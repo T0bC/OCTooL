@@ -134,6 +134,7 @@ class ConfigManager:
                 return config if self.validate_config(config) else None
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load configuration:\n{str(e)}")
+        self.active_config = config
         return None
 
     def validate_config(self, config):
@@ -213,3 +214,11 @@ class ConfigManager:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to apply configuration:\n{str(e)}")
             return False
+
+    def get_data_type_for_column(self, col_name):
+        config = getattr(self, "active_config", self.default_config)
+        for col in config["columns"]["dynamic_columns"]:
+            if col["name"] == col_name:
+                return col.get("data_type", "Text/String")
+        return "Text/String"
+
