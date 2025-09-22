@@ -89,7 +89,7 @@ class loadImagePanel:
             config = self.context.config_manager.load_config(str(config_path))
             if config:
                 self.context.config_manager.apply_config(config, self.context)
-                self.context.status_bar.update(f"Config loaded from: {config_path}", level="succes")
+                self.context.status_bar.update(f"Config loaded from: {config_path}", level="success")
 
             else:
                 self.context.status_bar.update("Config file found but failed to load.", level="error")
