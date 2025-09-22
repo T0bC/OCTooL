@@ -579,8 +579,30 @@ class annotatePanel:
         max_line_width = 80
 
         instructions = [
+            "1. Design Annotation Columns:",
+            "   - Define custom column names (e.g., Interface, Gap, etc.)",
+            "   - Assign a unique key binding for each column",
+            "   - Select the appropriate data type (e.g., Continuous, Categorical, Boolean)",
+            "   - Choose a color to visually distinguish annotations",
+            "➕ Click “Add Column” to register it in the system",
+            "\n\n",
+            "2. Fill Out Metadata:",
+            "   - Enter operator initials (e.g., TM, CR)",
+            "   - Specify measurement number (e.g., 1, 2) for repeated measurements",
+            "\n\n",
+            "3. Save Configuration:"
+            "   - remember the location of the file"
+            "\n\n",
+            "4. Load Image Stack:",
+            "   - Use the “Select Folder” button to load OCT images",
+            "   - Load the previously saved config to restore column setup and key bindings",
+            "\n\n",
+            "5. Start Analyzing",
+            "   - Navigate image slices using the slider, arrow keys or mouse wheel",
+            "   - Annotate by pressing the assigned keys",
+            "     + press [F] to use spline fitting",
+            "     + press [H] to hide or show the annotations"
 
-            "- EXPAND THIS SECTION"
         ]
 
         y_offset = text_y_start
