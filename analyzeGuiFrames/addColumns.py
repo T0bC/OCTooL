@@ -13,6 +13,7 @@ from errorHandler import handle_errors
 from tkinter import colorchooser
 import customtkinter as ctk
 from CTkColorPicker import AskColor
+import string
 
 class addColumnsPanel:
     @handle_errors("error in addColumnsPanel.__init__")
@@ -34,12 +35,20 @@ class addColumnsPanel:
         self.columnNameEntry.grid(row=3, column=0, sticky="ew", pady=3)
         Tooltip(self.columnNameEntry, text=self.columnNameToolTip , wraplength=200)
 
-        self.keyBindToolTip = 'Define the key you want to bind the column with'
+        self.keyBindToolTip = 'Select a unique key to bind this column.'
 
-        self.keyBindEntry = ttk.Entry(self.frame, width=4, bootstyle="success")
-        self.keyBindEntry.insert(0, 'a')
-        self.keyBindEntry.grid(row=3, column=1, sticky="ew", pady=3)
-        Tooltip(self.keyBindEntry, text=self.keyBindToolTip , wraplength=200)
+        self.keyBindVar = tk.StringVar()
+        self.keyBindDropdown = ttk.Combobox(
+            self.frame,
+            textvariable=self.keyBindVar,
+            state="readonly",
+            width=4,
+            bootstyle="success"
+        )
+        self.keyBindDropdown.grid(row=3, column=1, sticky="ew", pady=3)
+        Tooltip(self.keyBindDropdown, text=self.keyBindToolTip, wraplength=200)
+
+        self.update_available_keys()
 
         self.dataTypeToolTip = (
             "Select the type of data stored in this column:\n\n"
@@ -51,7 +60,6 @@ class addColumnsPanel:
             "Integer – Whole numbers without decimals. Used for counts or discrete values. Example: 1, 42, -7.\n\n"
             "Float – Decimal numbers. More precise than integers. Example: 3.14, -0.001, 0.5.\n\n"
             "Text/String – Free-form text or labels. Can be names, comments, or descriptions. Example: 'Sample A'.\n\n"
-            "Ratio – A value that compares two quantities. Often used for proportions or scaling. Example: 3:1 or 0.75."
         )
 
         self.dataTypeVar = tk.StringVar()
@@ -88,7 +96,7 @@ class addColumnsPanel:
             text='Add Column',
             command=lambda: self.addColumnToTable(
                 self.columnNameEntry.get(),
-                self.keyBindEntry.get(),
+                self.keyBindVar.get(),
                 self.dataTypeDropdown.get(),
                 self.selectedColor
                 ),
@@ -107,6 +115,8 @@ class addColumnsPanel:
         Tooltip(self.removeColumnButton, text="Remove the last added custom column", wraplength=300)
 
     def pick_color_ctk(self):
+        # Disable canvas events
+        #self.context.get_panel("image").canvas.unbind("<ButtonRelease-1>")
         pick_color = AskColor()
         color = pick_color.get()
         if color:
@@ -116,18 +126,29 @@ class addColumnsPanel:
                 bg=self.selectedColor,
                 fg='black'
             )
+        # Re-enable canvas events
+        #self.context.get_panel("image").canvas.bind("<ButtonRelease-1>", self.context.get_panel("image").create_new_point)
+
+    def update_available_keys(self):
+        all_keys = list(string.ascii_lowercase)
+        used_keys = [spec[2] for spec in getattr(self.resultsPanel, "dynamic_col_specs_full", [])]
+        available_keys = [k for k in all_keys if k not in used_keys]
+        self.keyBindDropdown["values"] = available_keys
+        if available_keys:
+            self.keyBindDropdown.set(available_keys[0])
+        else:
+            self.keyBindDropdown.set("")
 
     @handle_errors("addColumnsPanel.addColumnToTable")
     def addColumnToTable(self, colName, keyBind, dataType, color):
         # Add column to results panel
         self.resultsPanel.add_dynamic_column(colName, color, keyBind)
+        self.update_available_keys()
 
         # Store keybinding and data type so we can give that to the json config file
         self.column_keybindings[colName] = keyBind
         self.column_data_types[colName] = dataType
         self.column_colors[colName] = self.selectedColor
-
-        #self.resultsPanel.populate_sample_data()
 
     @handle_errors("addColumnsPanel.removeColumnFromTable")
     def removeColumnFromTable(self) -> None:
