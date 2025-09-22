@@ -15,8 +15,9 @@ from analyzeGuiFrames.addColumns import addColumnsPanel as addColumnsPanel
 from analyzeGuiFrames.metadataPanel import metadataPanel as metadataPanel
 from analyzeGuiFrames.configManager import ConfigManager
 from analyzeGuiFrames.statusBar import StatusBar
+from errorHandler import handle_errors
 
-
+@handle_errors("analyzingTab.addContent")
 def addContent(self, frame):
     self.analyzingTabFrame = frame
     self.context = AppContext()
@@ -39,6 +40,7 @@ def addContent(self, frame):
     self.loadFrame = ttk.LabelFrame(self.controlsContainer, text='Load Images', relief=tk.RIDGE)
     self.loadFrame.pack(fill="x", pady=(0, 2))
     self.context.register_frame("load", self.loadFrame)
+
 
     self.addColumnsFrame = ttk.LabelFrame(self.controlsContainer, text='Add Columns', relief=tk.RIDGE)
     self.addColumnsFrame.pack(fill="x", pady=2)
