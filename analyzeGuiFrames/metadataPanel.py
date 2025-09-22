@@ -63,7 +63,7 @@ class metadataPanel:
             bootstyle="primary"
         )
         self.saveConfig.grid(row=2, column=0, sticky="nsew", pady=3)
-        Tooltip(self.saveConfig, text='Save a config file for layout and key bindings', wraplength=200)
+        Tooltip(self.saveConfig, text='Save a config file for layout and key bindings. The config is saved as a "json" file and is to be loaded when analysis begins.', wraplength=200)
 
     @handle_errors("metadataPanel saveConfig failed.")
     def saveConfigToFile(self):
