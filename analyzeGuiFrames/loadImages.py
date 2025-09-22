@@ -138,7 +138,6 @@ class loadImagePanel:
                     self.context.status_bar.update(f"Loaded annotations from: {annotation_file}", level="success")
                 except Exception as e:
                     self.context.status_bar.update(f"Failed to load annotations: {e}", level="error")
-                    #print(f"Failed to load annotations: {e}")
             else:
                 self.context.status_bar.update("No annotations found in folder.", level="warning")
             self.try_load_results()
