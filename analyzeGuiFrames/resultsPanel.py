@@ -8,7 +8,6 @@ Created on Thu Aug 14 11:24:40 2025
 from errorHandler import handle_errors
 import tkinter as tk
 from tksheet import Sheet
-import math
 import csv
 from pathlib import Path
 
