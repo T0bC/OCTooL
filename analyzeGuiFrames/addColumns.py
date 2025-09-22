@@ -116,7 +116,6 @@ class addColumnsPanel:
 
     def pick_color_ctk(self):
         # Disable canvas events
-        #self.context.get_panel("image").canvas.unbind("<ButtonRelease-1>")
         pick_color = AskColor()
         color = pick_color.get()
         if color:
@@ -126,18 +125,21 @@ class addColumnsPanel:
                 bg=self.selectedColor,
                 fg='black'
             )
-        # Re-enable canvas events
-        #self.context.get_panel("image").canvas.bind("<ButtonRelease-1>", self.context.get_panel("image").create_new_point)
 
     def update_available_keys(self):
+        reserved_keys = {'f', 'h'}  # Keys to block
         all_keys = list(string.ascii_lowercase)
         used_keys = [spec[2] for spec in getattr(self.resultsPanel, "dynamic_col_specs_full", [])]
-        available_keys = [k for k in all_keys if k not in used_keys]
+
+        # Filter out both used and reserved keys
+        available_keys = [k for k in all_keys if k not in used_keys and k not in reserved_keys]
+
         self.keyBindDropdown["values"] = available_keys
         if available_keys:
             self.keyBindDropdown.set(available_keys[0])
         else:
             self.keyBindDropdown.set("")
+
 
     @handle_errors("addColumnsPanel.addColumnToTable")
     def addColumnToTable(self, colName, keyBind, dataType, color):
