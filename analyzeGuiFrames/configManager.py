@@ -115,9 +115,9 @@ class ConfigManager:
         try:
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
-            print(f"Config saved to: {config_path}")
+            self.context.status_bar.update(f"Config saved to: {config_path}", level="success")
         except Exception as e:
-            print(f"Failed to save config: {e}")
+            self.context.status_bar.update(f"Failed to save config: {e}", level="error")
 
     @handle_errors("ConfigManager.load_config")
     def load_config(self, filename=None):
@@ -170,7 +170,7 @@ class ConfigManager:
                     col_index = results_panel.sheet.headers().index(col_name)
                     results_panel.sheet.column_width(col_index, width=col.get("width", 100))
                 except Exception as e:
-                    print(f"Failed to set width for {col_name}: {e}")
+                    self.context.status_bar.update(f"Failed to set width for {col_name}: {e}", level="error")
 
                 # Update add_columns_panel attributes
                 if hasattr(add_columns_panel, 'column_keybindings'):
@@ -205,7 +205,7 @@ class ConfigManager:
             )
             keybinding_manager.register_keybindings()
 
-            print(f"Registered keybinding: <{key}> for column '{col_name}' with type '{data_type}'")
+            self.context.status_bar.update(f"Registered keybinding: <{key}> for column '{col_name}' with type '{data_type}'", level="success")
 
             messagebox.showinfo("Success", "Configuration loaded successfully!")
             return True
