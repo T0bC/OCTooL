@@ -89,12 +89,12 @@ class loadImagePanel:
             config = self.context.config_manager.load_config(str(config_path))
             if config:
                 self.context.config_manager.apply_config(config, self.context)
-                self.context.status_bar.update(f"Config loaded from: {config_path}", level="success")
+                self.context.safe_status_update(f"Config loaded from: {config_path}", level="success")
 
             else:
-                self.context.status_bar.update("Config file found but failed to load.", level="error")
+                self.context.safe_status_update("Config file found but failed to load.", level="error")
         else:
-            self.context.status_bar.update("No config file found in folder.", level="warning")
+            self.context.safe_status_update("No config file found in folder.", level="warning")
 
         # Collect image files
         image_extensions = ['*.jpg', '*.png', '*.tif', '*.tiff']
@@ -109,7 +109,7 @@ class loadImagePanel:
         )
 
         if not tmpPathList:
-            self.context.status_bar.update("No suitable image files found in the selected folder.", level="error")
+            self.context.safe_status_update("No suitable image files found in the selected folder.", level="error")
             raise ValueError("No suitable image files found in the selected folder.")
 
         self.tmpFileList = [{
@@ -135,9 +135,9 @@ class loadImagePanel:
                         annotations = json.load(f)
                     self.context.loaded_annotations = annotations
                     annotate_panel.load_annotations(annotations)
-                    self.context.status_bar.update(f"Loaded annotations from: {annotation_file}", level="success")
+                    self.context.safe_status_update(f"Loaded annotations from: {annotation_file}", level="success")
                 except Exception as e:
-                    self.context.status_bar.update(f"Failed to load annotations: {e}", level="error")
+                    self.context.safe_status_update(f"Failed to load annotations: {e}", level="error")
             else:
                 self.context.status_bar.update("No annotations found in folder.", level="warning")
             self.try_load_results()
@@ -150,9 +150,9 @@ class loadImagePanel:
             with open(annotation_file, "r", encoding="utf-8") as f:
                 annotations = json.load(f)
             self.context.loaded_annotations = annotations
-            self.context.status_bar.update(f"Loaded annotations from: {annotation_file}", level="success")
+            self.context.safe_status_update(f"Loaded annotations from: {annotation_file}", level="success")
         else:
-            self.context.status_bar.update("No annotations found in folder.", level="warning")
+            self.context.safe_status_update("No annotations found in folder.", level="warning")
 
     def try_load_results(self):
         results_file = self.folderPath / "results" / "measurements.csv"
