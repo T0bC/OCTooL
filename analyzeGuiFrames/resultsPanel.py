@@ -135,13 +135,14 @@ class resultsPanel:
         return min(max(base_width, len(header) * char_width + padding), max_width)
 
     @handle_errors("ResultsPanel.add_dynamic_column")
-    def add_dynamic_column(self, col_name: str, color: str) -> None:
+    def add_dynamic_column(self, col_name: str, color: str, keyBind: str) -> None:
         """
         Add a dynamic column to the sheet if it doesn't already exist.
 
         Args:
             col_name (str): Name of the column to add.
             color (str): Background color for the column.
+            keyBind (str): key we use
         """
         self.context.status_bar.update(f"Added column: {col_name} with color: {color}", level="success")
 
