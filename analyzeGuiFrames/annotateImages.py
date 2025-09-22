@@ -34,7 +34,6 @@ class annotatePanel:
         self.window.bind("<Button-4>", self.on_mouse_wheel_linux)     # Linux scroll up
         self.window.bind("<Button-5>", self.on_mouse_wheel_linux)     # Linux scroll down
 
-
         # panning in smoothed image
         self.is_panning = False
         self.pan_start_x = 0
@@ -111,7 +110,10 @@ class annotatePanel:
         self.setup_scale_callback()
 
     # %% Image anotation functions
+    @handle_errors("annotatePanel.on_canvas_click")
     def on_canvas_click(self, event):
+        if not hasattr(self, 'rawImage') or not hasattr(self, 'fitted_width'):
+            return None  # Prevent crash
         if self.dragging_started:
             return  # Skip adding point if drag was initiated
 
@@ -132,6 +134,7 @@ class annotatePanel:
         self.current_annotation["points"].append((img_x, img_y))
         self.draw_annotation()
 
+    @handle_errors("annotatePanel.draw_annotation")
     def draw_annotation(self):
         self.canvas.delete("annotation")
         self.point_handles.clear()
@@ -183,7 +186,7 @@ class annotatePanel:
                                                      tags="annotation")
                     self.point_handles.append(handle)
 
-
+    @handle_errors("annotatePanel.get_annotation_length")
     def get_annotation_length(self, slice_index):
         # Use current annotation if it's active
         if self.current_annotation and len(self.current_annotation["points"]) >= 2:
@@ -213,7 +216,7 @@ class annotatePanel:
 
         return length
 
-
+    @handle_errors("annotatePanel.commit_annotation")
     def commit_annotation(self, label, color="#FFFFFF"):
         index = int(self.scale.get()) - 1
         if self.current_annotation and len(self.current_annotation["points"]) >= 2:
@@ -234,6 +237,7 @@ class annotatePanel:
             return committed_id
         return None
 
+    @handle_errors("annotatePanel.draw_overlay_annotations")
     def draw_overlay_annotations(self):
         """
         draws non continous annotations to the image. It automatically gets for
@@ -327,6 +331,7 @@ class annotatePanel:
             )
             self.overlay_handles.append(text_id)
 
+    @handle_errors("annotatePanel.flash_annotation")
     def flash_annotation(self, duration=800):
         self.annotations_visible = True
         self.draw_annotation()
@@ -334,18 +339,23 @@ class annotatePanel:
         # Schedule hiding after duration
         self.window.after(duration, self._hide_annotations_if_not_toggled)
 
+    @handle_errors("annotatePanel._hide_annotations_if_not_toggled")
     def _hide_annotations_if_not_toggled(self):
         # Only hide if user hasn't manually re-enabled visibility
         if self.annotations_visible:
             self.annotations_visible = False
             self.draw_annotation()
 
+    @handle_errors("annotatePanel.canvas_to_image_coords")
     def canvas_to_image_coords(self, x, y):
+        if not hasattr(self, 'rawImage') or not hasattr(self, 'fitted_width'):
+            return None  # Prevent crash
         current_zoom = self.zoom_level if self.zoom_level != 1.0 else self.fitted_width / self.rawImage.width
         img_x = (x - self.image_offset_x) / current_zoom
         img_y = (y - self.image_offset_y) / current_zoom
         return img_x, img_y
 
+    @handle_errors("annotatePanel.image_to_canvas_coords")
     def image_to_canvas_coords(self, img_x, img_y):
         current_zoom = self.zoom_level if self.zoom_level != 1.0 else self.fitted_width / self.rawImage.width
         x = img_x * current_zoom + self.image_offset_x
@@ -353,6 +363,7 @@ class annotatePanel:
         return x, y
 
     # %% Curve Fitting
+    @handle_errors("annotatePanel.fit_bezier_curve")
     def fit_bezier_curve(self, event=None):
         if not self.current_annotation or len(self.current_annotation["points"]) < 2:
             return
@@ -364,9 +375,15 @@ class annotatePanel:
 
     # %% drag existing points to new position
 
+    @handle_errors("annotatePanel.create_new_point")
     def create_new_point(self, event):
         """Create a new annotation point"""
         x, y = event.x, event.y
+
+        img_coords = self.canvas_to_image_coords(x, y)
+        if img_coords is None:
+            return
+
         img_x, img_y = self.canvas_to_image_coords(x, y)
 
         if not (0 <= img_x < self.rawImage.width and 0 <= img_y < self.rawImage.height):
@@ -383,6 +400,7 @@ class annotatePanel:
         self.current_annotation["points"].append((img_x, img_y))
         self.draw_annotation()
 
+    @handle_errors("annotatePanel.on_drag_motion")
     def on_drag_motion(self, event):
         """Handle mouse drag - move point if one is selected"""
         if self.dragging_point_index is not None:
@@ -402,7 +420,7 @@ class annotatePanel:
             # Handle hover effects when not dragging
             self.handle_hover_effects(event.x, event.y)
 
-
+    @handle_errors("annotatePanel.on_drag_start")
     def on_drag_start(self, event):
         """Handle mouse press - check if clicking on existing point or starting new point"""
         self.dragging_started = False
@@ -418,7 +436,7 @@ class annotatePanel:
             self.canvas.itemconfig(handle, outline="white", width=2)
             return  # Exit early - we found a point to drag
 
-
+    @handle_errors("annotatePanel.on_drag_end")
     def on_drag_end(self, event):
         """Handle mouse release - end drag or create new point"""
         if self.dragging_point_index is not None:
@@ -438,7 +456,7 @@ class annotatePanel:
         self.dragging_started = False
 
 # %% hover over point logic
-
+    @handle_errors("annotatePanel.get_point_near_cursor")
     def get_point_near_cursor(self, canvas_x, canvas_y, hit_radius=15):
         """
         Check if cursor is near any point handle within hit_radius pixels
@@ -458,6 +476,7 @@ class annotatePanel:
                     return i
         return None
 
+    @handle_errors("annotatePanel.handle_hover_effects")
     def handle_hover_effects(self, canvas_x, canvas_y):
         """Handle hover effects for point handles"""
         point_index = self.get_point_near_cursor(canvas_x, canvas_y)
@@ -479,12 +498,14 @@ class annotatePanel:
 
             self.hovered_point_index = point_index
 
+    @handle_errors("annotatePanel.on_mouse_motion")
     def on_mouse_motion(self, event):
         """Handle mouse motion for hover effects when not dragging"""
         if self.dragging_point_index is None:  # Only show hover effects when not dragging
             self.handle_hover_effects(event.x, event.y)
 
     # %%remove existing point
+    @handle_errors("annotatePanel.on_right_click")
     def on_right_click(self, event):
         """Remove a point if right-clicked near it, or clear all uncommitted points if clicked in empty space"""
         point_index = self.get_point_near_cursor(event.x, event.y)
@@ -512,7 +533,7 @@ class annotatePanel:
 
         self.draw_annotation()
 
-
+    @handle_errors("annotatePanel.toggle_annotations")
     def toggle_annotations(self, event=None):
         self.annotations_visible = not self.annotations_visible
         self.canvas.delete("annotation")
@@ -526,9 +547,11 @@ class annotatePanel:
 
 
     # %%
+    @handle_errors("annotatePanel.setup_scale_callback")
     def setup_scale_callback(self):
         self.scale.configure(command=self.on_scale_change)
 
+    @handle_errors("annotatePanel.on_scale_change")
     def on_scale_change(self, value):
         index = int(round(float(value))) - 1
         self.display_image(index)
@@ -548,7 +571,7 @@ class annotatePanel:
             self.ULImage = ImageTk.PhotoImage(self.ULImage)
             self.canvas.create_image(self.cwidth - 217 // 2 - 7, 45, image=self.ULImage)
         except Exception as e:
-            print(f"Failed to load logo: {e}")
+            self.context.status_bar.update(f"Failed to load logo: {e}", level="error")
 
         header_y = 10
         text_y_start = 5
@@ -570,12 +593,14 @@ class annotatePanel:
             y_offset += line_spacing
 
     # %% Paning
+    @handle_errors("annotatePanel.start_pan")
     def start_pan(self, event):
         self.is_panning = True
         self.pan_start_x = event.x
         self.pan_start_y = event.y
         self.canvas.config(cursor="fleur") # "hand2"
 
+    @handle_errors("annotatePanel.do_pan")
     def do_pan(self, event):
         if not self.is_panning:
             return
@@ -605,12 +630,14 @@ class annotatePanel:
         self.render_zoomed_image()
         self.draw_annotation()
 
+    @handle_errors("annotatePanel.end_pan")
     def end_pan(self, event):
         self.is_panning = False
         self.canvas.config(cursor="arrow")
 
 
     # %% UI Resizing
+    @handle_errors("annotatePanel.onResize")
     def onResize(self, event):
         self.width = event.width
         self.height = event.height
@@ -621,18 +648,21 @@ class annotatePanel:
             self.instructionText()
 
     # %% Scale Binding
+    @handle_errors("annotatePanel.on_arrow_left")
     def on_arrow_left(self, event):
         current = int(self.scale.get())
         if current > 1:
             self.scale.set(current - 1)
             self.display_image(current - 2)  # -2 because scale is 1-based
 
+    @handle_errors("annotatePanel.on_arrow_right")
     def on_arrow_right(self, event):
         current = int(self.scale.get())
         if current < int(self.scale.cget("to")):
             self.scale.set(current + 1)
             self.display_image(current)  # current is already 1-based
 
+    @handle_errors("annotatePanel.on_mouse_wheel")
     def on_mouse_wheel(self, event):
         """Handle mouse wheel scroll for Windows/macOS"""
         if event.state & 0x0004:  # Ctrl is pressed
@@ -642,7 +672,7 @@ class annotatePanel:
         else:
             self.on_arrow_right(event)
 
-
+    @handle_errors("annotatePanel.on_mouse_wheel_linux")
     def on_mouse_wheel_linux(self, event):
         """Handle mouse wheel scroll for Linux"""
         if event.state & 0x0004:  # Ctrl is pressed
@@ -654,6 +684,7 @@ class annotatePanel:
 
 
     # %% Zooming
+    @handle_errors("annotatePanel.on_mouse_wheel_zoom")
     def on_mouse_wheel_zoom(self, event):
         if not hasattr(self, 'rawImage'):
             return
@@ -687,6 +718,7 @@ class annotatePanel:
         self.render_zoomed_image()
         self.draw_annotation()
 
+    @handle_errors("annotatePanel.render_zoomed_image")
     def render_zoomed_image(self):
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
@@ -724,7 +756,7 @@ class annotatePanel:
 
 
     # %% render takes over the display
-    @handle_errors("error in annotateImages.display_image")
+    @handle_errors("annotateImages.display_image")
     def display_image(self, index=None):
         self.canvas.delete("all")
 
@@ -758,13 +790,15 @@ class annotatePanel:
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
 
         except Exception as e:
-            print(f"Error displaying image {img_path}: {e}")
+            self.context.status_bar.update("Error displaying image {img_path}: {e}", level="error")
+
 
     # %% save annotations as json
+    @handle_errors("annotatePanel.save_current_annotations")
     def save_current_annotations(self):
         image_folder = getattr(self.context, "image_folder", None)
         if not image_folder or not isinstance(image_folder, Path):
-            print("Image folder not set. Cannot save annotations.")
+            self.context.status_bar.update("Image folder not set. Cannot save annotations.", level="warning")
             return
 
         annotation_folder = image_folder / "annotations"
@@ -790,8 +824,9 @@ class annotatePanel:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(json_data, f, indent=2)
 
-        print(f"Annotations saved to: {json_path}")
+        self.context.status_bar.update(f"Annotations saved to: {json_path}", level="success")
 
+    @handle_errors("annotatePanel.load_annotations")
     def load_annotations(self, annotations_dict):
         def normalize(ann):
             return {
