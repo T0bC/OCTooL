@@ -1,0 +1,84 @@
+{
+  "metadata": {
+    "operator": "TM",
+    "measurement": "1",
+    "system": "OCT"
+  },
+  "columns": {
+    "dynamic_columns": [
+      {
+        "name": "cont",
+        "keybinding": "a",
+        "position_after": "SLICE",
+        "order": 0,
+        "data_type": "Continuous",
+        "color": "#05ff18"
+      },
+      {
+        "name": "bool",
+        "keybinding": "s",
+        "position_after": "cont",
+        "order": 1,
+        "data_type": "Boolean",
+        "color": "#b6ff1e"
+      },
+      {
+        "name": "perc",
+        "keybinding": "d",
+        "position_after": "bool",
+        "order": 2,
+        "data_type": "Percentage",
+        "color": "#fff76d"
+      },
+      {
+        "name": "cat",
+        "keybinding": "q",
+        "position_after": "perc",
+        "order": 3,
+        "data_type": "Categorical",
+        "color": "#ffb346"
+      },
+      {
+        "name": "ord",
+        "keybinding": "w",
+        "position_after": "cat",
+        "order": 4,
+        "data_type": "Ordinal",
+        "color": "#ff7c4e"
+      },
+      {
+        "name": "int",
+        "keybinding": "e",
+        "position_after": "ord",
+        "order": 5,
+        "data_type": "Integer",
+        "color": "#ff3aa8"
+      },
+      {
+        "name": "float",
+        "keybinding": "r",
+        "position_after": "int",
+        "order": 6,
+        "data_type": "Float",
+        "color": "#b430ff"
+      },
+      {
+        "name": "txt",
+        "keybinding": "t",
+        "position_after": "float",
+        "order": 7,
+        "data_type": "Text/String",
+        "color": "#737cff"
+      }
+    ]
+  },
+  "ui_settings": {
+    "sheet_width": 800,
+    "sheet_height": 400
+  },
+  "config_info": {
+    "created_date": "2025-09-19T15:29:34.813561",
+    "version": "1.0",
+    "description": "OCT Analysis Configuration"
+  }
+}
