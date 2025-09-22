@@ -24,12 +24,15 @@ class loadImagePanel:
         self.frame = context.get_frame("load")
         self.config_manager = context.config_manager
 
+
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.columnconfigure(1, weight=1)
         # %% LoadImages Button
         self.pickFolderToolTip = 'Choose a folder that contains OCT Image(s). Supported formats are [png, jpg, tif, tiff]'
         self.pickFolderBtn = ttk.Button(
             self.frame,
             text='Select Folder',
-            width=14,
+            #width=14,
             command=self.globalPickerThread,
             bootstyle="primary"
         )
@@ -41,7 +44,7 @@ class loadImagePanel:
         self.loadConfig = ttk.Button(
             self.frame,
             text='Load Config',
-            width=14,
+            #width=14,
             command=self.loadConfigToTable,
             bootstyle="primary"
         )
