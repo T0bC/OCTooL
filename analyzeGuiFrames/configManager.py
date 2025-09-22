@@ -162,7 +162,8 @@ class ConfigManager:
             for col in columns_to_add:
                 col_name = col["name"]
                 color = col.get("color", "#FFFFFF")
-                results_panel.add_dynamic_column(col_name, color)
+                keyBind = None
+                results_panel.add_dynamic_column(col_name, color, keyBind)
 
                 # Set column width
                 try:
