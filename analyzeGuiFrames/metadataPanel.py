@@ -5,7 +5,6 @@ Created on Thu Aug 14 13:02:23 2025
 @author: meissnerto
 """
 
-import tkinter as tk
 from tkinter import ttk, messagebox
 from toolTip import Tooltip
 from errorHandler import handle_errors
