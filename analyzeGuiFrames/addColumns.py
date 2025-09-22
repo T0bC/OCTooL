@@ -68,7 +68,7 @@ class addColumnsPanel:
             textvariable=self.dataTypeVar,
             values=[
                 "Continuous", "Percentage", "Boolean", "Categorical", "Ordinal",
-                "Integer", "Float", "Text/String", "Ratio",
+                "Integer", "Float", "Text/String",
             ],
             state="readonly",
             width=15,
