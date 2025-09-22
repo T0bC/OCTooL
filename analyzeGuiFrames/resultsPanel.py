@@ -137,14 +137,13 @@ class resultsPanel:
     @handle_errors("ResultsPanel.add_dynamic_column")
     def add_dynamic_column(self, col_name: str, color: str, keyBind: str) -> None:
         """
-        Add a dynamic column to the sheet if it doesn't already exist.
+        Add a dynamic column to the sheet if it doesn't already exist and the keyBind is unique.
 
         Args:
             col_name (str): Name of the column to add.
             color (str): Background color for the column.
-            keyBind (str): key we use
+            keyBind (str): Key binding associated with the column.
         """
-        self.context.status_bar.update(f"Added column: {col_name} with color: {color}", level="success")
 
         existing_names = [name for name, _ in self.dynamic_col_specs]
         if col_name in existing_names or col_name in self.static_col_names:
@@ -153,6 +152,17 @@ class resultsPanel:
                 message=f"The column '{col_name}' already exists in the table."
             )
             return
+
+        # Check for duplicate keyBind
+        if keyBind and keyBind.lower() != "none":
+            for existing_col, _, existing_key in getattr(self, "dynamic_col_specs_full", []):
+                if keyBind == existing_key:
+                    tk.messagebox.showwarning(
+                        title="Duplicate Key Binding",
+                        message=f"The key binding '{keyBind}' is already assigned to column '{existing_col}'. Please choose a unique key."
+                    )
+                    return
+
 
         # Insert the column
         self.sheet.insert_column(
@@ -180,6 +190,9 @@ class resultsPanel:
 
         # Track column
         self.dynamic_col_specs.append((col_name, color))
+        if not hasattr(self, "dynamic_col_specs_full"):
+            self.dynamic_col_specs_full = []
+        self.dynamic_col_specs_full.append((col_name, color, keyBind))
 
         # Remove placeholder row if present
         if self.sheet.total_rows() > 0:
@@ -190,6 +203,10 @@ class resultsPanel:
 
         # Update insert index for next column
         self.dynamic_insert_index += 1
+
+        # Notify success
+        self.context.status_bar.update(f"Added column: {col_name} with key '{keyBind}' and color: {color}", level="success")
+
 
 
     @handle_errors("ResultsPanel.remove_last_dynamic_column")
