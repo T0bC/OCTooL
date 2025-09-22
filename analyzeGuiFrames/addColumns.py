@@ -119,7 +119,6 @@ class addColumnsPanel:
 
     @handle_errors("addColumnsPanel.addColumnToTable")
     def addColumnToTable(self, colName, keyBind, dataType, color):
-        #print("Adding column:", colName, "with key:", keyBind, "data type:", dataType, "color:", color)
         # Add column to results panel
         self.resultsPanel.add_dynamic_column(colName, color)
 
@@ -142,5 +141,5 @@ class addColumnsPanel:
             self.column_data_types.pop(removed_col_name, None)
             self.column_colors.pop(removed_col_name, None)
         else:
-            print("No column was removed.")
+            self.context.status_bar.update("No column was removed.", level="warning")
 
