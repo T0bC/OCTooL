@@ -120,14 +120,14 @@ class addColumnsPanel:
     @handle_errors("addColumnsPanel.addColumnToTable")
     def addColumnToTable(self, colName, keyBind, dataType, color):
         # Add column to results panel
-        self.resultsPanel.add_dynamic_column(colName, color)
+        self.resultsPanel.add_dynamic_column(colName, color, keyBind)
 
         # Store keybinding and data type so we can give that to the json config file
         self.column_keybindings[colName] = keyBind
         self.column_data_types[colName] = dataType
         self.column_colors[colName] = self.selectedColor
 
-        self.resultsPanel.populate_sample_data()
+        #self.resultsPanel.populate_sample_data()
 
     @handle_errors("addColumnsPanel.removeColumnFromTable")
     def removeColumnFromTable(self) -> None:
