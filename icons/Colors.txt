@@ -1,0 +1,7 @@
+red a6192eff
+
+dark blue 00677fff
+
+blue 0077c8ff
+
+light blue 05c3ddf
