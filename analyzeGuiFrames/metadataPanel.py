@@ -8,6 +8,7 @@ Created on Thu Aug 14 13:02:23 2025
 from tkinter import ttk, messagebox
 from toolTip import Tooltip
 from errorHandler import handle_errors
+from analyzeGuiFrames.keyboardLayoutViewer import KeyboardLayoutViewer
 
 class metadataPanel:
     def __init__(self, context):
@@ -63,6 +64,20 @@ class metadataPanel:
         )
         self.saveConfig.grid(row=2, column=0, sticky="nsew", pady=3)
         Tooltip(self.saveConfig, text='Save a config file for layout and key bindings. The config is saved as a "json" file and is to be loaded when analysis begins.', wraplength=200)
+
+        self.showConfigBtn = ttk.Button(
+            self.frame,
+            text='Show Config',
+            command=self.show_keyboard_layout,
+            bootstyle="info"
+        )
+        self.showConfigBtn.grid(row=2, column=1, sticky="nsew", pady=3)
+        Tooltip(self.showConfigBtn, text='View assigned key bindings in a keyboard layout', wraplength=200)
+
+    @handle_errors("metadataPanel.show_keyboard_layout")
+    def show_keyboard_layout(self):
+        KeyboardLayoutViewer(self.context)
+
 
     @handle_errors("metadataPanel saveConfig failed.")
     def saveConfigToFile(self):
