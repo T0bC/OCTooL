@@ -6,6 +6,7 @@ Created on Mon Sep 22 09:45:35 2025
 """
 
 import tkinter as tk
+from tkinter import filedialog
 from ttkbootstrap import ttk
 from datetime import datetime
 import csv
@@ -77,7 +78,12 @@ class StatusBar:
 
         # Filter dropdown
         filter_var = tk.StringVar(value="All")
-        filter_menu = ttk.Combobox(log_window, textvariable=filter_var, values=["All", "info", "success", "warning", "error"], state="readonly")
+        filter_menu = ttk.Combobox(log_window, textvariable=filter_var, values=["All",
+                                                                                "info",
+                                                                                "success",
+                                                                                "warning",
+                                                                                "error"],
+                                   state="readonly")
         filter_menu.pack(pady=5)
 
         # Log display
@@ -110,16 +116,30 @@ class StatusBar:
         export_frame.pack(pady=5)
 
         def export_txt():
-            with open("status_log.txt", "w", encoding="utf-8") as f:
-                for msg, level in self._log:
-                    f.write(f"{level.upper}: {msg}\n")
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt")],
+                title="Save log as TXT"
+            )
+            if file_path:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    for msg, level in self._log:
+                        f.write(f"{level.upper}: {msg}\n")
+
 
         def export_csv():
-            with open("status_log.csv", "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(["Level", "Message"])
-                for msg, level in self._log:
-                    writer.writerow([level, msg])
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".csv",
+                filetypes=[("CSV files", "*.csv")],
+                title="Save log as CSV"
+            )
+            if file_path:
+                with open(file_path, "w", newline="", encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["Level", "Message"])
+                    for msg, level in self._log:
+                        writer.writerow([level, msg])
+
 
         ttk.Button(export_frame, text="Export as TXT", command=export_txt, bootstyle="info").pack(side="left", padx=5)
         ttk.Button(export_frame, text="Export as CSV", command=export_csv, bootstyle="info").pack(side="left", padx=5)
