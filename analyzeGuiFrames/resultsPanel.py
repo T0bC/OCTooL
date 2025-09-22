@@ -85,7 +85,7 @@ class resultsPanel:
     def save_measurements(self):
         image_folder = getattr(self.context, "image_folder", None)
         if not image_folder or not isinstance(image_folder, Path):
-            print("Image folder not set. Cannot save measurements.")
+            self.context.status_bar.update("Image folder not set. Cannot save measurements.", level="warning")
             return
 
         results_folder = image_folder / "results"
@@ -100,9 +100,9 @@ class resultsPanel:
                 writer = csv.writer(f)
                 writer.writerow(headers)
                 writer.writerows(data)
-            print(f"Measurements saved to: {csv_path}")
+            self.context.status_bar.update(f"Measurements saved to: {csv_path}", level="success")
         except Exception as e:
-            print(f"Failed to save measurements: {e}")
+            self.context.status_bar.update(f"Failed to save measurements: {e}", level="error")
 
 
 
@@ -143,7 +143,7 @@ class resultsPanel:
             col_name (str): Name of the column to add.
             color (str): Background color for the column.
         """
-        print("ColName:", col_name, "Color:", color)
+        self.context.status_bar.update(f"Added column: {col_name} with color: {color}", level="success")
 
         existing_names = [name for name, _ in self.dynamic_col_specs]
         if col_name in existing_names or col_name in self.static_col_names:
@@ -200,7 +200,7 @@ class resultsPanel:
             str | None: Name of the removed column, or None if no dynamic column exists.
         """
         if not self.dynamic_col_specs:
-            print("No dynamic columns to remove.")
+            self.context.status_bar.update("No dynamic columns to remove.", level="success")
             return None
 
         last_col_name, _ = self.dynamic_col_specs.pop()
@@ -212,7 +212,7 @@ class resultsPanel:
             self.dynamic_insert_index -= 1
             return last_col_name
         else:
-            print(f"Column '{last_col_name}' not found in headers.")
+            self.context.status_bar.update(f"Column: {last_col_name} not found in headers.", level="warning")
             return None
 
 
@@ -245,7 +245,7 @@ class resultsPanel:
             col_index = column_names.index(col_name)
             self.sheet.set_cell_data(row_index, col_index, value)
         else:
-            print(f"Column '{col_name}' not found.")
+            self.context.status_bar.update(f"Column: {col_name} not found.", level="error")
 
 
     def get_luminance(self, hex_color: str) -> float:
