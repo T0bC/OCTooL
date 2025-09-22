@@ -26,3 +26,7 @@ class AppContext:
 
     def get_frame(self, name: str):
         return self.frames.get(name)
+
+    def safe_status_update(self, message: str, level: str = "info", duration: int = 2000):
+        self.root.after(0, lambda: self.status_bar.update(message, level, duration))
+
