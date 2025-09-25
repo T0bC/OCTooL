@@ -20,7 +20,6 @@ from utils.error_handler import handle_errors
 @handle_errors("analyzingTab.addContent")
 def addContent(self, frame):
     self.analyzingTabFrame = frame
-    self.context = self.context
     self.context.root = self.analyzingTabFrame
     self.context.config_manager = ConfigManager()
     self.attach_status_bar(self.context)
@@ -60,19 +59,6 @@ def addContent(self, frame):
     self.imgFrame = ttk.LabelFrame(self.analyzingTabFrame, text='Data Viewer', relief=tk.RIDGE)
     self.imgFrame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("image", self.imgFrame)
-
-# =============================================================================
-#     # Attach to shared status bar (fallback to local instance if missing)
-#     status_bar = getattr(self, "statusBar", None)
-#     if status_bar is None:
-#         status_bar = StatusBar(self.analyzingTabFrame)
-#         status_bar.frame.grid(row=2, column=0, columnspan=2, sticky="ew")
-#         self.statusBar = status_bar
-#     elif status_bar.parent is self.analyzingTabFrame:
-#         status_bar.frame.grid(row=2, column=0, columnspan=2, sticky="ew")
-#
-#     status_bar.attach_context(self.context)
-# =============================================================================
 
 
     # Create panels and register them
