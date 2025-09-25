@@ -12,12 +12,16 @@ class KeyboardLayoutViewer:
     def __init__(self, context):
         self.context = context
         self.root = context.root
+        self.context.keyboard_layout_viewer = self
+
         self.key_specs = []
 
         self.window = tk.Toplevel(self.root)
         self.window.title("Keyboard Layout Viewer")
         self.window.update_idletasks()
         self.window.geometry("")  # Let Tkinter calculate optimal size
+
+        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.window.resizable(True, True)
 
@@ -77,19 +81,28 @@ class KeyboardLayoutViewer:
         self.update_highlights()
 
     def update_highlights(self):
+        if not self.window.winfo_exists():
+            return
+
+        # Always pull fresh specs
         self.key_specs = getattr(self.context, "keybinding_specs", [])
 
+        # Reset all keys
         for key, btn in self.key_buttons.items():
-            btn.config(background="SystemButtonFace")  # Reset
+            if btn.winfo_exists():
+                btn.config(background="SystemButtonFace", fg="black", text=key.upper())
 
+        # Reserved keys
         for key in ['f', 'h']:
-            if key in self.key_buttons:
+            if key in self.key_buttons and self.key_buttons[key].winfo_exists():
                 self.key_buttons[key].config(bg="black", fg="white", text=key.upper())
 
-        self.table.delete(*self.table.get_children())  # Clear existing rows
+        # Clear table
+        self.table.delete(*self.table.get_children())
 
+        # Populate highlights
         for col_name, color, key, data_type in self.key_specs:
-            if key in self.key_buttons:
+            if key in self.key_buttons and self.key_buttons[key].winfo_exists():
                 self.key_buttons[key].config(background=color)
                 self.key_buttons[key].tooltip_text = f"{col_name}"
 
@@ -100,11 +113,10 @@ class KeyboardLayoutViewer:
         self.table.update_idletasks()
         self.window.update_idletasks()
 
-        # Resize window to fit content
+        # Resize window
         width = self.window.winfo_reqwidth()
         height = self.window.winfo_reqheight()
         self.window.geometry(f"{width}x{height}")
-
 
 
     def apply_row_color(self, tag, color):
@@ -113,4 +125,8 @@ class KeyboardLayoutViewer:
         style.configure(style_name, background=color)
         self.table.tag_configure(tag, background=color)
 
+
+    def on_close(self):
+        self.context.keyboard_layout_viewer = None
+        self.window.destroy()
 
