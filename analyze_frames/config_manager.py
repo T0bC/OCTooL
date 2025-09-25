@@ -207,7 +207,26 @@ class ConfigManager:
             )
             keybinding_manager.register_keybindings()
 
-            context.status_bar.update(f"Registered keybinding: <{key}> for column '{col_name}' with type '{data_type}'", level="success")
+            # store information for keybinding and show keybind layout purposes
+            context.keybinding_specs = [
+                (info["col_name"], info["color"], key, info["data_type"])
+                for key, info in column_map.items()
+            ]
+
+
+            # Update dropdown to reflect used keys
+            if hasattr(add_columns_panel, "update_available_keys"):
+                add_columns_panel.update_available_keys()
+
+            if hasattr(context, "keyboard_layout_viewer") and context.keyboard_layout_viewer:
+                context.keyboard_layout_viewer.update_highlights()
+
+
+            for key, info in column_map.items():
+                context.status_bar.update(
+                    f"Registered keybinding: <{key}> for column '{info['col_name']}' with type '{info['data_type']}'",
+                    level="success"
+                )
 
             messagebox.showinfo("Success", "Configuration loaded successfully!")
             return True
