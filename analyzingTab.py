@@ -7,15 +7,15 @@ Created on Tue Feb 23 15:14:14 2021
 
 import tkinter as tk
 from tkinter import ttk
-from analyzeGuiFrames.app_context import AppContext
-from analyzeGuiFrames.loadImages import loadImagePanel as loadImage
-from analyzeGuiFrames.annotateImages import annotatePanel as annotateImages
-from analyzeGuiFrames.resultsPanel import resultsPanel as resultsPanel
-from analyzeGuiFrames.addColumns import addColumnsPanel as addColumnsPanel
-from analyzeGuiFrames.metadataPanel import metadataPanel as metadataPanel
-from analyzeGuiFrames.configManager import ConfigManager
-from analyzeGuiFrames.statusBar import StatusBar
-from errorHandler import handle_errors
+from utils.app_context import AppContext
+from analyze_frames.load_images_panel import loadImagePanel as loadImage
+from analyze_frames.annotate_images_panel import annotatePanel as annotateImages
+from analyze_frames.results_panel import resultsPanel as resultsPanel
+from analyze_frames.add_columns_panel import addColumnsPanel as addColumnsPanel
+from analyze_frames.metadata_panel import metadataPanel as metadataPanel
+from analyze_frames.config_manager import ConfigManager
+from utils.status_bar import StatusBar
+from utils.error_handler import handle_errors
 
 @handle_errors("analyzingTab.addContent")
 def addContent(self, frame):
@@ -60,8 +60,16 @@ def addContent(self, frame):
     self.imgFrame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("image", self.imgFrame)
 
-    # Create status bar frame
-    self.statusBar = StatusBar(self.context)
+    # Attach to shared status bar (fallback to local instance if missing)
+    status_bar = getattr(self, "statusBar", None)
+    if status_bar is None:
+        status_bar = StatusBar(self.analyzingTabFrame)
+        status_bar.frame.grid(row=2, column=0, columnspan=2, sticky="ew")
+        self.statusBar = status_bar
+    elif status_bar.parent is self.analyzingTabFrame:
+        status_bar.frame.grid(row=2, column=0, columnspan=2, sticky="ew")
+
+    status_bar.attach_context(self.context)
 
 
     # Create panels and register them
