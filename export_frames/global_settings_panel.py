@@ -8,13 +8,13 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-from toolTip import Tooltip
+from utils.tool_tip import Tooltip
 
 class globalSettingsPanel:
-    def __init__(self, root, frame, treeView):
-        self.root = root
-        self.frame = frame
-        self.treeView = treeView
+    def __init__(self, context):
+        self.context = context
+        self.root = self.context.root
+        self.frame = self.context.get_frame("global_settings")
 
         # %% Buttons and Checkboxes
 
