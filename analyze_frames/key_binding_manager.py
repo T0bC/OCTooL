@@ -10,7 +10,8 @@ from datetime import datetime
 from analyze_frames.undo_panel import UndoPanel
 import threading
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, messagebox
+from concurrent.futures import ThreadPoolExecutor
 
 class KeybindingManager:
     @handle_errors("KeybindingManager.__init__")
@@ -86,7 +87,7 @@ class KeybindingManager:
 
      # %% Save Measurements, Annotations and Config
     def save_measurements_threaded(self):
-        from concurrent.futures import ThreadPoolExecutor
+
 
         results_panel = self.annotate_panel.context.get_panel("results")
         if results_panel:
