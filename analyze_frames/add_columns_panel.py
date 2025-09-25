@@ -126,27 +126,28 @@ class addColumnsPanel:
                 fg='black'
             )
 
+
     def update_available_keys(self):
-        reserved_keys = {'f', 'h'}  # Keys to block
+        reserved_keys = {'f', 'h'}
         all_keys = list(string.ascii_lowercase)
 
         # Pull used keys from centralized context
         used_keys = []
-        if hasattr(self.context, "keybinding_specs"):
+        if hasattr(self.context, "keybinding_specs") and self.context.keybinding_specs:
             used_keys = [spec[2] for spec in self.context.keybinding_specs if spec[2]]
 
         # Filter out both used and reserved keys
         available_keys = [k for k in all_keys if k not in used_keys and k not in reserved_keys]
 
+        # Update dropdown
         self.keyBindDropdown["values"] = available_keys
-        if available_keys:
-            self.keyBindDropdown.set(available_keys[0])
-        else:
-            self.keyBindDropdown.set("")
+        current = self.keyBindDropdown.get()
+        if current not in available_keys:
+            self.keyBindDropdown.set(available_keys[0] if available_keys else "")
 
-        if hasattr(self.context, "keyboard_layout_viewer") and self.context.keyboard_layout_viewer:
-            self.context.keyboard_layout_viewer.update_highlights()
-
+        viewer = getattr(self.context, "keyboard_layout_viewer", None)
+        if viewer and viewer.window.winfo_exists():
+            viewer.update_highlights()
 
 
     @handle_errors("addColumnsPanel.addColumnToTable")
@@ -159,12 +160,12 @@ class addColumnsPanel:
         self.column_data_types[colName] = dataType
         self.column_colors[colName] = self.selectedColor
 
-        if hasattr(self.context, "keybinding_specs"):
-            self.context.keybinding_specs.append((colName, color, keyBind, dataType))
+        if not hasattr(self.context, "keybinding_specs") or self.context.keybinding_specs is None:
+            self.context.keybinding_specs = []
+
+        self.context.keybinding_specs.append((colName, color, keyBind, dataType))
 
         self.update_available_keys()
-
-
 
 
 
@@ -179,13 +180,19 @@ class addColumnsPanel:
             self.column_keybindings.pop(removed_col_name, None)
             self.column_data_types.pop(removed_col_name, None)
             self.column_colors.pop(removed_col_name, None)
-        else:
-            self.context.status_bar.update("No column was removed.", level="warning")
 
-        if hasattr(self.context, "keybinding_specs"):
+            # Ensure keybinding_specs exists
+            if not hasattr(self.context, "keybinding_specs") or self.context.keybinding_specs is None:
+                self.context.keybinding_specs = []
+
+            # Remove from keybinding_specs
             self.context.keybinding_specs = [
                 spec for spec in self.context.keybinding_specs if spec[0] != removed_col_name
             ]
+        else:
+            self.context.status_bar.update("No column was removed.", level="warning")
+
         self.update_available_keys()
+
 
 
