@@ -203,9 +203,6 @@ class resultsPanel:
         # Update insert index for next column
         self.dynamic_insert_index += 1
 
-        # Notify success
-        self.context.status_bar.update(f"Added column: {col_name} with key '{keyBind}' and color: {color}", level="success")
-
 
 
     @handle_errors("ResultsPanel.remove_last_dynamic_column")
