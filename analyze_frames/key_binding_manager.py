@@ -102,7 +102,7 @@ class KeybindingManager:
 
         image_folder = self.annotate_panel.context.image_folder
         if image_folder:
-            config_manager.save_config_to_folder(image_folder, metadata_panel, results_panel, add_columns_panel)
+            config_manager.save_config_to_folder(image_folder, metadata_panel, results_panel, add_columns_panel, self.annotate_panel.context)
             self.annotate_panel.save_current_annotations()
             self.save_measurements_threaded()
 
