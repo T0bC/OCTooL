@@ -220,6 +220,17 @@ class resultsPanel:
         last_col_name, _ = self.dynamic_col_specs.pop()
         column_names = self.sheet.headers()
 
+        # Remove from dynamic_col_specs_full
+        if hasattr(self, "dynamic_col_specs_full"):
+            self.dynamic_col_specs_full = [
+                spec for spec in self.dynamic_col_specs_full if spec[0] != last_col_name
+            ]
+
+# =============================================================================
+#         last_col_name, _ = self.dynamic_col_specs.pop()
+#         column_names = self.sheet.headers()
+# =============================================================================
+
         if last_col_name in column_names:
             col_index = column_names.index(last_col_name)
             self.sheet.delete_column(col_index)
