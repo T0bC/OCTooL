@@ -6,65 +6,76 @@ Created on Tue Feb 23 14:58:13 2021
 """
 import tkinter as tk
 from tkinter import ttk
-#from exportGuiFrames.instructionFrame import instructionPanel as instructions
-from exportGuiFrames.treeViewFrame import treeViewPanel as table
-from exportGuiFrames.pickFilesFrame import pickFilesPanel as pickFile
-from exportGuiFrames.globalSettingsFrame import globalSettingsPanel as globalSettings
-from exportGuiFrames.customSettingsFrame import customSettingsPanel as customSettings
-from exportGuiFrames.imageFrame import imagePanel as imagePanel
-from exportGuiFrames.executionFrame import executionPanel as execution
-
+from utils.app_context import AppContext
+from utils.status_bar import StatusBar
+from export_frames.tree_view_panel import treeViewPanel as table
+from export_frames.pick_files_panel import pickFilesPanel as pickFile
+from export_frames.global_settings_panel import globalSettingsPanel as globalSettings
+from export_frames.custom_settings_panel import customSettingsPanel as customSettings
+from export_frames.image_panel import imagePanel as imagePanel
+from export_frames.execution_panel import executionPanel as execution
 
 def addContent(self, frame):
     self.exportTabFrame = frame
+    self.context = AppContext()
+    self.context.root = self.exportTabFrame
+    self.context.main_win = self.mainWin
+
+    status_bar = getattr(self, "statusBar", None)
+    if status_bar is None:
+        status_bar = StatusBar(self.exportTabFrame)
+        status_bar.frame.grid(row=10, column=0, columnspan=2, sticky=tk.E + tk.W)
+        self.statusBar = status_bar
+    elif status_bar.parent is self.exportTabFrame:
+        status_bar.frame.grid(row=10, column=0, columnspan=2, sticky=tk.E + tk.W)
+
+    status_bar.attach_context(self.context)
 
     self.exportTabFrame.columnconfigure(0, weight=0)
     self.exportTabFrame.columnconfigure(1, weight=1)
     self.exportTabFrame.rowconfigure(0, weight=0)
     self.exportTabFrame.rowconfigure(5, weight=1)
 
-
-    # %% Create Frames for Content here
-
-    # INSTRUCTIONS
-    #self.instrFrame = ttk.LabelFrame(self.exportTabFrame, text="Instructions...", relief=tk.RIDGE)
-    #self.instrFrame.grid(row=0, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
-
-    # TREEVIEW
+    # Create and register frames
     self.treeFrame = ttk.LabelFrame(self.exportTabFrame, text='Queue', relief=tk.RIDGE)
     self.treeFrame.grid(row=0, column=1, rowspan=5, sticky=tk.E + tk.W + tk.N + tk.S)
-    self.treeFrame.columnconfigure(1, weight=1)
-    self.treeFrame.rowconfigure(0, weight=1)
+    self.context.register_frame("tree", self.treeFrame)
 
-    # PICKFILES
     self.pickFrame = ttk.LabelFrame(self.exportTabFrame, text='Select File(s)', relief=tk.RIDGE)
     self.pickFrame.grid(row=0, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
+    self.context.register_frame("pick_files", self.pickFrame)
 
-    # SETTINGS
     self.glblSttngsFrame = ttk.LabelFrame(self.exportTabFrame, text='Global Settings', relief=tk.RIDGE)
     self.glblSttngsFrame.grid(row=1, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
+    self.context.register_frame("global_settings", self.glblSttngsFrame)
 
-    # SETTINGS
     self.cstmSttngsFrame = ttk.LabelFrame(self.exportTabFrame, text='Settings adjustable for each sample', relief=tk.RIDGE)
     self.cstmSttngsFrame.grid(row=4, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
+    self.context.register_frame("custom_settings", self.cstmSttngsFrame)
 
-    # IMAGE
     self.imgFrame = ttk.LabelFrame(self.exportTabFrame, text='Data Viewer', relief=tk.RIDGE)
     self.imgFrame.grid(row=5, column=0, rowspan=4, columnspan=2, sticky=tk.E + tk.W + tk.N + tk.S)
-    self.imgFrame.rowconfigure(1, weight=1)
-    self.imgFrame.columnconfigure(0, weight=1)
+    self.context.register_frame("image", self.imgFrame)
 
-    # EXECUTION
-    self.excFrame = ttk.LabelFrame(self.exportTabFrame, text='Excecution', relief=tk.RIDGE)
+    self.excFrame = ttk.LabelFrame(self.exportTabFrame, text='Execution', relief=tk.RIDGE)
     self.excFrame.grid(row=9, column=0, columnspan=2, sticky=tk.W + tk.E + tk.S)
+    self.context.register_frame("execution", self.excFrame)
 
+    # Create and register panels
+    self.treePanel = table(self.context)
+    self.context.register_panel("tree", self.treePanel)
 
-# %% Fill Content Frames with widgets here
-    # create content (Panel) inside the frames / Create Instances of each class
-    #self.instrPanel = instructions(self.exportTabFrame, self.instrFrame)
-    self.treePanel = table(self.exportTabFrame, self.treeFrame)
-    self.glblSttngsPanel = globalSettings(self.exportTabFrame, self.glblSttngsFrame, self.treePanel)
-    self.cstmSttngsPanel = customSettings(self.exportTabFrame, self.cstmSttngsFrame, self.treePanel, self.pickFrame)
-    self.pickPanel = pickFile(self.exportTabFrame, self.pickFrame, self.treePanel, self.glblSttngsPanel)
-    self.imgPanel = imagePanel(self.exportTabFrame, self.imgFrame, self.treePanel, self.glblSttngsPanel, self.cstmSttngsPanel, self.pickFrame)
-    self.excPanel = execution(self.exportTabFrame, self.excFrame, self.treePanel, self.imgPanel, self.glblSttngsPanel, self.cstmSttngsPanel, self.mainWin)
+    self.glblSttngsPanel = globalSettings(self.context)
+    self.context.register_panel("global_settings", self.glblSttngsPanel)
+
+    self.cstmSttngsPanel = customSettings(self.context)
+    self.context.register_panel("custom_settings", self.cstmSttngsPanel)
+
+    self.pickPanel = pickFile(self.context)
+    self.context.register_panel("pick_files", self.pickPanel)
+
+    self.imgPanel = imagePanel(self.context)
+    self.context.register_panel("image", self.imgPanel)
+
+    self.excPanel = execution(self.context)
+    self.context.register_panel("execution", self.excPanel)
