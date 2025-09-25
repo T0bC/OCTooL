@@ -17,19 +17,12 @@ from export_frames.execution_panel import executionPanel as execution
 
 def addContent(self, frame):
     self.exportTabFrame = frame
-    self.context = AppContext()
+    self.context = self.context
     self.context.root = self.exportTabFrame
     self.context.main_win = self.mainWin
 
-    status_bar = getattr(self, "statusBar", None)
-    if status_bar is None:
-        status_bar = StatusBar(self.exportTabFrame)
-        status_bar.frame.grid(row=10, column=0, columnspan=2, sticky=tk.E + tk.W)
-        self.statusBar = status_bar
-    elif status_bar.parent is self.exportTabFrame:
-        status_bar.frame.grid(row=10, column=0, columnspan=2, sticky=tk.E + tk.W)
+    self.attach_status_bar(self.context)
 
-    status_bar.attach_context(self.context)
 
     self.exportTabFrame.columnconfigure(0, weight=0)
     self.exportTabFrame.columnconfigure(1, weight=1)

@@ -12,13 +12,18 @@ from tkinter import ttk
 from ttkbootstrap import Style
 import exportTab
 import analyzingTab
+from utils.app_context import AppContext
 from utils.status_bar import StatusBar
+
 
 class MainGui:
     def __init__(self):
 
         self.mainWin = tk.Tk()
         self.mainWin.withdraw()
+
+        self.context = AppContext()
+        self.context.root = self.mainWin
 
         self.version = ' [v. 1.1.0 - 20250807]'
         self.mainWin.title(str('OCTexVIEW' + self.version))
@@ -106,3 +111,9 @@ class MainGui:
 
         tk.messagebox.showinfo(title = 'Help', message = self.aboutMassage)
 
+    def attach_status_bar(self, context):
+        """Attach the shared status bar to a given context."""
+        if hasattr(self, "statusBar") and self.statusBar:
+            self.statusBar.attach_context(context)
+        else:
+            raise RuntimeError("StatusBar not initialized in MainGui")
