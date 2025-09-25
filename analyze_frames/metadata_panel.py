@@ -76,7 +76,7 @@ class metadataPanel:
 
     @handle_errors("metadataPanel.show_keyboard_layout")
     def show_keyboard_layout(self):
-        KeyboardLayoutViewer(self.context)
+        self.context.keyboard_layout_viewer = KeyboardLayoutViewer(self.context)
 
 
     @handle_errors("metadataPanel saveConfig failed.")
