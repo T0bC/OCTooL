@@ -11,29 +11,12 @@ from tkinter import ttk
 import numpy as np
 from concurrent import futures
 from pathlib import Path
-import octFunctions as octF
+from utils import oct_functions as octF
 from scipy import ndimage
 from PIL import Image
-from toolTip import Tooltip
+from utils.tool_tip import Tooltip
 import gc
-import traceback
-from tkinter import messagebox
-
-def show_error_popup(title="Unexpected Error", exception=None):
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    error_message = f"{str(exception)}\n\nTraceback:\n{traceback.format_exc()}"
-    messagebox.showerror(title, error_message)
-    root.destroy()
-
-def catch_errors(func):
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            show_error_popup(f"Error in {func.__name__}", e)
-    return wrapper
+from utils.error_handler import handle_errors
 
 
 # %% To Prevent GUI Freezing during a long loop or function we need to set up
@@ -41,14 +24,15 @@ def catch_errors(func):
 #threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
 
 class executionPanel:
-    def __init__(self, root, frame, treeView, imgFrame, globalSettingsFrame, customSettingsFrame, mainWin):
-        self.root = root
-        self.frame = frame
-        self.treeView = treeView
-        self.imageFrame = imgFrame
-        self.globalSettingsFrame = globalSettingsFrame
-        self.customSettingsFrame = customSettingsFrame
-        self.mainWin = mainWin
+    def __init__(self, context):
+        self.context = context
+        self.root = self.context.root
+        self.frame = self.context.get_frame("execution")
+        self.treeView = self.context.get_panel("tree")
+        self.imageFrame = self.context.get_panel("image")
+        self.globalSettingsFrame = self.context.get_panel("global_settings")
+        self.customSettingsFrame = self.context.get_panel("custom_settings")
+        self.mainWin = self.context.main_win
 
         self.executeBtn = ttk.Button(self.frame, text='Export!', width=10,
                                      command=self.mainRoutine,
@@ -81,7 +65,7 @@ class executionPanel:
         Tooltip(self.quitBtn, text=self.quitToolTip , wraplength=200)
 
         # %%
-    @catch_errors
+    @handle_errors("executionPanel")
     def mainRoutine(self):
         '''
         To prevent GUII from freezing during a loop or time consuming function
@@ -99,7 +83,7 @@ class executionPanel:
         threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
         threadPoolExecutor.submit(self.mainRoutines)
 
-    @catch_errors
+    @handle_errors("executionPanel")
     def mainRoutines(self):
         """
         Processes each item in the TreeView:
@@ -229,7 +213,7 @@ class executionPanel:
             self.archive.close()
             gc.collect()
 
-    @catch_errors
+    @handle_errors("executionPanel")
     def prepareImageSlice(self, image, item):
         """
         Prepares a 2D image slice from a 2D or 3D image stack, applies resizing,

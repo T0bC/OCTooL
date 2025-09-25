@@ -8,13 +8,14 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-import octFunctions as octF
+from utils import oct_functions as octF
 
 
 class treeViewPanel:
-    def __init__(self, root, frame):
-        self.root = root
-        self.frame = frame
+    def __init__(self, context):
+        self.context = context
+        self.root = self.context.root
+        self.frame = self.context.get_frame("tree")
 
         # canvas Frame and its contens
         self.cols = ('Nr.', 'Name', 'First', 'Last', 'dB min', 'dB max', 'NumSlices', 'Refr. Ind.' , 'Disp. Coeff', 'Img. Slice Dir.' ,'Data Type', 'Status', 'Path')

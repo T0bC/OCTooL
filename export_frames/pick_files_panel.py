@@ -8,21 +8,23 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-from toolTip import Tooltip
-from tkinter import filedialog
+from utils.tool_tip import Tooltip
+from tkinter import filedialog, messagebox
 from pathlib import Path
 import os
 from fnmatch import fnmatch
-import octFunctions as octF
+from utils import oct_functions as octF
 from concurrent import futures
+from utils.error_handler import handle_errors
 
 
 class pickFilesPanel:
-    def __init__(self, root, frame, treeView, globalSettings):
-        self.root = root
-        self.frame = frame
-        self.treeView = treeView
-        self.globalSettings = globalSettings
+    def __init__(self, context):
+        self.context = context
+        self.root = self.context.root
+        self.frame = self.context.get_frame("pick_files")
+        self.treeView = self.context.get_panel("tree")
+        self.globalSettings = self.context.get_panel("global_settings")
 
         # Add buttons and instructions here
         self.pickFolderToolTip = 'Choose a folder whichs contains at least one OCT file. ' \
@@ -67,6 +69,7 @@ class pickFilesPanel:
 
         #%% folder/file Picker
 
+    @handle_errors("pickFilesPanel")
     def globalPickerThread(self, var):
         '''
         To prevent GUII from freezing during a loop or time consuming function
@@ -85,6 +88,7 @@ class pickFilesPanel:
         threadPoolExecutor.submit(self.globalPicker(var))
 
 
+    @handle_errors("pickFilesPanel")
     def globalPicker(self, isFolder: bool):
         '''
         Uses file open or ask directory dialog to list oct file(s) in the
@@ -104,134 +108,143 @@ class pickFilesPanel:
 
         global dir
         if isFolder == 1:
-            self.folderPath = Path(filedialog.askdirectory(initialdir=dir,
-                                                           title='Select the Folder Containing Your OCT Files!'))
+            selected_path = filedialog.askdirectory(initialdir=dir,
+                                                     title='Select the Folder Containing Your OCT Files!')
+            if not selected_path:
+                return
 
-            tmpPathList = []
-            for path, subdirs, files in os.walk(Path(self.folderPath)):
-                for file in files:
-                    if fnmatch(file, '*.oct'):
-                        tmpPathList += [os.path.join(path, file)]
+            self.folderPath = Path(selected_path)
+            tmpPathList = self._collect_oct_files(self.folderPath)
 
-            # create a new list containing name, first, last, status and path
+            if not tmpPathList:
+                self.show_info_box(
+                    "No OCT Files Found",
+                    f"No OCT files were found in:\n{self.folderPath}\n\nPlease choose another folder."
+                )
+                return
+
             self.tmpFileList = []
+            self._create_progress_popup(len(tmpPathList))
 
-            # Create a Progressbar
-            self.popup = tk.Toplevel(self.root)
-            tk.Label(self.popup, text="Searching for OCT files in selected folder. This might take a while.").grid(row=0,column=0)
-            self.progress = 0
-            self.progress_var = tk.DoubleVar()
-            self.progressBar = ttk.Progressbar(self.popup,
-                                               variable=self.progress_var,
-                                               maximum=len(tmpPathList),
-                                               orient='horizontal',
-                                               mode='determinate',
-                                               length=280)
-            self.progressBar.grid(row=1, column=0)
-            self.cancelButton = ttk.Button(self.popup, text='Cancel!', command=self.breakAll)
-            self.cancelButton.grid(column=0, row=2, padx=10, pady=10, sticky=tk.E)
-            self.popup.pack_slaves()
+            try:
+                for index, file_path in enumerate(tmpPathList, start=1):
+                    if self.running == 1:
+                        break
+                    self.tmpFileList.extend(self._build_entries_for_file(Path(file_path)))
+                    self._update_progress_popup(index)
+            finally:
+                self._destroy_progress_popup()
 
-            for j, (path) in enumerate(tmpPathList, start=0):
-
-                fileNameWithoutExtension = os.path.splitext(os.path.basename(Path(tmpPathList[j])))[0]
-                pathToSideCarTXTFile = Path(tmpPathList[j]).parent / (fileNameWithoutExtension + ".txt")
-
-                self.settings = self.handle_metadata_parsing(pathToSideCarTXTFile, octF.getXMLvalue(tmpPathList[j], 'dimY'))
-
-                # If the user defined multiple export directions, we iterate over them
-                # and add the oct multiple times in the queue
-                for exportDircectionKey in self.settings.keys():
-
-                    firstS = self.settings.get(exportDircectionKey).get('start')
-                    lastS = self.settings.get(exportDircectionKey).get('end')
-                    numAequidistSlices = self.settings.get(exportDircectionKey).get('numAequidistSlices')
-                    refractiveIndex =  self.settings.get(exportDircectionKey).get('refractiveIndex')
-
-                    if octF.getXMLvalue(Path(tmpPathList[j]), 'Serialnumber') == 'M00427924':
-                        self.dispCoeff = '-100'
-                    else:
-                        self.dispCoeff = '20'
-
-                    self.tmpFileList += [[fileNameWithoutExtension,   # file name
-                                          firstS,                                                        # first slice to export
-                                          lastS,                                                         # last slice to export
-                                          '20' if octF.getXMLvalue(Path(tmpPathList[j]),
-                                                                   'dataType') == 'Processed' else '30', # min dB value
-                                          '80' if octF.getXMLvalue(Path(tmpPathList[j]),
-                                                                   'dataType') == 'Processed' else '100',# max dB value
-                                          numAequidistSlices,                                            # number of Slices to export
-                                          refractiveIndex,
-                                          self.dispCoeff,                                                # Dispersion Coefficient
-                                          exportDircectionKey,                                           # Image Slice Direction (XZ, XY, ...)
-                                          octF.getXMLvalue(Path(tmpPathList[j]), 'dataType'),            # Processed or Spectral Data (or both)
-                                          'in queue',                                                    # current state
-                                          Path(tmpPathList[j])]]                                         # full path to file
-                    self.popup.update()
-                    self.progress += 1
-                    self.progress_var.set(self.progress)
-
-                if self.running == 1:
-                    self.popup.destroy()
-                    break
-
-            self.treeView.setMultipleValues(self.tmpFileList)
-            self.root.destroy
-
-
-
-            self.popup.destroy()
+            if self.running == 1:
+                return
 
         else:
 
-            self.filePath = Path(filedialog.askopenfilename(initialdir=dir,
-                                                              title='Select One OCT File!',
-                                                              filetypes=(('All Files', '*.*'),
-                                                                         ('OCT Files', '*.oct'))))
+            selected_path = filedialog.askopenfilename(initialdir=dir,
+                                                        title='Select One OCT File!',
+                                                        filetypes=(('All Files', '*.*'),
+                                                                   ('OCT Files', '*.oct')))
 
-            fileNameWithoutExtension = os.path.splitext(os.path.basename(Path(self.filePath)))[0]
-            pathToSideCarTXTFile = Path(self.filePath).parent / (fileNameWithoutExtension + ".txt")
+            if not selected_path:
+                return
 
-            self.settings = self.handle_metadata_parsing(pathToSideCarTXTFile, octF.getXMLvalue(self.filePath, 'dimY'))
+            self.filePath = Path(selected_path)
 
-            # create a new list containing name, first, last, status and path
-            self.tmpFileList = []
+            if not self.filePath.exists():
+                self.show_error_box(
+                    "File Not Found",
+                    f"The selected file could not be located:\n{self.filePath}"
+                )
+                return
 
-            for exportDircectionKey in self.settings.keys():
+            self.tmpFileList = self._build_entries_for_file(self.filePath)
 
-                #firstS, lastS, summS = self.checkForMetaDataFile(self.filePath)
+        if not getattr(self, "tmpFileList", []):
+            return
 
-                firstS = self.settings.get(exportDircectionKey).get('start')
-                lastS = self.settings.get(exportDircectionKey).get('end')
-                numAequidistSlices = self.settings.get(exportDircectionKey).get('numAequidistSlices')
-                refractiveIndex =  self.settings.get(exportDircectionKey).get('refractiveIndex')
-
-                if octF.getXMLvalue(self.filePath, 'Serialnumber') == 'M00427924':
-                    self.dispCoeff = '-100'
-                else:
-                    self.dispCoeff = '20'
-
-                # create a list object which contains the filename and other things
-                self.tmpFileList += [[os.path.splitext(os.path.basename(Path(self.filePath)))[0],         # file name
-                                     firstS,                                                             # first slice to export
-                                     lastS,                                                              # last slice to export
-                                    '20' if octF.getXMLvalue(Path(self.filePath),
-                                                             'dataType') == 'Processed' else '30',       # min dB value
-                                    '80' if octF.getXMLvalue(Path(self.filePath),
-                                                             'dataType') == 'Processed' else '100',      # max dB value
-                                     numAequidistSlices,                                                 # number of Slices to export,
-                                     refractiveIndex,
-                                     self.dispCoeff,                                                     # Dispersion Coefficient
-                                     exportDircectionKey,                                                               # Image Slice Direction (XZ, XY, ...)
-                                     octF.getXMLvalue(Path(self.filePath), 'dataType'),                  # Processed or Spectral Data (or both)
-                                     'in queue',                                                         # current state
-                                     Path(self.filePath)]]                                               # full path to file
-
-            self.treeView.setMultipleValues(self.tmpFileList)
-            self.root.destroy
+        self.treeView.setMultipleValues(self.tmpFileList)
+        self.root.destroy
 
 
     #%%
+    def _collect_oct_files(self, folder_path: Path):
+        oct_files = []
+        for path, _, files in os.walk(Path(folder_path)):
+            for file in files:
+                if fnmatch(file, '*.oct'):
+                    oct_files.append(Path(path) / file)
+        return sorted(oct_files)
+
+    def _create_progress_popup(self, total_files: int):
+        self.running = 0
+        self.popup = tk.Toplevel(self.root)
+        tk.Label(self.popup, text="Searching for OCT files in selected folder. This might take a while.").grid(row=0, column=0)
+        self.progress_var = tk.DoubleVar(value=0)
+        self.progressBar = ttk.Progressbar(self.popup,
+                                           variable=self.progress_var,
+                                           maximum=total_files,
+                                           orient='horizontal',
+                                           mode='determinate',
+                                           length=280)
+        self.progressBar.grid(row=1, column=0)
+        self.cancelButton = ttk.Button(self.popup, text='Cancel!', command=self.breakAll)
+        self.cancelButton.grid(column=0, row=2, padx=10, pady=10, sticky=tk.E)
+        self.popup.pack_slaves()
+
+    def _update_progress_popup(self, value: int):
+        if hasattr(self, 'progress_var'):
+            self.progress_var.set(value)
+        if hasattr(self, 'popup') and self.popup.winfo_exists():
+            self.popup.update()
+
+    def _destroy_progress_popup(self):
+        if hasattr(self, 'popup'):
+            try:
+                if self.popup.winfo_exists():
+                    self.popup.destroy()
+            except tk.TclError:
+                pass
+            finally:
+                self.popup = None
+
+    def _build_entries_for_file(self, file_path: Path):
+        file_path = Path(file_path)
+        file_name = os.path.splitext(os.path.basename(file_path))[0]
+        pathToSideCarTXTFile = file_path.parent / (file_name + ".txt")
+
+        settings = self.handle_metadata_parsing(pathToSideCarTXTFile, octF.getXMLvalue(file_path, 'dimY'))
+
+        data_type = octF.getXMLvalue(file_path, 'dataType')
+        serial_number = octF.getXMLvalue(file_path, 'Serialnumber')
+
+        disp_coeff = '-100' if serial_number == 'M00427924' else '20'
+        min_db = '20' if data_type == 'Processed' else '30'
+        max_db = '80' if data_type == 'Processed' else '100'
+
+        entries = []
+        for export_direction, config in settings.items():
+            firstS = config.get('start')
+            lastS = config.get('end')
+            numAequidistSlices = config.get('numAequidistSlices')
+            refractiveIndex = config.get('refractiveIndex')
+
+            entries.append([
+                file_name,
+                firstS,
+                lastS,
+                min_db,
+                max_db,
+                numAequidistSlices,
+                refractiveIndex,
+                disp_coeff,
+                export_direction,
+                data_type,
+                'in queue',
+                file_path
+            ])
+
+        return entries
+
     def getFilePath(self)->str:
         """
 
@@ -383,6 +396,12 @@ class pickFilesPanel:
         root_err.withdraw()  # Hide the main window
         tk.messagebox.showerror(title, message)
         root_err.destroy()   # Close the Tk instance
+
+    def show_info_box(self, title: str, message: str):
+        root_info = tk.Tk()
+        root_info.withdraw()
+        messagebox.showinfo(title, message)
+        root_info.destroy()
 
     def handle_metadata_parsing(self, file_path: Path, dimY: int) -> dict:
         """

@@ -8,15 +8,15 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-import octFunctions as octF
-from toolTip import Tooltip
+from utils import oct_functions as octF
+from utils.tool_tip import Tooltip
 
 class customSettingsPanel:
-    def __init__(self, root, frame, treeView, pickPanel):
-        self.root = root
-        self.frame = frame
-        self.treeView = treeView
-        self.pickPanel = pickPanel
+    def __init__(self, context):
+        self.context = context
+        self.root = self.context.root
+        self.frame = self.context.get_frame("custom_settings")
+        self.treeView = self.context.get_panel("tree")
 
         # %% Buttons and Checkboxes
 

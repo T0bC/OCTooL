@@ -8,37 +8,21 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-import octFunctions as octF
+from utils import oct_functions as octF
 from scipy import ndimage
 from PIL import Image, ImageTk
-from toolTip import Tooltip
-import traceback
-from tkinter import messagebox
-
-def show_error_popup(title="Unexpected Error", exception=None):
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    error_message = f"{str(exception)}\n\nTraceback:\n{traceback.format_exc()}"
-    messagebox.showerror(title, error_message)
-    root.destroy()
-
-def catch_errors(func):
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            show_error_popup(f"Error in {func.__name__}", e)
-    return wrapper
+from utils.tool_tip import Tooltip
+from utils.error_handler import handle_errors
 
 class imagePanel:
-    def __init__(self, root, frame, treeView, globalSettingsFrame, customSettingsFrame, pickFrame):
-        self.root = root
-        self.frame = frame
-        self.treeView = treeView
-        self.globalSettingsFrame = globalSettingsFrame
-        self.customSettingsFrame = customSettingsFrame
-        self.pickFrame = pickFrame
+    def __init__(self, context):
+        self.context = context
+        self.root = self.context.root
+        self.frame = self.context.get_frame("image")
+        self.treeView = self.context.get_panel("tree")
+        self.globalSettingsFrame = self.context.get_panel("global_settings")
+        self.customSettingsFrame = self.context.get_panel("custom_settings")
+        self.pickFrame = self.context.get_frame("pick_files")
 
 
         # Image Frame
@@ -123,7 +107,7 @@ class imagePanel:
             y_offset += line_spacing
 
 
-    @catch_errors
+    @handle_errors("imagePanel")
     def onResize(self, event):
         '''
         If the user changes the canvas size the image inside is resized.
@@ -155,7 +139,7 @@ class imagePanel:
 # %% Functions
 
     # dispImageInCanvas
-    @catch_errors
+    @handle_errors("imagePanel")
     def dispImageInCanvas(self):
         '''
         Read selected OCT File, extract XML-Data, create a Scale according to
@@ -227,7 +211,7 @@ class imagePanel:
 
             self.showImage(int(self.scale.get()-1), self.rawImage)
 
-    @catch_errors
+    @handle_errors("imagePanel")
     def showImage(self, scaleState: int, rawImage):
         '''
         Displays the selected OCT File in a Canvas. Everytime one of the sliders
