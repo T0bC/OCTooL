@@ -12,6 +12,7 @@ from tkinter import ttk
 from ttkbootstrap import Style
 import exportTab
 import analyzingTab
+from utils.status_bar import StatusBar
 
 class MainGui:
     def __init__(self):
@@ -37,6 +38,7 @@ class MainGui:
         # seetings for resizing of the window
         self.mainWin.columnconfigure(0, weight = 1)
         self.mainWin.rowconfigure(0, weight = 1)
+        self.mainWin.rowconfigure(1, weight = 0)
 
         # set a custom icon
         self.mainWin.iconbitmap("icons/thumb_4.ico")
@@ -51,6 +53,14 @@ class MainGui:
         # make the window resizeable
         self.tabParent.columnconfigure(0, weight = 1)
         self.tabParent.rowconfigure(0, weight = 1)
+
+        # Shared status bar container
+        self.statusFrame = ttk.Frame(self.mainWin)
+        self.statusFrame.grid(row = 1, column = 0, sticky = tk.E + tk.W, pady = (5, 0))
+        self.statusFrame.columnconfigure(0, weight = 1)
+
+        self.statusBar = StatusBar(self.statusFrame)
+        self.statusBar.frame.grid(row = 0, column = 0, sticky = "ew")
 
         # %% EXPORT TAB
         # create a frame holding the contents for the tab
