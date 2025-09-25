@@ -19,7 +19,7 @@ class ConfigManager:
         self.default_config = {
             "metadata": {
                 "operator": "TM",
-                "measurement": "A",
+                "measurement": "1",
                 "system": "OCT"
             },
             "columns": {
@@ -132,11 +132,16 @@ class ConfigManager:
             try:
                 with open(filename, 'r', encoding='utf-8') as f:
                     config = json.load(f)
-                return config if self.validate_config(config) else None
+                if self.validate_config(config):
+                    self.active_config = config  # ✅ Only assign if config is valid
+                    return config
+                else:
+                    return None
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load configuration:\n{str(e)}")
-        self.active_config = config
+
         return None
+
 
     def validate_config(self, config):
         return all(key in config for key in ["metadata", "columns", "config_info"])
