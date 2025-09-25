@@ -129,7 +129,11 @@ class addColumnsPanel:
     def update_available_keys(self):
         reserved_keys = {'f', 'h'}  # Keys to block
         all_keys = list(string.ascii_lowercase)
-        used_keys = [spec[2] for spec in getattr(self.resultsPanel, "dynamic_col_specs_full", [])]
+
+        # Pull used keys from centralized context
+        used_keys = []
+        if hasattr(self.context, "keybinding_specs"):
+            used_keys = [spec[2] for spec in self.context.keybinding_specs if spec[2]]
 
         # Filter out both used and reserved keys
         available_keys = [k for k in all_keys if k not in used_keys and k not in reserved_keys]
@@ -140,17 +144,29 @@ class addColumnsPanel:
         else:
             self.keyBindDropdown.set("")
 
+        if hasattr(self.context, "keyboard_layout_viewer") and self.context.keyboard_layout_viewer:
+            self.context.keyboard_layout_viewer.update_highlights()
+
+
 
     @handle_errors("addColumnsPanel.addColumnToTable")
     def addColumnToTable(self, colName, keyBind, dataType, color):
         # Add column to results panel
         self.resultsPanel.add_dynamic_column(colName, color, keyBind)
-        self.update_available_keys()
 
         # Store keybinding and data type so we can give that to the json config file
         self.column_keybindings[colName] = keyBind
         self.column_data_types[colName] = dataType
         self.column_colors[colName] = self.selectedColor
+
+        if hasattr(self.context, "keybinding_specs"):
+            self.context.keybinding_specs.append((colName, color, keyBind, dataType))
+
+        self.update_available_keys()
+
+
+
+
 
     @handle_errors("addColumnsPanel.removeColumnFromTable")
     def removeColumnFromTable(self) -> None:
@@ -165,4 +181,11 @@ class addColumnsPanel:
             self.column_colors.pop(removed_col_name, None)
         else:
             self.context.status_bar.update("No column was removed.", level="warning")
+
+        if hasattr(self.context, "keybinding_specs"):
+            self.context.keybinding_specs = [
+                spec for spec in self.context.keybinding_specs if spec[0] != removed_col_name
+            ]
+        self.update_available_keys()
+
 
