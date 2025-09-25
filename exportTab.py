@@ -17,7 +17,6 @@ from export_frames.execution_panel import executionPanel as execution
 
 def addContent(self, frame):
     self.exportTabFrame = frame
-    self.context = self.context
     self.context.root = self.exportTabFrame
     self.context.main_win = self.mainWin
 
