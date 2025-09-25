@@ -85,6 +85,6 @@ class metadataPanel:
         add_columns_panel = self.context.get_panel("add_columns")
 
         if results_panel and add_columns_panel:
-            self.config_manager.save_config(self, results_panel, add_columns_panel)
+            self.config_manager.save_config(self, results_panel, add_columns_panel, self.context)
         else:
             messagebox.showerror("Error", "Missing panel references in context")
