@@ -37,7 +37,7 @@ class ConfigManager:
         }
 
     @handle_errors("ConfigManager.save_config")
-    def save_config(self, metadata_panel, results_panel, add_columns_panel):
+    def save_config(self, metadata_panel, results_panel, add_columns_panel, context):
         config = self.default_config.copy()
 
         # Metadata
@@ -76,6 +76,7 @@ class ConfigManager:
             try:
                 with open(filename, 'w', encoding='utf-8') as f:
                     json.dump(config, f, indent=2, ensure_ascii=False)
+                context.status_bar.update(f"Config saved to: {filename}", level="success")
                 messagebox.showinfo("Success", f"Configuration saved to:\n{filename}")
                 return True
             except Exception as e:
@@ -83,7 +84,7 @@ class ConfigManager:
         return False
 
     @handle_errors("ConfigManager.save_config_to_folder")
-    def save_config_to_folder(self, folder_path, metadata_panel, results_panel, add_columns_panel):
+    def save_config_to_folder(self, folder_path, metadata_panel, results_panel, add_columns_panel, context):
         config = self.default_config.copy()
 
         # Metadata
@@ -115,9 +116,9 @@ class ConfigManager:
         try:
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
-            self.context.status_bar.update(f"Config saved to: {config_path}", level="success")
+            context.status_bar.update(f"Config saved to: {config_path}", level="success")
         except Exception as e:
-            self.context.status_bar.update(f"Failed to save config: {e}", level="error")
+            context.status_bar.update(f"Failed to save config: {e}", level="error")
 
     @handle_errors("ConfigManager.load_config")
     def load_config(self, filename=None):
@@ -171,7 +172,7 @@ class ConfigManager:
                     col_index = results_panel.sheet.headers().index(col_name)
                     results_panel.sheet.column_width(col_index, width=col.get("width", 100))
                 except Exception as e:
-                    self.context.status_bar.update(f"Failed to set width for {col_name}: {e}", level="error")
+                    context.status_bar.update(f"Failed to set width for {col_name}: {e}", level="error")
 
                 # Update add_columns_panel attributes
                 if hasattr(add_columns_panel, 'column_keybindings'):
@@ -206,7 +207,7 @@ class ConfigManager:
             )
             keybinding_manager.register_keybindings()
 
-            self.context.status_bar.update(f"Registered keybinding: <{key}> for column '{col_name}' with type '{data_type}'", level="success")
+            context.status_bar.update(f"Registered keybinding: <{key}> for column '{col_name}' with type '{data_type}'", level="success")
 
             messagebox.showinfo("Success", "Configuration loaded successfully!")
             return True
