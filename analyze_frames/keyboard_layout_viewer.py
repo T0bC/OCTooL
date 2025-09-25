@@ -7,7 +7,6 @@ Created on Mon Sep 22 15:56:23 2025
 
 import tkinter as tk
 from tkinter import ttk
-from tkinter import ttk
 
 class KeyboardLayoutViewer:
     def __init__(self, context):
@@ -78,7 +77,7 @@ class KeyboardLayoutViewer:
         self.update_highlights()
 
     def update_highlights(self):
-        self.key_specs = getattr(self.context.get_panel("results"), "dynamic_col_specs_full", [])
+        self.key_specs = getattr(self.context, "keybinding_specs", [])
 
         for key, btn in self.key_buttons.items():
             btn.config(background="SystemButtonFace")  # Reset
@@ -87,17 +86,13 @@ class KeyboardLayoutViewer:
             if key in self.key_buttons:
                 self.key_buttons[key].config(bg="black", fg="white", text=key.upper())
 
-
-        for col_name, color, key in self.key_specs:
-            if key in self.key_buttons:
-                self.key_buttons[key].config(background=color)
-                # Optional: add tooltip or label text
-                self.key_buttons[key].tooltip_text = f"{col_name}"
-
         self.table.delete(*self.table.get_children())  # Clear existing rows
 
-        for col_name, color, key in self.key_specs:
-            data_type = self.context.config_manager.get_data_type_for_column(col_name)  # Or use a fallback
+        for col_name, color, key, data_type in self.key_specs:
+            if key in self.key_buttons:
+                self.key_buttons[key].config(background=color)
+                self.key_buttons[key].tooltip_text = f"{col_name}"
+
             tag = f"tag_{key}"
             self.apply_row_color(tag, color)
             self.table.insert("", "end", values=(key, col_name, data_type), tags=(tag,))
