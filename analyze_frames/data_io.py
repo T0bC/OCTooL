@@ -93,34 +93,16 @@ class DataSaver:
         self.data_folder.mkdir(exist_ok=True)
 
     def save_config(self):
-        config = self.config_manager.default_config.copy()
+        # Build config using centralized logic
+        config = self.config_manager.build_config(
+            self.metadata_panel,
+            self.results_panel,
+            self.add_columns_panel
+        )
 
-        # Metadata
-        config["metadata"] = {
-            "operator": self.operator,
-            "measurement": self.measurement,
-            "system": self.metadata_panel.systemEntry.get()
-        }
-
-        # Dynamic Columns
-        config["columns"]["dynamic_columns"] = []
-        for i, (col_name, color) in enumerate(self.results_panel.dynamic_col_specs):
-            keybinding = getattr(self.add_columns_panel, 'column_keybindings', {}).get(col_name, "")
-            data_type = getattr(self.add_columns_panel, 'column_data_types', {}).get(col_name, "")
-            position_after = self.results_panel.dynamic_col_specs[i - 1][0] if i > 0 else "SLICE"
-
-            config["columns"]["dynamic_columns"].append({
-                "name": col_name,
-                "keybinding": keybinding,
-                "position_after": position_after,
-                "order": i,
-                "data_type": data_type,
-                "color": color
-            })
-
-        config["config_info"]["created_date"] = datetime.now().isoformat()
-
+        # Construct structured save path
         config_path = self.data_folder / f"{self.sample_folder.name}_config.json"
+
         try:
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
