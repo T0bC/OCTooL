@@ -80,30 +80,18 @@ class resultsPanel:
             fg=font_color
         )
 
-# =============================================================================
-#     def save_measurements(self):
-#         image_folder = getattr(self.context, "image_folder", None)
-#         if not image_folder or not isinstance(image_folder, Path):
-#             self.context.status_bar.update("Image folder not set. Cannot save measurements.", level="warning")
-#             return
-#
-#         results_folder = image_folder / "results"
-#         results_folder.mkdir(exist_ok=True)
-#         csv_path = results_folder / "measurements.csv"
-#
-#         headers = self.sheet.headers()
-#         data = self.sheet.get_sheet_data()
-#
-#         try:
-#             with open(csv_path, "w", newline="", encoding="utf-8") as f:
-#                 writer = csv.writer(f)
-#                 writer.writerow(headers)
-#                 writer.writerows(data)
-#             self.context.status_bar.update(f"Measurements saved to: {csv_path}", level="success")
-#         except Exception as e:
-#             self.context.status_bar.update(f"Failed to save measurements: {e}", level="error")
-# =============================================================================
+    @handle_errors("ResultsPanel.reset_table")
+    def reset_table(self):
+        self.sheet.set_sheet_data([[]])  # Clear all data
+        self.dynamic_col_specs.clear()
+        self.sheet.headers(self.static_col_names.copy())
+        self._set_column_widths()
 
+        font_color = self.choose_font_color("#2b2b2b")
+        static_indices = list(range(len(self.static_col_names)))
+
+        self.sheet.highlight_columns(columns=static_indices, bg="#2b2b2b", fg=font_color)
+        self.sheet.highlight_rows(rows=[], bg="#2b2b2b", fg=font_color)
 
 
     @handle_errors("ResultsPanel._set_column_widths")

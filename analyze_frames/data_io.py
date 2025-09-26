@@ -29,12 +29,18 @@ class DataLoader:
         if config_path:
             config = self.context.config_manager.load_config(str(config_path))
             if config:
+                # Reset resultsPanel before applying new config
+                results_panel = self.context.get_panel("results")
+                if results_panel:
+                    results_panel.reset_table()
+
                 self.context.config_manager.apply_config(config, self.context)
                 self.context.safe_status_update(f"Config loaded from: {config_path}", level="success")
             else:
                 self.context.safe_status_update("Config file found but failed to load.", level="error")
         else:
             self.context.safe_status_update("No config file found.", level="warning")
+
 
     def load_annotations(self):
         annotation_path = self.find_file("*annotations.json")
@@ -74,8 +80,6 @@ class DataLoader:
                 self.context.status_bar.update(f"Failed to load results: {e}", level="error")
         else:
             self.context.status_bar.update("No results file found.", level="warning")
-
-
 
 
 class DataSaver:
