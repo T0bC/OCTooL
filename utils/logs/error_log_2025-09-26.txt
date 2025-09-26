@@ -128,3 +128,35 @@ Traceback (most recent call last):
 _tkinter.TclError: unknown option "-weight"
 
 ================================================================================
+
+================================================================================
+🕒 Timestamp: 2025-09-26 15:50:32
+🔧 Function: selectFolder
+📌 Message: loadImagePanel.selectFolder
+🧩 Args: <carlquant_frames.load_images_panel.loadImagePanel object at 0x00000139003BC5B0>
+🧩 Kwargs: 
+--------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\utils\error_handler.py", line 108, in wrapper
+    return func(*args, **kwargs)
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\carlquant_frames\load_images_panel.py", line 66, in selectFolder
+    data["slices"],
+TypeError: 'Specimen' object is not subscriptable
+
+================================================================================
+
+================================================================================
+🕒 Timestamp: 2025-09-26 15:51:11
+🔧 Function: selectFolder
+📌 Message: loadImagePanel.selectFolder
+🧩 Args: <carlquant_frames.load_images_panel.loadImagePanel object at 0x00000139023EFB20>
+🧩 Kwargs: 
+--------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\utils\error_handler.py", line 108, in wrapper
+    return func(*args, **kwargs)
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\carlquant_frames\load_images_panel.py", line 66, in selectFolder
+    data["slices"],
+TypeError: 'Specimen' object is not subscriptable
+
+================================================================================
