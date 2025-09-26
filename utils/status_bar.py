@@ -10,6 +10,8 @@ from tkinter import filedialog
 from ttkbootstrap import ttk
 from datetime import datetime
 import csv
+import textwrap
+
 
 
 class StatusBar:
@@ -54,7 +56,16 @@ class StatusBar:
             return
 
         message, level, duration = self._queue[0]
-        self.label.config(text=message)
+
+        # Truncate if too long
+        max_chars = 200  # Adjust based on your layout
+        display_msg = message if len(message) <= max_chars else message[:max_chars - 3] + "..."
+
+        self.label.config(text=display_msg)
+        self.label.tooltip_text = message  # Store full message for tooltip
+
+        # Optional: add tooltip
+        self._add_tooltip(self.label, message)
 
         colors = {
             "info": (self.default_bootstyle, "black"),
@@ -68,6 +79,32 @@ class StatusBar:
         if self._clear_after_id:
             self.label.after_cancel(self._clear_after_id)
         self._clear_after_id = self.label.after(duration, self._advance_queue)
+
+    def _add_tooltip(self, widget, text, wrap_length=100):
+        wrapped_text = textwrap.fill(text, width=wrap_length)
+
+        tooltip = tk.Toplevel(widget)
+        tooltip.withdraw()
+        tooltip.overrideredirect(True)
+        tooltip.attributes("-topmost", True)
+
+        label = tk.Label(tooltip, text=wrapped_text, background="lightyellow",
+                         relief="solid", borderwidth=1, justify="left", anchor="w")
+        label.pack(ipadx=5, ipady=3)
+
+        def show_tooltip(event):
+            x = event.x_root + 10
+            y = event.y_root + 10
+            tooltip.geometry(f"+{x}+{y}")
+            tooltip.deiconify()
+
+        def hide_tooltip(event):
+            tooltip.withdraw()
+
+        widget.bind("<Enter>", show_tooltip)
+        widget.bind("<Leave>", hide_tooltip)
+
+
 
     def _advance_queue(self):
         self._queue.pop(0)
