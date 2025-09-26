@@ -192,7 +192,7 @@ class ConfigManager:
                     level="success"
                 )
 
-            messagebox.showinfo("Success", "Configuration loaded successfully!")
+            #messagebox.showinfo("Success", "Configuration loaded successfully!")
             return True
 
         except Exception as e:
