@@ -40,15 +40,19 @@ def addContent(self, frame):
     self.settingsFrame.pack(fill="x", pady=(0, 2))
     self.context.register_frame("carl_settings", self.settingsFrame)
 
+    # PanedWindow for Specimen and Results
+    self.tablePane = tk.PanedWindow(self.carlQuantFrame, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+    self.tablePane.grid(row=0, column=1, columnspan=2, sticky="nsew", padx=5, pady=5)
+
     # Specimen Frame
-    self.specimenFrame = ttk.LabelFrame(self.carlQuantFrame, text='Specimen', relief=tk.RIDGE)
-    self.specimenFrame.grid(row=0, column=1, sticky="nsew", padx=(10, 5), pady=5)
+    self.specimenFrame = ttk.LabelFrame(self.tablePane, text='Specimen', relief=tk.RIDGE)
     self.context.register_frame("carl_specimen", self.specimenFrame)
+    self.tablePane.add(self.specimenFrame)
 
     # Results Frame
-    self.resultsFrame = ttk.LabelFrame(self.carlQuantFrame, text='Results', relief=tk.RIDGE)
-    self.resultsFrame.grid(row=0, column=2, sticky="nsew", padx=(5, 10), pady=5)
+    self.resultsFrame = ttk.LabelFrame(self.tablePane, text='Results', relief=tk.RIDGE)
     self.context.register_frame("carl_results", self.resultsFrame)
+    self.tablePane.add(self.resultsFrame)
 
     # Viewer Frame
     self.viewerFrame = ttk.LabelFrame(self.carlQuantFrame, text='Data Viewer', relief=tk.RIDGE)
