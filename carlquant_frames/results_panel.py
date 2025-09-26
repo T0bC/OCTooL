@@ -35,3 +35,7 @@ class resultsPanel:
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
+
+    def load_results_for(self, specimen_id: str):
+        print(f"Loading results for {specimen_id}")
+        # Future: parse results file or generate dummy data
