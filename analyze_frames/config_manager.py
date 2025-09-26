@@ -32,7 +32,7 @@ class ConfigManager:
             "config_info": {
                 "created_date": datetime.now().isoformat(),
                 "version": self.config_version,
-                "description": "OCT Analysis Configuration"
+                "description": "OCTexVIEW Analysis Configuration"
             }
         }
 
