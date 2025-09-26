@@ -7,15 +7,14 @@ Created on Tue Feb 23 15:14:14 2021
 
 import tkinter as tk
 from tkinter import ttk
-from utils.app_context import AppContext
+from utils.error_handler import handle_errors
 from analyze_frames.load_images_panel import loadImagePanel as loadImage
 from analyze_frames.annotate_images_panel import annotatePanel as annotateImages
 from analyze_frames.results_panel import resultsPanel as resultsPanel
 from analyze_frames.add_columns_panel import addColumnsPanel as addColumnsPanel
 from analyze_frames.metadata_panel import metadataPanel as metadataPanel
 from analyze_frames.config_manager import ConfigManager
-from utils.status_bar import StatusBar
-from utils.error_handler import handle_errors
+
 
 @handle_errors("analyzingTab.addContent")
 def addContent(self, frame):
