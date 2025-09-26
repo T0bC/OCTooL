@@ -9,6 +9,7 @@ from pathlib import Path
 import json
 import csv
 from datetime import datetime
+from typing import Optional
 
 class DataLoader:
     def __init__(self, base_folder: Path, context):
@@ -16,7 +17,7 @@ class DataLoader:
         self.context = context
         self.sample_name = base_folder.name
 
-    def find_file(self, pattern: str) -> Path | None:
+    def find_file(self, pattern: str) -> Optional[Path]:
         matches = list(self.base_folder.rglob(pattern))
         if self.sample_name:
             prioritized = [f for f in matches if self.sample_name in f.name]
@@ -155,4 +156,10 @@ class DataSaver:
             self.context.status_bar.update(f"Measurements saved to: {csv_path}", level="success")
         except Exception as e:
             self.context.status_bar.update(f"Failed to save measurements: {e}", level="error")
+
+    def save_all(self):
+        self.save_config()
+        self.save_annotations()
+        self.save_results()
+        self.context.status_bar.update("All data saved successfully.", level="success")
 
