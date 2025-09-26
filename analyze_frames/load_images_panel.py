@@ -6,15 +6,16 @@ Created on Thu Aug 14 09:54:49 2025
 """
 
 from tkinter import ttk, filedialog, messagebox
-from utils.tool_tip import Tooltip
 from pathlib import Path
 import os
 from concurrent import futures
 from fnmatch import fnmatch
-from utils.error_handler import handle_errors
 import re
 import json
 import csv
+from utils.tool_tip import Tooltip
+from utils.error_handler import handle_errors
+from analyze_frames.data_io import DataLoader
 
 class loadImagePanel:
     @handle_errors("loadImagePanel.__init__")
@@ -86,7 +87,6 @@ class loadImagePanel:
         self.context.image_folder = self.folderPath
         self.context.sample_name = self.folderPath.name
 
-
         # Collect image files
         image_extensions = ['*.jpg', '*.png', '*.tif', '*.tiff']
 
@@ -119,71 +119,9 @@ class loadImagePanel:
         if annotate_panel:
             annotate_panel.display_image()
 
-        # Load config, annotations, results
-        self.try_load_config()
-        self.try_load_annotations()
-        self.try_load_results()
-
-
-    def try_load_config(self):
-        config_candidates = list(self.folderPath.rglob("*config.json"))
-        if config_candidates:
-            config_path = config_candidates[0]
-            config = self.context.config_manager.load_config(str(config_path))
-            if config:
-                self.context.config_manager.apply_config(config, self.context)
-                self.context.safe_status_update(f"Config loaded from: {config_path}", level="success")
-            else:
-                self.context.safe_status_update("Config file found but failed to load.", level="error")
-        else:
-            self.context.safe_status_update("No config file found in folder.", level="warning")
-
-
-    def try_load_annotations(self):
-        annotation_candidates = list(self.folderPath.rglob("*annotations.json"))
-        if annotation_candidates:
-            annotation_file = annotation_candidates[0]
-            try:
-                with open(annotation_file, "r", encoding="utf-8") as f:
-                    annotations = json.load(f)
-                self.context.loaded_annotations = annotations
-
-                annotate_panel = self.context.get_panel("image")
-                if annotate_panel:
-                    annotate_panel.load_annotations(annotations)
-
-                self.context.safe_status_update(f"Loaded annotations from: {annotation_file}", level="success")
-            except Exception as e:
-                self.context.safe_status_update(f"Failed to load annotations: {e}", level="error")
-        else:
-            self.context.safe_status_update("No annotations file found in folder.", level="warning")
-
-
-    def try_load_results(self):
-        results_candidates = list(self.folderPath.rglob("*results.csv"))
-        if results_candidates:
-            results_file = results_candidates[0]
-            try:
-                with open(results_file, "r", encoding="utf-8") as f:
-                    reader = csv.reader(f)
-                    rows = list(reader)
-
-                if not rows:
-                    self.context.status_bar.update("Results file is empty.", level="warning")
-                    return
-
-                headers = rows[0]
-                data = rows[1:]
-
-                results_panel = self.context.get_panel("results")
-                if results_panel:
-                    results_panel.sheet.headers(headers)
-                    results_panel.sheet.set_sheet_data(data)
-                    results_panel.sheet.refresh()
-                    results_panel._set_column_widths()
-                    self.context.status_bar.update(f"Results loaded from: {results_file}", level="success")
-            except Exception as e:
-                self.context.status_bar.update(f"Failed to load results: {e}", level="error")
-        else:
-            self.context.status_bar.update("No results file found in folder.", level="warning")
+        # Load config, annotations, results using DataLoader
+        loader = DataLoader(self.folderPath, self.context)
+        loader.load_config()
+        loader.load_annotations()
+        loader.load_results()
 
