@@ -1,0 +1,88 @@
+
+================================================================================
+🕒 Timestamp: 2025-09-26 14:07:00
+🔧 Function: addContent
+📌 Message: carl_quant.addContent
+🧩 Args: <MainGui.MainGui object at 0x000001D784947A00>, <tkinter.ttk.Frame object .!notebook.!frame3>
+🧩 Kwargs: 
+--------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\utils\error_handler.py", line 108, in wrapper
+    return func(*args, **kwargs)
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\carl_quant.py", line 36, in addContent
+    command=self.selectFolder,
+AttributeError: 'MainGui' object has no attribute 'selectFolder'
+
+================================================================================
+
+================================================================================
+🕒 Timestamp: 2025-09-26 14:24:34
+🔧 Function: __init__
+📌 Message: settingsPanel.__init__
+🧩 Args: <carlquant_frames.settings_panel.settingsPanel object at 0x000001D7862244F0>, <utils.app_context.AppContext object at 0x000001D7860ADD30>
+🧩 Kwargs: 
+--------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\utils\error_handler.py", line 108, in wrapper
+    return func(*args, **kwargs)
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\carlquant_frames\settings_panel.py", line 27, in __init__
+    self.checkA = ttk.Checkbutton(self.frame, text="Enable Feature A", variable=self.optionA)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 5206, in __init__
+    ttkstyle = Bootstyle.update_ttk_widget_style(
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 5296, in update_ttk_widget_style
+    builder_method(builder, widget_color)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 4290, in create_checkbutton_style
+    images = self.create_checkbutton_assets(colorname)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 4358, in create_checkbutton_assets
+    winsys = self.style.tk.call("tk", "windowingsystem")
+_tkinter.TclError: can't invoke "tk" command: application has been destroyed
+
+================================================================================
+
+================================================================================
+🕒 Timestamp: 2025-09-26 14:26:34
+🔧 Function: __init__
+📌 Message: settingsPanel.__init__
+🧩 Args: <carlquant_frames.settings_panel.settingsPanel object at 0x000001D786308BE0>, <utils.app_context.AppContext object at 0x000001D7861D6E20>
+🧩 Kwargs: 
+--------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\utils\error_handler.py", line 108, in wrapper
+    return func(*args, **kwargs)
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\carlquant_frames\settings_panel.py", line 27, in __init__
+    self.checkA = ttk.Checkbutton(self.frame, text="Enable Feature A", variable=self.optionA)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 5206, in __init__
+    ttkstyle = Bootstyle.update_ttk_widget_style(
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 5296, in update_ttk_widget_style
+    builder_method(builder, widget_color)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 4290, in create_checkbutton_style
+    images = self.create_checkbutton_assets(colorname)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 4358, in create_checkbutton_assets
+    winsys = self.style.tk.call("tk", "windowingsystem")
+_tkinter.TclError: can't invoke "tk" command: application has been destroyed
+
+================================================================================
+
+================================================================================
+🕒 Timestamp: 2025-09-26 14:27:03
+🔧 Function: __init__
+📌 Message: settingsPanel.__init__
+🧩 Args: <carlquant_frames.settings_panel.settingsPanel object at 0x000001D787355370>, <utils.app_context.AppContext object at 0x000001D7860AD550>
+🧩 Kwargs: 
+--------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\utils\error_handler.py", line 108, in wrapper
+    return func(*args, **kwargs)
+  File "\\medizin.uni-leipzig.de\data\workgroup\ZM2-MF\01_Labor\07_Software\06_Development_python\OCT_Dev\OCTexVIEW\carlquant_frames\settings_panel.py", line 27, in __init__
+    self.checkA = ttk.Checkbutton(self.frame, text="Enable Feature A", variable=self.optionA)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 5206, in __init__
+    ttkstyle = Bootstyle.update_ttk_widget_style(
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 5296, in update_ttk_widget_style
+    builder_method(builder, widget_color)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 4290, in create_checkbutton_style
+    images = self.create_checkbutton_assets(colorname)
+  File "C:\Users\meissnerto\.conda\envs\octDev\lib\site-packages\ttkbootstrap\style.py", line 4358, in create_checkbutton_assets
+    winsys = self.style.tk.call("tk", "windowingsystem")
+_tkinter.TclError: can't invoke "tk" command: application has been destroyed
+
+================================================================================
