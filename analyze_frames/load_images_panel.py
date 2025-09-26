@@ -76,33 +76,22 @@ class loadImagePanel:
     def getImagePaths(self):
         global dir
 
-        # Ask user to select folder
         selected_folder = filedialog.askdirectory(
             initialdir=dir,
             title='Select the Folder Containing Your OCT Images!'
         )
         if not selected_folder:
             self.context.status_bar.update("No folder selected.", level="warning")
-
             return
 
         self.folderPath = Path(selected_folder)
         self.context.image_folder = self.folderPath
+        self.context.sample_name = self.folderPath.name
 
-        config_path = self.folderPath / "config.json"
-        if config_path.exists():
-            config = self.context.config_manager.load_config(str(config_path))
-            if config:
-                self.context.config_manager.apply_config(config, self.context)
-                self.context.safe_status_update(f"Config loaded from: {config_path}", level="success")
-
-            else:
-                self.context.safe_status_update("Config file found but failed to load.", level="error")
-        else:
-            self.context.safe_status_update("No config file found in folder.", level="warning")
 
         # Collect image files
         image_extensions = ['*.jpg', '*.png', '*.tif', '*.tiff']
+
         def natural_key(path):
             return [int(text) if text.isdigit() else text.lower()
                     for text in re.split(r'(\d+)', path.name)]
@@ -132,36 +121,51 @@ class loadImagePanel:
         if annotate_panel:
             annotate_panel.display_image()
 
-            # Try to load annotations
-            annotation_file = self.folderPath / "annotations" / "annotations.json"
-            if annotation_file.exists():
-                try:
-                    with open(annotation_file, "r", encoding="utf-8") as f:
-                        annotations = json.load(f)
-                    self.context.loaded_annotations = annotations
-                    annotate_panel.load_annotations(annotations)
-                    self.context.safe_status_update(f"Loaded annotations from: {annotation_file}", level="success")
-                except Exception as e:
-                    self.context.safe_status_update(f"Failed to load annotations: {e}", level="error")
+        # Load config, annotations, results
+        self.try_load_config()
+        self.try_load_annotations()
+        self.try_load_results()
+
+
+    def try_load_config(self):
+        config_candidates = list(self.folderPath.rglob("*config.json"))
+        if config_candidates:
+            config_path = config_candidates[0]
+            config = self.context.config_manager.load_config(str(config_path))
+            if config:
+                self.context.config_manager.apply_config(config, self.context)
+                self.context.safe_status_update(f"Config loaded from: {config_path}", level="success")
             else:
-                self.context.status_bar.update("No annotations found in folder.", level="warning")
-            self.try_load_results()
+                self.context.safe_status_update("Config file found but failed to load.", level="error")
+        else:
+            self.context.safe_status_update("No config file found in folder.", level="warning")
 
 
 
     def try_load_annotations(self):
-        annotation_file = self.folderPath / "annotations" / "annotations.json"
-        if annotation_file.exists():
-            with open(annotation_file, "r", encoding="utf-8") as f:
-                annotations = json.load(f)
-            self.context.loaded_annotations = annotations
-            self.context.safe_status_update(f"Loaded annotations from: {annotation_file}", level="success")
+        annotation_candidates = list(self.folderPath.rglob("*annotations.json"))
+        if annotation_candidates:
+            annotation_file = annotation_candidates[0]
+            try:
+                with open(annotation_file, "r", encoding="utf-8") as f:
+                    annotations = json.load(f)
+                self.context.loaded_annotations = annotations
+
+                annotate_panel = self.context.get_panel("image")
+                if annotate_panel:
+                    annotate_panel.load_annotations(annotations)
+
+                self.context.safe_status_update(f"Loaded annotations from: {annotation_file}", level="success")
+            except Exception as e:
+                self.context.safe_status_update(f"Failed to load annotations: {e}", level="error")
         else:
-            self.context.safe_status_update("No annotations found in folder.", level="warning")
+            self.context.safe_status_update("No annotations file found in folder.", level="warning")
+
 
     def try_load_results(self):
-        results_file = self.folderPath / "results" / "measurements.csv"
-        if results_file.exists():
+        results_candidates = list(self.folderPath.rglob("*results.csv"))
+        if results_candidates:
+            results_file = results_candidates[0]
             try:
                 with open(results_file, "r", encoding="utf-8") as f:
                     reader = csv.reader(f)
@@ -185,3 +189,4 @@ class loadImagePanel:
                 self.context.status_bar.update(f"Failed to load results: {e}", level="error")
         else:
             self.context.status_bar.update("No results file found in folder.", level="warning")
+
