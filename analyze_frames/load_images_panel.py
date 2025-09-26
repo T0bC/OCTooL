@@ -56,13 +56,14 @@ class loadImagePanel:
     @handle_errors("loadImagePanel loadConfig failed.")
     def loadConfigToTable(self):
         config = self.config_manager.load_config()
-        if config:
+        if config and self.context:
+            results_panel = self.context.get_panel("results")
+            if results_panel:
+                results_panel.reset_table()
+            self.config_manager.apply_config(config, self.context)
+        else:
+            messagebox.showerror("Error", "Missing panel references in context")
 
-            if all([config, self.context]):
-                self.config_manager.apply_config(config, self.context)
-
-            else:
-                messagebox.showerror("Error", "Missing panel references in context")
 
     # %% Threaded Image Picker
     def globalPickerThread(self):
