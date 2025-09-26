@@ -12,6 +12,7 @@ from tkinter import ttk
 from ttkbootstrap import Style
 import exportTab
 import analyzingTab
+import carl_quant
 from utils.app_context import AppContext
 from utils.status_bar import StatusBar
 
@@ -84,12 +85,10 @@ class MainGui:
         self.mainWin.deiconify()
 
 
-# =============================================================================
-#         # %% Carl Quant
-#         self.carlQuantFrame = ttk.Frame(self.tabParent)
-#         self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
-#         carl_quant.addContent(self, self.carlQuantFrame)
-# =============================================================================
+        # %% Carl Quant
+        self.carlQuantFrame = ttk.Frame(self.tabParent)
+        self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
+        carl_quant.addContent(self, self.carlQuantFrame)
 
 
     def start(self):
