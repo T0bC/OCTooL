@@ -83,6 +83,18 @@ class MainGui:
         self.mainWin.update_idletasks()  # Ensure layout is processed
         self.mainWin.deiconify()
 
+<<<<<<< Updated upstream
+=======
+# =============================================================================
+#         # %% Carl Quant
+#         self.carlQuantFrame = ttk.Frame(self.tabParent)
+#         self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
+#         carl_quant.addContent(self, self.carlQuantFrame)
+# =============================================================================
+
+
+
+>>>>>>> Stashed changes
     def start(self):
         self.mainWin.mainloop() #start monitoring and updating the GUI
 
