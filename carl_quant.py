@@ -18,13 +18,21 @@ def addContent(self, frame):
     self.carlQuantFrame = frame
     self.context.root = self.carlQuantFrame
 
-    # Layout configuration
+# Layout configuration
+
+    # Column 0 → Controls container (holds Load Data + Settings)
     self.carlQuantFrame.columnconfigure(0, minsize=50, weight=0)
+    # Column 1 → Left pane of PanedWindow (Specimen table)
     self.carlQuantFrame.columnconfigure(1, weight=1, minsize=400)
+    # Column 2 → Right pane of PanedWindow (Results table)
     self.carlQuantFrame.columnconfigure(2, weight=1, minsize=400)
+    # Row 0 → Top row (Controls container + PanedWindow with Specimen + Results)
     self.carlQuantFrame.rowconfigure(0, weight=0)
+    # Row 1 → Middle row (Data Viewer frame spanning all columns)
     self.carlQuantFrame.rowconfigure(1, weight=1)
+    # Row 2 → Bottom row (Status bar, if present)
     self.carlQuantFrame.rowconfigure(2, weight=0)
+
 
     # Controls container
     self.controlsContainer = ttk.Frame(self.carlQuantFrame)
