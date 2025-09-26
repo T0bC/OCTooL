@@ -80,28 +80,29 @@ class resultsPanel:
             fg=font_color
         )
 
-
-    def save_measurements(self):
-        image_folder = getattr(self.context, "image_folder", None)
-        if not image_folder or not isinstance(image_folder, Path):
-            self.context.status_bar.update("Image folder not set. Cannot save measurements.", level="warning")
-            return
-
-        results_folder = image_folder / "results"
-        results_folder.mkdir(exist_ok=True)
-        csv_path = results_folder / "measurements.csv"
-
-        headers = self.sheet.headers()
-        data = self.sheet.get_sheet_data()
-
-        try:
-            with open(csv_path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(headers)
-                writer.writerows(data)
-            self.context.status_bar.update(f"Measurements saved to: {csv_path}", level="success")
-        except Exception as e:
-            self.context.status_bar.update(f"Failed to save measurements: {e}", level="error")
+# =============================================================================
+#     def save_measurements(self):
+#         image_folder = getattr(self.context, "image_folder", None)
+#         if not image_folder or not isinstance(image_folder, Path):
+#             self.context.status_bar.update("Image folder not set. Cannot save measurements.", level="warning")
+#             return
+#
+#         results_folder = image_folder / "results"
+#         results_folder.mkdir(exist_ok=True)
+#         csv_path = results_folder / "measurements.csv"
+#
+#         headers = self.sheet.headers()
+#         data = self.sheet.get_sheet_data()
+#
+#         try:
+#             with open(csv_path, "w", newline="", encoding="utf-8") as f:
+#                 writer = csv.writer(f)
+#                 writer.writerow(headers)
+#                 writer.writerows(data)
+#             self.context.status_bar.update(f"Measurements saved to: {csv_path}", level="success")
+#         except Exception as e:
+#             self.context.status_bar.update(f"Failed to save measurements: {e}", level="error")
+# =============================================================================
 
 
 
