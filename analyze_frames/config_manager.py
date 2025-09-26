@@ -66,55 +66,6 @@ class ConfigManager:
         return config
 
 
-# =============================================================================
-#     @handle_errors("ConfigManager.save_config")
-#     def save_config(self, metadata_panel, results_panel, add_columns_panel, context):
-#         config = self.default_config.copy()
-#
-#         # Metadata
-#         config["metadata"] = {
-#             "operator": metadata_panel.operatorEntry.get(),
-#             "measurement": metadata_panel.measurementEntry.get(),
-#             "system": metadata_panel.systemEntry.get()
-#         }
-#
-#         # Dynamic Columns
-#         config["columns"]["dynamic_columns"] = []
-#         for i, (col_name, color) in enumerate(results_panel.dynamic_col_specs):
-#             keybinding = getattr(add_columns_panel, 'column_keybindings', {}).get(col_name, "")
-#             data_type = getattr(add_columns_panel, 'column_data_types', {}).get(col_name, "")
-#             position_after = results_panel.dynamic_col_specs[i - 1][0] if i > 0 else "SLICE"
-#
-#             config["columns"]["dynamic_columns"].append({
-#                 "name": col_name,
-#                 "keybinding": keybinding,
-#                 "position_after": position_after,
-#                 "order": i,
-#                 "data_type": data_type,
-#                 "color": color
-#             })
-#
-#         config["config_info"]["created_date"] = datetime.now().isoformat()
-#
-#         filename = filedialog.asksaveasfilename(
-#             title="Save Configuration",
-#             defaultextension=".json",
-#             filetypes=[("JSON files", "*.json")],
-#             initialfile="oct_analysis_config.json"
-#         )
-#
-#         if filename:
-#             try:
-#                 with open(filename, 'w', encoding='utf-8') as f:
-#                     json.dump(config, f, indent=2, ensure_ascii=False)
-#                 context.status_bar.update(f"Config saved to: {filename}", level="success")
-#                 messagebox.showinfo("Success", f"Configuration saved to:\n{filename}")
-#                 return True
-#             except Exception as e:
-#                 messagebox.showerror("Error", f"Failed to save configuration:\n{str(e)}")
-#         return False
-# =============================================================================
-
     @handle_errors("ConfigManager.save_config_to_folder")
     def save_config_to_folder(self, folder_path, metadata_panel, results_panel, add_columns_panel, context):
         config = self.build_config(metadata_panel, results_panel, add_columns_panel)
@@ -141,7 +92,7 @@ class ConfigManager:
                 with open(filename, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                 if self.validate_config(config):
-                    self.active_config = config  # ✅ Only assign if config is valid
+                    self.active_config = config
                     return config
                 else:
                     return None
