@@ -18,47 +18,57 @@ def addContent(self, frame):
     self.carlQuantFrame = frame
     self.context.root = self.carlQuantFrame
 
-    # Columns: controls (0), tables (1 & 2)
+    # Layout configuration
     self.carlQuantFrame.columnconfigure(0, minsize=50, weight=0)
     self.carlQuantFrame.columnconfigure(1, weight=1, minsize=400)
     self.carlQuantFrame.columnconfigure(2, weight=1, minsize=400)
-
-    # Rows: top (tables), bottom (viewer), status
     self.carlQuantFrame.rowconfigure(0, weight=0)
     self.carlQuantFrame.rowconfigure(1, weight=1)
     self.carlQuantFrame.rowconfigure(2, weight=0)
 
-    # Controls
+    # Controls container
     self.controlsContainer = ttk.Frame(self.carlQuantFrame)
     self.controlsContainer.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
 
+    # Load Frame
     self.loadFrame = ttk.LabelFrame(self.controlsContainer, text='Load Data', relief=tk.RIDGE)
     self.loadFrame.pack(fill="x", pady=(0, 2))
     self.context.register_frame("carl_load", self.loadFrame)
-    loadImage(self.context)
 
+    # Settings Frame
     self.settingsFrame = ttk.LabelFrame(self.controlsContainer, text='Settings', relief=tk.RIDGE)
     self.settingsFrame.pack(fill="x", pady=(0, 2))
     self.context.register_frame("carl_settings", self.settingsFrame)
-    settingsPanel(self.context)
 
-    # Specimen Table
+    # Specimen Frame
     self.specimenFrame = ttk.LabelFrame(self.carlQuantFrame, text='Specimen', relief=tk.RIDGE)
     self.specimenFrame.grid(row=0, column=1, sticky="nsew", padx=(10, 5), pady=5)
     self.context.register_frame("carl_specimen", self.specimenFrame)
-    specimenPanel(self.context)
 
-    # Results Table
+    # Results Frame
     self.resultsFrame = ttk.LabelFrame(self.carlQuantFrame, text='Results', relief=tk.RIDGE)
     self.resultsFrame.grid(row=0, column=2, sticky="nsew", padx=(5, 10), pady=5)
     self.context.register_frame("carl_results", self.resultsFrame)
-    resultsPanel(self.context)
 
-    # Viewer
+    # Viewer Frame
     self.viewerFrame = ttk.LabelFrame(self.carlQuantFrame, text='Data Viewer', relief=tk.RIDGE)
     self.viewerFrame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("carl_viewer", self.viewerFrame)
 
     # Status bar
     self.attach_status_bar(self.context)
+
+    # Instantiate and register panels
+    self.loadPanel = loadImage(self.context)
+    self.context.register_panel("carl_load", self.loadPanel)
+
+    self.settingsPanel = settingsPanel(self.context)
+    self.context.register_panel("carl_settings", self.settingsPanel)
+
+    self.specimenPanel = specimenPanel(self.context)
+    self.context.register_panel("carl_specimen", self.specimenPanel)
+
+    self.resultsPanel = resultsPanel(self.context)
+    self.context.register_panel("carl_results", self.resultsPanel)
+
 
