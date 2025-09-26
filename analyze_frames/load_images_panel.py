@@ -5,14 +5,12 @@ Created on Thu Aug 14 09:54:49 2025
 @author: meissnerto
 """
 
-import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from utils.tool_tip import Tooltip
 from pathlib import Path
 import os
 from concurrent import futures
 from fnmatch import fnmatch
-from utils import oct_functions as octF
 from utils.error_handler import handle_errors
 import re
 import json
