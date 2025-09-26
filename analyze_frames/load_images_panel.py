@@ -141,7 +141,6 @@ class loadImagePanel:
             self.context.safe_status_update("No config file found in folder.", level="warning")
 
 
-
     def try_load_annotations(self):
         annotation_candidates = list(self.folderPath.rglob("*annotations.json"))
         if annotation_candidates:
