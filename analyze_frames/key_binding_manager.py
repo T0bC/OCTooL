@@ -88,7 +88,6 @@ class KeybindingManager:
      # %% Save Measurements, Annotations and Config
     def save_measurements_threaded(self):
 
-
         results_panel = self.annotate_panel.context.get_panel("results")
         if results_panel:
             executor = ThreadPoolExecutor(max_workers=1)
