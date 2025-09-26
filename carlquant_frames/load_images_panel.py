@@ -6,8 +6,14 @@ Created on Fri Sep 26 14:16:49 2025
 """
 
 from tkinter import ttk, filedialog
+from pathlib import Path
+from fnmatch import fnmatch
+import os
+import re
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
+from carlquant_frames.data_io import DataLoader
+
 
 class loadImagePanel:
     @handle_errors("loadImagePanel.__init__")
@@ -44,10 +50,27 @@ class loadImagePanel:
     @handle_errors("loadImagePanel.selectFolder")
     def selectFolder(self):
         folder_path = filedialog.askdirectory(title="Select CarlQuant Data Folder")
-        if folder_path:
-            self.context.path_to_carlquant_data = folder_path
-            print(f"Selected CarlQuant folder: {folder_path}")
-            # Future: trigger parsing or validation logic here
+        if not folder_path:
+            self.context.status_bar.update("No folder selected.", level="warning")
+            return
+
+        root = Path(folder_path)
+        self.context.path_to_carlquant_data = root
+        self.context.specimen_data = DataLoader.find_image_stacks(root)
+
+        specimen_panel = self.context.get_panel("carl_specimen")
+        rows = []
+        for specimen_id, specimen in self.context.specimen_data.items():
+            rows.append([
+                specimen.specimen_id,
+                specimen.slices,
+                specimen.regions,
+                specimen.status
+            ])
+        specimen_panel.sheet.set_sheet_data(rows)
+        self.context.status_bar.update(f"Found {len(rows)} specimen(s).", level="info")
+
+
 
     @handle_errors("loadImagePanel.startAnalyzing")
     def startAnalyzing(self):
