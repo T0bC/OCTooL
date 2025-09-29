@@ -18,8 +18,7 @@ def addContent(self, frame):
     self.carlQuantFrame = frame
     self.context.root = self.carlQuantFrame
 
-# Layout configuration
-
+    # Layout configuration
     # Column 0 → Controls container (holds Load Data + Settings)
     self.carlQuantFrame.columnconfigure(0, minsize=50, weight=0)
     # Column 1 → Left pane of PanedWindow (Specimen table)
