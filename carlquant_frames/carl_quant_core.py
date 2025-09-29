@@ -14,6 +14,21 @@ import random
 def run_carl_quant(context):
     def worker():
         for specimen_id, specimen in context.specimen_data.items():
+
+            # user choice to reanalyze a specemin
+            choice = getattr(specimen, "analysis_choice", "new")
+            if choice == "skip":
+                context.status_bar.update(f"Skipped specimen {specimen_id} (user choice)", level="info")
+                continue
+            elif choice == "overwrite":
+                specimen.measurement = context.analysis_metadata.get("measurement", 1)
+            elif choice == "new":
+                # You could auto-increment or prompt again, but for now:
+                specimen.measurement = context.analysis_metadata.get("measurement", 1)
+
+            specimen.operator = context.analysis_metadata.get("operator", "OP")
+
+            # Proceed with slice processing
             for slice_index in range(specimen.slices):
                 sleep(0.5)
 
