@@ -32,6 +32,8 @@ class DataLoader:
                     if f.is_file() and any(fnmatch(f.name.lower(), ext) for ext in IMAGE_EXTENSIONS)
                 ], key=natural_key)
 
+                data_folders = [f for f in subdir.iterdir() if f.is_dir() and f.name.startswith("Data_")]
+
                 if image_files:
                     specimen_id = subdir.name
                     specimen_data[specimen_id] = Specimen(
@@ -41,9 +43,9 @@ class DataLoader:
                         slices=len(image_files),
                         regions="",
                         status="new",
-                        date=subdir.stat().st_mtime
+                        date=subdir.stat().st_mtime,
+                        previous_runs=data_folders
                     )
-
         return specimen_data
 
 
