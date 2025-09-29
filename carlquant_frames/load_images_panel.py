@@ -196,7 +196,7 @@ class loadImagePanel:
             self.specimen_choices[specimen.specimen_id] = choice_var
 
             ttk.Combobox(popup, textvariable=choice_var, state="readonly",
-                         values=["overwrite", "new", "skip"], width=10).grid(row=i, column=2, padx=5)
+                         values=["overwrite", "skip"], width=10).grid(row=i, column=2, padx=5)
 
         def submit():
             for specimen in specimens_with_prior_runs:
