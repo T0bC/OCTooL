@@ -74,7 +74,6 @@ class loadImagePanel:
         self.context.status_bar.update(f"Found {len(rows)} specimen(s).", level="info")
 
 
-
     @handle_errors("loadImagePanel.startAnalyzing")
     def startAnalyzing(self):
         print("Start Analyzing triggered")
