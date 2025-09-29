@@ -48,4 +48,6 @@ class Specimen:
     status: str
     date: float
     results: Dict[int, SliceResult] = field(default_factory=dict)
+    previous_runs: List[Path] = field(default_factory=list)
+
 
