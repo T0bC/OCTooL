@@ -5,7 +5,6 @@ Created on Fri Sep 26 14:49:04 2025
 @author: meissnerto
 """
 
-import tkinter as tk
 from tksheet import Sheet
 from utils.error_handler import handle_errors
 
