@@ -5,15 +5,18 @@ Created on Mon Sep 29 15:46:17 2025
 @author: meissnerto
 """
 
+import tkinter as tk
+from tkinter import ttk
+from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 
-class image_vewer_panel:
-    @handle_errors("error in image_vewer_panel")
+class image_viewer_panel:
+    @handle_errors("error in image_viewer_panel")
     def __init__(self, context):
         self.context = context
         self.root = context.root
-        self.frame = context.get_frame("image")
-        self.loadFrame = context.get_frame("load")
+        self.frame = context.get_frame("carl_image")
+        self.loadFrame = context.get_frame("carl_load")
 
         self.window = self.frame.winfo_toplevel()
 

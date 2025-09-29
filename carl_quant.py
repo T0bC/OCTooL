@@ -12,6 +12,7 @@ from carlquant_frames.load_images_panel import loadImagePanel as loadImage
 from carlquant_frames.settings_panel import settingsPanel as settingsPanel
 from carlquant_frames.specimen_panel import specimenPanel as specimenPanel
 from carlquant_frames.results_panel import resultsPanel as resultsPanel
+from carlquant_frames.image_viewer_panel import image_viewer_panel as imagePanel
 
 @handle_errors("carl_quant.addContent")
 def addContent(self, frame):
@@ -62,7 +63,7 @@ def addContent(self, frame):
     self.tablePane.add(self.resultsFrame)
 
     # Viewer Frame
-    self.viewerFrame = ttk.LabelFrame(self.carlQuantFrame, text='Data Viewer', relief=tk.RIDGE)
+    self.viewerFrame = ttk.LabelFrame(self.carlQuantFrame, text='Image Viewer', relief=tk.RIDGE)
     self.viewerFrame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("carl_viewer", self.viewerFrame)
 
@@ -81,5 +82,8 @@ def addContent(self, frame):
 
     self.resultsPanel = resultsPanel(self.context)
     self.context.register_panel("carl_results", self.resultsPanel)
+
+    self.imagePanel = imagePanel(self.context)
+    self.context.register_panel("carl_image", self.imagePanel)
 
 
