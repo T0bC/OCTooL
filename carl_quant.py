@@ -65,7 +65,7 @@ def addContent(self, frame):
     # Viewer Frame
     self.viewerFrame = ttk.LabelFrame(self.carlQuantFrame, text='Image Viewer', relief=tk.RIDGE)
     self.viewerFrame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
-    self.context.register_frame("carl_viewer", self.viewerFrame)
+    self.context.register_frame("carl_image", self.viewerFrame)
 
     # Status bar
     self.attach_status_bar(self.context)
