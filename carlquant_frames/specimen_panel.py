@@ -8,12 +8,19 @@ Created on Fri Sep 26 14:49:04 2025
 from tksheet import Sheet
 from utils.error_handler import handle_errors
 
+STATIC_BG_COLOR = "#2b2b2b"
+STATIC_FG_COLOR = "#dcdcdc"
+HEADER_BG_COLOR = "#3c3c3c"
+HEADER_FG_COLOR = "#ffffff"
+GRID_COLOR = "#444444"
+
 class specimenPanel:
     @handle_errors("specimenPanel.__init__")
     def __init__(self, context):
         self.context = context
         self.root = context.root
         self.frame = context.get_frame("carl_specimen")
+        self.last_selected_row = None
 
         self.headers = ['SPECIMEN_ID', 'SLICES', 'REGIONS', 'STATE']
         self._setup_sheet()
@@ -30,6 +37,20 @@ class specimenPanel:
             width=400,
             height=180
         )
+
+        self.sheet.set_options(
+            table_bg=STATIC_BG_COLOR,
+            table_fg=STATIC_FG_COLOR,
+            header_bg=HEADER_BG_COLOR,
+            header_fg=HEADER_FG_COLOR,
+            index_bg=HEADER_BG_COLOR,
+            index_fg=HEADER_FG_COLOR,
+            grid_color=GRID_COLOR,
+            outline_color="#666666",
+            selected_rows_bg="#44475a",
+            selected_rows_fg="#ffffff"
+        )
+
         self.sheet.enable_bindings("copy", "delete", "single_select")
         self.sheet.enable_bindings("single_select", "cell_select")
         self.sheet.extra_bindings("cell_select", func=self.on_row_selected)
@@ -44,22 +65,47 @@ class specimenPanel:
         specimen_data = self.context.specimen_data.get(specimen_id)
 
         if specimen_data:
-            # Set current specimen in context
             self.context.current_specimen_id = specimen_id
 
-            # Trigger image display in viewer panel
             viewer_panel = self.context.get_panel("carl_image")
-            viewer_panel.display_image(0)  # Show first slice
+            viewer_panel.display_image(0)
 
-            # Trigger results loading
             results_panel = self.context.get_panel("carl_results")
             results_panel.load_results_for(specimen_id)
 
-            # Update status
             specimen_data.status = "displayed"
             self.sheet.set_cell_data(row_index, 3, "displayed")
 
-            # Highlight selected row
-            self.sheet.highlight_rows(rows="all", bg="white", fg="black", redraw=False)
-            self.sheet.highlight_rows(rows=[row_index], bg="#ffd966", fg="black", redraw=True)
+            # Clear previous highlight
+            if self.last_selected_row is not None:
+                self.sheet.highlight_rows(
+                    rows=[self.last_selected_row],
+                    bg="#2b2b2b",
+                    fg="#dcdcdc",
+                    redraw=False
+                )
 
+            # Apply new highlight
+            highlight_bg = "#ffd966"
+            highlight_fg = self.choose_font_color(highlight_bg)
+            self.sheet.highlight_rows(rows=[row_index], bg=highlight_bg, fg=highlight_fg, redraw=True)
+
+            # Update tracker
+            self.last_selected_row = row_index
+
+
+
+
+    def get_luminance(self, hex_color: str) -> float:
+        hex_color = hex_color.lstrip("#")
+        r, g, b = [int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4)]
+
+        def adjust(c):
+            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+        r, g, b = adjust(r), adjust(g), adjust(b)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    def choose_font_color(self, bg_color: str) -> str:
+        luminance = self.get_luminance(bg_color)
+        return "#FFFFFF" if luminance < 0.5 else "#000000"
