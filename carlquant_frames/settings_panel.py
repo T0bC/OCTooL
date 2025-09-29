@@ -43,31 +43,21 @@ class settingsPanel:
         self.regionDropdown.bind("<<ComboboxSelected>>", update_region_config)
 
 
-        # Dummy Dropdown
-        self.dropdownLabel = ttk.Label(self.frame, text="Select Mode:")
-        self.dropdownLabel.grid(row=2, column=0, sticky="w", pady=(10, 2))
-
-        self.modeVar = tk.StringVar()
-        self.dropdown = ttk.Combobox(self.frame, textvariable=self.modeVar, state="readonly")
-        self.dropdown['values'] = ["Mode 1", "Mode 2", "Mode 3"]
-        self.dropdown.current(0)
-        self.dropdown.grid(row=3, column=0, sticky="ew", pady=2)
+        self.metaLabel = ttk.Label(self.frame, text="Operator and Measurement:")
+        self.metaLabel.grid(row=2, column=0, columnspan=2 , sticky="w", pady=(10, 2))
 
         # Operator Entry
-        self.operatorLabel = ttk.Label(self.frame, text="Operator Initials:")
-        self.operatorLabel.grid(row=4, column=0, sticky="w", pady=(10, 2))
+        self.metaFrame = ttk.Frame(self.frame)
+        self.metaFrame.grid(row=3, column=0, sticky="w", pady=2)
 
         self.operatorVar = tk.StringVar()
-        self.operatorEntry = ttk.Entry(self.frame, textvariable=self.operatorVar)
-        self.operatorEntry.grid(row=5, column=0, sticky="ew", pady=2)
-
-        # Measurement Entry (Integer only)
-        self.measurementLabel = ttk.Label(self.frame, text="Measurement Number:")
-        self.measurementLabel.grid(row=6, column=0, sticky="w", pady=(10, 2))
+        self.operatorEntry = ttk.Entry(self.metaFrame, textvariable=self.operatorVar, width=11)
+        self.operatorEntry.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
         self.measurementVar = tk.StringVar()
-        self.measurementEntry = ttk.Entry(self.frame, textvariable=self.measurementVar)
-        self.measurementEntry.grid(row=7, column=0, sticky="ew", pady=2)
+        self.measurementEntry = ttk.Entry(self.metaFrame, textvariable=self.measurementVar, width=11)
+        self.measurementEntry.grid(row=0, column=1, sticky="ew")
+
 
         # Register metadata in context
         def update_metadata(*args):
