@@ -100,10 +100,36 @@ class loadImagePanel:
             self.prompt_for_metadata()
             return
 
+        specimens_with_prior_runs = [
+            s for s in self.context.specimen_data.values()
+            if s.previous_runs and not hasattr(s, "analysis_choice")
+        ]
+
+        if specimens_with_prior_runs:
+            self.prompt_overwrite_or_new(specimens_with_prior_runs)
+            return
+
         run_carl_quant(self.context)
+
 
     def prompt_for_metadata(self):
         popup = tk.Toplevel(self.root)
+        # set position of the popup to the center of the main UI
+        popup.update_idletasks()
+
+        main_x = self.root.winfo_x()
+        main_y = self.root.winfo_y()
+        main_width = self.root.winfo_width()
+        main_height = self.root.winfo_height()
+
+        popup_width = popup.winfo_width()
+        popup_height = popup.winfo_height()
+
+        pos_x = main_x + (main_width // 2) - (popup_width // 2)
+        pos_y = main_y + (main_height // 2) - (popup_height // 2)
+
+        popup.geometry(f"+{pos_x}+{pos_y}")
+
         popup.title("Enter Analysis Metadata")
         popup.transient(self.root)
         popup.grab_set()
@@ -133,4 +159,53 @@ class loadImagePanel:
             self.startAnalyzing()  # Retry analysis now that metadata is set
 
         ttk.Button(popup, text="Submit", command=submit).grid(row=2, column=0, columnspan=2, pady=10)
+
+    def prompt_overwrite_or_new(self, specimens_with_prior_runs):
+        popup = tk.Toplevel(self.root)
+
+        # set position of the popup to the center of the main UI
+        popup.update_idletasks()
+
+        main_x = self.root.winfo_x()
+        main_y = self.root.winfo_y()
+        main_width = self.root.winfo_width()
+        main_height = self.root.winfo_height()
+
+        popup_width = popup.winfo_width()
+        popup_height = popup.winfo_height()
+
+        pos_x = main_x + (main_width // 2) - (popup_width // 2)
+        pos_y = main_y + (main_height // 2) - (popup_height // 2)
+
+        popup.geometry(f"+{pos_x}+{pos_y}")
+
+        popup.title("Existing Results Detected")
+        popup.transient(self.root)
+        popup.grab_set()
+
+        tk.Label(popup, text="Some specimens already have saved results.\nChoose how to proceed:", font=("Arial", 10, "bold")).grid(row=0, column=0, columnspan=3, pady=10)
+
+        self.specimen_choices = {}
+
+        for i, specimen in enumerate(specimens_with_prior_runs, start=1):
+            tk.Label(popup, text=f"{specimen.specimen_id}").grid(row=i, column=0, sticky="w", padx=10)
+
+            existing = ", ".join([f.name for f in specimen.previous_runs])
+            tk.Label(popup, text=f"Existing: {existing}", wraplength=200).grid(row=i, column=1, sticky="w")
+
+            choice_var = tk.StringVar(value="new")
+            self.specimen_choices[specimen.specimen_id] = choice_var
+
+            ttk.Combobox(popup, textvariable=choice_var, state="readonly",
+                         values=["overwrite", "new", "skip"], width=10).grid(row=i, column=2, padx=5)
+
+        def submit():
+            for specimen in specimens_with_prior_runs:
+                choice = self.specimen_choices[specimen.specimen_id].get()
+                specimen.analysis_choice = choice  # Inject into specimen for later use
+
+            popup.destroy()
+            self.startAnalyzing()  # Retry analysis with updated choices
+
+        ttk.Button(popup, text="Confirm", command=submit).grid(row=len(specimens_with_prior_runs)+1, column=0, columnspan=3, pady=10)
 
