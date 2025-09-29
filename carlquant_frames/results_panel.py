@@ -9,6 +9,7 @@ import tkinter as tk
 from tksheet import Sheet
 from utils.error_handler import handle_errors
 from carlquant_frames.specimen_model import RegionStats, Surface, LesionDepth, SliceResult
+from carlquant_frames.data_io import DataLoader
 
 
 class resultsPanel:
@@ -58,6 +59,9 @@ class resultsPanel:
         if not specimen:
             self.context.status_bar.update(f"Specimen '{specimen_id}' not found.", level="error")
             return
+
+        if not specimen.results:
+            DataLoader.load_results(specimen, self.context.region_config)
 
         if not specimen.results:
             self.context.status_bar.update(f"No results available for '{specimen_id}'.", level="warning")
