@@ -46,6 +46,27 @@ class resultsPanel:
             width=400,
             height=180
         )
+
+        STATIC_BG_COLOR = "#2b2b2b"
+        STATIC_FG_COLOR = "#dcdcdc"
+        HEADER_BG_COLOR = "#3c3c3c"
+        HEADER_FG_COLOR = "#ffffff"
+        GRID_COLOR = "#444444"
+
+        self.sheet.set_options(
+            table_bg=STATIC_BG_COLOR,
+            table_fg=STATIC_FG_COLOR,
+            header_bg=HEADER_BG_COLOR,
+            header_fg=HEADER_FG_COLOR,
+            index_bg=HEADER_BG_COLOR,
+            index_fg=HEADER_FG_COLOR,
+            grid_color=GRID_COLOR,
+            outline_color="#666666",
+            selected_rows_bg="#44475a",
+            selected_rows_fg="#ffffff"
+        )
+
+
         self.sheet.enable_bindings("copy", "delete", "single_select")
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
