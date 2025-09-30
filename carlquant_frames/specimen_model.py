@@ -7,7 +7,7 @@ Created on Fri Sep 26 15:48:56 2025
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 @dataclass
 class RegionStats:
@@ -32,6 +32,27 @@ class LesionDepth:
     se: float
 
 @dataclass
+class RegionConfig:
+    """Configuration for a region (start and end points) for a specific slice."""
+    slice_index: int
+    start_point: Tuple[int, int]  # (x, y)
+    end_point: Tuple[int, int]    # (x, y)
+
+@dataclass
+class AirConfig:
+    """Configuration for AIR threshold area for a specific slice."""
+    slice_index: int
+    point1: Tuple[int, int]       # First diagonal point (x, y)
+    point2: Optional[Tuple[int, int]] = None  # Second diagonal point (x, y) for rectangular selection
+
+@dataclass
+class SpecimenConfig:
+    """Configuration data for a specimen including REGIONS and AIR settings."""
+    specimen_id: str
+    regions: Dict[int, RegionConfig] = field(default_factory=dict)  # slice_index -> RegionConfig
+    air: Dict[int, AirConfig] = field(default_factory=dict)         # slice_index -> AirConfig
+
+@dataclass
 class SliceResult:
     slice_index: int
     region_stats: List[RegionStats]
@@ -49,5 +70,6 @@ class Specimen:
     date: float
     results: Dict[int, SliceResult] = field(default_factory=dict)
     previous_runs: List[Path] = field(default_factory=list)
+    config: Optional[SpecimenConfig] = None  # Configuration for REGIONS and AIR
 
 

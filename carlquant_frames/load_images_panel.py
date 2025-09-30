@@ -64,10 +64,17 @@ class loadImagePanel:
         specimen_panel = self.context.get_panel("carl_specimen")
         rows = []
         for specimen_id, specimen in self.context.specimen_data.items():
+            # Get AIR configuration summary
+            air_summary = ""
+            if specimen.config and specimen.config.air:
+                air_count = len(specimen.config.air)
+                air_summary = f"{air_count} points" if air_count > 0 else ""
+            
             rows.append([
                 specimen.specimen_id,
                 specimen.slices,
                 specimen.regions,
+                air_summary,
                 specimen.status
             ])
         specimen_panel.sheet.set_sheet_data(rows)
