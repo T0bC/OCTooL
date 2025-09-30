@@ -181,7 +181,7 @@ class image_viewer_panel:
         self.canvas.delete("annotation")
 
         if self.annotations_visible:
-            self.draw_annotation()
+            #self.draw_annotation()
             self.draw_overlay_annotations()
 
         else:
@@ -221,7 +221,7 @@ class image_viewer_panel:
         self.image_offset_y = mouse_y - rel_y * self.zoom_level
 
         self.render_zoomed_image()
-        self.draw_annotation()
+        #self.draw_annotation()
 
     # %% Paning
     @handle_errors("imageViewerPanel.start_pan")
@@ -259,7 +259,7 @@ class image_viewer_panel:
         self.image_offset_y = min(max(self.image_offset_y, min_y), 0)
 
         self.render_zoomed_image()
-        self.draw_annotation()
+        #self.draw_annotation()
 
     @handle_errors("imageViewerPanel.end_pan")
     def end_pan(self, event):
