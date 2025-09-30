@@ -56,6 +56,9 @@ class specimenPanel:
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
+        
+        # Set initial column widths
+        self._set_column_widths()
 
     @handle_errors("specimenPanel.on_row_selected")
     def on_row_selected(self, event):
@@ -108,3 +111,31 @@ class specimenPanel:
     def choose_font_color(self, bg_color: str) -> str:
         luminance = self.get_luminance(bg_color)
         return "#FFFFFF" if luminance < 0.5 else "#000000"
+
+    @handle_errors("specimenPanel._set_column_widths")
+    def _set_column_widths(self) -> None:
+        """ Set column widths based on header length. """
+        column_names = self.sheet.headers()
+
+        for i, header in enumerate(column_names):
+            width = self._calculate_column_width(header)
+            self.sheet.column_width(i, width=width)
+
+        self.sheet.refresh()
+
+    def _calculate_column_width(self, header: str) -> int:
+        """
+        Calculate column width based on header length.
+
+        Args:
+            header (str): Column header text.
+
+        Returns:
+            int: Suggested column width.
+        """
+        base_width = 40  # Minimum width
+        char_width = 7   # Approximate width per character
+        padding = 20     # Extra space for clarity
+        max_width = 250
+
+        return min(max(base_width, len(header) * char_width + padding), max_width)
