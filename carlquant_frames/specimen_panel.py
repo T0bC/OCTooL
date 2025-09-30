@@ -22,7 +22,7 @@ class specimenPanel:
         self.frame = context.get_frame("carl_specimen")
         self.last_selected_row = None
 
-        self.headers = ['SPECIMEN_ID', 'SLICES', 'REGIONS', 'STATE']
+        self.headers = ['SPECIMEN_ID', 'SLICES', 'REGIONS', 'AIR', 'STATE']
         self._setup_sheet()
 
     def _setup_sheet(self):
@@ -76,7 +76,7 @@ class specimenPanel:
             results_panel.load_results_for(specimen_id)
 
             specimen_data.status = "displayed"
-            self.sheet.set_cell_data(row_index, 3, "displayed")
+            self.sheet.set_cell_data(row_index, 4, "displayed")
 
             # Clear previous highlight
             if self.last_selected_row is not None:
@@ -96,8 +96,6 @@ class specimenPanel:
             self.last_selected_row = row_index
 
 
-
-
     def get_luminance(self, hex_color: str) -> float:
         hex_color = hex_color.lstrip("#")
         r, g, b = [int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4)]
@@ -112,6 +110,7 @@ class specimenPanel:
         luminance = self.get_luminance(bg_color)
         return "#FFFFFF" if luminance < 0.5 else "#000000"
 
+
     @handle_errors("specimenPanel._set_column_widths")
     def _set_column_widths(self) -> None:
         """ Set column widths based on header length. """
@@ -123,6 +122,8 @@ class specimenPanel:
 
         self.sheet.refresh()
 
+
+    @handle_errors("specimenPanel._calculate_column_width")
     def _calculate_column_width(self, header: str) -> int:
         """
         Calculate column width based on header length.
