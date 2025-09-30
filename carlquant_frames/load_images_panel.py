@@ -71,6 +71,7 @@ class loadImagePanel:
                 specimen.status
             ])
         specimen_panel.sheet.set_sheet_data(rows)
+        specimen_panel._set_column_widths()  # Set column widths after loading data
         self.context.status_bar.update(f"Found {len(rows)} specimen(s).", level="info")
 
 
