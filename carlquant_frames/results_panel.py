@@ -70,6 +70,9 @@ class resultsPanel:
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
+        
+        # Set initial column widths
+        self._set_column_widths()
 
 
     @handle_errors("resultsPanel.load_results_for")
@@ -91,6 +94,7 @@ class resultsPanel:
         # Regenerate headers in case region config changed
         self.headers = self.generate_headers()
         self.sheet.headers(self.headers)
+        self._set_column_widths()  # Set column widths after header change
 
         # Populate results table with summary
         rows = []
@@ -111,6 +115,35 @@ class resultsPanel:
             rows.append(row)
 
         self.sheet.set_sheet_data(rows)
+        self._set_column_widths()  # Set column widths after loading data
         self.context.status_bar.update(f"Loaded {len(rows)} slice results for '{specimen_id}'.", level="info")
+
+    @handle_errors("resultsPanel._set_column_widths")
+    def _set_column_widths(self) -> None:
+        """ Set column widths based on header length. """
+        column_names = self.sheet.headers()
+
+        for i, header in enumerate(column_names):
+            width = self._calculate_column_width(header)
+            self.sheet.column_width(i, width=width)
+
+        self.sheet.refresh()
+
+    def _calculate_column_width(self, header: str) -> int:
+        """
+        Calculate column width based on header length.
+
+        Args:
+            header (str): Column header text.
+
+        Returns:
+            int: Suggested column width.
+        """
+        base_width = 40  # Minimum width
+        char_width = 7   # Approximate width per character
+        padding = 20     # Extra space for clarity
+        max_width = 250
+
+        return min(max(base_width, len(header) * char_width + padding), max_width)
 
 
