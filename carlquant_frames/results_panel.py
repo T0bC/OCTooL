@@ -43,7 +43,6 @@ class resultsPanel:
             show_header=True,
             show_x_scrollbar=True,
             show_y_scrollbar=True,
-            width=400,
             height=180
         )
 
