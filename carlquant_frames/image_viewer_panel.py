@@ -247,7 +247,6 @@ class image_viewer_panel:
             self.context.status_bar.update(f"Error displaying image {img_path}: {e}", level="error")
 
 
-
     @handle_errors("imageViewerPanel.toggle_annotations")
     def toggle_annotations(self, event=None):
         """
@@ -496,6 +495,7 @@ class image_viewer_panel:
     def instructionText(self):
         """
         Display instruction text and logo when no image is loaded.
+        Uses a multi-column layout for better space utilization.
         """
         self.canvas.delete("all")
 
@@ -512,24 +512,96 @@ class image_viewer_panel:
         except Exception as e:
             self.context.status_bar.update(f"Failed to load logo: {e}", level="error")
 
-        header_y = 10
-        text_y_start = 5
-        line_spacing = 20
-        max_line_width = 80
-
-        instructions = [
-            "MISSING"
-
+        # Layout configuration
+        left_col_x = 20
+        right_col_x = self.cwidth // 2 + 20
+        start_y = 100
+        line_spacing = 22
+        header_font = "Sans 12 bold"
+        text_font = "Sans 10"
+        symbol_font = "Sans 14"
+        
+        # === LEFT COLUMN: Region Selection ===
+        y = start_y
+        
+        # Header with visual separator
+        self.canvas.create_text(left_col_x, y, fill="#FFD700", font=header_font,
+                                text="◆ REGION BOUNDARIES", anchor=tk.NW, tags="Text")
+        y += line_spacing + 5
+        
+        # Instructions with symbols
+        instructions_left = [
+            ("🖱️", "Click twice to define vertical boundaries"),
+            ("", "  • First click: Start boundary"),
+            ("", "  • Second click: End boundary"),
+            ("", ""),
+            ("📋", "First region: Applied to ALL slices"),
+            ("✏️", "Subsequent edits: Current slice only"),
+            ("", ""),
+            ("🎨", "Visual: Yellow vertical lines"),
         ]
-
-        y_offset = text_y_start
-        for line in instructions:
-            if line == "":
-                y_offset += line_spacing // 2
+        
+        for symbol, text in instructions_left:
+            if text == "":
+                y += line_spacing // 2
                 continue
-            self.canvas.create_text(10, y_offset, fill="#D0D0D0", font="Sans 11",
-                                    text=line, anchor=tk.NW, tags="Text")
-            y_offset += line_spacing
+            if symbol:
+                self.canvas.create_text(left_col_x, y, fill="#90CAF9", font=symbol_font,
+                                       text=symbol, anchor=tk.NW, tags="Text")
+                self.canvas.create_text(left_col_x + 25, y, fill="#D0D0D0", font=text_font,
+                                       text=text, anchor=tk.NW, tags="Text")
+            else:
+                self.canvas.create_text(left_col_x + 25, y, fill="#B0B0B0", font=text_font,
+                                       text=text, anchor=tk.NW, tags="Text")
+            y += line_spacing
+        
+        # === RIGHT COLUMN: AIR Selection ===
+        y = start_y
+        
+        # Header with visual separator
+        self.canvas.create_text(right_col_x, y, fill="#00E5FF", font=header_font,
+                                text="◆ AIR REGIONS", anchor=tk.NW, tags="Text")
+        y += line_spacing + 5
+        
+        # Instructions with symbols
+        instructions_right = [
+            ("🖱️", "Click and drag to define rectangle"),
+            ("", "  • Drag: Area of Interest Rectangle"),
+            ("", "  • Release: Confirm selection"),
+            ("", ""),
+            ("📋", "First AIR: Applied to ALL slices"),
+            ("✏️", "Subsequent edits: Current slice only"),
+            ("", ""),
+            ("🎨", "Visual: Cyan rectangle"),
+        ]
+        
+        for symbol, text in instructions_right:
+            if text == "":
+                y += line_spacing // 2
+                continue
+            if symbol:
+                self.canvas.create_text(right_col_x, y, fill="#90CAF9", font=symbol_font,
+                                       text=symbol, anchor=tk.NW, tags="Text")
+                self.canvas.create_text(right_col_x + 25, y, fill="#D0D0D0", font=text_font,
+                                       text=text, anchor=tk.NW, tags="Text")
+            else:
+                self.canvas.create_text(right_col_x + 25, y, fill="#B0B0B0", font=text_font,
+                                       text=text, anchor=tk.NW, tags="Text")
+            y += line_spacing
+        
+        # === BOTTOM: Navigation Controls ===
+        bottom_y = self.cheight - 80
+        center_x = self.cwidth // 2
+        
+        self.canvas.create_text(center_x, bottom_y, fill="#A5D6A7", font=header_font,
+                                text="⌨ NAVIGATION", anchor=tk.N, tags="Text")
+        
+        nav_instructions = [
+            "← → Arrow Keys: Navigate slices  |  Mouse Wheel: Navigate slices  |  Ctrl+Wheel: Zoom  |  Ctrl+Drag: Pan  |  H: Toggle overlays"
+        ]
+        
+        self.canvas.create_text(center_x, bottom_y + 25, fill="#C0C0C0", font=text_font,
+                                text=nav_instructions[0], anchor=tk.N, tags="Text")
 
 
     # ============================================================================
@@ -1136,4 +1208,3 @@ class image_viewer_panel:
         specimen = specimen_data[specimen_id]
         current_slice = int(self.scale.get()) - 1  # Convert to 0-based index
         self.draw_air_regions(specimen, current_slice)
-
