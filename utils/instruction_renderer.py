@@ -39,10 +39,12 @@ class InstructionRenderer:
     
     # Font configuration
     FONTS = {
-        'header': 'Sans 12 bold',
-        'text': 'Sans 10',
+        'header': 'Sans 13 bold',
+        'text': 'Sans 11',
         'symbol': 'Sans 14',
-        'small': 'Sans 9',
+        'small': 'Sans 10',
+        'step_title': 'Sans 11 bold',
+        'step_number': 'Sans 10 bold',
     }
     
     def __init__(self, canvas, instructions_file="utils/instructions.json"):
@@ -134,9 +136,9 @@ class InstructionRenderer:
         left_margin = 15
         col1_x = left_margin
         col2_x = canvas_width // 2 + 10
-        start_y = 90
-        line_spacing = 18
-        section_spacing = 12
+        start_y = 50
+        line_spacing = 19
+        section_spacing = 10
         
         # Title
         if 'title' in data:
@@ -152,10 +154,21 @@ class InstructionRenderer:
         if 'workflow_steps' in data:
             for step in data['workflow_steps']:
                 # Step number and title
-                step_text = f"{step.get('number', '')} {step.get('title', '')}"
+                number = step.get('number', '')
+                title = step.get('title', '')
+                
+                # Render styled number with symbol prefix (like Quick Tips style)
+                number_text = f"◉ {number}."
+                
+                # Draw number with symbol
                 self.canvas.create_text(col1_x, y, fill=self.COLORS['symbol'],
-                                       font='Sans 10 bold',
-                                       text=step_text, anchor=tk.NW, tags="Text")
+                                       font=self.FONTS['step_number'],
+                                       text=f"📍 {number_text}", anchor=tk.NW, tags="Text")
+                
+                # Render title text (offset to the right of the circle)
+                self.canvas.create_text(col1_x + 30, y, fill=self.COLORS['text_primary'],
+                                       font=self.FONTS['step_title'],
+                                       text=title, anchor=tk.NW, tags="Text")
                 y += line_spacing
                 
                 # Panel location (in smaller, dimmer text)
