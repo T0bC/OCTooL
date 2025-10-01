@@ -19,6 +19,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
+from utils.instruction_renderer import InstructionRenderer
 from carlquant_frames.data_io import DataSaver
 
 
@@ -495,113 +496,20 @@ class image_viewer_panel:
     def instructionText(self):
         """
         Display instruction text and logo when no image is loaded.
-        Uses a multi-column layout for better space utilization.
+        Delegates rendering to InstructionRenderer for consistency.
         """
-        self.canvas.delete("all")
-
-        self.cwidth = self.canvas.winfo_width()
-        self.cheight = self.canvas.winfo_height()
-
-        # Draw logo in top-right corner
-        try:
-            self.ULPhoto = "icons/WBM_UL_RGB_digital_Path.png"
-            self.ULImage = Image.open(self.ULPhoto)
-            self.ULImage = self.ULImage.resize((217,76), Image.Resampling.LANCZOS)
-            self.ULImage = ImageTk.PhotoImage(self.ULImage)
-            self.canvas.create_image(self.cwidth - 217 // 2 - 7, 45, image=self.ULImage)
-        except Exception as e:
-            self.context.status_bar.update(f"Failed to load logo: {e}", level="error")
-
-        # Layout configuration
-        left_col_x = 20
-        right_col_x = self.cwidth // 2 + 20
-        start_y = 100
-        line_spacing = 22
-        header_font = "Sans 12 bold"
-        text_font = "Sans 10"
-        symbol_font = "Sans 14"
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
         
-        # === LEFT COLUMN: Region Selection ===
-        y = start_y
+        # Load logo
+        logo_image = InstructionRenderer.load_logo("icons/WBM_UL_RGB_digital_Path.png")
+        if logo_image:
+            self.ULImage = logo_image  # Keep reference to prevent garbage collection
         
-        # Header with visual separator
-        self.canvas.create_text(left_col_x, y, fill="#FFD700", font=header_font,
-                                text="◆ REGION BOUNDARIES", anchor=tk.NW, tags="Text")
-        y += line_spacing + 5
-        
-        # Instructions with symbols
-        instructions_left = [
-            ("🖱️", "Click twice to define vertical boundaries"),
-            ("", "  • First click: Start boundary"),
-            ("", "  • Second click: End boundary"),
-            ("", ""),
-            ("📋", "First region: Applied to ALL slices"),
-            ("✏️", "Subsequent edits: Current slice only"),
-            ("", ""),
-            ("🎨", "Visual: Yellow vertical lines"),
-        ]
-        
-        for symbol, text in instructions_left:
-            if text == "":
-                y += line_spacing // 2
-                continue
-            if symbol:
-                self.canvas.create_text(left_col_x, y, fill="#90CAF9", font=symbol_font,
-                                       text=symbol, anchor=tk.NW, tags="Text")
-                self.canvas.create_text(left_col_x + 25, y, fill="#D0D0D0", font=text_font,
-                                       text=text, anchor=tk.NW, tags="Text")
-            else:
-                self.canvas.create_text(left_col_x + 25, y, fill="#B0B0B0", font=text_font,
-                                       text=text, anchor=tk.NW, tags="Text")
-            y += line_spacing
-        
-        # === RIGHT COLUMN: AIR Selection ===
-        y = start_y
-        
-        # Header with visual separator
-        self.canvas.create_text(right_col_x, y, fill="#00E5FF", font=header_font,
-                                text="◆ AIR REGIONS", anchor=tk.NW, tags="Text")
-        y += line_spacing + 5
-        
-        # Instructions with symbols
-        instructions_right = [
-            ("🖱️", "Click and drag to define rectangle"),
-            ("", "  • Drag: Area of Interest Rectangle"),
-            ("", "  • Release: Confirm selection"),
-            ("", ""),
-            ("📋", "First AIR: Applied to ALL slices"),
-            ("✏️", "Subsequent edits: Current slice only"),
-            ("", ""),
-            ("🎨", "Visual: Cyan rectangle"),
-        ]
-        
-        for symbol, text in instructions_right:
-            if text == "":
-                y += line_spacing // 2
-                continue
-            if symbol:
-                self.canvas.create_text(right_col_x, y, fill="#90CAF9", font=symbol_font,
-                                       text=symbol, anchor=tk.NW, tags="Text")
-                self.canvas.create_text(right_col_x + 25, y, fill="#D0D0D0", font=text_font,
-                                       text=text, anchor=tk.NW, tags="Text")
-            else:
-                self.canvas.create_text(right_col_x + 25, y, fill="#B0B0B0", font=text_font,
-                                       text=text, anchor=tk.NW, tags="Text")
-            y += line_spacing
-        
-        # === BOTTOM: Navigation Controls ===
-        bottom_y = self.cheight - 80
-        center_x = self.cwidth // 2
-        
-        self.canvas.create_text(center_x, bottom_y, fill="#A5D6A7", font=header_font,
-                                text="⌨ NAVIGATION", anchor=tk.N, tags="Text")
-        
-        nav_instructions = [
-            "← → Arrow Keys: Navigate slices  |  Mouse Wheel: Navigate slices  |  Ctrl+Wheel: Zoom  |  Ctrl+Drag: Pan  |  H: Toggle overlays"
-        ]
-        
-        self.canvas.create_text(center_x, bottom_y + 25, fill="#C0C0C0", font=text_font,
-                                text=nav_instructions[0], anchor=tk.N, tags="Text")
+        # Render instructions using centralized renderer
+        InstructionRenderer.render_image_viewer_instructions(
+            self.canvas, canvas_width, canvas_height, logo_image
+        )
 
 
     # ============================================================================
