@@ -104,8 +104,18 @@ class InstructionRenderer:
             self._render_error(f"No instructions found for '{instruction_key}'")
             return
         
+        # Force canvas to update to get accurate dimensions
+        self.canvas.update_idletasks()
+        
+        # Get canvas dimensions, fallback to configured dimensions if not yet rendered
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
+        
+        # If canvas hasn't been rendered yet, use configured dimensions
+        if canvas_width <= 1:
+            canvas_width = self.canvas.winfo_reqwidth()
+        if canvas_height <= 1:
+            canvas_height = self.canvas.winfo_reqheight()
         
         # Draw logo if available
         if self.logo_image:
@@ -157,13 +167,13 @@ class InstructionRenderer:
                 number = step.get('number', '')
                 title = step.get('title', '')
                 
-                # Render styled number with symbol prefix (like Quick Tips style)
+                # Render styled number with symbol prefix
                 number_text = f"◉ {number}."
                 
                 # Draw number with symbol
                 self.canvas.create_text(col1_x, y, fill=self.COLORS['symbol'],
                                        font=self.FONTS['step_number'],
-                                       text=f"📍 {number_text}", anchor=tk.NW, tags="Text")
+                                       text=number_text, anchor=tk.NW, tags="Text")
                 
                 # Render title text (offset to the right of the circle)
                 self.canvas.create_text(col1_x + 30, y, fill=self.COLORS['text_primary'],
