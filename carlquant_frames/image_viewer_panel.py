@@ -47,10 +47,19 @@ class image_viewer_panel:
         self.dragging_started = False
         self.hovered_point_index = None # used for hiver detection
 
-        # region selection state
-        self.region_selection_mode = True  # Enable region selection by default
-        self.region_start_point = None     # First click point for region
+        # Selection state - automatic mode detection
+        self.region_start_point = None     # First click point for region (two-click mode)
         self.region_visual_elements = []   # Visual elements for region display
+        
+        # Mouse interaction state
+        self.mouse_down_pos = None         # Position where mouse was pressed
+        self.is_dragging = False           # True if user is dragging (AIR mode)
+        self.drag_threshold = 5            # Pixels to move before considering it a drag
+        
+        # AIR selection state
+        self.air_drag_start = None         # Starting point for AIR drag
+        self.air_drag_rectangle = None     # Canvas rectangle ID during drag
+        self.air_visual_elements = []      # Visual elements for AIR display
 
         self.frame.rowconfigure(1, weight=1)
 
@@ -84,8 +93,10 @@ class image_viewer_panel:
         self.canvas.bind("<Control-B1-Motion>", self.do_pan)
         self.canvas.bind("<Control-ButtonRelease-1>", self.end_pan)
 
-        # region selection mouse bindings
-        self.canvas.bind("<ButtonPress-1>", self.on_canvas_click)
+        # Mouse bindings for region and AIR selection
+        self.canvas.bind("<ButtonPress-1>", self.on_canvas_mouse_down)
+        self.canvas.bind("<B1-Motion>", self.on_canvas_mouse_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_canvas_mouse_up)
 
         self.instructionText()
 
@@ -140,8 +151,9 @@ class image_viewer_panel:
         self.canvas.create_image(self.image_offset_x, self.image_offset_y, image=self.tk_image, anchor=tk.NW)
         self.canvas.update_idletasks()
 
-        # Redraw region boundaries if they exist
+        # Redraw region boundaries and AIR regions if they exist
         self.redraw_region_boundaries_after_zoom()
+        self.redraw_air_regions_after_zoom()
 
 
     # %% render takes over the display
@@ -181,9 +193,10 @@ class image_viewer_panel:
             self.render_zoomed_image()
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
 
-            # Draw region boundaries if they exist for this slice
+            # Draw region boundaries and AIR regions if they exist for this slice
             specimen = specimen_data[specimen_id]
             self.draw_region_boundaries(specimen, index)
+            self.draw_air_regions(specimen, index)
 
         except Exception as e:
             self.context.status_bar.update(f"Error displaying image {img_path}: {e}", level="error")
@@ -386,17 +399,69 @@ class image_viewer_panel:
             y_offset += line_spacing
 
 
-    # %% Region Selection
-    @handle_errors("imageViewerPanel.on_canvas_click")
-    def on_canvas_click(self, event):
-        """Handle mouse clicks for region selection."""
+    # %% Automatic Selection: Click = Region, Drag = AIR
+    @handle_errors("imageViewerPanel.on_canvas_mouse_down")
+    def on_canvas_mouse_down(self, event):
+        """Handle mouse button press - start tracking for click vs drag detection."""
         # Skip if Ctrl is pressed (panning mode)
         if event.state & 0x0004:
             return
 
-        if not self.region_selection_mode:
+        # Store initial mouse position
+        self.mouse_down_pos = (event.x, event.y)
+        self.is_dragging = False
+
+
+    @handle_errors("imageViewerPanel.on_canvas_mouse_drag")
+    def on_canvas_mouse_drag(self, event):
+        """Handle mouse drag - automatically switch to AIR mode if dragging detected."""
+        # Skip if Ctrl is pressed (panning mode)
+        if event.state & 0x0004:
             return
 
+        if self.mouse_down_pos is None:
+            return
+
+        # Calculate distance moved
+        dx = event.x - self.mouse_down_pos[0]
+        dy = event.y - self.mouse_down_pos[1]
+        distance = (dx**2 + dy**2)**0.5
+
+        # If moved beyond threshold, switch to drag mode (AIR selection)
+        if not self.is_dragging and distance > self.drag_threshold:
+            self.is_dragging = True
+            self.start_air_drag(event)
+
+        # Update AIR rectangle if dragging
+        if self.is_dragging:
+            self.update_air_drag(event)
+
+
+    @handle_errors("imageViewerPanel.on_canvas_mouse_up")
+    def on_canvas_mouse_up(self, event):
+        """Handle mouse button release - finalize AIR or process region click."""
+        # Skip if Ctrl is pressed (panning mode)
+        if event.state & 0x0004:
+            return
+
+        if self.mouse_down_pos is None:
+            return
+
+        if self.is_dragging:
+            # User was dragging - finalize AIR selection
+            self.finish_air_selection(event)
+        else:
+            # User just clicked - handle region selection
+            self.handle_region_click(event)
+
+        # Reset state
+        self.mouse_down_pos = None
+        self.is_dragging = False
+
+
+    @handle_errors("imageViewerPanel.handle_region_click")
+    def handle_region_click(self, event):
+        """Handle mouse clicks for region selection (two-click mode)."""
         # Get current specimen and slice
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
@@ -506,6 +571,173 @@ class image_viewer_panel:
                 break
 
 
+    # %% AIR Selection Methods
+    @handle_errors("imageViewerPanel.start_air_drag")
+    def start_air_drag(self, event):
+        """Start AIR rectangular selection when drag is detected."""
+        # Get current specimen and slice
+        specimen_id = getattr(self.context, "current_specimen_id", None)
+        if not specimen_id:
+            return
+
+        specimen_data = getattr(self.context, "specimen_data", {})
+        if specimen_id not in specimen_data:
+            return
+
+        # Use the original mouse_down_pos for start position
+        start_x, start_y = self.mouse_down_pos
+        
+        # Convert canvas coordinates to image coordinates
+        image_x, image_y = self.canvas_to_image_coords(start_x, start_y)
+        if image_x is None or image_y is None:
+            return
+
+        # Store start point (both canvas and image coords)
+        self.air_drag_start = {
+            'canvas': (start_x, start_y),
+            'image': (image_x, image_y)
+        }
+        self.context.status_bar.update("Drawing AIR region...", level="info")
+
+
+    @handle_errors("imageViewerPanel.update_air_drag")
+    def update_air_drag(self, event):
+        """Update the visual rectangle as user drags."""
+        if self.air_drag_start is None:
+            return
+
+        # Remove previous rectangle
+        if self.air_drag_rectangle is not None:
+            self.canvas.delete(self.air_drag_rectangle)
+
+        # Get start position
+        start_canvas_x, start_canvas_y = self.air_drag_start['canvas']
+
+        # Draw rectangle from start to current position
+        self.air_drag_rectangle = self.canvas.create_rectangle(
+            start_canvas_x, start_canvas_y, event.x, event.y,
+            outline="cyan", width=2, tags="air_drag"
+        )
+
+
+    @handle_errors("imageViewerPanel.finish_air_selection")
+    def finish_air_selection(self, event):
+        """Finalize AIR selection on mouse release."""
+        if self.air_drag_start is None:
+            return
+
+        # Get current specimen and slice
+        specimen_id = getattr(self.context, "current_specimen_id", None)
+        specimen_data = getattr(self.context, "specimen_data", {})
+        
+        if not specimen_id or specimen_id not in specimen_data:
+            self.air_drag_start = None
+            if self.air_drag_rectangle:
+                self.canvas.delete(self.air_drag_rectangle)
+                self.air_drag_rectangle = None
+            return
+
+        specimen = specimen_data[specimen_id]
+        current_slice = int(self.scale.get()) - 1
+
+        # Convert end position to image coordinates
+        end_image_x, end_image_y = self.canvas_to_image_coords(event.x, event.y)
+        if end_image_x is None or end_image_y is None:
+            self.air_drag_start = None
+            if self.air_drag_rectangle:
+                self.canvas.delete(self.air_drag_rectangle)
+                self.air_drag_rectangle = None
+            return
+
+        # Get start position
+        start_image_x, start_image_y = self.air_drag_start['image']
+
+        # Normalize coordinates (ensure top-left and bottom-right)
+        x1 = min(start_image_x, end_image_x)
+        y1 = min(start_image_y, end_image_y)
+        x2 = max(start_image_x, end_image_x)
+        y2 = max(start_image_y, end_image_y)
+
+        # Save AIR configuration with propagation logic
+        point1 = (x1, y1)
+        point2 = (x2, y2)
+        self.save_air_configuration(specimen, current_slice, point1, point2)
+
+        # Clear drag state
+        self.air_drag_start = None
+        if self.air_drag_rectangle:
+            self.canvas.delete(self.air_drag_rectangle)
+            self.air_drag_rectangle = None
+
+        # Redraw AIR regions
+        self.draw_air_regions(specimen, current_slice)
+
+
+    def save_air_configuration(self, specimen, current_slice, point1, point2):
+        """Save AIR configuration with same propagation logic as regions.
+        
+        Logic:
+        - If NO AIR regions exist yet (first-time setup): propagate to all slices
+        - If AIR regions already exist: only update the current slice
+        """
+        total_slices = len(specimen.images)
+        
+        # Check if any AIR regions exist
+        has_existing_air = specimen.config and len(specimen.config.air) > 0
+        
+        if not has_existing_air:
+            # First-time initialization: propagate to all slices
+            for slice_idx in range(total_slices):
+                DataSaver.update_specimen_air(specimen, slice_idx, point1, point2)
+            self.context.status_bar.update(
+                f"AIR region initialized for all {total_slices} slices: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
+                level="success"
+            )
+        else:
+            # AIR regions already exist: only update current slice
+            DataSaver.update_specimen_air(specimen, current_slice, point1, point2)
+            self.context.status_bar.update(
+                f"AIR region updated for slice {current_slice + 1}: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
+                level="success"
+            )
+
+
+    def draw_air_regions(self, specimen, current_slice):
+        """Draw visual representation of AIR regions."""
+        self.clear_air_visuals()
+
+        if not specimen.config or current_slice not in specimen.config.air:
+            return
+
+        air_config = specimen.config.air[current_slice]
+        x1, y1 = air_config.point1
+        x2, y2 = air_config.point2
+
+        # Convert image coordinates to canvas coordinates
+        canvas_coords = self.image_to_canvas_coords(x1, y1, x2, y2)
+        if not canvas_coords:
+            return
+
+        canvas_x1, canvas_y1, canvas_x2, canvas_y2 = canvas_coords
+
+        # Draw rectangle for AIR region
+        rect = self.canvas.create_rectangle(
+            canvas_x1, canvas_y1, canvas_x2, canvas_y2,
+            outline="cyan", width=2, tags="air_visual"
+        )
+
+        self.air_visual_elements.append(rect)
+
+
+    def clear_air_visuals(self):
+        """Clear all AIR visual elements."""
+        for element in self.air_visual_elements:
+            self.canvas.delete(element)
+        self.air_visual_elements.clear()
+        self.canvas.delete("air_visual")
+        self.canvas.delete("air_drag")
+
+
     def draw_region_start_marker(self, canvas_x, canvas_y):
         """Draw a marker for the region start point."""
         self.clear_region_visuals()
@@ -589,3 +821,19 @@ class image_viewer_panel:
         specimen = specimen_data[specimen_id]
         current_slice = int(self.scale.get()) - 1  # Convert to 0-based index
         self.draw_region_boundaries(specimen, current_slice)
+
+
+    def redraw_air_regions_after_zoom(self):
+        """Redraw AIR regions after zoom/pan operations."""
+        specimen_id = getattr(self.context, "current_specimen_id", None)
+        if not specimen_id:
+            return
+
+        specimen_data = getattr(self.context, "specimen_data", {})
+        if specimen_id not in specimen_data:
+            return
+
+        specimen = specimen_data[specimen_id]
+        current_slice = int(self.scale.get()) - 1  # Convert to 0-based index
+        self.draw_air_regions(specimen, current_slice)
+
