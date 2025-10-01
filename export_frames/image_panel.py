@@ -37,9 +37,16 @@ class imagePanel:
         self.showBtnToolTip = 'Select a OCT-Scan from the queue and display it.'
         Tooltip(self.showBtn, text=self.showBtnToolTip , wraplength=200)
 
+        # Configure frame grid 
+        self.frame.rowconfigure(1, weight=1)
+        self.frame.rowconfigure(3, weight=0)
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.columnconfigure(1, weight=1)
+        self.frame.columnconfigure(2, weight=0)
+
         #self.canvas = ResizingCanvas(self.frame, width=1024, height=342, highlightthickness=0, bg='red')
         self.canvas = tk.Canvas(self.frame, width=1024, height=342, highlightthickness=0, bg='#505050')
-        self.canvas.grid(row=1, column=0, columnspan=2, sticky=tk.E + tk.W + tk.N + tk.S)
+        self.canvas.grid(row=1, column=0, columnspan=3, sticky="nsew")
         self.canvas.bind("<Configure>", self.onResize)
 
         # Initialize instruction renderer for this canvas
@@ -54,10 +61,11 @@ class imagePanel:
         self.scale = ttk.Scale(self.frame, from_=0, to=2, orient='horizontal',
                                bootstyle="warning")
         self.scale.set(1)
-        self.scale.grid(row=3, column = 0, sticky=tk.E + tk.W + tk.N + tk.S)
+        self.scale.grid(row=3, column=0, columnspan=2, sticky="ew")
 
         self.scaleValueLabel = ttk.Label(self.frame, text="text", textvariable=self.scaleValue)
-        self.scaleValueLabel.grid(row=3, column = 1, sticky=tk.E)
+        self.scaleValueLabel.grid(row=3, column=2, sticky=tk.E)
+        Tooltip(self.scale, text='Move the slider to display a different slice.', wraplength=200)
 
     def instructionText(self):
         """
