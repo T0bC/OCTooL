@@ -46,7 +46,7 @@ class image_viewer_panel:
         # drag an existing point check
         self.dragging_started = False
         self.hovered_point_index = None # used for hiver detection
-        
+
         # region selection state
         self.region_selection_mode = True  # Enable region selection by default
         self.region_start_point = None     # First click point for region
@@ -83,7 +83,7 @@ class image_viewer_panel:
         self.canvas.bind("<Control-ButtonPress-1>", self.start_pan)
         self.canvas.bind("<Control-B1-Motion>", self.do_pan)
         self.canvas.bind("<Control-ButtonRelease-1>", self.end_pan)
-        
+
         # region selection mouse bindings
         self.canvas.bind("<ButtonPress-1>", self.on_canvas_click)
 
@@ -139,7 +139,7 @@ class image_viewer_panel:
         self.canvas.delete("all")
         self.canvas.create_image(self.image_offset_x, self.image_offset_y, image=self.tk_image, anchor=tk.NW)
         self.canvas.update_idletasks()
-        
+
         # Redraw region boundaries if they exist
         self.redraw_region_boundaries_after_zoom()
 
@@ -180,7 +180,7 @@ class image_viewer_panel:
 
             self.render_zoomed_image()
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
-            
+
             # Draw region boundaries if they exist for this slice
             specimen = specimen_data[specimen_id]
             self.draw_region_boundaries(specimen, index)
@@ -239,6 +239,7 @@ class image_viewer_panel:
         self.render_zoomed_image()
         #self.draw_annotation()
 
+
     # %% Paning
     @handle_errors("imageViewerPanel.start_pan")
     def start_pan(self, event):
@@ -246,6 +247,7 @@ class image_viewer_panel:
         self.pan_start_x = event.x
         self.pan_start_y = event.y
         self.canvas.config(cursor="fleur") # "hand2"
+
 
     @handle_errors("imageViewerPanel.do_pan")
     def do_pan(self, event):
@@ -277,6 +279,7 @@ class image_viewer_panel:
         self.render_zoomed_image()
         #self.draw_annotation()
 
+
     @handle_errors("imageViewerPanel.end_pan")
     def end_pan(self, event):
         self.is_panning = False
@@ -291,12 +294,14 @@ class image_viewer_panel:
             self.scale.set(current - 1)
             self.display_image(current - 2)  # -2 because scale is 1-based
 
+
     @handle_errors("imageViewerPanel.on_arrow_right")
     def on_arrow_right(self, event):
         current = int(self.scale.get())
         if current < int(self.scale.cget("to")):
             self.scale.set(current + 1)
             self.display_image(current)  # current is already 1-based
+
 
     @handle_errors("imageViewerPanel.on_mouse_wheel")
     def on_mouse_wheel(self, event):
@@ -308,6 +313,7 @@ class image_viewer_panel:
         else:
             self.on_arrow_right(event)
 
+
     @handle_errors("imageViewerPanel.on_mouse_wheel_linux")
     def on_mouse_wheel_linux(self, event):
         """Handle mouse wheel scroll for Linux"""
@@ -318,14 +324,17 @@ class image_viewer_panel:
         elif event.num == 5:
             self.on_arrow_right(event)
 
+
     @handle_errors("imageViewerPanel.setup_scale_callback")
     def setup_scale_callback(self):
         self.scale.configure(command=self.on_scale_change)
+
 
     @handle_errors("imageViewerPanel.on_scale_change")
     def on_scale_change(self, value):
         index = int(round(float(value))) - 1
         self.display_image(index)
+
 
     # %% UI Resizing
     @handle_errors("imageViewerPanel.onResize")
@@ -337,6 +346,7 @@ class image_viewer_panel:
             self.display_image(int(self.scale.get()))
         else:
             self.instructionText()
+
 
     # %% Instructions
     @handle_errors("error in instructionText")
@@ -375,6 +385,7 @@ class image_viewer_panel:
                                     text=line, anchor=tk.NW, tags="Text")
             y_offset += line_spacing
 
+
     # %% Region Selection
     @handle_errors("imageViewerPanel.on_canvas_click")
     def on_canvas_click(self, event):
@@ -382,27 +393,27 @@ class image_viewer_panel:
         # Skip if Ctrl is pressed (panning mode)
         if event.state & 0x0004:
             return
-            
+
         if not self.region_selection_mode:
             return
-            
+
         # Get current specimen and slice
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
             return
-            
+
         specimen_data = getattr(self.context, "specimen_data", {})
         if specimen_id not in specimen_data:
             return
-            
+
         specimen = specimen_data[specimen_id]
         current_slice = int(self.scale.get()) - 1  # Convert to 0-based index
-        
+
         # Convert canvas coordinates to image coordinates
         image_x, image_y = self.canvas_to_image_coords(event.x, event.y)
         if image_x is None or image_y is None:
             return
-            
+
         if self.region_start_point is None:
             # First click - set start point
             self.region_start_point = (image_x, image_y)
@@ -412,20 +423,21 @@ class image_viewer_panel:
             # Second click - set end point and save region
             start_x, start_y = self.region_start_point
             end_x, end_y = image_x, image_y
-            
+
             # Ensure start is always left of end
             if start_x > end_x:
                 start_x, end_x = end_x, start_x
-                
+
             self.save_region_configuration(specimen, current_slice, (start_x, start_y), (end_x, end_y))
             self.region_start_point = None
             self.draw_region_boundaries(specimen, current_slice)
-            
+
+
     def canvas_to_image_coords(self, canvas_x, canvas_y):
         """Convert canvas coordinates to image coordinates."""
         if not hasattr(self, 'rawImage'):
             return None, None
-            
+
         # Use fitted size if zoom_level == 1.0
         if self.zoom_level == 1.0:
             current_width = getattr(self, 'fitted_width', self.rawImage.width)
@@ -433,21 +445,22 @@ class image_viewer_panel:
             current_zoom = current_width / self.rawImage.width
         else:
             current_zoom = self.zoom_level
-            
+
         # Convert to image-relative coordinates
         rel_x = (canvas_x - self.image_offset_x) / current_zoom
         rel_y = (canvas_y - self.image_offset_y) / current_zoom
-        
+
         # Check if click is within image bounds
         if rel_x < 0 or rel_x >= self.rawImage.width or rel_y < 0 or rel_y >= self.rawImage.height:
             return None, None
-            
+
         return int(rel_x), int(rel_y)
-        
+
+
     def save_region_configuration(self, specimen, current_slice, start_point, end_point):
         """Save region configuration based on slice logic."""
         total_slices = len(specimen.images)
-        
+
         if current_slice == 0:
             # First slice - apply to all slices
             for slice_idx in range(total_slices):
@@ -456,7 +469,7 @@ class image_viewer_panel:
         else:
             # Check if regions already exist for all slices
             has_all_regions = specimen.config and len(specimen.config.regions) == total_slices
-            
+
             if has_all_regions:
                 # Only update current slice
                 DataSaver.update_specimen_region(specimen, current_slice, start_point, end_point)
@@ -466,16 +479,17 @@ class image_viewer_panel:
                 for slice_idx in range(total_slices):
                     DataSaver.update_specimen_region(specimen, slice_idx, start_point, end_point)
                 self.context.status_bar.update(f"Region applied to all {total_slices} slices: start={start_point}, end={end_point}", level="success")
-        
+
         # Update specimen panel display
         self.update_specimen_panel_display(specimen)
-        
+
+
     def update_specimen_panel_display(self, specimen):
         """Update the specimen panel to reflect new region configuration."""
         specimen_panel = self.context.get_panel("carl_specimen")
         if not specimen_panel:
             return
-            
+
         # Find the row for this specimen
         for row_idx in range(specimen_panel.sheet.get_total_rows()):
             if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen.specimen_id:
@@ -485,7 +499,8 @@ class image_viewer_panel:
                 specimen_panel.sheet.set_cell_data(row_idx, 2, regions_text)
                 specimen.regions = regions_text
                 break
-                
+
+
     def draw_region_start_marker(self, canvas_x, canvas_y):
         """Draw a marker for the region start point."""
         self.clear_region_visuals()
@@ -494,25 +509,26 @@ class image_viewer_panel:
             fill="red", outline="white", width=2, tags="region_visual"
         )
         self.region_visual_elements.append(marker)
-        
+
+
     def draw_region_boundaries(self, specimen, current_slice):
         """Draw visual representation of region boundaries."""
         self.clear_region_visuals()
-        
+
         if not specimen.config or current_slice not in specimen.config.regions:
             return
-            
+
         region = specimen.config.regions[current_slice]
         start_x, start_y = region.start_point
         end_x, end_y = region.end_point
-        
+
         # Convert image coordinates back to canvas coordinates
         canvas_coords = self.image_to_canvas_coords(start_x, start_y, end_x, end_y)
         if not canvas_coords:
             return
-            
+
         canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y = canvas_coords
-        
+
         # Draw vertical lines for region boundaries
         line1 = self.canvas.create_line(
             canvas_start_x, 0, canvas_start_x, self.canvas.winfo_height(),
@@ -522,7 +538,7 @@ class image_viewer_panel:
             canvas_end_x, 0, canvas_end_x, self.canvas.winfo_height(),
             fill="yellow", width=2, tags="region_visual"
         )
-        
+
         # Draw text labels
         text1 = self.canvas.create_text(
             canvas_start_x, 20, text=f"Start: {start_x}", fill="yellow",
@@ -532,14 +548,15 @@ class image_viewer_panel:
             canvas_end_x, 20, text=f"End: {end_x}", fill="yellow",
             font=("Arial", 10, "bold"), tags="region_visual"
         )
-        
+
         self.region_visual_elements.extend([line1, line2, text1, text2])
-        
+
+
     def image_to_canvas_coords(self, start_x, start_y, end_x, end_y):
         """Convert image coordinates to canvas coordinates."""
         if not hasattr(self, 'rawImage'):
             return None
-            
+
         # Use fitted size if zoom_level == 1.0
         if self.zoom_level == 1.0:
             current_width = getattr(self, 'fitted_width', self.rawImage.width)
@@ -547,31 +564,33 @@ class image_viewer_panel:
             current_zoom = current_width / self.rawImage.width
         else:
             current_zoom = self.zoom_level
-            
+
         canvas_start_x = start_x * current_zoom + self.image_offset_x
         canvas_start_y = start_y * current_zoom + self.image_offset_y
         canvas_end_x = end_x * current_zoom + self.image_offset_x
         canvas_end_y = end_y * current_zoom + self.image_offset_y
-        
+
         return canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y
-        
+
+
     def clear_region_visuals(self):
         """Clear all region visual elements."""
         for element in self.region_visual_elements:
             self.canvas.delete(element)
         self.region_visual_elements.clear()
         self.canvas.delete("region_visual")
-        
+
+
     def redraw_region_boundaries_after_zoom(self):
         """Redraw region boundaries after zoom/pan operations."""
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
             return
-            
+
         specimen_data = getattr(self.context, "specimen_data", {})
         if specimen_id not in specimen_data:
             return
-            
+
         specimen = specimen_data[specimen_id]
         current_slice = int(self.scale.get()) - 1  # Convert to 0-based index
         self.draw_region_boundaries(specimen, current_slice)
