@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Sep 29 15:46:17 2025
+Image Viewer Panel for Carl Quant Analysis
 
+This module provides an interactive image viewer for OCT image stacks with support for:
+- Image navigation (arrow keys, mouse wheel, slider)
+- Zoom and pan functionality
+- Region boundary definition (two-click mode)
+- AIR (Area of Interest Rectangle) selection (drag mode)
+- Automatic mode detection: click = region boundary, drag = AIR selection
+- Visual overlays for configured regions and AIR areas
+
+Created on Mon Sep 29 15:46:17 2025
 @author: meissnerto
 """
 
@@ -12,7 +21,27 @@ from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from carlquant_frames.data_io import DataSaver
 
+
 class image_viewer_panel:
+    """
+    Interactive image viewer panel for OCT image stack visualization and annotation.
+    
+    This panel provides a canvas-based viewer with the following capabilities:
+    - Display OCT image stacks with navigation controls
+    - Zoom (Ctrl+MouseWheel) and pan (Ctrl+Drag) functionality
+    - Define region boundaries via two-click selection
+    - Define AIR regions via drag selection
+    - Automatic mode detection based on user interaction
+    - Visual feedback for all configured regions and AIR areas
+    
+    Attributes:
+        context: Application context providing access to shared state
+        canvas: Tkinter canvas for image display
+        zoom_level: Current zoom level (1.0 = fit to canvas)
+        slice_annotations: Dictionary of annotations per slice
+        region_start_point: First click point for region selection
+        air_drag_start: Starting point for AIR drag selection
+    """
     @handle_errors("error in image_viewer_panel")
     def __init__(self, context):
         self.context = context
@@ -60,8 +89,6 @@ class image_viewer_panel:
         self.air_drag_start = None         # Starting point for AIR drag
         self.air_drag_rectangle = None     # Canvas rectangle ID during drag
         self.air_visual_elements = []      # Visual elements for AIR display
-
-        self.frame.rowconfigure(1, weight=1)
 
         self.frame.rowconfigure(1, weight=1)
         self.frame.rowconfigure(3, weight=0)
@@ -115,9 +142,19 @@ class image_viewer_panel:
         self.setup_scale_callback()
 
 
-    ## % Display Images
+    # ============================================================================
+    # IMAGE DISPLAY AND RENDERING
+    # ============================================================================
+    
     @handle_errors("imageViewerPanel.render_zoomed_image")
     def render_zoomed_image(self):
+        """
+        Render the current image with applied zoom and pan transformations.
+        
+        At zoom_level=1.0, the image is fitted to the canvas while preserving
+        aspect ratio. At higher zoom levels, the image is scaled accordingly.
+        After rendering, region boundaries and AIR regions are redrawn.
+        """
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
 
@@ -156,9 +193,17 @@ class image_viewer_panel:
         self.redraw_air_regions_after_zoom()
 
 
-    # %% render takes over the display
     @handle_errors("imageViewerPanel.display_image")
     def display_image(self, index=None):
+        """
+        Display an image from the current specimen's image stack.
+        
+        Args:
+            index: 0-based slice index. If None, uses current slider position.
+        
+        This method loads the image, resets zoom/pan, renders it, and draws
+        any configured region boundaries and AIR regions for the slice.
+        """
         self.canvas.delete("all")
 
         specimen_id = getattr(self.context, "current_specimen_id", None)
@@ -203,9 +248,14 @@ class image_viewer_panel:
 
 
 
-    # %% Annotations
     @handle_errors("imageViewerPanel.toggle_annotations")
     def toggle_annotations(self, event=None):
+        """
+        Toggle visibility of annotations (bound to 'h' key).
+        
+        Args:
+            event: Tkinter event object (optional)
+        """
         self.annotations_visible = not self.annotations_visible
         self.canvas.delete("annotation")
 
@@ -217,9 +267,21 @@ class image_viewer_panel:
             self.point_handles.clear()
 
 
-    # %% Zoom
+    # ============================================================================
+    # ZOOM AND PAN FUNCTIONALITY
+    # ============================================================================
+    
     @handle_errors("imageViewerPanel.on_mouse_wheel_zoom")
     def on_mouse_wheel_zoom(self, event):
+        """
+        Handle zoom via Ctrl+MouseWheel.
+        
+        Zooms in/out while keeping the content under the mouse cursor fixed.
+        Zoom range: 1.0 (fit to canvas) to 10.0 (10x magnification).
+        
+        Args:
+            event: Mouse wheel event with delta and position information
+        """
         if not hasattr(self, 'rawImage'):
             return
 
@@ -250,12 +312,16 @@ class image_viewer_panel:
         self.image_offset_y = mouse_y - rel_y * self.zoom_level
 
         self.render_zoomed_image()
-        #self.draw_annotation()
 
 
-    # %% Paning
     @handle_errors("imageViewerPanel.start_pan")
     def start_pan(self, event):
+        """
+        Start panning operation (Ctrl+LeftClick).
+        
+        Args:
+            event: Mouse button press event
+        """
         self.is_panning = True
         self.pan_start_x = event.x
         self.pan_start_y = event.y
@@ -264,6 +330,15 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.do_pan")
     def do_pan(self, event):
+        """
+        Perform panning while Ctrl+Drag is active.
+        
+        Updates image offset and clamps to prevent dragging image completely
+        out of view.
+        
+        Args:
+            event: Mouse motion event
+        """
         if not self.is_panning:
             return
 
@@ -290,18 +365,32 @@ class image_viewer_panel:
         self.image_offset_y = min(max(self.image_offset_y, min_y), 0)
 
         self.render_zoomed_image()
-        #self.draw_annotation()
 
 
     @handle_errors("imageViewerPanel.end_pan")
     def end_pan(self, event):
+        """
+        End panning operation (Ctrl+LeftRelease).
+        
+        Args:
+            event: Mouse button release event
+        """
         self.is_panning = False
         self.canvas.config(cursor="arrow")
 
 
-    # %% Scale Bindings
+    # ============================================================================
+    # NAVIGATION CONTROLS (Arrow Keys, Mouse Wheel, Slider)
+    # ============================================================================
+    
     @handle_errors("imageViewerPanel.on_arrow_left")
     def on_arrow_left(self, event):
+        """
+        Navigate to previous slice (Left arrow key or scroll up).
+        
+        Args:
+            event: Keyboard or mouse wheel event
+        """
         current = int(self.scale.get())
         if current > 1:
             self.scale.set(current - 1)
@@ -310,6 +399,12 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.on_arrow_right")
     def on_arrow_right(self, event):
+        """
+        Navigate to next slice (Right arrow key or scroll down).
+        
+        Args:
+            event: Keyboard or mouse wheel event
+        """
         current = int(self.scale.get())
         if current < int(self.scale.cget("to")):
             self.scale.set(current + 1)
@@ -318,7 +413,15 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.on_mouse_wheel")
     def on_mouse_wheel(self, event):
-        """Handle mouse wheel scroll for Windows/macOS"""
+        """
+        Handle mouse wheel scroll for Windows/macOS.
+        
+        Without Ctrl: Navigate between slices
+        With Ctrl: Zoom (handled by on_mouse_wheel_zoom)
+        
+        Args:
+            event: Mouse wheel event
+        """
         if event.state & 0x0004:  # Ctrl is pressed
             return  # Let canvas handle zoom
         if event.delta > 0:
@@ -329,7 +432,15 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.on_mouse_wheel_linux")
     def on_mouse_wheel_linux(self, event):
-        """Handle mouse wheel scroll for Linux"""
+        """
+        Handle mouse wheel scroll for Linux.
+        
+        Without Ctrl: Navigate between slices
+        With Ctrl: Zoom (handled by on_mouse_wheel_zoom)
+        
+        Args:
+            event: Mouse wheel event (Button-4 = up, Button-5 = down)
+        """
         if event.state & 0x0004:  # Ctrl is pressed
             return  # Let canvas handle zoom
         if event.num == 4:
@@ -340,18 +451,38 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.setup_scale_callback")
     def setup_scale_callback(self):
+        """
+        Configure the slider callback for slice navigation.
+        """
         self.scale.configure(command=self.on_scale_change)
 
 
     @handle_errors("imageViewerPanel.on_scale_change")
     def on_scale_change(self, value):
+        """
+        Handle slider value changes.
+        
+        Args:
+            value: New slider value (1-based slice number)
+        """
         index = int(round(float(value))) - 1
         self.display_image(index)
 
 
-    # %% UI Resizing
+    # ============================================================================
+    # UI EVENT HANDLERS
+    # ============================================================================
+    
     @handle_errors("imageViewerPanel.onResize")
     def onResize(self, event):
+        """
+        Handle canvas resize events.
+        
+        Refreshes the displayed image to fit the new canvas dimensions.
+        
+        Args:
+            event: Canvas configure event with new width/height
+        """
         self.width = event.width
         self.height = event.height
 
@@ -361,9 +492,11 @@ class image_viewer_panel:
             self.instructionText()
 
 
-    # %% Instructions
     @handle_errors("error in instructionText")
     def instructionText(self):
+        """
+        Display instruction text and logo when no image is loaded.
+        """
         self.canvas.delete("all")
 
         self.cwidth = self.canvas.winfo_width()
@@ -399,10 +532,22 @@ class image_viewer_panel:
             y_offset += line_spacing
 
 
-    # %% Automatic Selection: Click = Region, Drag = AIR
+    # ============================================================================
+    # MOUSE INTERACTION: AUTOMATIC MODE DETECTION (Click = Region, Drag = AIR)
+    # ============================================================================
+    
     @handle_errors("imageViewerPanel.on_canvas_mouse_down")
     def on_canvas_mouse_down(self, event):
-        """Handle mouse button press - start tracking for click vs drag detection."""
+        """
+        Handle mouse button press - start tracking for click vs drag detection.
+        
+        This is the entry point for the automatic mode detection system.
+        The system determines whether the user is clicking (region selection)
+        or dragging (AIR selection) based on mouse movement distance.
+        
+        Args:
+            event: Mouse button press event
+        """
         # Skip if Ctrl is pressed (panning mode)
         if event.state & 0x0004:
             return
@@ -414,7 +559,15 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.on_canvas_mouse_drag")
     def on_canvas_mouse_drag(self, event):
-        """Handle mouse drag - automatically switch to AIR mode if dragging detected."""
+        """
+        Handle mouse drag - automatically switch to AIR mode if dragging detected.
+        
+        If the mouse moves beyond drag_threshold pixels, the interaction is
+        classified as a drag and AIR selection mode is activated.
+        
+        Args:
+            event: Mouse motion event
+        """
         # Skip if Ctrl is pressed (panning mode)
         if event.state & 0x0004:
             return
@@ -439,7 +592,15 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.on_canvas_mouse_up")
     def on_canvas_mouse_up(self, event):
-        """Handle mouse button release - finalize AIR or process region click."""
+        """
+        Handle mouse button release - finalize AIR or process region click.
+        
+        Determines whether the interaction was a click (region) or drag (AIR)
+        and calls the appropriate handler.
+        
+        Args:
+            event: Mouse button release event
+        """
         # Skip if Ctrl is pressed (panning mode)
         if event.state & 0x0004:
             return
@@ -459,9 +620,23 @@ class image_viewer_panel:
         self.is_dragging = False
 
 
+    # ============================================================================
+    # REGION BOUNDARY SELECTION (Two-Click Mode)
+    # ============================================================================
+    
     @handle_errors("imageViewerPanel.handle_region_click")
     def handle_region_click(self, event):
-        """Handle mouse clicks for region selection (two-click mode)."""
+        """
+        Handle mouse clicks for region selection (two-click mode).
+        
+        First click: Set start point (vertical boundary)
+        Second click: Set end point and save region configuration
+        
+        Region boundaries are vertical lines used to define analysis regions.
+        
+        Args:
+            event: Mouse button release event
+        """
         # Get current specimen and slice
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
@@ -499,7 +674,19 @@ class image_viewer_panel:
 
 
     def canvas_to_image_coords(self, canvas_x, canvas_y):
-        """Convert canvas coordinates to image coordinates."""
+        """
+        Convert canvas coordinates to image coordinates.
+        
+        Takes into account current zoom level and pan offset. Returns None
+        if the coordinates are outside the image bounds.
+        
+        Args:
+            canvas_x: X coordinate on canvas
+            canvas_y: Y coordinate on canvas
+        
+        Returns:
+            tuple: (image_x, image_y) as integers, or (None, None) if out of bounds
+        """
         if not hasattr(self, 'rawImage'):
             return None, None
 
@@ -523,11 +710,21 @@ class image_viewer_panel:
 
 
     def save_region_configuration(self, specimen, current_slice, start_point, end_point):
-        """Save region configuration based on slice logic.
+        """
+        Save region configuration with intelligent propagation logic.
         
-        Logic:
+        Propagation Logic:
         - If NO regions exist yet (first-time setup): propagate to all slices
         - If regions already exist: only update the current slice
+        
+        This allows users to set a global configuration initially, then
+        fine-tune individual slices as needed.
+        
+        Args:
+            specimen: Specimen object to update
+            current_slice: Current slice index (0-based)
+            start_point: (x, y) tuple for region start
+            end_point: (x, y) tuple for region end
         """
         total_slices = len(specimen.images)
         
@@ -555,7 +752,15 @@ class image_viewer_panel:
 
 
     def update_specimen_panel_display(self, specimen):
-        """Update the specimen panel to reflect new region configuration."""
+        """
+        Update the specimen panel to reflect new region configuration.
+        
+        Updates the regions column in the specimen list to show the count
+        of configured regions.
+        
+        Args:
+            specimen: Specimen object that was updated
+        """
         specimen_panel = self.context.get_panel("carl_specimen")
         if not specimen_panel:
             return
@@ -571,10 +776,20 @@ class image_viewer_panel:
                 break
 
 
-    # %% AIR Selection Methods
+    # ============================================================================
+    # AIR (Area of Interest Rectangle) SELECTION (Drag Mode)
+    # ============================================================================
+    
     @handle_errors("imageViewerPanel.start_air_drag")
     def start_air_drag(self, event):
-        """Start AIR rectangular selection when drag is detected."""
+        """
+        Start AIR rectangular selection when drag is detected.
+        
+        Stores both canvas and image coordinates of the drag start point.
+        
+        Args:
+            event: Mouse motion event (when drag threshold exceeded)
+        """
         # Get current specimen and slice
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
@@ -602,7 +817,15 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.update_air_drag")
     def update_air_drag(self, event):
-        """Update the visual rectangle as user drags."""
+        """
+        Update the visual rectangle as user drags.
+        
+        Draws a cyan rectangle from the drag start point to the current
+        mouse position.
+        
+        Args:
+            event: Mouse motion event
+        """
         if self.air_drag_start is None:
             return
 
@@ -622,7 +845,16 @@ class image_viewer_panel:
 
     @handle_errors("imageViewerPanel.finish_air_selection")
     def finish_air_selection(self, event):
-        """Finalize AIR selection on mouse release."""
+        """
+        Finalize AIR selection on mouse release.
+        
+        Converts canvas coordinates to image coordinates, normalizes the
+        rectangle (ensures top-left and bottom-right), and saves the
+        configuration.
+        
+        Args:
+            event: Mouse button release event
+        """
         if self.air_drag_start is None:
             return
 
@@ -674,11 +906,20 @@ class image_viewer_panel:
 
 
     def save_air_configuration(self, specimen, current_slice, point1, point2):
-        """Save AIR configuration with same propagation logic as regions.
+        """
+        Save AIR configuration with intelligent propagation logic.
         
-        Logic:
+        Propagation Logic:
         - If NO AIR regions exist yet (first-time setup): propagate to all slices
         - If AIR regions already exist: only update the current slice
+        
+        This mirrors the region configuration logic for consistency.
+        
+        Args:
+            specimen: Specimen object to update
+            current_slice: Current slice index (0-based)
+            point1: (x, y) tuple for top-left corner
+            point2: (x, y) tuple for bottom-right corner
         """
         total_slices = len(specimen.images)
         
@@ -702,8 +943,20 @@ class image_viewer_panel:
             )
 
 
+    # ============================================================================
+    # VISUAL OVERLAY RENDERING
+    # ============================================================================
+    
     def draw_air_regions(self, specimen, current_slice):
-        """Draw visual representation of AIR regions."""
+        """
+        Draw visual representation of AIR regions.
+        
+        Displays configured AIR regions as cyan rectangles on the canvas.
+        
+        Args:
+            specimen: Specimen object containing AIR configuration
+            current_slice: Current slice index (0-based)
+        """
         self.clear_air_visuals()
 
         if not specimen.config or current_slice not in specimen.config.air:
@@ -730,7 +983,9 @@ class image_viewer_panel:
 
 
     def clear_air_visuals(self):
-        """Clear all AIR visual elements."""
+        """
+        Clear all AIR visual elements from the canvas.
+        """
         for element in self.air_visual_elements:
             self.canvas.delete(element)
         self.air_visual_elements.clear()
@@ -739,7 +994,16 @@ class image_viewer_panel:
 
 
     def draw_region_start_marker(self, canvas_x, canvas_y):
-        """Draw a marker for the region start point."""
+        """
+        Draw a marker for the region start point.
+        
+        Displays a red circle at the first click location during region
+        boundary selection.
+        
+        Args:
+            canvas_x: X coordinate on canvas
+            canvas_y: Y coordinate on canvas
+        """
         self.clear_region_visuals()
         marker = self.canvas.create_oval(
             canvas_x - 5, canvas_y - 5, canvas_x + 5, canvas_y + 5,
@@ -749,7 +1013,16 @@ class image_viewer_panel:
 
 
     def draw_region_boundaries(self, specimen, current_slice):
-        """Draw visual representation of region boundaries."""
+        """
+        Draw visual representation of region boundaries.
+        
+        Displays configured region boundaries as yellow vertical lines
+        spanning the full canvas height.
+        
+        Args:
+            specimen: Specimen object containing region configuration
+            current_slice: Current slice index (0-based)
+        """
         self.clear_region_visuals()
 
         if not specimen.config or current_slice not in specimen.config.regions:
@@ -780,7 +1053,22 @@ class image_viewer_panel:
 
 
     def image_to_canvas_coords(self, start_x, start_y, end_x, end_y):
-        """Convert image coordinates to canvas coordinates."""
+        """
+        Convert image coordinates to canvas coordinates.
+        
+        Takes into account current zoom level and pan offset. This is the
+        inverse operation of canvas_to_image_coords.
+        
+        Args:
+            start_x: Start X coordinate in image space
+            start_y: Start Y coordinate in image space
+            end_x: End X coordinate in image space
+            end_y: End Y coordinate in image space
+        
+        Returns:
+            tuple: (canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y)
+                   or None if no image is loaded
+        """
         if not hasattr(self, 'rawImage'):
             return None
 
@@ -801,7 +1089,9 @@ class image_viewer_panel:
 
 
     def clear_region_visuals(self):
-        """Clear all region visual elements."""
+        """
+        Clear all region visual elements from the canvas.
+        """
         for element in self.region_visual_elements:
             self.canvas.delete(element)
         self.region_visual_elements.clear()
@@ -809,7 +1099,12 @@ class image_viewer_panel:
 
 
     def redraw_region_boundaries_after_zoom(self):
-        """Redraw region boundaries after zoom/pan operations."""
+        """
+        Redraw region boundaries after zoom/pan operations.
+        
+        Called automatically after zoom or pan to update visual overlays
+        to match the new view transformation.
+        """
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
             return
@@ -824,7 +1119,12 @@ class image_viewer_panel:
 
 
     def redraw_air_regions_after_zoom(self):
-        """Redraw AIR regions after zoom/pan operations."""
+        """
+        Redraw AIR regions after zoom/pan operations.
+        
+        Called automatically after zoom or pan to update visual overlays
+        to match the new view transformation.
+        """
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
             return
