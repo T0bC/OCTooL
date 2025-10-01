@@ -458,27 +458,32 @@ class image_viewer_panel:
 
 
     def save_region_configuration(self, specimen, current_slice, start_point, end_point):
-        """Save region configuration based on slice logic."""
+        """Save region configuration based on slice logic.
+        
+        Logic:
+        - If NO regions exist yet (first-time setup): propagate to all slices
+        - If regions already exist: only update the current slice
+        """
         total_slices = len(specimen.images)
-
-        if current_slice == 0:
-            # First slice - apply to all slices
+        
+        # Check if any regions exist
+        has_existing_regions = specimen.config and len(specimen.config.regions) > 0
+        
+        if not has_existing_regions:
+            # First-time initialization: propagate to all slices
             for slice_idx in range(total_slices):
                 DataSaver.update_specimen_region(specimen, slice_idx, start_point, end_point)
-            self.context.status_bar.update(f"Region applied to all {total_slices} slices: start={start_point}, end={end_point}", level="success")
+            self.context.status_bar.update(
+                f"Region initialized for all {total_slices} slices: start={start_point}, end={end_point}", 
+                level="success"
+            )
         else:
-            # Check if regions already exist for all slices
-            has_all_regions = specimen.config and len(specimen.config.regions) == total_slices
-
-            if has_all_regions:
-                # Only update current slice
-                DataSaver.update_specimen_region(specimen, current_slice, start_point, end_point)
-                self.context.status_bar.update(f"Region updated for slice {current_slice + 1}: start={start_point}, end={end_point}", level="success")
-            else:
-                # Apply to all slices
-                for slice_idx in range(total_slices):
-                    DataSaver.update_specimen_region(specimen, slice_idx, start_point, end_point)
-                self.context.status_bar.update(f"Region applied to all {total_slices} slices: start={start_point}, end={end_point}", level="success")
+            # Regions already exist: only update current slice
+            DataSaver.update_specimen_region(specimen, current_slice, start_point, end_point)
+            self.context.status_bar.update(
+                f"Region updated for slice {current_slice + 1}: start={start_point}, end={end_point}", 
+                level="success"
+            )
 
         # Update specimen panel display
         self.update_specimen_panel_display(specimen)
