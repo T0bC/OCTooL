@@ -7,7 +7,7 @@
     },
     "workflow_steps": [
       {
-        "number": "1️⃣",
+        "number": "1",
         "title": "Load Images",
         "panel": "Left Panel",
         "actions": [
@@ -17,7 +17,7 @@
         ]
       },
       {
-        "number": "2️⃣",
+        "number": "2",
         "title": "Review Specimens",
         "panel": "Specimen Table",
         "actions": [
@@ -27,7 +27,7 @@
         ]
       },
       {
-        "number": "3️⃣",
+        "number": "3",
         "title": "Define Regions",
         "panel": "Image Viewer",
         "actions": [
@@ -37,7 +37,7 @@
         ]
       },
       {
-        "number": "4️⃣",
+        "number": "4",
         "title": "Configure Settings",
         "panel": "Settings Panel",
         "actions": [
@@ -47,7 +47,7 @@
         ]
       },
       {
-        "number": "5️⃣",
+        "number": "5",
         "title": "Start Analysis",
         "panel": "Left Panel",
         "actions": [
@@ -81,12 +81,12 @@
   "analyze_getting_started": {
     "layout": "comprehensive_guide",
     "title": {
-      "text": "◆ ANALYZE FRAMES - GETTING STARTED",
+      "text": "◆ ANALYZE - GETTING STARTED",
       "color": "header_workflow"
     },
     "workflow_steps": [
       {
-        "number": "1️⃣",
+        "number": "1",
         "title": "Load Data",
         "panel": "Load Panel",
         "actions": [
@@ -96,7 +96,7 @@
         ]
       },
       {
-        "number": "2️⃣",
+        "number": "2",
         "title": "Annotate Images",
         "panel": "Image Viewer",
         "actions": [
@@ -106,7 +106,7 @@
         ]
       },
       {
-        "number": "3️⃣",
+        "number": "3",
         "title": "Add Columns",
         "panel": "Add Columns Panel",
         "actions": [
@@ -116,7 +116,7 @@
         ]
       },
       {
-        "number": "4️⃣",
+        "number": "4",
         "title": "Export Data",
         "panel": "Export Panel",
         "actions": [
@@ -155,7 +155,7 @@
     },
     "workflow_steps": [
       {
-        "number": "1️⃣",
+        "number": "1",
         "title": "Load Images",
         "panel": "Load Panel",
         "actions": [
@@ -165,7 +165,7 @@
         ]
       },
       {
-        "number": "2️⃣",
+        "number": "2",
         "title": "Configure Global Settings",
         "panel": "Global Settings",
         "actions": [
@@ -175,7 +175,7 @@
         ]
       },
       {
-        "number": "3️⃣",
+        "number": "3",
         "title": "Customize Per-Image",
         "panel": "Custom Settings",
         "actions": [
@@ -185,7 +185,7 @@
         ]
       },
       {
-        "number": "4️⃣",
+        "number": "4",
         "title": "Execute Export",
         "panel": "Execution Panel",
         "actions": [
