@@ -544,17 +544,7 @@ class image_viewer_panel:
             fill="yellow", width=2, tags="region_visual"
         )
 
-        # Draw text labels
-        text1 = self.canvas.create_text(
-            canvas_start_x, 20, text=f"Start: {start_x}", fill="yellow",
-            font=("Arial", 10, "bold"), tags="region_visual"
-        )
-        text2 = self.canvas.create_text(
-            canvas_end_x, 20, text=f"End: {end_x}", fill="yellow",
-            font=("Arial", 10, "bold"), tags="region_visual"
-        )
-
-        self.region_visual_elements.extend([line1, line2, text1, text2])
+        self.region_visual_elements.extend([line1, line2])
 
 
     def image_to_canvas_coords(self, start_x, start_y, end_x, end_y):
