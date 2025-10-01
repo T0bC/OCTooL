@@ -1,29 +1,27 @@
 # -*- coding: utf-8 -*-
 """
-Instruction Renderer for OCTexVIEW
+Instruction Renderer for Carl Quant Module
 
-This module provides a centralized system for rendering instruction text
-on canvas widgets across different panels. It supports multi-column layouts,
-color-coded sections, and visual symbols for better user guidance.
+This module provides a data-driven instruction rendering system that displays
+contextual help on a shared canvas. Instructions are loaded from JSON files,
+separating content from presentation logic.
 
-Created on Wed Oct 01 11:20:00 2025
+Created on Wed Oct 01 11:48:00 2025
 @author: meissnerto
 """
 
 import tkinter as tk
+import json
+from pathlib import Path
 from PIL import Image, ImageTk
 
 
 class InstructionRenderer:
     """
-    Renders instruction text on Tkinter canvas widgets with visual styling.
+    Data-driven instruction renderer for Carl Quant panels.
     
-    Supports:
-    - Multi-column layouts
-    - Color-coded headers
-    - Visual symbols/emojis
-    - Hierarchical text organization
-    - Logo placement
+    Renders instructions from JSON configuration files onto a shared canvas.
+    Supports multiple layouts: two-column, centered steps, single column.
     """
     
     # Color scheme
@@ -47,268 +45,418 @@ class InstructionRenderer:
         'small': 'Sans 9',
     }
     
-    @staticmethod
-    def render_image_viewer_instructions(canvas, canvas_width, canvas_height, logo_image=None):
+    def __init__(self, canvas, instructions_file="utils/instructions.json"):
         """
-        Render instructions for the image viewer panel.
+        Initialize the instruction renderer.
         
         Args:
-            canvas: Tkinter canvas widget
-            canvas_width: Canvas width in pixels
-            canvas_height: Canvas height in pixels
-            logo_image: Optional PIL ImageTk.PhotoImage for logo display
+            canvas: Tkinter canvas widget for rendering
+            instructions_file: Path to JSON file containing instruction data
         """
-        canvas.delete("all")
+        self.canvas = canvas
+        self.instructions_file = instructions_file
+        self.instructions_data = self._load_instructions()
+        self.logo_image = None
+    
+    def _load_instructions(self):
+        """Load instruction data from JSON file with UTF-8 encoding."""
+        try:
+            with open(self.instructions_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            print(f"Instructions file not found: {self.instructions_file}")
+            return {}
+        except json.JSONDecodeError as e:
+            print(f"Invalid JSON in instructions file: {e}")
+            return {}
+        except Exception as e:
+            print(f"Error loading instructions: {e}")
+            return {}
+    
+    def set_logo(self, logo_path, size=(217, 76)):
+        """
+        Load and set logo image.
         
-        # Draw logo if provided
-        if logo_image:
-            canvas.create_image(canvas_width - 217 // 2 - 7, 45, image=logo_image)
+        Args:
+            logo_path: Path to logo image file
+            size: Tuple of (width, height) for resizing
+        """
+        try:
+            logo = Image.open(logo_path)
+            logo = logo.resize(size, Image.Resampling.LANCZOS)
+            self.logo_image = ImageTk.PhotoImage(logo)
+        except Exception as e:
+            print(f"Error loading logo: {e}")
+            self.logo_image = None
+    
+    def render(self, instruction_key):
+        """
+        Render instructions for a specific context.
         
+        Args:
+            instruction_key: Key in instructions.json (e.g., 'image_viewer', 'workflow', 'settings')
+        """
+        self.canvas.delete("all")
+        
+        if instruction_key not in self.instructions_data:
+            self._render_error(f"No instructions found for '{instruction_key}'")
+            return
+        
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        
+        # Draw logo if available
+        if self.logo_image:
+            self.canvas.create_image(canvas_width - 217 // 2 - 7, 45, image=self.logo_image)
+        
+        # Get instruction data
+        data = self.instructions_data[instruction_key]
+        layout = data.get('layout', 'single_column')
+        
+        # Render based on layout type
+        if layout == 'comprehensive_guide':
+            self._render_comprehensive_guide(data, canvas_width, canvas_height)
+        elif layout == 'two_column':
+            self._render_two_column(data, canvas_width, canvas_height)
+        elif layout == 'centered_steps':
+            self._render_centered_steps(data, canvas_width, canvas_height)
+        elif layout == 'single_column':
+            self._render_single_column(data, canvas_width, canvas_height)
+        else:
+            self._render_error(f"Unknown layout: {layout}")
+    
+    def _render_comprehensive_guide(self, data, canvas_width, canvas_height):
+        """
+        Render comprehensive getting started guide with workflow, tips, and panel locations.
+        Optimized for efficient space usage on a single screen.
+        """
         # Layout configuration
+        left_margin = 15
+        col1_x = left_margin
+        col2_x = canvas_width // 2 + 10
+        start_y = 90
+        line_spacing = 18
+        section_spacing = 12
+        
+        # Title
+        if 'title' in data:
+            title = data['title']
+            color = self.COLORS.get(title.get('color', 'text_primary'))
+            self.canvas.create_text(canvas_width // 2, 20, fill=color,
+                                   font=self.FONTS['header'],
+                                   text=title['text'], anchor=tk.N, tags="Text")
+        
+        # === LEFT COLUMN: Workflow Steps ===
+        y = start_y
+        
+        if 'workflow_steps' in data:
+            for step in data['workflow_steps']:
+                # Step number and title
+                step_text = f"{step.get('number', '')} {step.get('title', '')}"
+                self.canvas.create_text(col1_x, y, fill=self.COLORS['symbol'],
+                                       font='Sans 10 bold',
+                                       text=step_text, anchor=tk.NW, tags="Text")
+                y += line_spacing
+                
+                # Panel location (in smaller, dimmer text)
+                if 'panel' in step:
+                    self.canvas.create_text(col1_x + 5, y, fill=self.COLORS['text_tertiary'],
+                                           font=self.FONTS['small'],
+                                           text=f"📍 {step['panel']}", anchor=tk.NW, tags="Text")
+                    y += line_spacing - 2
+                
+                # Actions (compact list)
+                if 'actions' in step:
+                    for action in step['actions']:
+                        self.canvas.create_text(col1_x + 10, y, fill=self.COLORS['text_secondary'],
+                                               font=self.FONTS['small'],
+                                               text=action, anchor=tk.NW, tags="Text")
+                        y += line_spacing - 4
+                
+                y += section_spacing  # Space between steps
+        
+        # === RIGHT COLUMN: Quick Tips & Panel Guide ===
+        y = start_y
+        
+        # Quick Tips Section
+        if 'quick_tips' in data:
+            tips_data = data['quick_tips']
+            
+            # Header
+            self.canvas.create_text(col2_x, y, fill=self.COLORS['header_navigation'],
+                                   font='Sans 10 bold',
+                                   text=tips_data.get('header', 'QUICK TIPS'),
+                                   anchor=tk.NW, tags="Text")
+            y += line_spacing + 3
+            
+            # Tips in compact two-column layout within right column
+            if 'tips' in tips_data:
+                tips = tips_data['tips']
+                tips_per_col = (len(tips) + 1) // 2
+                
+                # First sub-column
+                temp_y = y
+                for i, tip in enumerate(tips[:tips_per_col]):
+                    self.canvas.create_text(col2_x + 5, temp_y,
+                                           fill=self.COLORS['text_secondary'],
+                                           font=self.FONTS['small'],
+                                           text=tip, anchor=tk.NW, tags="Text")
+                    temp_y += line_spacing - 4
+                
+                # Second sub-column
+                temp_y = y
+                sub_col2_x = col2_x + 180
+                for tip in tips[tips_per_col:]:
+                    self.canvas.create_text(sub_col2_x, temp_y,
+                                           fill=self.COLORS['text_secondary'],
+                                           font=self.FONTS['small'],
+                                           text=tip, anchor=tk.NW, tags="Text")
+                    temp_y += line_spacing - 4
+                
+                y = max(temp_y, y + (tips_per_col * (line_spacing - 4)))
+            
+            y += section_spacing + 5
+        
+        # Panel Guide Section
+        if 'panel_guide' in data:
+            guide_data = data['panel_guide']
+            
+            # Header
+            self.canvas.create_text(col2_x, y, fill=self.COLORS['header_settings'],
+                                   font='Sans 10 bold',
+                                   text=guide_data.get('header', 'PANEL LOCATIONS'),
+                                   anchor=tk.NW, tags="Text")
+            y += line_spacing + 3
+            
+            # Panel locations
+            if 'panels' in guide_data:
+                for panel in guide_data['panels']:
+                    panel_text = f"{panel.get('name', '')}: {panel.get('location', '')}"
+                    self.canvas.create_text(col2_x + 5, y,
+                                           fill=self.COLORS['text_secondary'],
+                                           font=self.FONTS['small'],
+                                           text=panel_text, anchor=tk.NW, tags="Text")
+                    y += line_spacing - 4
+        
+        # === BOTTOM: Key Visual Indicators ===
+        bottom_y = canvas_height - 35
+        center_x = canvas_width // 2
+        
+        visual_text = "🎨 Visual Indicators: Yellow Lines = Region Boundaries  |  Cyan Rectangle = AIR Region"
+        self.canvas.create_text(center_x, bottom_y, fill=self.COLORS['text_tertiary'],
+                               font=self.FONTS['small'],
+                               text=visual_text, anchor=tk.N, tags="Text")
+    
+    def _render_two_column(self, data, canvas_width, canvas_height):
+        """Render two-column layout (e.g., for image viewer)."""
         left_col_x = 20
         right_col_x = canvas_width // 2 + 20
         start_y = 100
         line_spacing = 22
         
-        # === LEFT COLUMN: Region Selection ===
-        y = start_y
+        # Left column
+        if 'left_column' in data:
+            left_data = data['left_column']
+            y = start_y
+            
+            # Header
+            if 'header' in left_data:
+                header = left_data['header']
+                color = self.COLORS.get(header.get('color', 'text_primary'))
+                self.canvas.create_text(left_col_x, y, fill=color,
+                                       font=self.FONTS['header'],
+                                       text=header['text'], anchor=tk.NW, tags="Text")
+                y += line_spacing + 5
+            
+            # Instructions
+            if 'instructions' in left_data:
+                self._render_instruction_list(left_col_x, y, left_data['instructions'], line_spacing)
         
-        # Header
-        canvas.create_text(left_col_x, y, fill=InstructionRenderer.COLORS['header_region'],
-                          font=InstructionRenderer.FONTS['header'],
-                          text="◆ REGION BOUNDARIES", anchor=tk.NW, tags="Text")
-        y += line_spacing + 5
+        # Right column
+        if 'right_column' in data:
+            right_data = data['right_column']
+            y = start_y
+            
+            # Header
+            if 'header' in right_data:
+                header = right_data['header']
+                color = self.COLORS.get(header.get('color', 'text_primary'))
+                self.canvas.create_text(right_col_x, y, fill=color,
+                                       font=self.FONTS['header'],
+                                       text=header['text'], anchor=tk.NW, tags="Text")
+                y += line_spacing + 5
+            
+            # Instructions
+            if 'instructions' in right_data:
+                self._render_instruction_list(right_col_x, y, right_data['instructions'], line_spacing)
         
-        # Instructions
-        instructions_left = [
-            ("🖱️", "Click twice to define vertical boundaries"),
-            ("", "  • First click: Start boundary"),
-            ("", "  • Second click: End boundary"),
-            ("", ""),
-            ("📋", "First region: Applied to ALL slices"),
-            ("✏️", "Subsequent edits: Current slice only"),
-            ("", ""),
-            ("🎨", "Visual: Yellow vertical lines"),
-        ]
-        
-        y = InstructionRenderer._render_instruction_list(
-            canvas, left_col_x, y, instructions_left, line_spacing
-        )
-        
-        # === RIGHT COLUMN: AIR Selection ===
-        y = start_y
-        
-        # Header
-        canvas.create_text(right_col_x, y, fill=InstructionRenderer.COLORS['header_air'],
-                          font=InstructionRenderer.FONTS['header'],
-                          text="◆ AIR REGIONS", anchor=tk.NW, tags="Text")
-        y += line_spacing + 5
-        
-        # Instructions
-        instructions_right = [
-            ("🖱️", "Click and drag to define rectangle"),
-            ("", "  • Drag: Area of Interest Rectangle"),
-            ("", "  • Release: Confirm selection"),
-            ("", ""),
-            ("📋", "First AIR: Applied to ALL slices"),
-            ("✏️", "Subsequent edits: Current slice only"),
-            ("", ""),
-            ("🎨", "Visual: Cyan rectangle"),
-        ]
-        
-        y = InstructionRenderer._render_instruction_list(
-            canvas, right_col_x, y, instructions_right, line_spacing
-        )
-        
-        # === BOTTOM: Navigation Controls ===
-        bottom_y = canvas_height - 80
-        center_x = canvas_width // 2
-        
-        canvas.create_text(center_x, bottom_y, fill=InstructionRenderer.COLORS['header_navigation'],
-                          font=InstructionRenderer.FONTS['header'],
-                          text="⌨ NAVIGATION", anchor=tk.N, tags="Text")
-        
-        nav_text = "← → Arrow Keys: Navigate slices  |  Mouse Wheel: Navigate slices  |  Ctrl+Wheel: Zoom  |  Ctrl+Drag: Pan  |  H: Toggle overlays"
-        canvas.create_text(center_x, bottom_y + 25, fill=InstructionRenderer.COLORS['text_tertiary'],
-                          font=InstructionRenderer.FONTS['text'],
-                          text=nav_text, anchor=tk.N, tags="Text")
+        # Footer (navigation)
+        if 'footer' in data:
+            footer = data['footer']
+            bottom_y = canvas_height - 80
+            center_x = canvas_width // 2
+            
+            if 'header' in footer:
+                header = footer['header']
+                color = self.COLORS.get(header.get('color', 'text_primary'))
+                self.canvas.create_text(center_x, bottom_y, fill=color,
+                                       font=self.FONTS['header'],
+                                       text=header['text'], anchor=tk.N, tags="Text")
+            
+            if 'text' in footer:
+                self.canvas.create_text(center_x, bottom_y + 25,
+                                       fill=self.COLORS['text_tertiary'],
+                                       font=self.FONTS['text'],
+                                       text=footer['text'], anchor=tk.N, tags="Text")
     
-    @staticmethod
-    def render_load_panel_instructions(canvas, canvas_width, canvas_height, logo_image=None):
-        """
-        Render instructions for the load/folder selection panel.
-        
-        Args:
-            canvas: Tkinter canvas widget
-            canvas_width: Canvas width in pixels
-            canvas_height: Canvas height in pixels
-            logo_image: Optional PIL ImageTk.PhotoImage for logo display
-        """
-        canvas.delete("all")
-        
-        # Draw logo if provided
-        if logo_image:
-            canvas.create_image(canvas_width - 217 // 2 - 7, 45, image=logo_image)
-        
-        # Center layout for workflow instructions
+    def _render_centered_steps(self, data, canvas_width, canvas_height):
+        """Render centered workflow steps layout."""
         center_x = canvas_width // 2
         start_y = 120
         line_spacing = 24
         
         # Main header
-        canvas.create_text(center_x, start_y, fill=InstructionRenderer.COLORS['header_workflow'],
-                          font=InstructionRenderer.FONTS['header'],
-                          text="◆ CARL QUANT WORKFLOW", anchor=tk.N, tags="Text")
+        if 'header' in data:
+            header = data['header']
+            color = self.COLORS.get(header.get('color', 'text_primary'))
+            self.canvas.create_text(center_x, start_y, fill=color,
+                                   font=self.FONTS['header'],
+                                   text=header['text'], anchor=tk.N, tags="Text")
         
         y = start_y + 40
         
         # Workflow steps
-        workflow_steps = [
-            ("1️⃣", "Select Folder", "Choose a directory containing OCT image stacks"),
-            ("", "", "  • Each subfolder = one specimen"),
-            ("", "", "  • Supported formats: .jpg, .png, .tif, .tiff"),
-            ("", "", ""),
-            ("2️⃣", "Configure Regions", "Define analysis regions on images"),
-            ("", "", "  • Region boundaries: Vertical lines (click twice)"),
-            ("", "", "  • AIR regions: Rectangles (click and drag)"),
-            ("", "", ""),
-            ("3️⃣", "Start Analysis", "Process all configured specimens"),
-            ("", "", "  • Results saved to Data_[operator]_[measurement] folder"),
-            ("", "", "  • Configuration auto-saved for future sessions"),
-        ]
-        
-        for number, title, description in workflow_steps:
-            if not number and not title:
-                # Empty line for spacing
-                y += line_spacing // 2
-                continue
-            
-            if number:
+        if 'steps' in data:
+            for step in data['steps']:
                 # Step number
-                canvas.create_text(center_x - 200, y, fill=InstructionRenderer.COLORS['symbol'],
-                                  font=InstructionRenderer.FONTS['symbol'],
-                                  text=number, anchor=tk.W, tags="Text")
+                if 'number' in step:
+                    self.canvas.create_text(center_x - 200, y,
+                                           fill=self.COLORS['symbol'],
+                                           font=self.FONTS['symbol'],
+                                           text=step['number'], anchor=tk.W, tags="Text")
+                
                 # Step title
-                canvas.create_text(center_x - 165, y, fill=InstructionRenderer.COLORS['text_primary'],
-                                  font=InstructionRenderer.FONTS['header'],
-                                  text=title, anchor=tk.W, tags="Text")
-            
-            if description:
-                # Description text
-                text_x = center_x - 165 if number else center_x - 165
-                canvas.create_text(text_x, y + (18 if number else 0),
-                                  fill=InstructionRenderer.COLORS['text_secondary'],
-                                  font=InstructionRenderer.FONTS['text'],
-                                  text=description, anchor=tk.W, tags="Text")
-            
-            y += line_spacing
+                if 'title' in step:
+                    self.canvas.create_text(center_x - 165, y,
+                                           fill=self.COLORS['text_primary'],
+                                           font=self.FONTS['header'],
+                                           text=step['title'], anchor=tk.W, tags="Text")
+                
+                # Description
+                if 'description' in step:
+                    self.canvas.create_text(center_x - 165, y + 18,
+                                           fill=self.COLORS['text_secondary'],
+                                           font=self.FONTS['text'],
+                                           text=step['description'], anchor=tk.W, tags="Text")
+                
+                y += line_spacing
+                
+                # Details
+                if 'details' in step:
+                    for detail in step['details']:
+                        self.canvas.create_text(center_x - 165, y,
+                                               fill=self.COLORS['text_secondary'],
+                                               font=self.FONTS['text'],
+                                               text=detail, anchor=tk.W, tags="Text")
+                        y += line_spacing
+                
+                y += line_spacing // 2  # Extra spacing between steps
     
-    @staticmethod
-    def render_settings_panel_instructions(canvas, canvas_width, canvas_height, logo_image=None):
-        """
-        Render instructions for the settings/configuration panel.
-        
-        Args:
-            canvas: Tkinter canvas widget
-            canvas_width: Canvas width in pixels
-            canvas_height: Canvas height in pixels
-            logo_image: Optional PIL ImageTk.PhotoImage for logo display
-        """
-        canvas.delete("all")
-        
-        # Draw logo if provided
-        if logo_image:
-            canvas.create_image(canvas_width - 217 // 2 - 7, 45, image=logo_image)
-        
+    def _render_single_column(self, data, canvas_width, canvas_height):
+        """Render single column layout (e.g., for settings)."""
         center_x = canvas_width // 2
         start_y = 120
         line_spacing = 22
         
         # Main header
-        canvas.create_text(center_x, start_y, fill=InstructionRenderer.COLORS['header_settings'],
-                          font=InstructionRenderer.FONTS['header'],
-                          text="◆ ANALYSIS SETTINGS", anchor=tk.N, tags="Text")
+        if 'header' in data:
+            header = data['header']
+            color = self.COLORS.get(header.get('color', 'text_primary'))
+            self.canvas.create_text(center_x, start_y, fill=color,
+                                   font=self.FONTS['header'],
+                                   text=header['text'], anchor=tk.N, tags="Text")
         
         y = start_y + 40
         
-        # Settings information
-        settings_info = [
-            ("⚙️", "Configure analysis parameters before processing"),
-            ("", ""),
-            ("📊", "Region Configuration"),
-            ("", "  • Number of sound regions"),
-            ("", "  • Number of lesion regions"),
-            ("", "  • Region width and spacing"),
-            ("", ""),
-            ("🔬", "Analysis Parameters"),
-            ("", "  • Surface detection threshold"),
-            ("", "  • Depth calculation method"),
-            ("", "  • Statistical measures"),
-            ("", ""),
-            ("💾", "Output Settings"),
-            ("", "  • Operator name"),
-            ("", "  • Measurement number"),
-            ("", "  • Export format preferences"),
-        ]
-        
-        y = InstructionRenderer._render_instruction_list(
-            canvas, center_x - 200, y, settings_info, line_spacing
-        )
+        # Sections
+        if 'sections' in data:
+            for section in data['sections']:
+                symbol = section.get('symbol', '')
+                text = section.get('text', '')
+                
+                if not text:
+                    y += line_spacing // 2
+                    continue
+                
+                if symbol:
+                    # Render symbol
+                    self.canvas.create_text(center_x - 200, y,
+                                           fill=self.COLORS['symbol'],
+                                           font=self.FONTS['symbol'],
+                                           text=symbol, anchor=tk.W, tags="Text")
+                    # Render main text
+                    self.canvas.create_text(center_x - 175, y,
+                                           fill=self.COLORS['text_primary'],
+                                           font=self.FONTS['text'],
+                                           text=text, anchor=tk.W, tags="Text")
+                else:
+                    # Render sub-text without symbol
+                    self.canvas.create_text(center_x - 175, y,
+                                           fill=self.COLORS['text_secondary'],
+                                           font=self.FONTS['text'],
+                                           text=text, anchor=tk.W, tags="Text")
+                
+                y += line_spacing
+                
+                # Subsections
+                if 'subsections' in section:
+                    for subsection in section['subsections']:
+                        self.canvas.create_text(center_x - 175, y,
+                                               fill=self.COLORS['text_secondary'],
+                                               font=self.FONTS['text'],
+                                               text=subsection, anchor=tk.W, tags="Text")
+                        y += line_spacing
     
-    @staticmethod
-    def _render_instruction_list(canvas, x, y, instructions, line_spacing):
-        """
-        Helper method to render a list of instructions with symbols.
-        
-        Args:
-            canvas: Tkinter canvas widget
-            x: X coordinate for text start
-            y: Y coordinate for text start
-            instructions: List of (symbol, text) tuples
-            line_spacing: Vertical spacing between lines
-        
-        Returns:
-            Final y coordinate after rendering
-        """
-        for symbol, text in instructions:
-            if text == "":
+    def _render_instruction_list(self, x, y, instructions, line_spacing):
+        """Helper to render a list of instructions."""
+        for item in instructions:
+            symbol = item.get('symbol', '')
+            text = item.get('text', '')
+            
+            if not text:
                 y += line_spacing // 2
                 continue
             
             if symbol:
                 # Render symbol
-                canvas.create_text(x, y, fill=InstructionRenderer.COLORS['symbol'],
-                                  font=InstructionRenderer.FONTS['symbol'],
-                                  text=symbol, anchor=tk.NW, tags="Text")
+                self.canvas.create_text(x, y, fill=self.COLORS['symbol'],
+                                       font=self.FONTS['symbol'],
+                                       text=symbol, anchor=tk.NW, tags="Text")
                 # Render main text
-                canvas.create_text(x + 25, y, fill=InstructionRenderer.COLORS['text_primary'],
-                                  font=InstructionRenderer.FONTS['text'],
-                                  text=text, anchor=tk.NW, tags="Text")
+                self.canvas.create_text(x + 25, y, fill=self.COLORS['text_primary'],
+                                       font=self.FONTS['text'],
+                                       text=text, anchor=tk.NW, tags="Text")
             else:
                 # Render sub-text without symbol
-                canvas.create_text(x + 25, y, fill=InstructionRenderer.COLORS['text_secondary'],
-                                  font=InstructionRenderer.FONTS['text'],
-                                  text=text, anchor=tk.NW, tags="Text")
+                self.canvas.create_text(x + 25, y, fill=self.COLORS['text_secondary'],
+                                       font=self.FONTS['text'],
+                                       text=text, anchor=tk.NW, tags="Text")
             
             y += line_spacing
         
         return y
     
-    @staticmethod
-    def load_logo(logo_path, size=(217, 76)):
-        """
-        Load and resize logo image for display.
+    def _render_error(self, message):
+        """Render error message on canvas."""
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
         
-        Args:
-            logo_path: Path to logo image file
-            size: Tuple of (width, height) for resizing
-        
-        Returns:
-            ImageTk.PhotoImage object or None if loading fails
-        """
-        try:
-            logo = Image.open(logo_path)
-            logo = logo.resize(size, Image.Resampling.LANCZOS)
-            return ImageTk.PhotoImage(logo)
-        except Exception:
-            return None
+        self.canvas.create_text(canvas_width // 2, canvas_height // 2,
+                               fill="#FF5252",
+                               font=self.FONTS['header'],
+                               text=f"⚠️ {message}",
+                               anchor=tk.CENTER, tags="Text")
+    
+    def clear(self):
+        """Clear all instructions from canvas."""
+        self.canvas.delete("all")

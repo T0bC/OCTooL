@@ -13,6 +13,7 @@ from scipy import ndimage
 from PIL import Image, ImageTk
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
+from utils.instruction_renderer import InstructionRenderer
 
 class imagePanel:
     def __init__(self, context):
@@ -41,6 +42,11 @@ class imagePanel:
         self.canvas.grid(row=1, column=0, columnspan=2, sticky=tk.E + tk.W + tk.N + tk.S)
         self.canvas.bind("<Configure>", self.onResize)
 
+        # Initialize instruction renderer for this canvas
+        self.instruction_renderer = InstructionRenderer(self.canvas)
+        self.instruction_renderer.set_logo("icons/WBM_UL_RGB_digital_Path.png")
+        
+        # Show initial instructions
         self.instructionText()
 
         self.scaleValue = tk.StringVar()
@@ -54,57 +60,12 @@ class imagePanel:
         self.scaleValueLabel.grid(row=3, column = 1, sticky=tk.E)
 
     def instructionText(self):
-        self.canvas.delete("all")
-
-        self.cwidth = self.canvas.winfo_width()
-        self.cheight = self.canvas.winfo_height()
-
-        # Draw logo in top-right corner
-        try:
-            self.ULPhoto = "icons/WBM_UL_RGB_digital_Path.png"
-            self.ULImage = Image.open(self.ULPhoto)
-            self.ULImage = self.ULImage.resize((217,76), Image.Resampling.LANCZOS)
-            self.ULImage = ImageTk.PhotoImage(self.ULImage)
-            self.canvas.create_image(self.cwidth - 217 // 2 - 7, 45, image=self.ULImage)
-        except Exception as e:
-            print(f"Failed to load logo: {e}")
-
-        header_y = 10
-        text_y_start = 5
-        line_spacing = 20
-        max_line_width = 80  # Adjust based on canvas width
-
-        instructions = [
-            "- Select a folder with OCT files (subfolders searched automatically)",
-            "- Add single files via 'Select File'",
-            "- Select dataset in 'Queue' and click 'Show'",
-            "- 'Global Settings' apply to all datasets",
-
-            "",
-            "Custom Settings",
-            "- 'Exp. Range': First and last slice to export",
-            "- 'Equidist. Slices': Number of slices to export",
-            "- 'Dyn. Range [dB]': Adjust image contrast",
-            "- 'Dispersion Correction': Enhance edge sharpness",
-
-            "",
-            "Sidecar Metadata File ('same name as oct file'.txt)",
-            "- Format: <VIEW>:<START-END>:<numberOfAequidistSlices>:<refractiveIndex>",
-            "  Example: ",
-            "           XZ:20-80:20:1.5",
-            "           YZ:15-90:10:1",
-            "           XY:1-50:25",
-            "- If file is missing or malformed, defaults are used."
-        ]
-
-        y_offset = text_y_start
-        for line in instructions:
-            if line == "":
-                y_offset += line_spacing // 2
-                continue
-            self.canvas.create_text(10, y_offset, fill="#D0D0D0", font="Sans 11",
-                                    text=line, anchor=tk.NW, tags="Text")
-            y_offset += line_spacing
+        """
+        Display instruction text and logo when no image is loaded.
+        Shows comprehensive getting started guide for Export module.
+        """
+        # Render comprehensive guide from JSON data
+        self.instruction_renderer.render('export_getting_started')
 
 
     @handle_errors("imagePanel")
