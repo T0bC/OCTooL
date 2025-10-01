@@ -1,0 +1,219 @@
+{
+  "carlquant_getting_started": {
+    "layout": "comprehensive_guide",
+    "title": {
+      "text": "◆ CARL QUANT - GETTING STARTED",
+      "color": "header_workflow"
+    },
+    "workflow_steps": [
+      {
+        "number": "1️⃣",
+        "title": "Load Images",
+        "panel": "Left Panel",
+        "actions": [
+          "▸ Click 'Select Folder' button",
+          "▸ Choose directory with OCT image stacks",
+          "▸ Each subfolder = one specimen"
+        ]
+      },
+      {
+        "number": "2️⃣",
+        "title": "Review Specimens",
+        "panel": "Specimen Table",
+        "actions": [
+          "▸ View loaded specimens in table",
+          "▸ Click specimen to select",
+          "▸ Check slice count and status"
+        ]
+      },
+      {
+        "number": "3️⃣",
+        "title": "Define Regions",
+        "panel": "Image Viewer",
+        "actions": [
+          "▸ REGION: Click twice for vertical boundaries",
+          "▸ AIR: Click & drag for rectangle",
+          "▸ First definition applies to ALL slices"
+        ]
+      },
+      {
+        "number": "4️⃣",
+        "title": "Configure Settings",
+        "panel": "Settings Panel",
+        "actions": [
+          "▸ Set operator name & measurement #",
+          "▸ Configure region parameters",
+          "▸ Adjust analysis settings"
+        ]
+      },
+      {
+        "number": "5️⃣",
+        "title": "Start Analysis",
+        "panel": "Left Panel",
+        "actions": [
+          "▸ Click 'Start Analyzing' button",
+          "▸ Results saved to Data_[operator]_[measurement]",
+          "▸ Configuration auto-saved"
+        ]
+      }
+    ],
+    "quick_tips": {
+      "header": "💡 QUICK TIPS",
+      "tips": [
+        "◄ ► Navigate slices",
+        "⊕ Ctrl+Wheel: Zoom in/out",
+        "✋ Ctrl+Drag: Pan image",
+        "⌨ H key: Toggle overlays",
+        "▬ Yellow lines = Regions",
+        "▭ Cyan box = AIR"
+      ]
+    },
+    "panel_guide": {
+      "header": "📍 PANEL LOCATIONS",
+      "panels": [
+        {"name": "▸ Load/Analyze", "location": "Left side"},
+        {"name": "▸ Specimen Table", "location": "Bottom left"},
+        {"name": "▸ Image Viewer", "location": "Center/Right"},
+        {"name": "▸ Settings", "location": "Right side"}
+      ]
+    }
+  },
+  "analyze_getting_started": {
+    "layout": "comprehensive_guide",
+    "title": {
+      "text": "◆ ANALYZE FRAMES - GETTING STARTED",
+      "color": "header_workflow"
+    },
+    "workflow_steps": [
+      {
+        "number": "1️⃣",
+        "title": "Load Data",
+        "panel": "Load Panel",
+        "actions": [
+          "▸ Click 'Load Folder' to select data directory",
+          "▸ Browse and select image stack",
+          "▸ Data loads into image viewer"
+        ]
+      },
+      {
+        "number": "2️⃣",
+        "title": "Annotate Images",
+        "panel": "Image Viewer",
+        "actions": [
+          "▸ Click on image to add annotation points",
+          "▸ Drag points to adjust position",
+          "▸ Use keyboard shortcuts for navigation"
+        ]
+      },
+      {
+        "number": "3️⃣",
+        "title": "Add Columns",
+        "panel": "Add Columns Panel",
+        "actions": [
+          "▸ Define custom data columns",
+          "▸ Set column types (numeric, text, boolean)",
+          "▸ Add metadata for analysis"
+        ]
+      },
+      {
+        "number": "4️⃣",
+        "title": "Export Data",
+        "panel": "Export Panel",
+        "actions": [
+          "▸ Configure export settings",
+          "▸ Select output format",
+          "▸ Save annotated data"
+        ]
+      }
+    ],
+    "quick_tips": {
+      "header": "💡 QUICK TIPS",
+      "tips": [
+        "◄ ► Navigate frames",
+        "⊕ Ctrl+Wheel: Zoom",
+        "✋ Drag points to adjust",
+        "⌨ H key: Toggle annotations",
+        "🖱️ Click to add points",
+        "⌫ Delete to remove points"
+      ]
+    },
+    "panel_guide": {
+      "header": "📍 PANEL LOCATIONS",
+      "panels": [
+        {"name": "▸ Load Data", "location": "Left side"},
+        {"name": "▸ Image Viewer", "location": "Center"},
+        {"name": "▸ Add Columns", "location": "Right side"},
+        {"name": "▸ Export", "location": "Bottom"}
+      ]
+    }
+  },
+  "export_getting_started": {
+    "layout": "comprehensive_guide",
+    "title": {
+      "text": "◆ EXPORT FRAMES - GETTING STARTED",
+      "color": "header_workflow"
+    },
+    "workflow_steps": [
+      {
+        "number": "1️⃣",
+        "title": "Load Images",
+        "panel": "Load Panel",
+        "actions": [
+          "▸ Select source folder with images",
+          "▸ Preview loaded image stack",
+          "▸ Verify image count and format"
+        ]
+      },
+      {
+        "number": "2️⃣",
+        "title": "Configure Global Settings",
+        "panel": "Global Settings",
+        "actions": [
+          "▸ Set output resolution",
+          "▸ Choose export format (PNG, TIFF, etc.)",
+          "▸ Configure compression settings"
+        ]
+      },
+      {
+        "number": "3️⃣",
+        "title": "Customize Per-Image",
+        "panel": "Custom Settings",
+        "actions": [
+          "▸ Add text overlays",
+          "▸ Set scale bars",
+          "▸ Configure annotations"
+        ]
+      },
+      {
+        "number": "4️⃣",
+        "title": "Execute Export",
+        "panel": "Execution Panel",
+        "actions": [
+          "▸ Review export settings",
+          "▸ Click 'Start Export' button",
+          "▸ Monitor progress"
+        ]
+      }
+    ],
+    "quick_tips": {
+      "header": "💡 QUICK TIPS",
+      "tips": [
+        "◄ ► Navigate images",
+        "⊕ Preview before export",
+        "📁 Batch process folders",
+        "⚙️ Save settings presets",
+        "📊 Add scale bars",
+        "🎨 Customize overlays"
+      ]
+    },
+    "panel_guide": {
+      "header": "📍 PANEL LOCATIONS",
+      "panels": [
+        {"name": "▸ Load Images", "location": "Top left"},
+        {"name": "▸ Global Settings", "location": "Left side"},
+        {"name": "▸ Image Viewer", "location": "Center"},
+        {"name": "▸ Custom Settings", "location": "Right side"}
+      ]
+    }
+  }
+}

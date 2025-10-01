@@ -126,6 +126,11 @@ class image_viewer_panel:
         self.canvas.bind("<B1-Motion>", self.on_canvas_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_mouse_up)
 
+        # Initialize instruction renderer for this canvas (before first use)
+        self.instruction_renderer = InstructionRenderer(self.canvas)
+        self.instruction_renderer.set_logo("icons/WBM_UL_RGB_digital_Path.png")
+        
+        # Show initial instructions
         self.instructionText()
 
         self.scaleValue = tk.StringVar()
@@ -496,20 +501,10 @@ class image_viewer_panel:
     def instructionText(self):
         """
         Display instruction text and logo when no image is loaded.
-        Delegates rendering to InstructionRenderer for consistency.
+        Shows comprehensive getting started guide on initial load.
         """
-        canvas_width = self.canvas.winfo_width()
-        canvas_height = self.canvas.winfo_height()
-        
-        # Load logo
-        logo_image = InstructionRenderer.load_logo("icons/WBM_UL_RGB_digital_Path.png")
-        if logo_image:
-            self.ULImage = logo_image  # Keep reference to prevent garbage collection
-        
-        # Render instructions using centralized renderer
-        InstructionRenderer.render_image_viewer_instructions(
-            self.canvas, canvas_width, canvas_height, logo_image
-        )
+        # Render comprehensive guide from JSON data
+        self.instruction_renderer.render('carlquant_getting_started')
 
 
     # ============================================================================

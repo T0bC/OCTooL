@@ -10,6 +10,7 @@ from tkinter import ttk
 from utils.tool_tip import Tooltip
 from PIL import Image, ImageTk
 from utils.error_handler import handle_errors
+from utils.instruction_renderer import InstructionRenderer
 import numpy as np
 from scipy.interpolate import splprep, splev
 from pathlib import Path
@@ -93,6 +94,11 @@ class annotatePanel:
         self.canvas.bind("<Button-3>", self.on_right_click)
         self.window.bind("<KeyPress-f>", self.fit_bezier_curve)
 
+        # Initialize instruction renderer for this canvas
+        self.instruction_renderer = InstructionRenderer(self.canvas)
+        self.instruction_renderer.set_logo("icons/WBM_UL_RGB_digital_Path.png")
+        
+        # Show initial instructions
         self.instructionText()
 
         self.scaleValue = tk.StringVar()
@@ -558,6 +564,14 @@ class annotatePanel:
 
     @handle_errors("error in instructionText")
     def instructionText(self):
+        """
+        Display instruction text and logo when no image is loaded.
+        Shows comprehensive getting started guide for Analyze module.
+        """
+        # Render comprehensive guide from JSON data
+        self.instruction_renderer.render('analyze_getting_started')
+        return  # Early return - old code below is replaced
+        
         self.canvas.delete("all")
 
         self.cwidth = self.canvas.winfo_width()
