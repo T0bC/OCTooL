@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Instruction Renderer for Carl Quant Module
+Instruction Renderer for OCTexVIEW Application
 
 This module provides a data-driven instruction rendering system that displays
-contextual help on a shared canvas. Instructions are loaded from JSON files,
+contextual help on canvas widgets. Instructions are loaded from JSON files,
 separating content from presentation logic.
+
+The renderer automatically adapts to different canvas heights by using an
+overflow system: workflow steps fill the first column, overflow to the second
+column, and Quick Tips appear below the overflow content.
 
 Created on Wed Oct 01 11:48:00 2025
 @author: meissnerto
@@ -12,16 +16,16 @@ Created on Wed Oct 01 11:48:00 2025
 
 import tkinter as tk
 import json
-from pathlib import Path
 from PIL import Image, ImageTk
 
 
 class InstructionRenderer:
     """
-    Data-driven instruction renderer for Carl Quant panels.
+    Data-driven instruction renderer for application panels.
     
-    Renders instructions from JSON configuration files onto a shared canvas.
-    Supports multiple layouts: two-column, centered steps, single column.
+    Renders instructions from JSON configuration files onto canvas widgets.
+    Automatically adapts layout based on available vertical space with column
+    overflow support to ensure all content is visible without scrolling.
     """
     
     # Color scheme
@@ -121,34 +125,56 @@ class InstructionRenderer:
         if self.logo_image:
             self.canvas.create_image(canvas_width - 217 // 2 - 7, 45, image=self.logo_image)
         
-        # Get instruction data
+        # Get instruction data and render
         data = self.instructions_data[instruction_key]
-        layout = data.get('layout', 'single_column')
+        layout = data.get('layout', 'comprehensive_guide')
         
-        # Render based on layout type
+        # Currently only 'comprehensive_guide' layout is supported
         if layout == 'comprehensive_guide':
             self._render_comprehensive_guide(data, canvas_width, canvas_height)
-        elif layout == 'two_column':
-            self._render_two_column(data, canvas_width, canvas_height)
-        elif layout == 'centered_steps':
-            self._render_centered_steps(data, canvas_width, canvas_height)
-        elif layout == 'single_column':
-            self._render_single_column(data, canvas_width, canvas_height)
         else:
-            self._render_error(f"Unknown layout: {layout}")
+            self._render_error(f"Unsupported layout: '{layout}'. Only 'comprehensive_guide' is supported.")
+    
+    def _calculate_workflow_height(self, data, line_spacing=19, section_spacing=10):
+        """
+        Calculate the required height for rendering workflow steps.
+        
+        Args:
+            data: Instruction data dictionary
+            line_spacing: Spacing between lines
+            section_spacing: Spacing between sections
+            
+        Returns:
+            Required height in pixels
+        """
+        height = 0
+        if 'workflow_steps' in data:
+            for step in data['workflow_steps']:
+                height += line_spacing  # Step number and title
+                if 'panel' in step:
+                    height += line_spacing - 2  # Panel location
+                if 'actions' in step:
+                    height += len(step['actions']) * (line_spacing - 4)  # Actions
+                height += section_spacing  # Space between steps
+        return height
     
     def _render_comprehensive_guide(self, data, canvas_width, canvas_height):
         """
         Render comprehensive getting started guide with workflow, tips, and panel locations.
-        Optimized for efficient space usage on a single screen.
+        Automatically adapts layout based on available vertical space:
+        - Workflow steps fill column 1 first
+        - If they overflow, continue in column 2
+        - Quick Tips and Panel Guide appear below overflow content in column 2
         """
         # Layout configuration
         left_margin = 15
-        col1_x = left_margin
-        col2_x = canvas_width // 2 + 10
         start_y = 50
         line_spacing = 19
         section_spacing = 10
+        
+        # Calculate required height for workflow steps
+        workflow_height = self._calculate_workflow_height(data, line_spacing, section_spacing)
+        available_height = canvas_height - start_y - 40  # Reserve space for title and bottom margin
         
         # Title
         if 'title' in data:
@@ -158,316 +184,130 @@ class InstructionRenderer:
                                    font=self.FONTS['header'],
                                    text=title['text'], anchor=tk.N, tags="Text")
         
-        # === LEFT COLUMN: Workflow Steps ===
-        y = start_y
+        # Always use adaptive two-column layout with overflow support
+        self._render_adaptive_two_column_layout(data, canvas_width, canvas_height, start_y, line_spacing, section_spacing, left_margin, available_height)
+    
+    def _render_adaptive_two_column_layout(self, data, canvas_width, canvas_height, start_y, line_spacing, section_spacing, left_margin, available_height):
+        """
+        Adaptive two-column layout with overflow support.
+        Workflow steps fill column 1, overflow to column 2.
+        Quick Tips and Panel Guide appear below overflow in column 2.
+        """
+        col1_x = left_margin
+        col2_x = canvas_width // 2 + 10
+        col1_y = start_y
+        col2_y = start_y
         
+        # Render workflow steps with overflow detection
         if 'workflow_steps' in data:
-            for step in data['workflow_steps']:
-                # Step number and title
+            steps = data['workflow_steps']
+            current_column = 1
+            
+            for step in steps:
                 number = step.get('number', '')
                 title = step.get('title', '')
                 
-                # Render styled number with symbol prefix
-                number_text = f"◉ {number}."
+                # Calculate height needed for this step
+                step_height = line_spacing  # Title
+                if 'panel' in step:
+                    step_height += line_spacing - 2
+                if 'actions' in step:
+                    step_height += len(step['actions']) * (line_spacing - 4)
+                step_height += section_spacing
                 
-                # Draw number with symbol
-                self.canvas.create_text(col1_x, y, fill=self.COLORS['symbol'],
+                # Check if we need to switch to column 2
+                # Only switch if the ENTIRE step won't fit (with small margin for safety)
+                if current_column == 1 and (col1_y - start_y + step_height) > (available_height + 50):
+                    current_column = 2
+                
+                # Select current position
+                if current_column == 1:
+                    col_x = col1_x
+                    y = col1_y
+                else:
+                    col_x = col2_x
+                    y = col2_y
+                
+                # Render step number with symbol
+                number_text = f"◉ {number}."
+                self.canvas.create_text(col_x, y, fill=self.COLORS['symbol'],
                                        font=self.FONTS['step_number'],
                                        text=number_text, anchor=tk.NW, tags="Text")
                 
-                # Render title text (offset to the right of the circle)
-                self.canvas.create_text(col1_x + 30, y, fill=self.COLORS['text_primary'],
+                # Render title
+                self.canvas.create_text(col_x + 30, y, fill=self.COLORS['text_primary'],
                                        font=self.FONTS['step_title'],
                                        text=title, anchor=tk.NW, tags="Text")
                 y += line_spacing
                 
-                # Panel location (in smaller, dimmer text)
+                # Panel location
                 if 'panel' in step:
-                    self.canvas.create_text(col1_x + 5, y, fill=self.COLORS['text_tertiary'],
+                    self.canvas.create_text(col_x + 5, y, fill=self.COLORS['text_tertiary'],
                                            font=self.FONTS['small'],
                                            text=f"📍 {step['panel']}", anchor=tk.NW, tags="Text")
                     y += line_spacing - 2
                 
-                # Actions (compact list)
+                # Actions
                 if 'actions' in step:
                     for action in step['actions']:
-                        self.canvas.create_text(col1_x + 10, y, fill=self.COLORS['text_secondary'],
+                        self.canvas.create_text(col_x + 10, y, fill=self.COLORS['text_secondary'],
                                                font=self.FONTS['small'],
                                                text=action, anchor=tk.NW, tags="Text")
                         y += line_spacing - 4
                 
-                y += section_spacing  # Space between steps
+                y += section_spacing
+                
+                # Update column position
+                if current_column == 1:
+                    col1_y = y
+                else:
+                    col2_y = y
         
-        # === RIGHT COLUMN: Quick Tips & Panel Guide ===
-        y = start_y
+        # Add extra spacing before Quick Tips
+        col2_y += section_spacing * 2
         
-        # Quick Tips Section
+        # === Quick Tips Section (in column 2, below overflow content) ===
         if 'quick_tips' in data:
             tips_data = data['quick_tips']
             
             # Header
-            self.canvas.create_text(col2_x, y, fill=self.COLORS['header_navigation'],
+            self.canvas.create_text(col2_x, col2_y, fill=self.COLORS['header_navigation'],
                                    font='Sans 10 bold',
                                    text=tips_data.get('header', 'QUICK TIPS'),
                                    anchor=tk.NW, tags="Text")
-            y += line_spacing + 3
+            col2_y += line_spacing + 3
             
-            # Tips in compact two-column layout within right column
+            # Tips in single column (simplified for space efficiency)
             if 'tips' in tips_data:
-                tips = tips_data['tips']
-                tips_per_col = (len(tips) + 1) // 2
-                
-                # First sub-column
-                temp_y = y
-                for i, tip in enumerate(tips[:tips_per_col]):
-                    self.canvas.create_text(col2_x + 5, temp_y,
+                for tip in tips_data['tips']:
+                    self.canvas.create_text(col2_x + 5, col2_y,
                                            fill=self.COLORS['text_secondary'],
                                            font=self.FONTS['small'],
                                            text=tip, anchor=tk.NW, tags="Text")
-                    temp_y += line_spacing - 4
-                
-                # Second sub-column
-                temp_y = y
-                sub_col2_x = col2_x + 180
-                for tip in tips[tips_per_col:]:
-                    self.canvas.create_text(sub_col2_x, temp_y,
-                                           fill=self.COLORS['text_secondary'],
-                                           font=self.FONTS['small'],
-                                           text=tip, anchor=tk.NW, tags="Text")
-                    temp_y += line_spacing - 4
-                
-                y = max(temp_y, y + (tips_per_col * (line_spacing - 4)))
+                    col2_y += line_spacing - 4
             
-            y += section_spacing + 5
+            col2_y += section_spacing + 5
         
-        # Panel Guide Section
+        # === Panel Guide Section (in column 2, below Quick Tips) ===
         if 'panel_guide' in data:
             guide_data = data['panel_guide']
             
             # Header
-            self.canvas.create_text(col2_x, y, fill=self.COLORS['header_settings'],
+            self.canvas.create_text(col2_x, col2_y, fill=self.COLORS['header_settings'],
                                    font='Sans 10 bold',
                                    text=guide_data.get('header', 'PANEL LOCATIONS'),
                                    anchor=tk.NW, tags="Text")
-            y += line_spacing + 3
+            col2_y += line_spacing + 3
             
             # Panel locations
             if 'panels' in guide_data:
                 for panel in guide_data['panels']:
                     panel_text = f"{panel.get('name', '')}: {panel.get('location', '')}"
-                    self.canvas.create_text(col2_x + 5, y,
+                    self.canvas.create_text(col2_x + 5, col2_y,
                                            fill=self.COLORS['text_secondary'],
                                            font=self.FONTS['small'],
                                            text=panel_text, anchor=tk.NW, tags="Text")
-                    y += line_spacing - 4
-        
-        # === BOTTOM: Key Visual Indicators ===
-        bottom_y = canvas_height - 35
-        center_x = canvas_width // 2
-        
-        visual_text = "🎨 Visual Indicators: Yellow Lines = Region Boundaries  |  Cyan Rectangle = AIR Region"
-        self.canvas.create_text(center_x, bottom_y, fill=self.COLORS['text_tertiary'],
-                               font=self.FONTS['small'],
-                               text=visual_text, anchor=tk.N, tags="Text")
-    
-    def _render_two_column(self, data, canvas_width, canvas_height):
-        """Render two-column layout (e.g., for image viewer)."""
-        left_col_x = 20
-        right_col_x = canvas_width // 2 + 20
-        start_y = 100
-        line_spacing = 22
-        
-        # Left column
-        if 'left_column' in data:
-            left_data = data['left_column']
-            y = start_y
-            
-            # Header
-            if 'header' in left_data:
-                header = left_data['header']
-                color = self.COLORS.get(header.get('color', 'text_primary'))
-                self.canvas.create_text(left_col_x, y, fill=color,
-                                       font=self.FONTS['header'],
-                                       text=header['text'], anchor=tk.NW, tags="Text")
-                y += line_spacing + 5
-            
-            # Instructions
-            if 'instructions' in left_data:
-                self._render_instruction_list(left_col_x, y, left_data['instructions'], line_spacing)
-        
-        # Right column
-        if 'right_column' in data:
-            right_data = data['right_column']
-            y = start_y
-            
-            # Header
-            if 'header' in right_data:
-                header = right_data['header']
-                color = self.COLORS.get(header.get('color', 'text_primary'))
-                self.canvas.create_text(right_col_x, y, fill=color,
-                                       font=self.FONTS['header'],
-                                       text=header['text'], anchor=tk.NW, tags="Text")
-                y += line_spacing + 5
-            
-            # Instructions
-            if 'instructions' in right_data:
-                self._render_instruction_list(right_col_x, y, right_data['instructions'], line_spacing)
-        
-        # Footer (navigation)
-        if 'footer' in data:
-            footer = data['footer']
-            bottom_y = canvas_height - 80
-            center_x = canvas_width // 2
-            
-            if 'header' in footer:
-                header = footer['header']
-                color = self.COLORS.get(header.get('color', 'text_primary'))
-                self.canvas.create_text(center_x, bottom_y, fill=color,
-                                       font=self.FONTS['header'],
-                                       text=header['text'], anchor=tk.N, tags="Text")
-            
-            if 'text' in footer:
-                self.canvas.create_text(center_x, bottom_y + 25,
-                                       fill=self.COLORS['text_tertiary'],
-                                       font=self.FONTS['text'],
-                                       text=footer['text'], anchor=tk.N, tags="Text")
-    
-    def _render_centered_steps(self, data, canvas_width, canvas_height):
-        """Render centered workflow steps layout."""
-        center_x = canvas_width // 2
-        start_y = 120
-        line_spacing = 24
-        
-        # Main header
-        if 'header' in data:
-            header = data['header']
-            color = self.COLORS.get(header.get('color', 'text_primary'))
-            self.canvas.create_text(center_x, start_y, fill=color,
-                                   font=self.FONTS['header'],
-                                   text=header['text'], anchor=tk.N, tags="Text")
-        
-        y = start_y + 40
-        
-        # Workflow steps
-        if 'steps' in data:
-            for step in data['steps']:
-                # Step number
-                if 'number' in step:
-                    self.canvas.create_text(center_x - 200, y,
-                                           fill=self.COLORS['symbol'],
-                                           font=self.FONTS['symbol'],
-                                           text=step['number'], anchor=tk.W, tags="Text")
-                
-                # Step title
-                if 'title' in step:
-                    self.canvas.create_text(center_x - 165, y,
-                                           fill=self.COLORS['text_primary'],
-                                           font=self.FONTS['header'],
-                                           text=step['title'], anchor=tk.W, tags="Text")
-                
-                # Description
-                if 'description' in step:
-                    self.canvas.create_text(center_x - 165, y + 18,
-                                           fill=self.COLORS['text_secondary'],
-                                           font=self.FONTS['text'],
-                                           text=step['description'], anchor=tk.W, tags="Text")
-                
-                y += line_spacing
-                
-                # Details
-                if 'details' in step:
-                    for detail in step['details']:
-                        self.canvas.create_text(center_x - 165, y,
-                                               fill=self.COLORS['text_secondary'],
-                                               font=self.FONTS['text'],
-                                               text=detail, anchor=tk.W, tags="Text")
-                        y += line_spacing
-                
-                y += line_spacing // 2  # Extra spacing between steps
-    
-    def _render_single_column(self, data, canvas_width, canvas_height):
-        """Render single column layout (e.g., for settings)."""
-        center_x = canvas_width // 2
-        start_y = 120
-        line_spacing = 22
-        
-        # Main header
-        if 'header' in data:
-            header = data['header']
-            color = self.COLORS.get(header.get('color', 'text_primary'))
-            self.canvas.create_text(center_x, start_y, fill=color,
-                                   font=self.FONTS['header'],
-                                   text=header['text'], anchor=tk.N, tags="Text")
-        
-        y = start_y + 40
-        
-        # Sections
-        if 'sections' in data:
-            for section in data['sections']:
-                symbol = section.get('symbol', '')
-                text = section.get('text', '')
-                
-                if not text:
-                    y += line_spacing // 2
-                    continue
-                
-                if symbol:
-                    # Render symbol
-                    self.canvas.create_text(center_x - 200, y,
-                                           fill=self.COLORS['symbol'],
-                                           font=self.FONTS['symbol'],
-                                           text=symbol, anchor=tk.W, tags="Text")
-                    # Render main text
-                    self.canvas.create_text(center_x - 175, y,
-                                           fill=self.COLORS['text_primary'],
-                                           font=self.FONTS['text'],
-                                           text=text, anchor=tk.W, tags="Text")
-                else:
-                    # Render sub-text without symbol
-                    self.canvas.create_text(center_x - 175, y,
-                                           fill=self.COLORS['text_secondary'],
-                                           font=self.FONTS['text'],
-                                           text=text, anchor=tk.W, tags="Text")
-                
-                y += line_spacing
-                
-                # Subsections
-                if 'subsections' in section:
-                    for subsection in section['subsections']:
-                        self.canvas.create_text(center_x - 175, y,
-                                               fill=self.COLORS['text_secondary'],
-                                               font=self.FONTS['text'],
-                                               text=subsection, anchor=tk.W, tags="Text")
-                        y += line_spacing
-    
-    def _render_instruction_list(self, x, y, instructions, line_spacing):
-        """Helper to render a list of instructions."""
-        for item in instructions:
-            symbol = item.get('symbol', '')
-            text = item.get('text', '')
-            
-            if not text:
-                y += line_spacing // 2
-                continue
-            
-            if symbol:
-                # Render symbol
-                self.canvas.create_text(x, y, fill=self.COLORS['symbol'],
-                                       font=self.FONTS['symbol'],
-                                       text=symbol, anchor=tk.NW, tags="Text")
-                # Render main text
-                self.canvas.create_text(x + 25, y, fill=self.COLORS['text_primary'],
-                                       font=self.FONTS['text'],
-                                       text=text, anchor=tk.NW, tags="Text")
-            else:
-                # Render sub-text without symbol
-                self.canvas.create_text(x + 25, y, fill=self.COLORS['text_secondary'],
-                                       font=self.FONTS['text'],
-                                       text=text, anchor=tk.NW, tags="Text")
-            
-            y += line_spacing
-        
-        return y
+                    col2_y += line_spacing - 4
     
     def _render_error(self, message):
         """Render error message on canvas."""

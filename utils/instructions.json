@@ -67,15 +67,6 @@
         "▬ Yellow lines = Regions",
         "▭ Cyan box = AIR"
       ]
-    },
-    "panel_guide": {
-      "header": "📍 PANEL LOCATIONS",
-      "panels": [
-        {"name": "▸ Load/Analyze", "location": "Left side"},
-        {"name": "▸ Specimen Table", "location": "Bottom left"},
-        {"name": "▸ Image Viewer", "location": "Center/Right"},
-        {"name": "▸ Settings", "location": "Right side"}
-      ]
     }
   },
   "analyze_getting_started": {
@@ -136,21 +127,12 @@
         "🖱️ Click to add points",
         "⌫ Delete to remove points"
       ]
-    },
-    "panel_guide": {
-      "header": "📍 PANEL LOCATIONS",
-      "panels": [
-        {"name": "▸ Load Data", "location": "Left side"},
-        {"name": "▸ Image Viewer", "location": "Center"},
-        {"name": "▸ Add Columns", "location": "Right side"},
-        {"name": "▸ Export", "location": "Bottom"}
-      ]
     }
   },
   "export_getting_started": {
     "layout": "comprehensive_guide",
     "title": {
-      "text": "◆ EXPORT FRAMES - GETTING STARTED",
+      "text": "◆ EXPORT - GETTING STARTED",
       "color": "header_workflow"
     },
     "workflow_steps": [
@@ -204,15 +186,6 @@
         "⚙️ Save settings presets",
         "📊 Add scale bars",
         "🎨 Customize overlays"
-      ]
-    },
-    "panel_guide": {
-      "header": "📍 PANEL LOCATIONS",
-      "panels": [
-        {"name": "▸ Load Images", "location": "Top left"},
-        {"name": "▸ Global Settings", "location": "Left side"},
-        {"name": "▸ Image Viewer", "location": "Center"},
-        {"name": "▸ Custom Settings", "location": "Right side"}
       ]
     }
   }
