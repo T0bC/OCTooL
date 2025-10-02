@@ -95,8 +95,8 @@ class BaseCanvasPanel:
         self.fitted_width = None
         self.fitted_height = None
         
-        # Overlay visibility state
-        self.overlays_visible = True
+        # Overlay visibility state (default: hidden for clean annotation workspace)
+        self.overlays_visible = False
         
         # Configure frame grid
         self.frame.rowconfigure(1, weight=1)
