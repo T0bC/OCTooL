@@ -34,6 +34,7 @@ class BaseCanvasPanel:
     - Coordinate conversion (canvas ↔ image)
     - Canvas resize handling with aspect ratio preservation
     - Instruction text rendering via InstructionRenderer
+    - Automatic focus management for reliable keyboard/mouse input in tabbed interfaces
     
     Hook Methods (override in subclasses for specialized behavior):
     - setup_specialized_bindings(): Add custom mouse/keyboard bindings
@@ -94,6 +95,9 @@ class BaseCanvasPanel:
         self.fitted_width = None
         self.fitted_height = None
         
+        # Overlay visibility state
+        self.overlays_visible = True
+        
         # Configure frame grid
         self.frame.rowconfigure(1, weight=1)
         self.frame.rowconfigure(3, weight=0)
@@ -105,6 +109,9 @@ class BaseCanvasPanel:
         self.canvas = tk.Canvas(self.frame, width=1024, height=480, 
                                highlightthickness=0, bg=canvas_bg)
         self.canvas.grid(row=1, column=0, columnspan=3, sticky="nsew")
+        
+        # Make canvas focusable for keyboard events
+        self.canvas.config(takefocus=True)
         
         # Setup common bindings
         self._setup_common_bindings()
@@ -137,7 +144,7 @@ class BaseCanvasPanel:
     
     def _setup_common_bindings(self):
         """Setup common keyboard and mouse bindings for navigation and zoom."""
-        # Navigation bindings
+        # Navigation bindings (window-level for keyboard shortcuts)
         self.window.bind("<Left>", self.on_arrow_left)
         self.window.bind("<Right>", self.on_arrow_right)
         self.window.bind("<MouseWheel>", self.on_mouse_wheel)
@@ -146,6 +153,17 @@ class BaseCanvasPanel:
         
         # Canvas bindings
         self.canvas.bind("<Configure>", self.onResize)
+        
+        # Keyboard navigation on canvas (for better reliability in tabbed interfaces)
+        self.canvas.bind("<Left>", self.on_arrow_left)
+        self.canvas.bind("<Right>", self.on_arrow_right)
+        
+        # Mouse wheel bindings on canvas (for better reliability in tabbed interfaces)
+        self.canvas.bind("<MouseWheel>", self.on_mouse_wheel)
+        self.canvas.bind("<Button-4>", self.on_mouse_wheel_linux)
+        self.canvas.bind("<Button-5>", self.on_mouse_wheel_linux)
+        
+        # Zoom bindings
         self.canvas.bind("<Control-MouseWheel>", self.on_mouse_wheel_zoom)
         self.canvas.bind("<Control-Button-4>", self.on_mouse_wheel_zoom)
         self.canvas.bind("<Control-Button-5>", self.on_mouse_wheel_zoom)
@@ -155,6 +173,9 @@ class BaseCanvasPanel:
         self.canvas.bind("<Control-ButtonPress-1>", self.start_pan)
         self.canvas.bind("<Control-B1-Motion>", self.do_pan)
         self.canvas.bind("<Control-ButtonRelease-1>", self.end_pan)
+        
+        # Focus management: give canvas focus when mouse enters
+        self.canvas.bind("<Enter>", lambda e: self.canvas.focus_set())
     
     # ============================================================================
     # HOOK METHODS - Override these in subclasses for specialized behavior
