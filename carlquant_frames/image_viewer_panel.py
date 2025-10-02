@@ -55,7 +55,6 @@ class image_viewer_panel(BaseCanvasPanel):
         # Annotation state (for compatibility, though not heavily used in this panel)
         self.slice_annotations = {}
         self.current_annotation = None
-        self.annotations_visible = True
         self.dragging_point_index = None
         self.point_handles = []
         self.overlay_handles = []
@@ -87,11 +86,13 @@ class image_viewer_panel(BaseCanvasPanel):
     
     def setup_specialized_bindings(self):
         """Setup region/AIR-specific mouse and keyboard bindings."""
-        # Annotation toggle (for compatibility)
-        self.window.bind("<KeyPress-h>", self.toggle_annotations)
+        # Overlay toggle (use base class method) - just 'h' key
+        # Only bind to canvas (gets focus on mouse enter via base class)
+        self.canvas.bind("<h>", self.toggle_overlays)
         
         # Mouse bindings for region and AIR selection
-        self.canvas.bind("<ButtonPress-1>", self.on_canvas_mouse_down)
+        # Use add=True to preserve base class focus management
+        self.canvas.bind("<ButtonPress-1>", self.on_canvas_mouse_down, add=True)
         self.canvas.bind("<B1-Motion>", self.on_canvas_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_mouse_up)
     
@@ -117,6 +118,9 @@ class image_viewer_panel(BaseCanvasPanel):
     
     def draw_specialized_overlays(self):
         """Draw region boundaries and AIR regions after image rendering."""
+        if not self.overlays_visible:
+            return
+        
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
             return
@@ -181,6 +185,9 @@ class image_viewer_panel(BaseCanvasPanel):
 
             self.render_zoomed_image()  # Calls base class method
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
+            
+            # Give canvas focus so keyboard shortcuts work immediately
+            self.canvas.focus_set()
 
         except Exception as e:
             if hasattr(self.context, 'status_bar') and self.context.status_bar:
@@ -189,23 +196,6 @@ class image_viewer_panel(BaseCanvasPanel):
                 print(f"Error displaying image {img_path}: {e}")
 
 
-    @handle_errors("imageViewerPanel.toggle_annotations")
-    def toggle_annotations(self, event=None):
-        """
-        Toggle visibility of annotations (bound to 'h' key).
-        
-        Args:
-            event: Tkinter event object (optional)
-        """
-        self.annotations_visible = not self.annotations_visible
-        self.canvas.delete("annotation")
-
-        if self.annotations_visible:
-            #self.draw_annotation()
-            self.draw_overlay_annotations()
-
-        else:
-            self.point_handles.clear()
 
 
     # ============================================================================

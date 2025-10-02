@@ -174,8 +174,16 @@ class BaseCanvasPanel:
         self.canvas.bind("<Control-B1-Motion>", self.do_pan)
         self.canvas.bind("<Control-ButtonRelease-1>", self.end_pan)
         
-        # Focus management: give canvas focus when mouse enters
+        # Focus management: give canvas focus when mouse enters or clicks
         self.canvas.bind("<Enter>", lambda e: self.canvas.focus_set())
+        self.canvas.bind("<Button-1>", self._ensure_focus, add=True)
+    
+    def _ensure_focus(self, event):
+        """
+        Ensure canvas has focus when clicked.
+        Uses add=True in binding to not interfere with other click handlers.
+        """
+        self.canvas.focus_set()
     
     # ============================================================================
     # HOOK METHODS - Override these in subclasses for specialized behavior
@@ -193,6 +201,9 @@ class BaseCanvasPanel:
         Hook method: Draw specialized overlays on the image.
         Override this in subclasses to draw annotations, regions, etc.
         Called after image rendering.
+        
+        Note: Subclasses should check self.overlays_visible before drawing
+        overlays to respect the toggle state.
         """
         pass
     
@@ -386,6 +397,9 @@ class BaseCanvasPanel:
             
             self.render_zoomed_image()
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
+            
+            # Give canvas focus so keyboard shortcuts work immediately
+            self.canvas.focus_set()
             
         except Exception as e:
             # Try to update status bar if available
@@ -616,3 +630,38 @@ class BaseCanvasPanel:
             self.display_image(int(self.scale.get()) - 1)
         else:
             self.instructionText()
+    
+    # ============================================================================
+    # OVERLAY VISIBILITY TOGGLE
+    # ============================================================================
+    
+    @handle_errors("BaseCanvasPanel.toggle_overlays")
+    def toggle_overlays(self, event=None):
+        """
+        Toggle visibility of all overlays (annotations, regions, AIR, etc.).
+        
+        This method provides a unified way to show/hide overlays across different
+        panel types. It toggles the overlays_visible flag and triggers a redraw.
+        
+        Subclasses should check self.overlays_visible in their draw_specialized_overlays()
+        implementation to respect this toggle state.
+        
+        Args:
+            event: Tkinter event object (optional, for keyboard binding)
+        """
+        self.overlays_visible = not self.overlays_visible
+        
+        # Clear all overlay-related canvas items
+        self.canvas.delete("annotation")
+        self.canvas.delete("region_visual")
+        self.canvas.delete("air_visual")
+        self.canvas.delete("air_drag")
+        
+        # Redraw image with overlays if visible
+        if self.rawImage is not None:
+            self.render_zoomed_image()  # This will call draw_specialized_overlays()
+        
+        # Update status if available
+        status = "visible" if self.overlays_visible else "hidden"
+        if hasattr(self.context, 'status_bar') and self.context.status_bar:
+            self.context.status_bar.update(f"Overlays {status}", level="info")
