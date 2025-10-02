@@ -34,19 +34,10 @@ class MainGui:
         self.mainWin['padx'] = 5
         self.mainWin['pady'] = 5
 
-        # Initialize Menubar to window
-        self.menubar = tk.Menu(self.mainWin)
-        self.helpmenu = tk.Menu(self.menubar)
-        self.helpmenu.add_command(label = 'Help', command=self.onHelp)
-        self.helpmenu.add_command(label = 'About', command=self.onAbout)
-
-        self.menubar.add_cascade(label="Help", menu=self.helpmenu)
-        self.mainWin.config(menu=self.menubar)
-
         # seetings for resizing of the window
         self.mainWin.columnconfigure(0, weight = 1)
-        self.mainWin.rowconfigure(0, weight = 1)
-        self.mainWin.rowconfigure(1, weight = 0)
+        self.mainWin.rowconfigure(0, weight = 1)  # Main content row
+        self.mainWin.rowconfigure(1, weight = 0)  # Status bar row
 
         # set a custom icon
         self.mainWin.iconbitmap("icons/thumb_4.ico")
@@ -113,6 +104,7 @@ class MainGui:
         self.mainWin.update_idletasks()  # Ensure layout is processed
         self.mainWin.deiconify()
 
+    @handle_errors("MainGui.setup_tab_styles")
     def _setup_tab_styles(self):
         """Setup custom styles for colored tab buttons."""
         # Hide the default notebook tabs completely by modifying the layout
@@ -168,14 +160,24 @@ class MainGui:
             padding=[20, 10]
         )
 
+    @handle_errors("MainGui.create_colored_tab_buttons")
     def create_colored_tab_buttons(self):
-        """Create colored buttons that act as tabs."""
+        """Create colored buttons that act as tabs, plus Help and About buttons."""
         self.tab_buttons = []
         self.current_tab = 0
+        
+        # Configure tabBar to have space between tab buttons and help buttons
+        self.tabBar.columnconfigure(0, weight=0)  # Tab buttons
+        self.tabBar.columnconfigure(1, weight=1)  # Spacer
+        self.tabBar.columnconfigure(2, weight=0)  # Help buttons
+        
+        # Container for tab buttons (left side)
+        tab_button_container = ttk.Frame(self.tabBar)
+        tab_button_container.grid(row=0, column=0, sticky="w")
 
         # Export button
         export_btn = ttk.Button(
-            self.tabBar,
+            tab_button_container,
             text="Export", #📊
             style="Export.TButton",
             command=lambda: self.switch_tab(0),
@@ -186,7 +188,7 @@ class MainGui:
 
         # Analyze button
         analyze_btn = ttk.Button(
-            self.tabBar,
+            tab_button_container,
             text="Analyze", #🔬
             style="Analyze.TButton",
             command=lambda: self.switch_tab(1),
@@ -197,7 +199,7 @@ class MainGui:
 
         # CarlQuant button
         carlquant_btn = ttk.Button(
-            self.tabBar,
+            tab_button_container,
             text="CarlQuant", #⚡
             style="CarlQuant.TButton",
             command=lambda: self.switch_tab(2),
@@ -205,7 +207,32 @@ class MainGui:
         )
         carlquant_btn.grid(row=0, column=2, padx=(2,0))
         self.tab_buttons.append(carlquant_btn)
+        
+        # Container for Help and About buttons (right side)
+        help_button_container = ttk.Frame(self.tabBar)
+        help_button_container.grid(row=0, column=2, sticky="e")
+        
+        # Help button
+        help_btn = ttk.Button(
+            help_button_container,
+            text="❓ Help",
+            bootstyle="secondary",
+            command=self.onHelp,
+            takefocus=False
+        )
+        help_btn.grid(row=0, column=0, padx=(0, 2))
+        
+        # About button
+        about_btn = ttk.Button(
+            help_button_container,
+            text="ℹ️ About",
+            bootstyle="secondary",
+            command=self.onAbout,
+            takefocus=False
+        )
+        about_btn.grid(row=0, column=1, padx=(2, 0))
 
+    @handle_errors("MainGui.switch_tab")
     def switch_tab(self, tab_index):
         """Switch to the specified tab."""
         # Force the button to lose focus immediately
@@ -232,6 +259,7 @@ class MainGui:
                 elif i == 2:  # CarlQuant
                     btn.configure(style="CarlQuant.TButton")
 
+    @handle_errors("MainGui.apply_tab_colors")
     def _apply_tab_colors(self):
         """Apply the hidden style to notebook tabs."""
         # Hide the default notebook tabs since we're using custom buttons
@@ -241,9 +269,11 @@ class MainGui:
         except tk.TclError:
             pass
 
+    @handle_errors("MainGui.start")
     def start(self):
         self.mainWin.mainloop() #start monitoring and updating the GUI
 
+    @handle_errors("MainGui.onHelp")
     def onHelp(self):
 
         self.helpMessage = \
@@ -255,6 +285,7 @@ class MainGui:
             '5. Click on "Export" to start the export. The outputfolder is\n    found in the original directory of the OCT File'
         tk.messagebox.askquestion(title = 'Help', message = self.helpMessage)
 
+    @handle_errors("MainGui.onAbout")
     def onAbout(self):
 
         self.aboutMassage = \
@@ -269,6 +300,7 @@ class MainGui:
 
         tk.messagebox.showinfo(title = 'Help', message = self.aboutMassage)
 
+    @handle_errors("MainGui.attach_status_bar")
     def attach_status_bar(self, context):
         """Attach the shared status bar to a given context."""
         if hasattr(self, "statusBar") and self.statusBar:

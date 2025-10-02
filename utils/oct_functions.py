@@ -14,25 +14,10 @@ import math
 from scipy import signal
 from PIL import ImageDraw, ImageFont
 from datetime import datetime
-import traceback
-import tkinter as tk
-from tkinter import messagebox
+from utils.error_handler import handle_errors
 
-def show_error_popup(title="Unexpected Error", exception=None):
-    root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    error_message = f"{str(exception)}\n\nTraceback:\n{traceback.format_exc()}"
-    messagebox.showerror(title, error_message)
-    root.destroy()
-
-def catch_errors(func):
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            show_error_popup(f"Error in {func.__name__}", e)
-    return wrapper
+# Alias for backward compatibility with existing code
+catch_errors = handle_errors
 
 # %% Insert Scale
 @catch_errors

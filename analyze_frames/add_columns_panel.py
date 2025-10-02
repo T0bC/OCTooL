@@ -32,7 +32,7 @@ class addColumnsPanel:
 
         self.columnNameEntry = ttk.Entry(self.frame, width=15, bootstyle="success")
         self.columnNameEntry.insert(0, 'GAP')
-        self.columnNameEntry.grid(row=3, column=0, sticky="ew", pady=3)
+        self.columnNameEntry.grid(row=0, column=0, sticky="ew", padx=(0, 3), pady=3)
         Tooltip(self.columnNameEntry, text=self.columnNameToolTip , wraplength=200)
 
         self.keyBindToolTip = 'Select a unique key to bind this column.'
@@ -45,7 +45,7 @@ class addColumnsPanel:
             width=4,
             bootstyle="success"
         )
-        self.keyBindDropdown.grid(row=3, column=1, sticky="ew", pady=3)
+        self.keyBindDropdown.grid(row=0, column=1, sticky="ew", padx=3, pady=3)
         Tooltip(self.keyBindDropdown, text=self.keyBindToolTip, wraplength=200)
 
         self.update_available_keys()
@@ -75,21 +75,35 @@ class addColumnsPanel:
             bootstyle="success"
         )
         self.dataTypeDropdown.set("Continuous")  # Default selection
-        self.dataTypeDropdown.grid(row=3, column=2, sticky="ew", pady=3)
+        self.dataTypeDropdown.grid(row=0, column=2, sticky="ew", padx=3, pady=3)
         Tooltip(self.dataTypeDropdown, text=self.dataTypeToolTip, wraplength=200)
 
-        self.colorPickerButton = tk.Button(
-            self.frame,
+        # Color picker container frame for better styling
+        self.colorPickerFrame = ttk.Frame(self.frame)
+        self.colorPickerFrame.grid(row=0, column=3, sticky="ew", padx=(3, 0), pady=3)
+        
+        # Color preview label (shows selected color)
+        self.colorPreviewLabel = tk.Label(
+            self.colorPickerFrame,
+            bg=self.selectedColor,
+            width=3,
+            relief=tk.SUNKEN,
+            borderwidth=2
+        )
+        self.colorPreviewLabel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 2))
+        
+        # Styled button using ttk for consistency
+        self.colorPickerButton = ttk.Button(
+            self.colorPickerFrame,
             text='Pick Color',
             command=self.pick_color_ctk,
-            bg=self.selectedColor,
-            fg='black',
-            width=12
+            bootstyle="info",
+            width=10
         )
-        self.colorPickerButton.grid(row=3, column=3, sticky=tk.W, pady=3)
+        self.colorPickerButton.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         Tooltip(self.colorPickerButton, text="Choose a color for this column (hex format)", wraplength=200)
 
-        self.addColumnAndBindingToTableToolTip = 'XXX Do a good tooltip here'
+        self.addColumnAndBindingToTableToolTip = 'Add a new custom column to the results table with the specified name, keybinding, data type, and color. The keybinding allows quick data entry using keyboard shortcuts during image annotation.'
 
         self.addColumnAndBindingToTable = ttk.Button(
             self.frame,
@@ -102,7 +116,7 @@ class addColumnsPanel:
                 ),
             bootstyle="success"
             )
-        self.addColumnAndBindingToTable.grid(row=4, column=0, sticky="ew" + tk.W, pady=3)
+        self.addColumnAndBindingToTable.grid(row=1, column=0, sticky="ew", padx=(0, 3), pady=3)
         Tooltip(self.addColumnAndBindingToTable, text=self.addColumnAndBindingToTableToolTip , wraplength=300)
 
         self.removeColumnButton = ttk.Button(
@@ -111,7 +125,7 @@ class addColumnsPanel:
             command=self.removeColumnFromTable,
             bootstyle="danger"
         )
-        self.removeColumnButton.grid(row=4, column=2, sticky="ew", pady=3)
+        self.removeColumnButton.grid(row=1, column=2, sticky="ew", padx=3, pady=3)
         Tooltip(self.removeColumnButton, text="Remove the last added custom column", wraplength=300)
 
     def pick_color_ctk(self):
@@ -120,11 +134,10 @@ class addColumnsPanel:
         color = pick_color.get()
         if color:
             self.selectedColor = color
-            self.colorPickerButton.config(
-                text=self.selectedColor,
-                bg=self.selectedColor,
-                fg='black'
-            )
+            # Update the color preview label
+            self.colorPreviewLabel.config(bg=self.selectedColor)
+            # Optionally update button text to show hex value
+            self.colorPickerButton.config(text=self.selectedColor)
 
 
     def update_available_keys(self):

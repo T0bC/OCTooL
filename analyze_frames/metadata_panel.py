@@ -21,37 +21,29 @@ class metadataPanel:
     def setup(self):
         # Operator
         self.operatorLabel = ttk.Label(self.frame, text='Operator')
-        #self.operatorLabel.grid(row=0, column=0, sticky="nsew", pady=3)
-        self.operatorLabel.grid(row=0, column=0)
+        self.operatorLabel.grid(row=0, column=0, sticky="w", padx=(0, 3), pady=3)
 
-
-        self.operatorEntry = ttk.Entry(self.frame, width=5, bootstyle="success")
+        self.operatorEntry = ttk.Entry(self.frame, width=3, bootstyle="success")
         self.operatorEntry.insert(0, 'TM')
-        #self.operatorEntry.grid(row=0, column=1, sticky=tk.W, pady=3)
-        self.operatorEntry.grid(row=0, column=1)
+        self.operatorEntry.grid(row=0, column=1, sticky="ew", padx=(0, 8), pady=3)
         Tooltip(self.operatorEntry, text='Define the Operator Abbreviation: TM or CR or ...', wraplength=200)
 
         # Measurement
         self.measurementLabel = ttk.Label(self.frame, text='Measurement')
-        #self.measurementLabel.grid(row=0, column=2, sticky="nsew", pady=3)
-        self.measurementLabel.grid(row=0, column=2)
+        self.measurementLabel.grid(row=0, column=2, sticky="w", padx=3, pady=3)
 
         self.measurementEntry = ttk.Entry(self.frame, width=5, bootstyle="success")
         self.measurementEntry.insert(0, '1')
-        #self.measurementEntry.grid(row=0, column=3, sticky=tk.W, pady=3)
-        self.measurementEntry.grid(row=0, column=3)
-
+        self.measurementEntry.grid(row=0, column=3, sticky="ew", padx=(0, 8), pady=3)
         Tooltip(self.measurementEntry, text='Measurement Number 1, 2, ...', wraplength=200)
 
-        # System
+        # System (moved to row 1)
         self.systemLabel = ttk.Label(self.frame, text='System')
-        #self.systemLabel.grid(row=1, column=0, sticky="nsew", pady=3)
-        self.systemLabel.grid(row=0, column=4)
+        self.systemLabel.grid(row=1, column=0, sticky="w", padx=(0, 3), pady=3)
 
         self.systemEntry = ttk.Entry(self.frame, width=5, bootstyle="success")
         self.systemEntry.insert(0, 'OCT')
-        #self.systemEntry.grid(row=1, column=1, sticky=tk.W, pady=3)
-        self.systemEntry.grid(row=0, column=5)
+        self.systemEntry.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=3)
         Tooltip(self.systemEntry, text='System: OCT / uCT / SEM / LiMi / ...', wraplength=200)
 
         # Save Config Button
@@ -62,7 +54,7 @@ class metadataPanel:
             command=self.saveConfigToFile,
             bootstyle="primary"
         )
-        self.saveConfig.grid(row=2, column=0, sticky="nsew", pady=3)
+        self.saveConfig.grid(row=2, column=0, sticky="ew", padx=(0, 3), pady=3)
         Tooltip(self.saveConfig, text='Save a config file for layout and key bindings. The config is saved as a "json" file and is to be loaded when analysis begins.', wraplength=200)
 
         self.showConfigBtn = ttk.Button(
@@ -71,7 +63,7 @@ class metadataPanel:
             command=self.show_keyboard_layout,
             bootstyle="info"
         )
-        self.showConfigBtn.grid(row=2, column=1, sticky="nsew", pady=3)
+        self.showConfigBtn.grid(row=2, column=1, sticky="ew", padx=(0, 3), pady=3)
         Tooltip(self.showConfigBtn, text='View assigned key bindings in a keyboard layout', wraplength=200)
 
     @handle_errors("metadataPanel.show_keyboard_layout")
