@@ -69,7 +69,6 @@ class annotatePanel(BaseCanvasPanel):
     
     def draw_specialized_overlays(self):
         """Draw annotations and overlays after image rendering."""
-        self.draw_annotation()
         self.draw_overlay_annotations()
 
     # ============================================================================
@@ -77,13 +76,17 @@ class annotatePanel(BaseCanvasPanel):
     # ============================================================================
     @handle_errors("annotatePanel.on_canvas_click")
     def on_canvas_click(self, event):
-        if not hasattr(self, 'rawImage') or not hasattr(self, 'fitted_width'):
+        if not hasattr(self, 'rawImage') or self.rawImage is None or not hasattr(self, 'fitted_width'):
             return None  # Prevent crash
         if self.dragging_started:
             return  # Skip adding point if drag was initiated
 
         x, y = event.x, event.y
-        img_x, img_y = self.canvas_to_image_coords(x, y)
+        img_coords = self.canvas_to_image_coords(x, y)
+        if img_coords is None or img_coords == (None, None):
+            return
+        
+        img_x, img_y = img_coords
 
         if not (0 <= img_x < self.rawImage.width and 0 <= img_y < self.rawImage.height):
             return
@@ -329,13 +332,17 @@ class annotatePanel(BaseCanvasPanel):
     @handle_errors("annotatePanel.create_new_point")
     def create_new_point(self, event):
         """Create a new annotation point"""
+        # Early return if no image is loaded
+        if self.rawImage is None:
+            return
+        
         x, y = event.x, event.y
 
         img_coords = self.canvas_to_image_coords(x, y)
-        if img_coords is None:
+        if img_coords is None or img_coords == (None, None):
             return
 
-        img_x, img_y = self.canvas_to_image_coords(x, y)
+        img_x, img_y = img_coords
 
         if not (0 <= img_x < self.rawImage.width and 0 <= img_y < self.rawImage.height):
             return
@@ -355,9 +362,17 @@ class annotatePanel(BaseCanvasPanel):
     def on_drag_motion(self, event):
         """Handle mouse drag - move point if one is selected"""
         if self.dragging_point_index is not None:
+            # Early return if no image is loaded
+            if self.rawImage is None:
+                return
+            
             self.dragging_started = True
 
-            img_x, img_y = self.canvas_to_image_coords(event.x, event.y)
+            img_coords = self.canvas_to_image_coords(event.x, event.y)
+            if img_coords is None or img_coords == (None, None):
+                return
+            
+            img_x, img_y = img_coords
 
             # Constrain to image bounds
             if not (0 <= img_x < self.rawImage.width and 0 <= img_y < self.rawImage.height):
