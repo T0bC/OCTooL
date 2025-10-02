@@ -16,11 +16,8 @@ from PIL import ImageDraw, ImageFont
 from datetime import datetime
 from utils.error_handler import handle_errors
 
-# Alias for backward compatibility with existing code
-catch_errors = handle_errors
-
 # %% Insert Scale
-@catch_errors
+@handle_errors("oct_functions.insertScale")
 def insertScale(img, scaleSize, xmlDict, fontSize, imgSliceDir):
     '''
     Parameters
@@ -66,7 +63,7 @@ def insertScale(img, scaleSize, xmlDict, fontSize, imgSliceDir):
     return img
 
 # %% Unzip OCT Files
-@catch_errors
+@handle_errors("oct_functions.unzipOCTData")
 def unzipOCTData(path):
     """
     Uses zipfile to unzip the data. Read Only.
@@ -86,7 +83,7 @@ def unzipOCTData(path):
     return archive
 
 #%%
-@catch_errors
+@handle_errors("oct_functions.getXMLvalue")
 def getXMLvalue(path: str, value: str)-> str:
     '''
     Returns the OCT data type as documented in the Header.xml. RawSpectral,
@@ -108,7 +105,7 @@ def getXMLvalue(path: str, value: str)-> str:
 
 
 # %% Read XML Content
-@catch_errors
+@handle_errors("oct_functions.readXMLContent")
 def readXMLContent(archive, nameOfXMLFile, fileExtension):
     """
     Reads XML Contents into buffer.
@@ -131,7 +128,7 @@ def readXMLContent(archive, nameOfXMLFile, fileExtension):
     xmlContent = BeautifulSoup(xmlData, fileExtension)
     return xmlContent
 
-@catch_errors
+@handle_errors("oct_functions.getXMLAttributes")
 def getXMLAttributes(xmlContent):
     '''
     Collect Meta-Data from the XML Header file.
@@ -289,7 +286,7 @@ def getXMLAttributes(xmlContent):
 
 
 # %% get the video image
-@catch_errors
+@handle_errors("oct_functions.createVideoImageFromRaw")
 def createVideoImageFromRaw(xmlDict: dict, archive: None):
     rawDataVideo = archive.read('data/VideoImage.data')
     # Read raw data as 32-bit unsigned integers
@@ -310,7 +307,7 @@ def createVideoImageFromRaw(xmlDict: dict, archive: None):
     return rgb_img
 
 # %% Create Image Spectral
-@catch_errors
+@handle_errors("oct_functions.createImageFromRaw")
 def createImageFromRaw(xmlDict: dict, archive: None, dBmin: int, dBmax: int, selDataType: str, averaging: str, spectral, prefRaw: bool, tukeySize: float, advancedFilter: str, dispersion, update_callback=None):
     '''
     Returns an uint8 (0-255) numpy array with the correct image dimensions in
@@ -457,7 +454,7 @@ def createImageFromRaw(xmlDict: dict, archive: None, dBmin: int, dBmax: int, sel
         return np.clip(img_stack, a_min = 0, a_max = 255)
 
 # %%
-@catch_errors
+@handle_errors("oct_functions.octToGV")
 def octToGV(cBscan, dBmin: int, dBmax: int, advancedFilter: str):
 
     '''
@@ -503,7 +500,7 @@ def octToGV(cBscan, dBmin: int, dBmax: int, advancedFilter: str):
     return np.clip(temp, a_min = 0, a_max = 255)
 
 # %% Smooth function from Matlab
-@catch_errors
+@handle_errors("oct_functions.smooth")
 def smooth(a, SPAN):
     '''
     SMOOTH(a,SPAN) smooths data a using SPAN as the number of points used
