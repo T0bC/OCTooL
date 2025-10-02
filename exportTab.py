@@ -25,7 +25,9 @@ def addContent(self, frame):
 
     self.exportTabFrame.columnconfigure(0, weight=0)
     self.exportTabFrame.columnconfigure(1, weight=1)
-    self.exportTabFrame.rowconfigure(0, weight=0)
+    self.exportTabFrame.rowconfigure(0, weight=1)
+    self.exportTabFrame.rowconfigure(1, weight=1)
+    self.exportTabFrame.rowconfigure(4, weight=1)
     self.exportTabFrame.rowconfigure(5, weight=1)
 
     # Create and register frames

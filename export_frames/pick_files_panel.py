@@ -85,7 +85,7 @@ class pickFilesPanel:
         self.running = 0
         # create a thread to keep UI responsive
         threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
-        threadPoolExecutor.submit(self.globalPicker(var))
+        threadPoolExecutor.submit(self.globalPicker, var)
 
 
     @handle_errors("pickFilesPanel")
