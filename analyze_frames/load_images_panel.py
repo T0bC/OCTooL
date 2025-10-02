@@ -37,7 +37,7 @@ class loadImagePanel:
             command=self.globalPickerThread,
             bootstyle="primary"
         )
-        self.pickFolderBtn.grid(row=0, column=0, sticky="ew", pady=3)
+        self.pickFolderBtn.grid(row=0, column=0, sticky="ew", pady=3, padx=3)
         Tooltip(self.pickFolderBtn, text=self.pickFolderToolTip, wraplength=200)
 
         # %% Load Config Button
@@ -49,7 +49,7 @@ class loadImagePanel:
             command=self.loadConfigToTable,
             bootstyle="primary"
         )
-        self.loadConfig.grid(row=0, column=1, sticky="ew", pady=3)
+        self.loadConfig.grid(row=0, column=1, sticky="ew", pady=3, padx=3  )
         Tooltip(self.loadConfig, text=self.loadConfigToolTip, wraplength=200)
 
     # %% Load Config Function

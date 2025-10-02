@@ -45,7 +45,7 @@ def addContent(self, frame):
     self.cstmSttngsFrame.grid(row=4, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
     self.context.register_frame("custom_settings", self.cstmSttngsFrame)
 
-    self.imgFrame = ttk.LabelFrame(self.exportTabFrame, text='Data Viewer', relief=tk.RIDGE)
+    self.imgFrame = ttk.LabelFrame(self.exportTabFrame, text='Image Viewer', relief=tk.RIDGE)
     self.imgFrame.grid(row=5, column=0, rowspan=4, columnspan=2, sticky=tk.E + tk.W + tk.N + tk.S)
     self.context.register_frame("image", self.imgFrame)
 

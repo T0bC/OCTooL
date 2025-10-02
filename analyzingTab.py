@@ -55,7 +55,7 @@ def addContent(self, frame):
     self.context.register_frame("results", self.resultsFrame)
 
     # Image Viewer Frame (dominates vertical space)
-    self.imgFrame = ttk.LabelFrame(self.analyzingTabFrame, text='Data Viewer', relief=tk.RIDGE)
+    self.imgFrame = ttk.LabelFrame(self.analyzingTabFrame, text='Image Viewer', relief=tk.RIDGE)
     self.imgFrame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("image", self.imgFrame)
 
