@@ -28,7 +28,6 @@ class annotatePanel(BaseCanvasPanel):
         # because setup_specialized_bindings() is called at the end of super().__init__()
         self.slice_annotations = {}
         self.current_annotation = None
-        self.annotations_visible = True
         self.dragging_point_index = None
         self.point_handles = []
         self.overlay_handles = []  # for non drawn overlays for boolean, categorial data types
@@ -46,11 +45,13 @@ class annotatePanel(BaseCanvasPanel):
     
     def setup_specialized_bindings(self):
         """Setup annotation-specific mouse and keyboard bindings."""
-        # Annotation toggle
-        self.window.bind("<KeyPress-h>", self.toggle_annotations)
+        # Annotation toggle (use base class method) - just 'h' key
+        # Only bind to canvas (gets focus on mouse enter via base class)
+        self.canvas.bind("<h>", self.toggle_overlays)
         
         # Mouse bindings for annotation
-        self.canvas.bind("<ButtonPress-1>", self.on_drag_start)
+        # Use add=True to preserve base class focus management
+        self.canvas.bind("<ButtonPress-1>", self.on_drag_start, add=True)
         self.canvas.bind("<B1-Motion>", self.on_drag_motion)
         self.canvas.bind("<ButtonRelease-1>", self.on_drag_end)
         self.canvas.bind("<Motion>", self.on_mouse_motion)
@@ -69,7 +70,9 @@ class annotatePanel(BaseCanvasPanel):
     
     def draw_specialized_overlays(self):
         """Draw annotations and overlays after image rendering."""
-        self.draw_overlay_annotations()
+        if self.overlays_visible:
+            self.draw_annotation()
+            self.draw_overlay_annotations()
 
     # ============================================================================
     # IMAGE ANNOTATION FUNCTIONS
@@ -109,11 +112,10 @@ class annotatePanel(BaseCanvasPanel):
 
         index = int(self.scale.get()) - 1
 
-        annotations = []
-        if self.annotations_visible:
-            annotations = self.slice_annotations.get(index, [])
+        # Get committed annotations for this slice
+        annotations = self.slice_annotations.get(index, [])
 
-        # Always include current annotation
+        # Always include current annotation (even if overlays are hidden)
         if self.current_annotation:
             annotations = annotations + [self.current_annotation]
 
@@ -199,8 +201,7 @@ class annotatePanel(BaseCanvasPanel):
             self.slice_annotations[index].append(self.current_annotation)
             committed_id = self.current_annotation["id"]
             self.current_annotation = None
-            self.draw_annotation()
-            self.draw_overlay_annotations()
+            # Flash annotation will show the committed annotation briefly, then hide it
             self.flash_annotation()
             return committed_id
         return None
@@ -301,18 +302,22 @@ class annotatePanel(BaseCanvasPanel):
 
     @handle_errors("annotatePanel.flash_annotation")
     def flash_annotation(self, duration=800):
-        self.annotations_visible = True
+        self.overlays_visible = True
         self.draw_annotation()
+        self.draw_overlay_annotations()
 
         # Schedule hiding after duration
         self.window.after(duration, self._hide_annotations_if_not_toggled)
 
     @handle_errors("annotatePanel._hide_annotations_if_not_toggled")
     def _hide_annotations_if_not_toggled(self):
-        # Only hide if user hasn't manually re-enabled visibility
-        if self.annotations_visible:
-            self.annotations_visible = False
-            self.draw_annotation()
+        # Only hide if user hasn't manually toggled visibility back on
+        # This auto-hide only triggers if overlays are still visible after the flash duration
+        if self.overlays_visible:
+            self.overlays_visible = False
+            # Trigger a full redraw to properly clear overlays
+            if self.rawImage is not None:
+                self.render_zoomed_image()
 
     # ============================================================================
     # CURVE FITTING
@@ -499,16 +504,6 @@ class annotatePanel(BaseCanvasPanel):
 
         self.draw_annotation()
 
-    @handle_errors("annotatePanel.toggle_annotations")
-    def toggle_annotations(self, event=None):
-        self.annotations_visible = not self.annotations_visible
-        self.canvas.delete("annotation")
-
-        if self.annotations_visible:
-            self.draw_annotation()
-            self.draw_overlay_annotations()
-        else:
-            self.point_handles.clear()
 
     # ============================================================================
     # SAVE/LOAD ANNOTATIONS
