@@ -173,6 +173,12 @@ class image_viewer_panel(BaseCanvasPanel):
 
         if index < 0 or index >= len(image_list):
             return
+        
+        # Auto-save previous slice if it has unsaved changes
+        if (self.last_displayed_slice is not None and 
+            self.last_displayed_slice != index and 
+            self.current_slice_modified):
+            self._auto_save_slice(self.last_displayed_slice)
 
         try:
             img_path = image_list[index]
@@ -185,6 +191,10 @@ class image_viewer_panel(BaseCanvasPanel):
 
             self.render_zoomed_image()  # Calls base class method
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
+            
+            # Update tracking
+            self.last_displayed_slice = index
+            self.current_slice_modified = False  # Reset for new slice
             
             # Give canvas focus so keyboard shortcuts work immediately
             self.canvas.focus_set()
