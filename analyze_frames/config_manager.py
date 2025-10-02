@@ -66,17 +66,46 @@ class ConfigManager:
         return config
 
 
+    @handle_errors("ConfigManager.save_config")
+    def save_config(self, metadata_panel, results_panel, add_columns_panel, context, filepath=None):
+        """
+        Save configuration to file.
+        
+        Args:
+            filepath: If provided, saves to this path. If None, prompts user with dialog.
+        """
+        config = self.build_config(metadata_panel, results_panel, add_columns_panel)
+        
+        # Prompt user for location if no filepath provided
+        if filepath is None:
+            filepath = filedialog.asksaveasfilename(
+                title="Save Configuration",
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            )
+            show_dialog = True
+        else:
+            show_dialog = False
+        
+        if filepath:
+            try:
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(config, f, indent=2, ensure_ascii=False)
+                context.status_bar.update(f"Config saved to: {filepath}", level="success")
+                if show_dialog:
+                    messagebox.showinfo("Success", f"Configuration saved to:\n{filepath}")
+            except Exception as e:
+                context.status_bar.update(f"Failed to save config: {e}", level="error")
+                if show_dialog:
+                    messagebox.showerror("Error", f"Failed to save configuration:\n{str(e)}")
+
     @handle_errors("ConfigManager.save_config_to_folder")
     def save_config_to_folder(self, folder_path, metadata_panel, results_panel, add_columns_panel, context):
-        config = self.build_config(metadata_panel, results_panel, add_columns_panel)
+        """
+        Auto-save config to a specific folder (convenience wrapper for annotation auto-save).
+        """
         config_path = Path(folder_path) / "config.json"
-
-        try:
-            with open(config_path, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=2, ensure_ascii=False)
-            context.status_bar.update(f"Config saved to: {config_path}", level="success")
-        except Exception as e:
-            context.status_bar.update(f"Failed to save config: {e}", level="error")
+        self.save_config(metadata_panel, results_panel, add_columns_panel, context, filepath=str(config_path))
 
 
     @handle_errors("ConfigManager.load_config")
