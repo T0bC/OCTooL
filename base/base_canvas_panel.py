@@ -14,10 +14,14 @@ Created on Thu Oct 02 09:43:00 2025
 
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
+import threading
+import queue
+from pathlib import Path
+from datetime import datetime
 
 
 class BaseCanvasPanel:
@@ -97,6 +101,14 @@ class BaseCanvasPanel:
         
         # Overlay visibility state (default: hidden for clean annotation workspace)
         self.overlays_visible = False
+        
+        # Image saving infrastructure (non-blocking)
+        self.save_queue = queue.Queue()
+        self.save_thread = None
+        self.is_saving = False
+        self.modified_slices = set()  # Track which slices have been modified
+        self.current_slice_modified = False  # Track if current slice has unsaved changes
+        self.last_displayed_slice = None  # Track which slice is currently displayed
         
         # Configure frame grid
         self.frame.rowconfigure(1, weight=1)
@@ -365,6 +377,8 @@ class BaseCanvasPanel:
         """
         Display an image from the image list.
         
+        Auto-saves the previous slice if it has unsaved changes before switching.
+        
         Args:
             index: 0-based slice index. If None, uses current slider position.
         """
@@ -382,6 +396,12 @@ class BaseCanvasPanel:
         if index < 0 or index >= len(image_list):
             return
         
+        # Auto-save previous slice if it has unsaved changes
+        if (self.last_displayed_slice is not None and 
+            self.last_displayed_slice != index and 
+            self.current_slice_modified):
+            self._auto_save_slice(self.last_displayed_slice)
+        
         try:
             img_path = self.get_image_path(index)
             if img_path is None:
@@ -397,6 +417,10 @@ class BaseCanvasPanel:
             
             self.render_zoomed_image()
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
+            
+            # Update tracking
+            self.last_displayed_slice = index
+            self.current_slice_modified = False  # Reset for new slice
             
             # Give canvas focus so keyboard shortcuts work immediately
             self.canvas.focus_set()
@@ -665,3 +689,270 @@ class BaseCanvasPanel:
         status = "visible" if self.overlays_visible else "hidden"
         if hasattr(self.context, 'status_bar') and self.context.status_bar:
             self.context.status_bar.update(f"Overlays {status}", level="info")
+    
+    # ============================================================================
+    # IMAGE SAVING WITH OVERLAYS (NON-BLOCKING)
+    # ============================================================================
+    
+    def mark_slice_modified(self, slice_index=None):
+        """
+        Mark a slice as modified (has annotations/overlays that should be saved).
+        
+        This sets the current_slice_modified flag, which triggers auto-save
+        when the user navigates to a different slice.
+        
+        Args:
+            slice_index: 0-based slice index. If None, uses current slice.
+        """
+        if slice_index is None:
+            slice_index = self.last_displayed_slice
+        
+        if slice_index is not None:
+            self.current_slice_modified = True
+            self.modified_slices.add(slice_index)
+    
+    @handle_errors("BaseCanvasPanel._get_output_folder")
+    def _get_output_folder(self):
+        """
+        Get the output folder for annotated images.
+        
+        Uses the Data_<operator>_<measurement> convention to match
+        where annotations.json is saved.
+        
+        Returns:
+            Path: Output folder path, or None if metadata not available
+        """
+        image_folder = getattr(self.context, "image_folder", None)
+        if not image_folder:
+            return None
+        
+        # Try to get operator and measurement from metadata panel
+        metadata_panel = self.context.get_panel("metadata")
+        if metadata_panel:
+            try:
+                operator = metadata_panel.operatorEntry.get()
+                measurement = metadata_panel.measurementEntry.get()
+                
+                if operator and measurement:
+                    # Use Data_<operator>_<measurement>/annotations convention
+                    output_folder = Path(image_folder) / f"Data_{operator}_{measurement}" / "annotations"
+                    output_folder.mkdir(parents=True, exist_ok=True)
+                    return output_folder
+            except:
+                pass
+        
+        # Fallback to simple annotations folder
+        output_folder = Path(image_folder) / "annotations" / "annotated_images"
+        output_folder.mkdir(parents=True, exist_ok=True)
+        return output_folder
+    
+    @handle_errors("BaseCanvasPanel._auto_save_slice")
+    def _auto_save_slice(self, slice_index):
+        """
+        Auto-save a single slice in the background.
+        
+        Called automatically when navigating away from a modified slice.
+        
+        Args:
+            slice_index: 0-based slice index to save
+        """
+        # Get output folder using Data_<operator>_<measurement> convention
+        output_folder = self._get_output_folder()
+        if not output_folder:
+            return
+        
+        # Get metadata
+        metadata_text = self.get_metadata_text()
+        
+        # Get image path
+        img_path = self.get_image_path(slice_index)
+        if not img_path:
+            return
+        
+        # Queue for saving
+        self.save_queue.put({
+            'slice_index': slice_index,
+            'image_path': img_path,
+            'output_folder': output_folder,
+            'metadata_text': metadata_text
+        })
+        
+        # Start save thread if not already running
+        if self.save_thread is None or not self.save_thread.is_alive():
+            self.is_saving = True
+            self.save_thread = threading.Thread(target=self._save_worker, daemon=True)
+            self.save_thread.start()
+    
+    def get_render_image_with_overlays(self, slice_index):
+        """
+        Hook method: Render image with overlays for saving.
+        Override this in subclasses to draw annotations/regions on the image.
+        
+        Args:
+            slice_index: 0-based slice index
+            
+        Returns:
+            PIL.Image: Image with overlays drawn, or None if no overlays
+        """
+        return None
+    
+    def get_metadata_text(self):
+        """
+        Hook method: Get metadata text to overlay on saved images.
+        Override this in subclasses to provide operator, measurement, etc.
+        
+        Returns:
+            str: Metadata text to display on image, or None
+        """
+        return None
+    
+    @handle_errors("BaseCanvasPanel.save_annotated_images")
+    def save_annotated_images(self, output_folder=None, only_modified=True):
+        """
+        Save images with overlays to disk (non-blocking).
+        
+        This method queues images for saving in a background thread, allowing
+        the user to continue annotating without interruption.
+        
+        Args:
+            output_folder: Path to save images. If None, uses annotations folder.
+            only_modified: If True, only saves slices that have been modified.
+        """
+        if self.is_saving:
+            if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                self.context.status_bar.update("Image saving already in progress...", level="warning")
+            return
+        
+        # Determine output folder
+        if output_folder is None:
+            output_folder = self._get_output_folder()
+            if not output_folder:
+                if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                    self.context.status_bar.update("No image folder set. Cannot save images.", level="error")
+                return
+        else:
+            output_folder = Path(output_folder)
+            output_folder.mkdir(parents=True, exist_ok=True)
+        
+        # Get metadata
+        metadata_text = self.get_metadata_text()
+        
+        # Determine which slices to save
+        image_list = self.get_image_list()
+        if only_modified:
+            slices_to_save = sorted(self.modified_slices)
+            if not slices_to_save:
+                if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                    self.context.status_bar.update("No modified slices to save.", level="info")
+                return
+        else:
+            slices_to_save = list(range(len(image_list)))
+        
+        # Queue images for saving
+        for slice_idx in slices_to_save:
+            img_path = self.get_image_path(slice_idx)
+            if img_path:
+                self.save_queue.put({
+                    'slice_index': slice_idx,
+                    'image_path': img_path,
+                    'output_folder': output_folder,
+                    'metadata_text': metadata_text
+                })
+        
+        # Start save thread if not already running
+        if self.save_thread is None or not self.save_thread.is_alive():
+            self.is_saving = True
+            self.save_thread = threading.Thread(target=self._save_worker, daemon=True)
+            self.save_thread.start()
+            
+            if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                self.context.status_bar.update(
+                    f"Saving {len(slices_to_save)} annotated image(s) in background...", 
+                    level="info"
+                )
+    
+    def _save_worker(self):
+        """
+        Background worker thread for saving images.
+        Processes the save queue without blocking the UI.
+        """
+        saved_count = 0
+        error_count = 0
+        
+        while not self.save_queue.empty():
+            try:
+                task = self.save_queue.get(timeout=1)
+                
+                # Load original image
+                img = Image.open(task['image_path'])
+                
+                # Get overlays from subclass
+                overlay_img = self.get_render_image_with_overlays(task['slice_index'])
+                
+                # Composite overlays if provided
+                if overlay_img:
+                    img = Image.alpha_composite(
+                        img.convert('RGBA'),
+                        overlay_img.convert('RGBA')
+                    ).convert('RGB')
+                
+                # Add metadata text if provided
+                if task['metadata_text']:
+                    draw = ImageDraw.Draw(img)
+                    try:
+                        # Try to use a nice font
+                        font = ImageFont.truetype("arial.ttf", 16)
+                    except:
+                        # Fall back to default font
+                        font = ImageFont.load_default()
+                    
+                    # Draw text with background
+                    text_bbox = draw.textbbox((0, 0), task['metadata_text'], font=font)
+                    text_width = text_bbox[2] - text_bbox[0]
+                    text_height = text_bbox[3] - text_bbox[1]
+                    
+                    # Position in top-right corner
+                    x = img.width - text_width - 10
+                    y = 10
+                    
+                    # Draw background rectangle
+                    draw.rectangle([x-5, y-5, x+text_width+5, y+text_height+5], 
+                                 fill=(0, 0, 0, 180))
+                    draw.text((x, y), task['metadata_text'], fill=(255, 255, 255), font=font)
+                
+                # Generate output filename
+                original_name = Path(task['image_path']).stem
+                output_path = task['output_folder'] / f"{original_name}_annotated.png"
+                
+                # Save image
+                img.save(output_path, 'PNG')
+                saved_count += 1
+                
+                self.save_queue.task_done()
+                
+            except Exception as e:
+                error_count += 1
+                error_msg = f"Error saving image slice {task.get('slice_index', '?')}: {str(e)}"
+                # Log to status bar for visibility
+                if hasattr(self, 'root') and hasattr(self.context, 'status_bar') and self.context.status_bar:
+                    self.root.after(0, lambda msg=error_msg: self.context.status_bar.update(msg, level="error"))
+                self.save_queue.task_done()
+        
+        # Update UI on completion (must be done in main thread)
+        self.is_saving = False
+        self.root.after(0, lambda: self._on_save_complete(saved_count, error_count))
+    
+    def _on_save_complete(self, saved_count, error_count):
+        """
+        Called when saving is complete (runs in main thread).
+        
+        Args:
+            saved_count: Number of images successfully saved
+            error_count: Number of errors encountered
+        """
+        # Only show status for errors or batch saves (not auto-saves)
+        if error_count > 0 and hasattr(self.context, 'status_bar') and self.context.status_bar:
+            self.context.status_bar.update(
+                f"Warning: {error_count} image(s) failed to save (check console for details)", 
+                level="warning"
+            )

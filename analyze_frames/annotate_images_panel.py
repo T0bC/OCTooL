@@ -8,7 +8,7 @@ Created on Thu Aug 14 11:13:52 2025
 import tkinter as tk
 from tkinter import ttk
 from utils.tool_tip import Tooltip
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
 import numpy as np
@@ -239,6 +239,10 @@ class annotatePanel(BaseCanvasPanel):
             self.slice_annotations[index].append(self.current_annotation)
             committed_id = self.current_annotation["id"]
             self.current_annotation = None
+            
+            # Mark this slice as modified for auto-save on navigation
+            self.mark_slice_modified()
+            
             # Flash annotation will show the committed annotation briefly, then hide it
             self.flash_annotation()
             return committed_id
@@ -611,5 +615,111 @@ class annotatePanel(BaseCanvasPanel):
         for slice_key, annotations in annotations_dict.items():
             slice_index = int(slice_key.replace("slice_", ""))
             self.slice_annotations[slice_index] = [normalize(a) for a in annotations]
+            # Don't mark as modified on load - only when user adds new annotations
 
         self.draw_annotation()
+    
+    # ============================================================================
+    # IMAGE SAVING HOOK IMPLEMENTATIONS
+    # ============================================================================
+    
+    @handle_errors("annotatePanel.get_render_image_with_overlays")
+    def get_render_image_with_overlays(self, slice_index):
+        """
+        Render annotations on image for saving.
+        
+        Args:
+            slice_index: 0-based slice index
+            
+        Returns:
+            PIL.Image: RGBA image with annotations drawn
+        """
+        # Check if this slice has annotations
+        if slice_index not in self.slice_annotations:
+            self.logger.debug(f"Slice {slice_index} not in slice_annotations")
+            return None
+        
+        annotations = self.slice_annotations[slice_index]
+        if not annotations:
+            self.logger.debug(f"Slice {slice_index} has empty annotations list")
+            return None
+        
+        self.logger.info(f"Rendering {len(annotations)} annotation(s) for slice {slice_index}")
+        
+        # Load the original image to get dimensions
+        img_path = self.get_image_path(slice_index)
+        if not img_path:
+            return None
+        
+        original_img = Image.open(img_path)
+        width, height = original_img.size
+        
+        # Create transparent overlay
+        overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+        
+        # Draw each annotation
+        for ann in annotations:
+            pts = ann["points"]
+            mode = ann["mode"]
+            color = ann.get("color", "#ffffb2")
+            
+            # Convert hex color to RGB
+            if color.startswith('#'):
+                r = int(color[1:3], 16)
+                g = int(color[3:5], 16)
+                b = int(color[5:7], 16)
+                rgb_color = (r, g, b, 255)
+            else:
+                rgb_color = (255, 255, 178, 255)  # Default yellow
+            
+            if len(pts) >= 2:
+                if mode == "line" or len(pts) < 4:
+                    # Draw as lines - convert tuples to proper format
+                    for i in range(len(pts)-1):
+                        # Ensure coordinates are tuples of floats/ints
+                        pt1 = tuple(pts[i]) if isinstance(pts[i], (list, tuple)) else pts[i]
+                        pt2 = tuple(pts[i+1]) if isinstance(pts[i+1], (list, tuple)) else pts[i+1]
+                        draw.line([pt1, pt2], fill=rgb_color, width=3)
+                else:
+                    # Draw as spline
+                    try:
+                        pts_np = np.array(pts)
+                        tck, _ = splprep([pts_np[:,0], pts_np[:,1]], s=0, k=3)
+                        u = np.linspace(0, 1, 500)
+                        x_new, y_new = splev(u, tck)
+                        spline_pts = list(zip(x_new, y_new))
+                        for i in range(len(spline_pts)-1):
+                            draw.line([spline_pts[i], spline_pts[i+1]], fill=rgb_color, width=3)
+                    except Exception as e:
+                        self.logger.warning(f"Spline rendering failed: {e}, falling back to lines")
+                        # Fall back to lines if spline fails
+                        for i in range(len(pts)-1):
+                            pt1 = tuple(pts[i]) if isinstance(pts[i], (list, tuple)) else pts[i]
+                            pt2 = tuple(pts[i+1]) if isinstance(pts[i+1], (list, tuple)) else pts[i+1]
+                            draw.line([pt1, pt2], fill=rgb_color, width=3)
+                
+                # Note: Control points are NOT drawn in saved images
+                # (only shown in interactive canvas for editing)
+        
+        return overlay
+    
+    @handle_errors("annotatePanel.get_metadata_text")
+    def get_metadata_text(self):
+        """
+        Get metadata text from the metadata panel.
+        
+        Returns:
+            str: Formatted metadata text
+        """
+        metadata_panel = self.context.get_panel("metadata")
+        if not metadata_panel:
+            return None
+        
+        try:
+            operator = metadata_panel.operatorEntry.get()
+            measurement = metadata_panel.measurementEntry.get()
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+            return f"Operator: {operator} | Measurement: {measurement} | {timestamp}"
+        except:
+            return None
