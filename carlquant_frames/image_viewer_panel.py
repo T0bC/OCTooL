@@ -21,9 +21,10 @@ from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
 from carlquant_frames.data_io import DataSaver
+from base import BaseCanvasPanel
 
 
-class image_viewer_panel:
+class image_viewer_panel(BaseCanvasPanel):
     """
     Interactive image viewer panel for OCT image stack visualization and annotation.
     
@@ -45,38 +46,24 @@ class image_viewer_panel:
     """
     @handle_errors("error in image_viewer_panel")
     def __init__(self, context):
-        self.context = context
-        self.root = context.root
-        self.frame = context.get_frame("carl_image")
+        # Store reference to load frame before calling super()
         self.loadFrame = context.get_frame("carl_load")
-
-        self.window = self.frame.winfo_toplevel()
-
-        # Next/prevous slice
-        self.window.bind("<Left>", self.on_arrow_left)
-        self.window.bind("<Right>", self.on_arrow_right)
-        self.window.bind("<KeyPress-h>", self.toggle_annotations)
-        self.window.bind("<MouseWheel>", self.on_mouse_wheel)         # Windows/macOS
-        self.window.bind("<Button-4>", self.on_mouse_wheel_linux)     # Linux scroll up
-        self.window.bind("<Button-5>", self.on_mouse_wheel_linux)     # Linux scroll down
-
-        # panning in smoothed image
-        self.is_panning = False
-        self.pan_start_x = 0
-        self.pan_start_y = 0
-
-        # image annotation
+        
+        # Initialize region/AIR-specific state BEFORE calling super().__init__()
+        # because setup_specialized_bindings() is called at the end of super().__init__()
+        
+        # Annotation state (for compatibility, though not heavily used in this panel)
         self.slice_annotations = {}
         self.current_annotation = None
         self.annotations_visible = True
         self.dragging_point_index = None
         self.point_handles = []
-        self.overlay_handles = [] # for non drawn overlays for boolean, categorial data types and such
-
-        # drag an existing point check
+        self.overlay_handles = []
+        
+        # Drag detection state
         self.dragging_started = False
-        self.hovered_point_index = None # used for hiver detection
-
+        self.hovered_point_index = None
+        
         # Selection state - automatic mode detection
         self.region_start_point = None     # First click point for region (two-click mode)
         self.region_visual_elements = []   # Visual elements for region display
@@ -90,125 +77,74 @@ class image_viewer_panel:
         self.air_drag_start = None         # Starting point for AIR drag
         self.air_drag_rectangle = None     # Canvas rectangle ID during drag
         self.air_visual_elements = []      # Visual elements for AIR display
-
-        self.frame.rowconfigure(1, weight=1)
-        self.frame.rowconfigure(3, weight=0)
-
-        # Ensure both columns can expand
-        self.frame.columnconfigure(0, weight=1)
-        self.frame.columnconfigure(1, weight=1)
-        self.frame.columnconfigure(2, weight=0)
-
-        self.root.after(100, lambda: self.display_image(0))
-
-        # Image Frame
-        self.canvas = tk.Canvas(self.frame, width=1024, height=480, highlightthickness=0, bg='#505050')
-        self.canvas.grid(row=1, column=0, columnspan=3, sticky="nsew")
-
-        # zoom experience
-        self.zoom_level = 1.0
-        self.image_offset_x = 0
-        self.image_offset_y = 0
-
-        self.canvas.bind("<Configure>", self.onResize)
-        self.canvas.bind("<Control-MouseWheel>", self.on_mouse_wheel_zoom)  # Windows
-        self.canvas.bind("<Control-Button-4>", self.on_mouse_wheel_zoom)    # Linux scroll up
-        self.canvas.bind("<Control-Button-5>", self.on_mouse_wheel_zoom)    # Linux scroll down
-        self.canvas.config(scrollregion=self.canvas.bbox("all"))
-
-        # keybind for paning the image when zoomed
-        self.canvas.bind("<Control-ButtonPress-1>", self.start_pan)
-        self.canvas.bind("<Control-B1-Motion>", self.do_pan)
-        self.canvas.bind("<Control-ButtonRelease-1>", self.end_pan)
-
+        
+        # Initialize base class (sets up canvas, zoom, pan, navigation, etc.)
+        super().__init__(context, "carl_image", canvas_bg='#505050')
+    
+    # ============================================================================
+    # HOOK METHOD IMPLEMENTATIONS
+    # ============================================================================
+    
+    def setup_specialized_bindings(self):
+        """Setup region/AIR-specific mouse and keyboard bindings."""
+        # Annotation toggle (for compatibility)
+        self.window.bind("<KeyPress-h>", self.toggle_annotations)
+        
         # Mouse bindings for region and AIR selection
         self.canvas.bind("<ButtonPress-1>", self.on_canvas_mouse_down)
         self.canvas.bind("<B1-Motion>", self.on_canvas_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_mouse_up)
-
-        # Initialize instruction renderer for this canvas (before first use)
-        self.instruction_renderer = InstructionRenderer(self.canvas)
-        self.instruction_renderer.set_logo("icons/WBM_UL_RGB_digital_Path.png")
+    
+    def get_instruction_key(self):
+        """Return instruction key for carlquant panel."""
+        return 'carlquant_getting_started'
+    
+    def get_image_list(self):
+        """Return the image list from current specimen."""
+        specimen_id = getattr(self.context, "current_specimen_id", None)
+        specimen_data = getattr(self.context, "specimen_data", {})
         
-        # Show initial instructions
-        self.instructionText()
-
-        self.scaleValue = tk.StringVar()
-        # Insert a Scale to select current slice
-        self.scale = ttk.Scale(self.frame, from_=1, to=1,
-                               orient='horizontal',
-                               bootstyle="warning")
-        self.scale.set(1)
-        self.scale.grid(row=3, column=0, columnspan=2, sticky="ew")
-
-        self.scaleValueLabel = ttk.Label(self.frame, text="text", textvariable=self.scaleValue)
-        self.scaleValueLabel.grid(row=3, column=2, sticky=tk.E)
-        Tooltip(self.scale, text='Move the slider to display a different slice.', wraplength=200)
-
-        self.setup_scale_callback()
-
+        if specimen_id and specimen_id in specimen_data:
+            return specimen_data[specimen_id].images
+        return []
+    
+    def get_image_path(self, index):
+        """Return the path to the image at the given index."""
+        image_list = self.get_image_list()
+        if 0 <= index < len(image_list):
+            return image_list[index]
+        return None
+    
+    def draw_specialized_overlays(self):
+        """Draw region boundaries and AIR regions after image rendering."""
+        specimen_id = getattr(self.context, "current_specimen_id", None)
+        if not specimen_id:
+            return
+        
+        specimen_data = getattr(self.context, "specimen_data", {})
+        if specimen_id not in specimen_data:
+            return
+        
+        specimen = specimen_data[specimen_id]
+        current_slice = int(self.scale.get()) - 1
+        
+        # Draw region boundaries and AIR regions
+        self.draw_region_boundaries(specimen, current_slice)
+        self.draw_air_regions(specimen, current_slice)
 
     # ============================================================================
-    # IMAGE DISPLAY AND RENDERING
+    # IMAGE DISPLAY (OVERRIDE FOR SPECIMEN-SPECIFIC LOGIC)
     # ============================================================================
     
-    @handle_errors("imageViewerPanel.render_zoomed_image")
-    def render_zoomed_image(self):
-        """
-        Render the current image with applied zoom and pan transformations.
-        
-        At zoom_level=1.0, the image is fitted to the canvas while preserving
-        aspect ratio. At higher zoom levels, the image is scaled accordingly.
-        After rendering, region boundaries and AIR regions are redrawn.
-        """
-        canvas_width = self.canvas.winfo_width()
-        canvas_height = self.canvas.winfo_height()
-
-        if self.zoom_level == 1.0:
-            # Fit image to canvas while preserving aspect ratio
-            img_ratio = self.rawImage.width / self.rawImage.height
-            canvas_ratio = canvas_width / canvas_height
-
-            if img_ratio > canvas_ratio:
-                zoomed_width = canvas_width
-                zoomed_height = int(canvas_width / img_ratio)
-            else:
-                zoomed_height = canvas_height
-                zoomed_width = int(canvas_height * img_ratio)
-
-            self.fitted_width = zoomed_width
-            self.fitted_height = zoomed_height
-
-            self.image_offset_x = (canvas_width - zoomed_width) // 2
-            self.image_offset_y = (canvas_height - zoomed_height) // 2
-        else:
-            zoomed_width = int(self.rawImage.width * self.zoom_level)
-            zoomed_height = int(self.rawImage.height * self.zoom_level)
-
-        # Resize image
-        zoomed = self.rawImage.resize((zoomed_width, zoomed_height), Image.Resampling.LANCZOS)
-        self.tk_image = ImageTk.PhotoImage(zoomed)
-
-        # Draw image
-        self.canvas.delete("all")
-        self.canvas.create_image(self.image_offset_x, self.image_offset_y, image=self.tk_image, anchor=tk.NW)
-        self.canvas.update_idletasks()
-
-        # Redraw region boundaries and AIR regions if they exist
-        self.redraw_region_boundaries_after_zoom()
-        self.redraw_air_regions_after_zoom()
-
-
     @handle_errors("imageViewerPanel.display_image")
     def display_image(self, index=None):
         """
         Display an image from the current specimen's image stack.
         
+        Overrides base class to handle specimen-specific image loading logic.
+        
         Args:
             index: 0-based slice index. If None, uses current slider position.
-        
-        This method loads the image, resets zoom/pan, renders it, and draws
-        any configured region boundaries and AIR regions for the slice.
         """
         self.canvas.delete("all")
 
@@ -216,14 +152,16 @@ class image_viewer_panel:
         specimen_data = getattr(self.context, "specimen_data", {})
 
         if not specimen_id or specimen_id not in specimen_data:
-            self.context.status_bar.update("No specimen selected.", level="warning")
+            if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                self.context.status_bar.update("No specimen selected.", level="warning")
             return
 
         image_list = specimen_data[specimen_id].images
         self.scale.configure(from_=1, to=len(image_list))
 
         if not image_list:
-            self.context.status_bar.update("No images found for selected specimen.", level="warning")
+            if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                self.context.status_bar.update("No images found for selected specimen.", level="warning")
             return
 
         if index is None:
@@ -241,16 +179,14 @@ class image_viewer_panel:
             self.image_offset_x = 0
             self.image_offset_y = 0
 
-            self.render_zoomed_image()
+            self.render_zoomed_image()  # Calls base class method
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
 
-            # Draw region boundaries and AIR regions if they exist for this slice
-            specimen = specimen_data[specimen_id]
-            self.draw_region_boundaries(specimen, index)
-            self.draw_air_regions(specimen, index)
-
         except Exception as e:
-            self.context.status_bar.update(f"Error displaying image {img_path}: {e}", level="error")
+            if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                self.context.status_bar.update(f"Error displaying image {img_path}: {e}", level="error")
+            else:
+                print(f"Error displaying image {img_path}: {e}")
 
 
     @handle_errors("imageViewerPanel.toggle_annotations")
@@ -270,241 +206,6 @@ class image_viewer_panel:
 
         else:
             self.point_handles.clear()
-
-
-    # ============================================================================
-    # ZOOM AND PAN FUNCTIONALITY
-    # ============================================================================
-    
-    @handle_errors("imageViewerPanel.on_mouse_wheel_zoom")
-    def on_mouse_wheel_zoom(self, event):
-        """
-        Handle zoom via Ctrl+MouseWheel.
-        
-        Zooms in/out while keeping the content under the mouse cursor fixed.
-        Zoom range: 1.0 (fit to canvas) to 10.0 (10x magnification).
-        
-        Args:
-            event: Mouse wheel event with delta and position information
-        """
-        if not hasattr(self, 'rawImage'):
-            return
-
-        # Get mouse position relative to canvas
-        mouse_x = self.canvas.canvasx(event.x)
-        mouse_y = self.canvas.canvasy(event.y)
-
-        # Use fitted size if zoom_level == 1.0
-        if self.zoom_level == 1.0:
-            current_width = getattr(self, 'fitted_width', self.rawImage.width)
-            current_height = getattr(self, 'fitted_height', self.rawImage.height)
-            current_zoom = current_width / self.rawImage.width
-        else:
-            current_zoom = self.zoom_level
-        # Convert to image-relative coordinates
-        rel_x = (mouse_x - self.image_offset_x) / current_zoom
-        rel_y = (mouse_y - self.image_offset_y) / current_zoom
-
-        # Update zoom level
-        old_zoom = self.zoom_level
-        if event.delta > 0 or getattr(event, 'num', None) == 4:
-            self.zoom_level = min(self.zoom_level + 0.25, 10.0)
-        elif event.delta < 0 or getattr(event, 'num', None) == 5:
-            self.zoom_level = max(self.zoom_level - 0.25, 1.0)
-
-        # Compute new offset to keep content under cursor fixed
-        self.image_offset_x = mouse_x - rel_x * self.zoom_level
-        self.image_offset_y = mouse_y - rel_y * self.zoom_level
-
-        self.render_zoomed_image()
-
-
-    @handle_errors("imageViewerPanel.start_pan")
-    def start_pan(self, event):
-        """
-        Start panning operation (Ctrl+LeftClick).
-        
-        Args:
-            event: Mouse button press event
-        """
-        self.is_panning = True
-        self.pan_start_x = event.x
-        self.pan_start_y = event.y
-        self.canvas.config(cursor="fleur") # "hand2"
-
-
-    @handle_errors("imageViewerPanel.do_pan")
-    def do_pan(self, event):
-        """
-        Perform panning while Ctrl+Drag is active.
-        
-        Updates image offset and clamps to prevent dragging image completely
-        out of view.
-        
-        Args:
-            event: Mouse motion event
-        """
-        if not self.is_panning:
-            return
-
-        dx = event.x - self.pan_start_x
-        dy = event.y - self.pan_start_y
-
-        self.image_offset_x += dx
-        self.image_offset_y += dy
-
-        self.pan_start_x = event.x
-        self.pan_start_y = event.y
-
-        # Clamp bounds
-        canvas_width = self.canvas.winfo_width()
-        canvas_height = self.canvas.winfo_height()
-        img_width = int(self.rawImage.width * self.zoom_level)
-        img_height = int(self.rawImage.height * self.zoom_level)
-
-        # Prevent dragging image completely out of view
-        min_x = canvas_width - img_width
-        min_y = canvas_height - img_height
-
-        self.image_offset_x = min(max(self.image_offset_x, min_x), 0)
-        self.image_offset_y = min(max(self.image_offset_y, min_y), 0)
-
-        self.render_zoomed_image()
-
-
-    @handle_errors("imageViewerPanel.end_pan")
-    def end_pan(self, event):
-        """
-        End panning operation (Ctrl+LeftRelease).
-        
-        Args:
-            event: Mouse button release event
-        """
-        self.is_panning = False
-        self.canvas.config(cursor="arrow")
-
-
-    # ============================================================================
-    # NAVIGATION CONTROLS (Arrow Keys, Mouse Wheel, Slider)
-    # ============================================================================
-    
-    @handle_errors("imageViewerPanel.on_arrow_left")
-    def on_arrow_left(self, event):
-        """
-        Navigate to previous slice (Left arrow key or scroll up).
-        
-        Args:
-            event: Keyboard or mouse wheel event
-        """
-        current = int(self.scale.get())
-        if current > 1:
-            self.scale.set(current - 1)
-            self.display_image(current - 2)  # -2 because scale is 1-based
-
-
-    @handle_errors("imageViewerPanel.on_arrow_right")
-    def on_arrow_right(self, event):
-        """
-        Navigate to next slice (Right arrow key or scroll down).
-        
-        Args:
-            event: Keyboard or mouse wheel event
-        """
-        current = int(self.scale.get())
-        if current < int(self.scale.cget("to")):
-            self.scale.set(current + 1)
-            self.display_image(current)  # current is already 1-based
-
-
-    @handle_errors("imageViewerPanel.on_mouse_wheel")
-    def on_mouse_wheel(self, event):
-        """
-        Handle mouse wheel scroll for Windows/macOS.
-        
-        Without Ctrl: Navigate between slices
-        With Ctrl: Zoom (handled by on_mouse_wheel_zoom)
-        
-        Args:
-            event: Mouse wheel event
-        """
-        if event.state & 0x0004:  # Ctrl is pressed
-            return  # Let canvas handle zoom
-        if event.delta > 0:
-            self.on_arrow_left(event)
-        else:
-            self.on_arrow_right(event)
-
-
-    @handle_errors("imageViewerPanel.on_mouse_wheel_linux")
-    def on_mouse_wheel_linux(self, event):
-        """
-        Handle mouse wheel scroll for Linux.
-        
-        Without Ctrl: Navigate between slices
-        With Ctrl: Zoom (handled by on_mouse_wheel_zoom)
-        
-        Args:
-            event: Mouse wheel event (Button-4 = up, Button-5 = down)
-        """
-        if event.state & 0x0004:  # Ctrl is pressed
-            return  # Let canvas handle zoom
-        if event.num == 4:
-            self.on_arrow_left(event)
-        elif event.num == 5:
-            self.on_arrow_right(event)
-
-
-    @handle_errors("imageViewerPanel.setup_scale_callback")
-    def setup_scale_callback(self):
-        """
-        Configure the slider callback for slice navigation.
-        """
-        self.scale.configure(command=self.on_scale_change)
-
-
-    @handle_errors("imageViewerPanel.on_scale_change")
-    def on_scale_change(self, value):
-        """
-        Handle slider value changes.
-        
-        Args:
-            value: New slider value (1-based slice number)
-        """
-        index = int(round(float(value))) - 1
-        self.display_image(index)
-
-
-    # ============================================================================
-    # UI EVENT HANDLERS
-    # ============================================================================
-    
-    @handle_errors("imageViewerPanel.onResize")
-    def onResize(self, event):
-        """
-        Handle canvas resize events.
-        
-        Refreshes the displayed image to fit the new canvas dimensions.
-        
-        Args:
-            event: Canvas configure event with new width/height
-        """
-        self.width = event.width
-        self.height = event.height
-
-        if hasattr(self, 'tk_image'):
-            self.display_image(int(self.scale.get()))
-        else:
-            self.instructionText()
-
-
-    @handle_errors("error in instructionText")
-    def instructionText(self):
-        """
-        Display instruction text and logo when no image is loaded.
-        Shows comprehensive getting started guide on initial load.
-        """
-        # Render comprehensive guide from JSON data
-        self.instruction_renderer.render('carlquant_getting_started')
 
 
     # ============================================================================
