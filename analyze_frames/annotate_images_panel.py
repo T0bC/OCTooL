@@ -70,8 +70,11 @@ class annotatePanel(BaseCanvasPanel):
     
     def draw_specialized_overlays(self):
         """Draw annotations and overlays after image rendering."""
+        # Always draw annotations (draw_annotation handles visibility internally)
+        self.draw_annotation()
+        
+        # Only draw non-drawn overlays (boolean, categorical) if visible
         if self.overlays_visible:
-            self.draw_annotation()
             self.draw_overlay_annotations()
 
     # ============================================================================
@@ -112,10 +115,14 @@ class annotatePanel(BaseCanvasPanel):
 
         index = int(self.scale.get()) - 1
 
-        # Get committed annotations for this slice
-        annotations = self.slice_annotations.get(index, [])
-
-        # Always include current annotation (even if overlays are hidden)
+        # Build list of annotations to draw
+        annotations = []
+        
+        # Only include committed annotations if overlays are visible
+        if self.overlays_visible:
+            annotations = self.slice_annotations.get(index, [])
+        
+        # Always include current annotation being edited (even if overlays are hidden)
         if self.current_annotation:
             annotations = annotations + [self.current_annotation]
 
@@ -136,15 +143,35 @@ class annotatePanel(BaseCanvasPanel):
                                                 width=2,
                                                 tags="annotation")
                 else:
-                    pts_np = np.array(canvas_pts)
-                    tck, _ = splprep([pts_np[:,0], pts_np[:,1]], s=0)
-                    u = np.linspace(0, 1, 500)
-                    x_new, y_new = splev(u, tck)
-                    for i in range(len(x_new)-1):
-                        self.canvas.create_line(x_new[i], y_new[i], x_new[i+1], y_new[i+1],
-                                                fill=color,
-                                                width=2,
-                                                tags="annotation")
+                    # Spline mode: requires at least 4 points for cubic spline
+                    # Fall back to line drawing if not enough points
+                    if len(canvas_pts) < 4:
+                        # Draw as lines with visual feedback that spline needs more points
+                        for i in range(len(canvas_pts)-1):
+                            self.canvas.create_line(*canvas_pts[i], *canvas_pts[i+1],
+                                                    fill=color,
+                                                    width=2,
+                                                    dash=(4, 2),  # Dashed line to indicate "waiting for spline"
+                                                    tags="annotation")
+                    else:
+                        try:
+                            pts_np = np.array(canvas_pts)
+                            # Use cubic spline (k=3) which requires at least 4 points
+                            tck, _ = splprep([pts_np[:,0], pts_np[:,1]], s=0, k=3)
+                            u = np.linspace(0, 1, 500)
+                            x_new, y_new = splev(u, tck)
+                            for i in range(len(x_new)-1):
+                                self.canvas.create_line(x_new[i], y_new[i], x_new[i+1], y_new[i+1],
+                                                        fill=color,
+                                                        width=2,
+                                                        tags="annotation")
+                        except Exception as e:
+                            # If spline fails, fall back to line drawing
+                            for i in range(len(canvas_pts)-1):
+                                self.canvas.create_line(*canvas_pts[i], *canvas_pts[i+1],
+                                                        fill=color,
+                                                        width=2,
+                                                        tags="annotation")
 
             # Only draw point handles if annotation is editable
             if not locked:
@@ -179,10 +206,21 @@ class annotatePanel(BaseCanvasPanel):
             diffs = np.diff(pts, axis=0)
             length = np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
         else:
-            tck, _ = splprep([pts[:, 0], pts[:, 1]], s=0)
-            u = np.linspace(0, 1, 1000)
-            x_new, y_new = splev(u, tck)
-            length = np.sum(np.sqrt(np.diff(x_new)**2 + np.diff(y_new)**2))
+            # Spline mode: requires at least 4 points for cubic spline
+            if len(points) < 4:
+                # Fall back to line length calculation if not enough points
+                diffs = np.diff(pts, axis=0)
+                length = np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
+            else:
+                try:
+                    tck, _ = splprep([pts[:, 0], pts[:, 1]], s=0, k=3)
+                    u = np.linspace(0, 1, 1000)
+                    x_new, y_new = splev(u, tck)
+                    length = np.sum(np.sqrt(np.diff(x_new)**2 + np.diff(y_new)**2))
+                except Exception:
+                    # Fall back to line length if spline fails
+                    diffs = np.diff(pts, axis=0)
+                    length = np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
 
         return length
 
@@ -329,7 +367,24 @@ class annotatePanel(BaseCanvasPanel):
 
         # Toggle mode for the current annotation only
         current_mode = self.current_annotation["mode"]
-        self.current_annotation["mode"] = "spline" if current_mode == "line" else "line"
+        num_points = len(self.current_annotation["points"])
+        
+        if current_mode == "line":
+            # Switching to spline mode
+            if num_points < 4:
+                # Show user feedback about minimum points needed
+                if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                    self.context.status_bar.update(
+                        f"Spline mode activated. Add {4 - num_points} more point(s) for smooth curve (currently {num_points}/4)",
+                        level="info"
+                    )
+            self.current_annotation["mode"] = "spline"
+        else:
+            # Switching back to line mode
+            self.current_annotation["mode"] = "line"
+            if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                self.context.status_bar.update("Line mode activated", level="info")
+        
         self.draw_annotation()
 
     # %% drag existing points to new position
