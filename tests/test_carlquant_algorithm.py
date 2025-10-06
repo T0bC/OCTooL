@@ -32,39 +32,90 @@ from carlquant_frames.specimen_model import (
 # SURFACE DETECTION
 # =============================================================================
 
-def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None) -> Surface:
+def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, region_config: Optional[RegionConfig] = None) -> Surface:
     """
     Detect the surface of the specimen in the OCT image.
     
-    Algorithm steps (to be implemented):
-    1. Use AIR region to determine threshold
-    2. Find first non-air pixels in each column
-    3. Apply smoothing/filtering
-    4. Fit curves (polynomial, spline, etc.)
+    Algorithm:
+    1. Calculate IQR from AIR region (if provided)
+    2. For each vertical pixel column (A-Scan) within specimen boundaries, find first pixel > IQR * 1.5
+    3. Store raw surface points
+    4. (Future) Apply smoothing/filtering and curve fitting
     
     Args:
         image: 2D numpy array (grayscale image)
         air_config: AIR configuration with threshold region
+        region_config: Region configuration with specimen boundaries
     
     Returns:
         Surface object with raw_points and fitted_curves
     """
     height, width = image.shape
     
-    print('bunch of things')
-
-    # TODO: Implement surface detection algorithm
-    # Placeholder: Generate dummy surface points
-    raw_points = []
-    for x in range(0, width, 10):  # Sample every 10 pixels
-        y = height // 4 + int(10 * np.sin(x / 50))  # Dummy sinusoidal surface
-        raw_points.append((x, y))
+    # Step 1: Calculate threshold based on AIR region
+    if air_config and air_config.point2:
+        # Extract AIR region
+        x1, y1 = air_config.point1
+        x2, y2 = air_config.point2
+        
+        # Ensure coordinates are within image bounds and properly ordered
+        x1, x2 = max(0, min(x1, x2)), min(width, max(x1, x2))
+        y1, y2 = max(0, min(y1, y2)), min(height, max(y1, y2))
+        
+        air_region = image[y1:y2, x1:x2]
+        
+        # Calculate statistics from AIR region
+        air_mean = np.mean(air_region)
+        air_std = np.std(air_region)
+        air_max = np.max(air_region)
+        air_q95 = np.percentile(air_region, 95)
+        
+        # Threshold: Use maximum value from AIR region
+        # Surface should be significantly brighter than air
+        # Use 95th percentile to be robust against outliers in AIR
+        threshold = air_q95 *1.5
+        
+        print(f"AIR region: ({x1},{y1}) to ({x2},{y2})")
+        print(f"AIR mean={air_mean:.2f}, std={air_std:.2f}, max={air_max:.2f}, Q95={air_q95:.2f}")
+        print(f"Threshold={threshold:.2f}")
+    else:
+        # Fallback: use image statistics if no AIR config
+        threshold = np.percentile(image, 50)
+        print(f"No AIR config, using fallback threshold={threshold:.2f}")
     
-    # TODO: Implement curve fitting
-    # Placeholder: Simple polynomial fit
-    fitted_curves = {
-        "polyfit": raw_points.copy()  # Replace with actual polynomial fit
-    }
+    # Step 2: Determine search boundaries (specimen start to end)
+    if region_config:
+        x_start = region_config.specimen_start[0]
+        x_end = region_config.tooth_end[0]
+        print(f"Searching for surface from x={x_start} to x={x_end}")
+    else:
+        # No region config, search entire width
+        x_start = 0
+        x_end = width
+        print(f"No region config, searching entire width")
+    
+    # Step 3: For each column (A-Scan) within boundaries, find first pixel above threshold
+    # Skip first 25 pixels (typically white/black band)
+    imageOffsett = 25
+    raw_points = []
+    for x in range(x_start, x_end):
+        column = image[imageOffsett:, x]  # Skip first 25 pixels
+        
+        # Find first pixel that exceeds threshold
+        above_threshold = np.where(column > threshold)[0]
+        
+        if len(above_threshold) > 0:
+            y = above_threshold[0] + imageOffsett  # First pixel above threshold (add 25 offset back)
+            raw_points.append((x, y))
+        else:
+            # No pixel found above threshold in this column
+            # Skip this column or use a default value
+            pass
+    
+    print(f"Detected {len(raw_points)} surface points out of {x_end - x_start} columns")
+    
+    # Step 4: Placeholder for curve fitting (to be implemented later)
+    fitted_curves = {}
     
     return Surface(
         raw_points=raw_points,
@@ -324,7 +375,7 @@ def process_slice(image_path: Path,
     image_array = np.array(img)
     
     # Step 1: Detect surface
-    surface = detect_surface(image_array, air_config)
+    surface = detect_surface(image_array, air_config, region_config)
     
     # Step 2: Extract regions
     region_stats = extract_regions(

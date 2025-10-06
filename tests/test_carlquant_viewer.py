@@ -15,7 +15,7 @@ Created on Mon Oct 06 11:50:00 2025
 import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 import numpy as np
 from pathlib import Path
 from typing import Optional, Dict
@@ -42,12 +42,14 @@ class CarlQuantTestViewer:
         self.current_specimen: Optional[Specimen] = None
         self.current_slice_index: int = 0
         self.current_image: Optional[np.ndarray] = None
+        self.current_ascan_x: int = 0  # Current A-Scan column position
         
         # Display state
         self.show_surface = tk.BooleanVar(value=True)
         self.show_regions = tk.BooleanVar(value=True)
         self.show_air = tk.BooleanVar(value=True)
         self.show_lesion_depth = tk.BooleanVar(value=True)
+        self.show_ascan = tk.BooleanVar(value=True)
         
         # Results cache
         self.results_cache = {}  # (specimen_id, slice_idx) -> (region_stats, surface, lesion_depth)
@@ -66,7 +68,7 @@ class CarlQuantTestViewer:
         left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
         left_panel.pack_propagate(False)
         
-        # Right panel: Image display
+        # Right panel: Image and A-Scan display
         right_panel = ttk.Frame(main_frame)
         right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
@@ -141,6 +143,8 @@ class CarlQuantTestViewer:
                        command=self.update_display).pack(anchor=tk.W)
         ttk.Checkbutton(display_frame, text="Show Lesion Depth", variable=self.show_lesion_depth,
                        command=self.update_display).pack(anchor=tk.W)
+        ttk.Checkbutton(display_frame, text="Show A-Scan", variable=self.show_ascan,
+                       command=self.update_display).pack(anchor=tk.W)
         
         # Info panel
         info_frame = ttk.LabelFrame(parent, text="Information", padding=10)
@@ -155,10 +159,39 @@ class CarlQuantTestViewer:
         self.info_text.config(yscrollcommand=info_scroll.set)
     
     def setup_image_panel(self, parent):
-        """Setup the image display panel."""
+        """Setup the image display panel with A-Scan viewer."""
+        # Main container with image on left and A-Scan plot on right
+        display_container = ttk.Frame(parent)
+        display_container.pack(fill=tk.BOTH, expand=True)
+        
+        # Left side: Image display
+        image_frame = ttk.Frame(display_container)
+        image_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
         # Canvas for image display
-        self.canvas = tk.Canvas(parent, bg='#2b2b2b', highlightthickness=0)
+        self.canvas = tk.Canvas(image_frame, bg='#2b2b2b', highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # A-Scan position slider (below image)
+        ascan_frame = ttk.Frame(image_frame)
+        ascan_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        self.ascan_label = ttk.Label(ascan_frame, text="A-Scan X: 0")
+        self.ascan_label.pack()
+        
+        self.ascan_scale = ttk.Scale(ascan_frame, from_=0, to=100, orient=tk.HORIZONTAL,
+                                     command=self.on_ascan_change)
+        self.ascan_scale.pack(fill=tk.X)
+        
+        # Right side: A-Scan intensity plot
+        plot_frame = ttk.Frame(display_container, width=300)
+        plot_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(5, 0))
+        plot_frame.pack_propagate(False)
+        
+        ttk.Label(plot_frame, text="A-Scan Intensity Profile", font=("Arial", 10, "bold")).pack(pady=(0, 5))
+        
+        self.plot_canvas = tk.Canvas(plot_frame, bg='white', highlightthickness=1, highlightbackground='gray')
+        self.plot_canvas.pack(fill=tk.BOTH, expand=True)
         
         # Status bar
         self.status_label = ttk.Label(parent, text="Ready", relief=tk.SUNKEN, anchor=tk.W)
@@ -256,10 +289,26 @@ class CarlQuantTestViewer:
         img = Image.open(image_path).convert('L')
         self.current_image = np.array(img)
         
+        # Update A-Scan scale range
+        width = self.current_image.shape[1]
+        self.ascan_scale.config(from_=0, to=width-1)
+        if self.current_ascan_x >= width:
+            self.current_ascan_x = width // 2
+        self.ascan_scale.set(self.current_ascan_x)
+        
         # Update label
         self.slice_label.config(text=f"Slice: {slice_idx + 1} / {len(self.current_specimen.images)}")
         
         # Display with overlays
+        self.update_display()
+    
+    def on_ascan_change(self, value):
+        """Handle A-Scan position change."""
+        if self.current_image is None:
+            return
+        
+        self.current_ascan_x = int(float(value))
+        self.ascan_label.config(text=f"A-Scan X: {self.current_ascan_x}")
         self.update_display()
     
     def update_display(self):
@@ -273,6 +322,10 @@ class CarlQuantTestViewer:
         # Convert to RGB for overlays
         if len(display_image.shape) == 2:
             display_image = np.stack([display_image] * 3, axis=-1)
+        
+        # Draw A-Scan vertical line
+        if self.show_ascan.get() and 0 <= self.current_ascan_x < display_image.shape[1]:
+            display_image[:, self.current_ascan_x] = [255, 0, 255]  # Magenta line
         
         # Check if we have results for this slice
         cache_key = (self.current_specimen.specimen_id, self.current_slice_index)
@@ -360,15 +413,14 @@ class CarlQuantTestViewer:
         self.photo = ImageTk.PhotoImage(pil_image)
         self.canvas.delete("all")
         self.canvas.create_image(canvas_width // 2, canvas_height // 2, image=self.photo, anchor=tk.CENTER)
+        
+        # Update A-Scan plot
+        self.update_ascan_plot()
     
     def run_algorithm(self):
-        """Run the CarlQuant algorithm on current slice."""
+        """Run the CarlQuant algorithm on all slices."""
         if self.current_specimen is None or self.current_specimen.config is None:
             messagebox.showwarning("No Configuration", "Please select a specimen with configuration.")
-            return
-        
-        if self.current_slice_index not in self.current_specimen.config.regions:
-            messagebox.showwarning("No Region Config", f"No region configuration for slice {self.current_slice_index + 1}")
             return
         
         self.update_info("Reloading algorithm module...")
@@ -378,48 +430,161 @@ class CarlQuantTestViewer:
         try:
             # Hot-reload the algorithm module to pick up changes
             importlib.reload(test_carlquant_algorithm)
-            self.update_info("Running algorithm...")
-            self.status_label.config(text="Processing...")
-            self.root.update()
             
-            # Get configuration
-            region_config = self.current_specimen.config.regions[self.current_slice_index]
-            air_config = self.current_specimen.config.air.get(self.current_slice_index)
+            # Process all slices
+            num_slices = len(self.current_specimen.images)
+            processed_count = 0
             
-            # Run algorithm (use reloaded module)
-            image_path = self.current_specimen.images[self.current_slice_index]
-            region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
-                image_path,
-                region_config,
-                air_config,
-                self.sound_regions_var.get(),
-                self.lesion_regions_var.get()
-            )
+            for slice_idx in range(num_slices):
+                # Check if this slice has configuration
+                if slice_idx not in self.current_specimen.config.regions:
+                    continue
+                
+                # Update UI less frequently (every 5 slices)
+                if slice_idx % 5 == 0 or slice_idx == num_slices - 1:
+                    self.status_label.config(text=f"Processing {slice_idx + 1}/{num_slices}...")
+                    self.root.update_idletasks()  # Use update_idletasks instead of update
+                
+                # Get configuration
+                region_config = self.current_specimen.config.regions[slice_idx]
+                air_config = self.current_specimen.config.air.get(slice_idx)
+                
+                # Run algorithm (use reloaded module)
+                image_path = self.current_specimen.images[slice_idx]
+                region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
+                    image_path,
+                    region_config,
+                    air_config,
+                    self.sound_regions_var.get(),
+                    self.lesion_regions_var.get()
+                )
+                
+                # Cache results
+                cache_key = (self.current_specimen.specimen_id, slice_idx)
+                self.results_cache[cache_key] = (region_stats, surface, lesion_depth)
+                processed_count += 1
             
-            # Cache results
+            # Update info with summary (don't update display yet to save time)
+            info = f"Processed {processed_count} slices\n\n"
+            
+            # Show current slice results
             cache_key = (self.current_specimen.specimen_id, self.current_slice_index)
-            self.results_cache[cache_key] = (region_stats, surface, lesion_depth)
-            
-            # Update display
-            self.update_display()
-            
-            # Update info
-            info = f"Algorithm Results (Slice {self.current_slice_index + 1}):\n"
-            info += f"Surface points: {len(surface.raw_points)}\n"
-            info += f"Lesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n\n"
-            info += "Region Statistics:\n"
-            for i, stats in enumerate(region_stats):
-                info += f"  {stats.region_type.upper()} {i+1}: "
-                info += f"median={stats.median:.2f}, sd={stats.sd:.2f}\n"
+            if cache_key in self.results_cache:
+                region_stats, surface, lesion_depth = self.results_cache[cache_key]
+                info += f"Current Slice {self.current_slice_index + 1}:\n"
+                info += f"Surface points: {len(surface.raw_points)}\n"
+                info += f"Lesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n\n"
+                info += "Region Statistics:\n"
+                for i, stats in enumerate(region_stats):
+                    info += f"  {stats.region_type.upper()} {i+1}: "
+                    info += f"median={stats.median:.2f}, sd={stats.sd:.2f}\n"
             
             self.update_info(info)
-            self.status_label.config(text="Algorithm completed")
+            self.status_label.config(text=f"Completed: {processed_count} slices processed")
+            
+            # Now update display once at the end
+            self.update_display()
             
         except Exception as e:
             messagebox.showerror("Algorithm Error", f"Error running algorithm:\n{str(e)}")
             self.status_label.config(text="Error")
             import traceback
             traceback.print_exc()
+    
+    def update_ascan_plot(self):
+        """Update the A-Scan intensity profile plot."""
+        if self.current_image is None:
+            return
+        
+        # Get canvas dimensions
+        plot_width = self.plot_canvas.winfo_width()
+        plot_height = self.plot_canvas.winfo_height()
+        
+        if plot_width <= 1 or plot_height <= 1:
+            return
+        
+        # Extract A-Scan column (grayscale values)
+        ascan_column = self.current_image[:, self.current_ascan_x]
+        image_height = len(ascan_column)
+        
+        # Create plot image
+        plot_img = Image.new('RGB', (plot_width, plot_height), 'white')
+        draw = ImageDraw.Draw(plot_img)
+        
+        # Define plot margins
+        margin_left = 50
+        margin_right = 20
+        margin_top = 20
+        margin_bottom = 30
+        
+        plot_area_width = plot_width - margin_left - margin_right
+        plot_area_height = plot_height - margin_top - margin_bottom
+        
+        if plot_area_width <= 0 or plot_area_height <= 0:
+            return
+        
+        # Draw axes
+        # Y-axis (depth)
+        draw.line([(margin_left, margin_top), (margin_left, plot_height - margin_bottom)], fill='black', width=2)
+        # X-axis (intensity)
+        draw.line([(margin_left, plot_height - margin_bottom), (plot_width - margin_right, plot_height - margin_bottom)], fill='black', width=2)
+        
+        # Draw grid and labels
+        # X-axis labels (intensity: 0, 128, 255)
+        for intensity in [0, 128, 255]:
+            x = margin_left + int((intensity / 255.0) * plot_area_width)
+            draw.line([(x, plot_height - margin_bottom), (x, plot_height - margin_bottom + 5)], fill='black', width=1)
+            draw.text((x - 10, plot_height - margin_bottom + 8), str(intensity), fill='black')
+        
+        # Y-axis labels (depth: 0, middle, max)
+        for depth_idx, depth in enumerate([0, image_height // 2, image_height - 1]):
+            y = margin_top + int((depth / float(image_height - 1)) * plot_area_height)
+            draw.line([(margin_left - 5, y), (margin_left, y)], fill='black', width=1)
+            draw.text((5, y - 5), str(depth), fill='black')
+        
+        # Plot the intensity profile
+        points = []
+        for y_idx, intensity in enumerate(ascan_column):
+            x = margin_left + int((intensity / 255.0) * plot_area_width)
+            y = margin_top + int((y_idx / float(image_height - 1)) * plot_area_height)
+            points.append((x, y))
+        
+        # Draw the profile line
+        if len(points) > 1:
+            draw.line(points, fill='blue', width=2)
+        
+        # Mark detected surface point if available
+        cache_key = (self.current_specimen.specimen_id, self.current_slice_index)
+        if cache_key in self.results_cache:
+            _, surface, _ = self.results_cache[cache_key]
+            if surface and surface.raw_points:
+                # Find surface point for current A-Scan
+                for x, y in surface.raw_points:
+                    if x == self.current_ascan_x:
+                        # Get intensity at surface
+                        if 0 <= y < image_height:
+                            surface_intensity = ascan_column[y]
+                            plot_x = margin_left + int((surface_intensity / 255.0) * plot_area_width)
+                            plot_y = margin_top + int((y / float(image_height - 1)) * plot_area_height)
+                            
+                            # Draw marker (red circle)
+                            radius = 5
+                            draw.ellipse([(plot_x - radius, plot_y - radius), 
+                                        (plot_x + radius, plot_y + radius)], 
+                                       fill='red', outline='darkred', width=2)
+                            
+                            # Add label
+                            draw.text((plot_x + 8, plot_y - 8), f"Surface\ny={y}", fill='red')
+                        break
+        
+        # Axis labels
+        draw.text((plot_width // 2 - 30, plot_height - 10), "Intensity", fill='black')
+        draw.text((5, 5), "Depth (px)", fill='black')
+        
+        # Convert to PhotoImage and display
+        self.plot_photo = ImageTk.PhotoImage(plot_img)
+        self.plot_canvas.delete("all")
+        self.plot_canvas.create_image(0, 0, image=self.plot_photo, anchor=tk.NW)
     
     def clear_cache(self):
         """Clear the results cache."""
