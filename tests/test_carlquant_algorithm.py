@@ -116,16 +116,16 @@ def extract_regions(image: np.ndarray,
     Extract pixel values from sound and lesion regions.
     
     Algorithm steps (to be implemented):
-    1. Define vertical boundaries from region_config
-    2. Divide sound region (left of lesion) into num_sound_regions
-    3. Divide lesion region (between boundaries) into num_lesion_regions
+    1. Define vertical boundaries from region_config (4 points)
+    2. Divide sound region (specimen_start to lesion_start) into num_sound_regions
+    3. Divide lesion region (lesion_start to lesion_end) into num_lesion_regions
     4. Extract pixel values from each region (below surface)
     5. Calculate statistics for each region
     
     Args:
         image: 2D numpy array (grayscale image)
         surface: Detected surface
-        region_config: Region boundaries (start and end points)
+        region_config: Region boundaries (4 points: specimen_start, lesion_start, lesion_end, tooth_end)
         num_sound_regions: Number of sound regions to extract
         num_lesion_regions: Number of lesion regions to extract
     
@@ -133,8 +133,12 @@ def extract_regions(image: np.ndarray,
         List of RegionStats (sound regions first, then lesion regions)
     """
     height, width = image.shape
-    start_x, _ = region_config.start_point
-    end_x, _ = region_config.end_point
+    
+    # Extract boundary x-coordinates from 4-point configuration
+    specimen_start_x, _ = region_config.specimen_start
+    lesion_start_x, _ = region_config.lesion_start
+    lesion_end_x, _ = region_config.lesion_end
+    tooth_end_x, _ = region_config.tooth_end
     
     region_stats = []
     
@@ -228,7 +232,7 @@ def perform_clustering(pixel_values: List[int], n_clusters: int = 2) -> Dict:
 # =============================================================================
 
 def calculate_lesion_depth(surface: Surface, 
-                          lesion_boundary_x: Tuple[int, int],
+                          region_config: RegionConfig,
                           image: np.ndarray) -> LesionDepth:
     """
     Calculate lesion depth within the specified boundary.
@@ -240,13 +244,15 @@ def calculate_lesion_depth(surface: Surface,
     
     Args:
         surface: Detected surface
-        lesion_boundary_x: (start_x, end_x) horizontal boundaries of lesion
+        region_config: Region configuration with lesion boundaries
         image: 2D numpy array (grayscale image)
     
     Returns:
         LesionDepth object with depth measurements
     """
-    start_x, end_x = lesion_boundary_x
+    # Extract lesion boundaries from region config
+    start_x, _ = region_config.lesion_start
+    end_x, _ = region_config.lesion_end
     
     # TODO: Implement lesion depth calculation
     # Placeholder: Generate dummy depth points
@@ -330,8 +336,7 @@ def process_slice(image_path: Path,
     )
     
     # Step 3: Calculate lesion depth
-    lesion_boundary = (region_config.start_point[0], region_config.end_point[0])
-    lesion_depth = calculate_lesion_depth(surface, lesion_boundary, image_array)
+    lesion_depth = calculate_lesion_depth(surface, region_config, image_array)
     
     return region_stats, surface, lesion_depth
 

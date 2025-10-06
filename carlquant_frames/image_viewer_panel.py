@@ -64,7 +64,7 @@ class image_viewer_panel(BaseCanvasPanel):
         self.hovered_point_index = None
         
         # Selection state - automatic mode detection
-        self.region_start_point = None     # First click point for region (two-click mode)
+        self.region_points = []            # List of clicked points for region (4-click mode)
         self.region_visual_elements = []   # Visual elements for region display
         
         # Mouse interaction state
@@ -303,10 +303,12 @@ class image_viewer_panel(BaseCanvasPanel):
     @handle_errors("imageViewerPanel.handle_region_click")
     def handle_region_click(self, event):
         """
-        Handle mouse clicks for region selection (two-click mode).
+        Handle mouse clicks for region selection (4-click mode).
         
-        First click: Set start point (vertical boundary)
-        Second click: Set end point and save region configuration
+        Click 1: Specimen start (left boundary)
+        Click 2: Lesion start
+        Click 3: Lesion end
+        Click 4: Tooth end (right boundary) - saves configuration
         
         Region boundaries are vertical lines used to define analysis regions.
         
@@ -330,22 +332,33 @@ class image_viewer_panel(BaseCanvasPanel):
         if image_x is None or image_y is None:
             return
 
-        if self.region_start_point is None:
-            # First click - set start point
-            self.region_start_point = (image_x, image_y)
-            self.draw_region_start_marker(event.x, event.y)
-            self.context.status_bar.update(f"Region start set at ({image_x}, {image_y}). Click again to set end point.", level="info")
+        # Add point to list
+        self.region_points.append((image_x, image_y))
+        
+        # Draw marker for this point
+        self.draw_region_markers()
+        
+        # Update status message
+        if len(self.region_points) < 4:
+            self.context.status_bar.update(
+                f"Point {len(self.region_points)}/4 set. Click 4 boundaries in any order.",
+                level="info"
+            )
         else:
-            # Second click - set end point and save region
-            start_x, start_y = self.region_start_point
-            end_x, end_y = image_x, image_y
-
-            # Ensure start is always left of end
-            if start_x > end_x:
-                start_x, end_x = end_x, start_x
-
-            self.save_region_configuration(specimen, current_slice, (start_x, start_y), (end_x, end_y))
-            self.region_start_point = None
+            # All 4 points collected - sort by x-coordinate
+            sorted_points = sorted(self.region_points, key=lambda p: p[0])
+            
+            # Assign based on position (leftmost to rightmost)
+            specimen_start = sorted_points[0]   # Leftmost
+            lesion_start = sorted_points[1]     # Second from left
+            lesion_end = sorted_points[2]       # Third from left
+            tooth_end = sorted_points[3]        # Rightmost
+            
+            self.save_region_configuration(
+                specimen, current_slice,
+                specimen_start, lesion_start, lesion_end, tooth_end
+            )
+            self.region_points = []  # Reset for next selection
             self.draw_region_boundaries(specimen, current_slice)
 
 
@@ -385,7 +398,8 @@ class image_viewer_panel(BaseCanvasPanel):
         return int(rel_x), int(rel_y)
 
 
-    def save_region_configuration(self, specimen, current_slice, start_point, end_point):
+    def save_region_configuration(self, specimen, current_slice, 
+                                 specimen_start, lesion_start, lesion_end, tooth_end):
         """
         Save region configuration with intelligent propagation logic.
         
@@ -399,8 +413,10 @@ class image_viewer_panel(BaseCanvasPanel):
         Args:
             specimen: Specimen object to update
             current_slice: Current slice index (0-based)
-            start_point: (x, y) tuple for region start
-            end_point: (x, y) tuple for region end
+            specimen_start: (x, y) tuple for specimen start
+            lesion_start: (x, y) tuple for lesion start
+            lesion_end: (x, y) tuple for lesion end
+            tooth_end: (x, y) tuple for tooth end
         """
         total_slices = len(specimen.images)
         
@@ -410,16 +426,22 @@ class image_viewer_panel(BaseCanvasPanel):
         if not has_existing_regions:
             # First-time initialization: propagate to all slices
             for slice_idx in range(total_slices):
-                DataSaver.update_specimen_region(specimen, slice_idx, start_point, end_point)
+                DataSaver.update_specimen_region(
+                    specimen, slice_idx, 
+                    specimen_start, lesion_start, lesion_end, tooth_end
+                )
             self.context.status_bar.update(
-                f"Region initialized for all {total_slices} slices: start={start_point}, end={end_point}", 
+                f"Region initialized for all {total_slices} slices (4 boundaries)", 
                 level="success"
             )
         else:
             # Regions already exist: only update current slice
-            DataSaver.update_specimen_region(specimen, current_slice, start_point, end_point)
+            DataSaver.update_specimen_region(
+                specimen, current_slice,
+                specimen_start, lesion_start, lesion_end, tooth_end
+            )
             self.context.status_bar.update(
-                f"Region updated for slice {current_slice + 1}: start={start_point}, end={end_point}", 
+                f"Region updated for slice {current_slice + 1} (4 boundaries)", 
                 level="success"
             )
 
@@ -669,30 +691,52 @@ class image_viewer_panel(BaseCanvasPanel):
         self.canvas.delete("air_drag")
 
 
-    def draw_region_start_marker(self, canvas_x, canvas_y):
+    def draw_region_markers(self):
         """
-        Draw a marker for the region start point.
+        Draw markers for all currently selected region points.
         
-        Displays a red circle at the first click location during region
-        boundary selection.
-        
-        Args:
-            canvas_x: X coordinate on canvas
-            canvas_y: Y coordinate on canvas
+        Shows numbered circles for each clicked point during 4-point
+        region boundary selection. Points are displayed in click order,
+        but will be sorted by x-coordinate when saved.
         """
         self.clear_region_visuals()
-        marker = self.canvas.create_oval(
-            canvas_x - 5, canvas_y - 5, canvas_x + 5, canvas_y + 5,
-            fill="red", outline="white", width=2, tags="region_visual"
-        )
-        self.region_visual_elements.append(marker)
+        
+        # Use cyan for temporary markers (will become green/yellow after sorting)
+        color = "cyan"
+        
+        for i, (image_x, image_y) in enumerate(self.region_points):
+            # Convert image coords to canvas coords for single point
+            if not hasattr(self, 'rawImage'):
+                continue
+                
+            if self.zoom_level == 1.0:
+                current_width = getattr(self, 'fitted_width', self.rawImage.width)
+                current_zoom = current_width / self.rawImage.width
+            else:
+                current_zoom = self.zoom_level
+            
+            canvas_x = image_x * current_zoom + self.image_offset_x
+            canvas_y = image_y * current_zoom + self.image_offset_y
+            
+            # Draw circle
+            marker = self.canvas.create_oval(
+                canvas_x - 6, canvas_y - 6, canvas_x + 6, canvas_y + 6,
+                fill=color, outline="white", width=2, tags="region_visual"
+            )
+            # Draw number label (click order)
+            label = self.canvas.create_text(
+                canvas_x, canvas_y,
+                text=str(i + 1), fill="black", font=("Arial", 10, "bold"),
+                tags="region_visual"
+            )
+            self.region_visual_elements.extend([marker, label])
 
 
     def draw_region_boundaries(self, specimen, current_slice):
         """
-        Draw visual representation of region boundaries.
+        Draw visual representation of region boundaries (4 vertical lines).
         
-        Displays configured region boundaries as yellow vertical lines
+        Displays configured region boundaries as colored vertical lines
         spanning the full canvas height.
         
         Args:
@@ -705,27 +749,40 @@ class image_viewer_panel(BaseCanvasPanel):
             return
 
         region = specimen.config.regions[current_slice]
-        start_x, start_y = region.start_point
-        end_x, end_y = region.end_point
-
-        # Convert image coordinates back to canvas coordinates
-        canvas_coords = self.image_to_canvas_coords(start_x, start_y, end_x, end_y)
-        if not canvas_coords:
-            return
-
-        canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y = canvas_coords
-
-        # Draw vertical lines for region boundaries
-        line1 = self.canvas.create_line(
-            canvas_start_x, 0, canvas_start_x, self.canvas.winfo_height(),
-            fill="yellow", width=2, tags="region_visual"
-        )
-        line2 = self.canvas.create_line(
-            canvas_end_x, 0, canvas_end_x, self.canvas.winfo_height(),
-            fill="yellow", width=2, tags="region_visual"
-        )
-
-        self.region_visual_elements.extend([line1, line2])
+        
+        # Get all 4 boundary points with color scheme:
+        # Green for specimen boundaries, Yellow for lesion boundaries
+        points = [
+            (region.specimen_start, "green", "Specimen Start"),
+            (region.lesion_start, "yellow", "Lesion Start"),
+            (region.lesion_end, "yellow", "Lesion End"),
+            (region.tooth_end, "green", "Tooth End")
+        ]
+        
+        canvas_height = self.canvas.winfo_height()
+        
+        for (point, color, label) in points:
+            x, y = point
+            
+            # Convert image coordinates to canvas coordinates
+            if not hasattr(self, 'rawImage'):
+                continue
+                
+            if self.zoom_level == 1.0:
+                current_width = getattr(self, 'fitted_width', self.rawImage.width)
+                current_zoom = current_width / self.rawImage.width
+            else:
+                current_zoom = self.zoom_level
+            
+            canvas_x = x * current_zoom + self.image_offset_x
+            
+            # Draw vertical line
+            line = self.canvas.create_line(
+                canvas_x, 0, canvas_x, canvas_height,
+                fill=color, width=2, tags="region_visual"
+            )
+            
+            self.region_visual_elements.append(line)
 
 
     def image_to_canvas_coords(self, start_x, start_y, end_x, end_y):

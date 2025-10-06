@@ -82,11 +82,29 @@ class DataLoader:
                     if 'regions' in config_data:
                         for slice_idx_str, region_data in config_data['regions'].items():
                             slice_idx = int(slice_idx_str)
-                            config.regions[slice_idx] = RegionConfig(
-                                slice_index=slice_idx,
-                                start_point=tuple(region_data['start_point']),
-                                end_point=tuple(region_data['end_point'])
-                            )
+                            # Support both old (2-point) and new (4-point) format
+                            if 'specimen_start' in region_data:
+                                # New 4-point format
+                                config.regions[slice_idx] = RegionConfig(
+                                    slice_index=slice_idx,
+                                    specimen_start=tuple(region_data['specimen_start']),
+                                    lesion_start=tuple(region_data['lesion_start']),
+                                    lesion_end=tuple(region_data['lesion_end']),
+                                    tooth_end=tuple(region_data['tooth_end'])
+                                )
+                            else:
+                                # Old 2-point format - convert to 4-point
+                                # Assume: specimen_start = start_point, lesion_start = start_point,
+                                #         lesion_end = end_point, tooth_end = end_point
+                                start_pt = tuple(region_data['start_point'])
+                                end_pt = tuple(region_data['end_point'])
+                                config.regions[slice_idx] = RegionConfig(
+                                    slice_index=slice_idx,
+                                    specimen_start=start_pt,
+                                    lesion_start=start_pt,
+                                    lesion_end=end_pt,
+                                    tooth_end=end_pt
+                                )
                     
                     # Load air configurations
                     if 'air' in config_data:
@@ -253,8 +271,10 @@ class DataSaver:
         for slice_idx, region_config in specimen.config.regions.items():
             config_data["regions"][str(slice_idx)] = {
                 "slice_index": region_config.slice_index,
-                "start_point": list(region_config.start_point),
-                "end_point": list(region_config.end_point)
+                "specimen_start": list(region_config.specimen_start),
+                "lesion_start": list(region_config.lesion_start),
+                "lesion_end": list(region_config.lesion_end),
+                "tooth_end": list(region_config.tooth_end)
             }
         
         # Convert air configurations to JSON-serializable format
@@ -273,15 +293,19 @@ class DataSaver:
             json.dump(config_data, f, indent=2)
 
     @staticmethod
-    def update_specimen_region(specimen: Specimen, slice_index: int, start_point: tuple, end_point: tuple):
-        """Update region configuration for a specific slice."""
+    def update_specimen_region(specimen: Specimen, slice_index: int, 
+                              specimen_start: tuple, lesion_start: tuple,
+                              lesion_end: tuple, tooth_end: tuple):
+        """Update region configuration for a specific slice (4 points)."""
         if not specimen.config:
             specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
         
         specimen.config.regions[slice_index] = RegionConfig(
             slice_index=slice_index,
-            start_point=start_point,
-            end_point=end_point
+            specimen_start=specimen_start,
+            lesion_start=lesion_start,
+            lesion_end=lesion_end,
+            tooth_end=tooth_end
         )
         
         # Auto-save configuration

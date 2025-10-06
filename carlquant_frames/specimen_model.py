@@ -33,10 +33,12 @@ class LesionDepth:
 
 @dataclass
 class RegionConfig:
-    """Configuration for a region (start and end points) for a specific slice."""
+    """Configuration for region boundaries (4 points) for a specific slice."""
     slice_index: int
-    start_point: Tuple[int, int]  # (x, y)
-    end_point: Tuple[int, int]    # (x, y)
+    specimen_start: Tuple[int, int]  # (x, y) - Left boundary of specimen
+    lesion_start: Tuple[int, int]    # (x, y) - Left boundary of lesion
+    lesion_end: Tuple[int, int]      # (x, y) - Right boundary of lesion
+    tooth_end: Tuple[int, int]       # (x, y) - Right boundary of tooth/specimen
 
 @dataclass
 class AirConfig:

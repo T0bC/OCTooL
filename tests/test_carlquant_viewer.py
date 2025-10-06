@@ -291,18 +291,24 @@ class CarlQuantTestViewer:
                                     if abs(dx) <= 1 or abs(dy) <= 1:
                                         display_image[ny, nx] = [255, 0, 0]  # Red
         
-        # Draw region boundaries
+        # Draw region boundaries (4 vertical lines)
+        # Green for specimen boundaries, Yellow for lesion boundaries
         if self.show_regions.get() and self.current_specimen.config:
             if self.current_slice_index in self.current_specimen.config.regions:
                 region = self.current_specimen.config.regions[self.current_slice_index]
-                start_x, _ = region.start_point
-                end_x, _ = region.end_point
+                
+                # Define 4 boundaries with colors
+                boundaries = [
+                    (region.specimen_start[0], [0, 255, 0]),      # Green - Specimen Start
+                    (region.lesion_start[0], [255, 255, 0]),      # Yellow - Lesion Start
+                    (region.lesion_end[0], [255, 255, 0]),        # Yellow - Lesion End
+                    (region.tooth_end[0], [0, 255, 0])            # Green - Tooth End
+                ]
                 
                 # Draw vertical lines
-                if 0 <= start_x < display_image.shape[1]:
-                    display_image[:, start_x] = [255, 255, 0]  # Yellow
-                if 0 <= end_x < display_image.shape[1]:
-                    display_image[:, end_x] = [255, 255, 0]  # Yellow
+                for x, color in boundaries:
+                    if 0 <= x < display_image.shape[1]:
+                        display_image[:, x] = color
         
         # Draw AIR region
         if self.show_air.get() and self.current_specimen.config:
