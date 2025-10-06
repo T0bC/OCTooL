@@ -14,10 +14,15 @@ Created on Mon Oct 06 11:50:00 2025
 @author: meissnerto
 """
 
+import sys
 import numpy as np
 from PIL import Image
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional
+
+# Add parent directory to path so we can import from carlquant_frames
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from carlquant_frames.specimen_model import (
     RegionStats, Surface, LesionDepth, RegionConfig, AirConfig
 )
@@ -46,6 +51,8 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None) ->
     """
     height, width = image.shape
     
+    print('bunch of things')
+
     # TODO: Implement surface detection algorithm
     # Placeholder: Generate dummy surface points
     raw_points = []

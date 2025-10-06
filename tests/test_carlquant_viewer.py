@@ -12,15 +12,20 @@ Created on Mon Oct 06 11:50:00 2025
 @author: meissnerto
 """
 
+import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
 import numpy as np
 from pathlib import Path
 from typing import Optional, Dict
+import importlib
+
+# Add parent directory to path so we can import from carlquant_frames
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from test_carlquant_config import load_test_specimens, load_single_specimen, TestConfig
-from test_carlquant_algorithm import process_slice, visualize_surface, visualize_regions
+import test_carlquant_algorithm
 from carlquant_frames.specimen_model import Specimen
 
 
@@ -360,18 +365,24 @@ class CarlQuantTestViewer:
             messagebox.showwarning("No Region Config", f"No region configuration for slice {self.current_slice_index + 1}")
             return
         
-        self.update_info("Running algorithm...")
-        self.status_label.config(text="Processing...")
+        self.update_info("Reloading algorithm module...")
+        self.status_label.config(text="Reloading...")
         self.root.update()
         
         try:
+            # Hot-reload the algorithm module to pick up changes
+            importlib.reload(test_carlquant_algorithm)
+            self.update_info("Running algorithm...")
+            self.status_label.config(text="Processing...")
+            self.root.update()
+            
             # Get configuration
             region_config = self.current_specimen.config.regions[self.current_slice_index]
             air_config = self.current_specimen.config.air.get(self.current_slice_index)
             
-            # Run algorithm
+            # Run algorithm (use reloaded module)
             image_path = self.current_specimen.images[self.current_slice_index]
-            region_stats, surface, lesion_depth = process_slice(
+            region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
                 image_path,
                 region_config,
                 air_config,
