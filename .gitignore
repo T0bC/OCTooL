@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 testData/
 utils/logs/
+HTML_docs/OCTexVIEW_change_log_files/
+HTML_docs/OCTexVIEW_MANUAL_files/

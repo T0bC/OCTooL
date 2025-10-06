@@ -16,6 +16,8 @@ import carl_quant
 from utils.app_context import AppContext
 from utils.status_bar import StatusBar
 from utils.error_handler import handle_errors
+from utils.help_dialog import HelpDialog
+from utils.about_dialog import AboutDialog
 
 
 class MainGui:
@@ -275,30 +277,15 @@ class MainGui:
 
     @handle_errors("MainGui.onHelp")
     def onHelp(self):
-
-        self.helpMessage = \
-            '1. Choose a folder with Thorlabs OCT files. All Files inside this\n   folder are populated into a list.\n' \
-            '   You can choose single files as well!\n \n' \
-            '2. You can select an item in the list to adapt the export range,  aequidistant slices or dispersion.\n\n' \
-            '3. You can display a given slice with the "Show" button. Adjust the slice with the slider\n\n' \
-            '4. Adjust Dyn. Range to you liking for a single file or for all\n   files. Check if the dispersion needs to be adjusted.\n\n' \
-            '5. Click on "Export" to start the export. The outputfolder is\n    found in the original directory of the OCT File'
-        tk.messagebox.askquestion(title = 'Help', message = self.helpMessage)
+        """Show context-aware help based on the currently active tab."""
+        help_dialog = HelpDialog(self.mainWin, self.style, self.current_tab)
+        help_dialog.show()
 
     @handle_errors("MainGui.onAbout")
     def onAbout(self):
-
-        self.aboutMassage = \
-            str('OCTexVIEW' + self.version) + '\n\n' \
-                'Developed by \nTobias Meißner [1], \n' \
-                'Maximilian Bemmann [1] \n' \
-                'with contribution from \n' \
-                'Jonas Golde [2]\n\n' \
-                '1: Universität Leipzig - Poliklinik für Zahnerhaltung und Parodontologie\n' \
-                '2: Technische Universität Dresden - Medizinische Fakultät Carl Gustav Carus - Klinisches Sensoring und Monitoring\n\n' \
-                'Error Reports to: tobias.meissner@medizin.uni-leipzig.de'
-
-        tk.messagebox.showinfo(title = 'Help', message = self.aboutMassage)
+        """Show About dialog with dark theme."""
+        about_dialog = AboutDialog(self.mainWin, self.style, self.version)
+        about_dialog.show()
 
     @handle_errors("MainGui.attach_status_bar")
     def attach_status_bar(self, context):
