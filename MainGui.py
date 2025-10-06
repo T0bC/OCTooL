@@ -8,7 +8,6 @@ Created on Sat Oct 10 18:54:40 2020
 
 import tkinter as tk
 from tkinter import ttk
-#from ttkthemes import ThemedStyle
 from ttkbootstrap import Style
 import exportTab
 import analyzingTab
@@ -90,7 +89,7 @@ class MainGui:
         exportTab.addContent(self, self.exportTabFrame)
 
 
-        # %% ADDITIONAL FRAME 1
+        # %% Anylyzing Tab
         self.analyzingFrame = ttk.Frame(self.tabParent)
         self.tabParent.add(self.analyzingFrame, text = 'Analyze')
         analyzingTab.addContent(self, self.analyzingFrame)
