@@ -150,27 +150,19 @@ class BaseCanvasPanel:
         
         # Allow subclasses to add specialized bindings
         self.setup_specialized_bindings()
-        
         # Show initial instructions
         self.root.after(100, self.instructionText)
     
     def _setup_common_bindings(self):
         """Setup common keyboard and mouse bindings for navigation and zoom."""
-        # Navigation bindings (window-level for keyboard shortcuts)
-        self.window.bind("<Left>", self.on_arrow_left)
-        self.window.bind("<Right>", self.on_arrow_right)
-        self.window.bind("<MouseWheel>", self.on_mouse_wheel)
-        self.window.bind("<Button-4>", self.on_mouse_wheel_linux)
-        self.window.bind("<Button-5>", self.on_mouse_wheel_linux)
-        
-        # Canvas bindings
+        # Canvas resize
         self.canvas.bind("<Configure>", self.onResize)
         
-        # Keyboard navigation on canvas (for better reliability in tabbed interfaces)
+        # Keyboard navigation on canvas (canvas gets focus on mouse enter)
         self.canvas.bind("<Left>", self.on_arrow_left)
         self.canvas.bind("<Right>", self.on_arrow_right)
         
-        # Mouse wheel bindings on canvas (for better reliability in tabbed interfaces)
+        # Mouse wheel bindings on canvas
         self.canvas.bind("<MouseWheel>", self.on_mouse_wheel)
         self.canvas.bind("<Button-4>", self.on_mouse_wheel_linux)
         self.canvas.bind("<Button-5>", self.on_mouse_wheel_linux)
