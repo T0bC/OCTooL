@@ -1,27 +1,109 @@
 ---
-title: "OCTexView_MANUAL"
+title: "OCTexVIEW User Manual"
 author: "Tobias Meißner"
-format: html
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    fig-cap-location: bottom
+    crossref:
+      fig-title: "Figure"
+      tbl-title: "Table"
+  pdf:
+    documentclass: article
+    geometry: margin=1in
+    fig-cap-location: bottom
 editor: visual
 ---
 
-## Quarto
+# Introduction
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+**OCTexVIEW** is a comprehensive software application designed for the analysis and quantification of Optical Coherence Tomography (OCT) images. Developed specifically for dental and medical research applications, OCTexVIEW provides researchers and clinicians with powerful tools to extract meaningful data from OCT imaging studies.
 
-## Running Code
+## Purpose and Scope
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+OCTexVIEW addresses the critical need for standardized, reproducible analysis of OCT images in research environments. The software enables users to:
 
-```{r}
-1 + 1
-```
+- **Process large datasets** of OCT images efficiently
+- **Extract quantitative measurements** from tissue structures
+- **Apply consistent analysis protocols** across multiple specimens
+- **Generate publication-ready results** with statistical analysis
+- **Maintain data integrity** through automated workflows
 
-You can add options to executable code like this
+The application is particularly valuable for studies involving tissue characterization, structural analysis, and longitudinal monitoring of biological samples.
 
-```{r}
-#| echo: false
-2 * 2
-```
+## System Requirements
 
-The `echo: false` option disables the printing of code (only output is displayed).
+- **Operating System**: Windows 10/11, macOS 10.15+, or Linux
+- **Memory**: Minimum 8GB RAM (16GB recommended for large datasets)
+- **Storage**: At least 2GB free space for installation and temporary files
+- **Display**: Minimum 1920x1080 resolution for optimal interface experience
+
+## Application Overview
+
+OCTexVIEW is organized into three main functional sections, each designed for specific aspects of OCT image analysis:
+
+### Export Section {.unnumbered}
+The **Export** section focuses on data preparation and batch processing capabilities. This module allows users to:
+
+- Import and organize large collections of OCT image files
+- Configure global processing parameters
+- Apply custom settings to specific datasets
+- Execute batch operations across multiple specimens
+- Export processed data in various formats
+
+*Primary Use Case*: Preparing raw OCT data for analysis and converting between different file formats.
+
+### Analyze Section {.unnumbered}
+The **Analyze** section provides comprehensive tools for detailed image analysis and annotation. Key features include:
+
+- Interactive image viewing and navigation
+- Manual and semi-automated annotation tools
+- Measurement and quantification capabilities
+- Results compilation and statistical analysis
+- Metadata management and documentation
+
+*Primary Use Case*: Detailed analysis of individual specimens with manual oversight and quality control.
+
+### CarlQuant Section {.unnumbered}
+The **CarlQuant** section implements advanced quantitative analysis algorithms specifically developed for OCT image analysis. This module offers:
+
+- Automated region-of-interest selection
+- Specialized quantification algorithms
+- Batch processing with consistent parameters
+- Advanced statistical analysis and reporting
+- Integration with research databases
+
+*Primary Use Case*: High-throughput quantitative analysis using validated algorithms for research studies.
+
+## Workflow Integration
+
+The three sections are designed to work together in a typical research workflow:
+
+1. **Data Preparation** (Export): Import and organize raw OCT files
+2. **Quality Control** (Analyze): Review and annotate key specimens
+3. **Quantitative Analysis** (CarlQuant): Apply algorithms to generate research data
+
+However, each section can also function independently, allowing users to enter the workflow at any point based on their specific needs.
+
+::: {.callout-tip}
+## Getting Started
+New users should begin with the **Export** section to familiarize themselves with data import procedures, then proceed to **Analyze** for hands-on experience with the interface before using **CarlQuant** for automated analysis.
+:::
+
+---
+
+# Export Section
+
+*[This section will be expanded with detailed Export functionality documentation]*
+
+# Analyze Section  
+
+*[This section will be expanded with detailed Analyze functionality documentation]*
+
+# CarlQuant Section
+
+*[This section will be expanded with detailed CarlQuant functionality documentation]*
