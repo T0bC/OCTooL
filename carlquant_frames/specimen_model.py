@@ -18,7 +18,8 @@ class RegionStats:
     sd: float
     se: float
     region_index: int = 0  # Region number (1, 2, 3, ...)
-    bounds: Tuple[int, int, int, int] = (0, 0, 0, 0)  # (left_x, top_y, right_x, bottom_y)
+    bounds: Tuple = (0, 0, 0, 0)  # Either (left_x, top_y, right_x, bottom_y) or 4 corner points
+    rotation_angle: float = 0.0  # Rotation angle in degrees
 
 @dataclass
 class Surface:
