@@ -196,6 +196,179 @@ def detect_cavitation(primary_curve: List[Tuple[int, int]],
     return is_cavitated, mean_cavitation_depth
 
 
+# =============================================================================
+# REGION EXTRACTION
+# =============================================================================
+
+def extract_regions(image: np.ndarray, 
+                   surface: Surface, 
+                   region_config,
+                   num_sound_regions: int = 6,
+                   num_lesion_regions: int = 6,
+                   region_size: int = 25,
+                   surface_offset: int = 10) -> List[RegionStats]:
+    """
+    Extract pixel values from sound and lesion regions.
+    
+    Algorithm:
+    1. Divide sound areas (left and right of lesion) into num_sound_regions TOTAL (split between left/right)
+    2. Divide lesion area into num_lesion_regions
+    3. For each region, place 25x25 pixel rectangle 10px below surface
+    4. Extract pixel values and calculate statistics
+    
+    Args:
+        image: 2D numpy array (grayscale image)
+        surface: Detected surface with fitted curve
+        region_config: Region boundaries (4 points)
+        num_sound_regions: TOTAL number of sound regions (split between left and right sides)
+        num_lesion_regions: Number of lesion regions
+        region_size: Size of extraction rectangle (default 25x25)
+        surface_offset: Distance below surface to start extraction (default 10px)
+    
+    Returns:
+        List of RegionStats with region coordinates
+    """
+    height, width = image.shape
+    
+    # Extract boundary x-coordinates from 4-point configuration
+    specimen_start_x, _ = region_config.specimen_start
+    lesion_start_x, _ = region_config.lesion_start
+    lesion_end_x, _ = region_config.lesion_end
+    tooth_end_x, _ = region_config.tooth_end
+    
+    # Define overall boundaries for surface lookup
+    x_start = specimen_start_x
+    x_end = tooth_end_x
+    
+    # Use primary surface fit for positioning
+    if not surface.fitted_curves or "spline" not in surface.fitted_curves:
+        return []
+    
+    # Convert surface to dictionary for easy lookup
+    surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    
+    region_stats = []
+    
+    # Helper function to extract region with rotation
+    def extract_region_at(center_x: int, region_type: str, region_index: int) -> Optional[RegionStats]:
+        """Extract a single region at given x position, rotated to match surface slope."""
+        # Get surface y-coordinate at this x
+        if center_x not in surface_dict:
+            return None
+        
+        surface_y = surface_dict[center_x]
+        
+        # Calculate surface slope at this position (using neighboring points)
+        slope_window = 10  # Look at ±10 pixels for slope calculation
+        x_left = max(x_start, center_x - slope_window)
+        x_right = min(x_end - 1, center_x + slope_window)
+        
+        # Get y values at left and right positions
+        y_left = surface_dict.get(x_left, surface_y)
+        y_right = surface_dict.get(x_right, surface_y)
+        
+        # Calculate slope (dy/dx)
+        if x_right != x_left:
+            slope = (y_right - y_left) / (x_right - x_left)
+            angle_rad = np.arctan(slope)
+        else:
+            angle_rad = 0.0
+        
+        # Calculate rotated rectangle corners
+        # Start with center point offset below surface
+        center_y = surface_y + surface_offset + region_size // 2
+        
+        # Create rotation matrix
+        cos_a = np.cos(angle_rad)
+        sin_a = np.sin(angle_rad)
+        
+        # Define rectangle corners relative to center (before rotation)
+        half_size = region_size // 2
+        corners = [
+            (-half_size, -half_size),  # Top-left
+            (half_size, -half_size),   # Top-right
+            (half_size, half_size),    # Bottom-right
+            (-half_size, half_size)    # Bottom-left
+        ]
+        
+        # Rotate corners and translate to center position
+        rotated_corners = []
+        for dx, dy in corners:
+            rx = dx * cos_a - dy * sin_a + center_x
+            ry = dx * sin_a + dy * cos_a + center_y
+            rotated_corners.append((int(rx), int(ry)))
+        
+        # Extract pixels using rotated sampling
+        pixel_values = []
+        for dy in range(-half_size, half_size):
+            for dx in range(-half_size, half_size):
+                # Rotate point
+                rx = dx * cos_a - dy * sin_a + center_x
+                ry = dx * sin_a + dy * cos_a + center_y
+                
+                # Sample pixel (with bounds checking)
+                ix, iy = int(round(rx)), int(round(ry))
+                if 0 <= ix < width and 0 <= iy < height:
+                    pixel_values.append(int(image[iy, ix]))
+        
+        if len(pixel_values) == 0:
+            return None
+        
+        # Calculate statistics
+        mean_val = float(np.mean(pixel_values))
+        median_val = float(np.median(pixel_values))
+        sd_val = float(np.std(pixel_values))
+        se_val = sd_val / np.sqrt(len(pixel_values))
+        
+        # Store rotated corners for visualization
+        return RegionStats(
+            region_type=region_type,
+            pixel_values=pixel_values,
+            mean=mean_val,
+            median=median_val,
+            sd=sd_val,
+            se=se_val,
+            region_index=region_index,
+            bounds=tuple(rotated_corners),  # Store 4 corner points instead of bbox
+            rotation_angle=float(np.degrees(angle_rad))  # Store rotation in degrees
+        )
+    
+    # Split sound regions between left and right sides
+    num_sound_per_side = num_sound_regions // 2
+    
+    # Calculate positions for sound regions (left side: specimen_start to lesion_start)
+    sound_left_width = lesion_start_x - specimen_start_x
+    sound_left_spacing = sound_left_width / (num_sound_per_side + 1)
+    
+    for i in range(num_sound_per_side):
+        center_x = int(specimen_start_x + sound_left_spacing * (i + 1))
+        stats = extract_region_at(center_x, "sound", i + 1)
+        if stats:
+            region_stats.append(stats)
+    
+    # Calculate positions for lesion regions
+    lesion_width = lesion_end_x - lesion_start_x
+    lesion_spacing = lesion_width / (num_lesion_regions + 1)
+    
+    for i in range(num_lesion_regions):
+        center_x = int(lesion_start_x + lesion_spacing * (i + 1))
+        stats = extract_region_at(center_x, "lesion", i + 1)
+        if stats:
+            region_stats.append(stats)
+    
+    # Calculate positions for sound regions (right side: lesion_end to tooth_end)
+    sound_right_width = tooth_end_x - lesion_end_x
+    sound_right_spacing = sound_right_width / (num_sound_per_side + 1)
+    
+    for i in range(num_sound_per_side):
+        center_x = int(lesion_end_x + sound_right_spacing * (i + 1))
+        stats = extract_region_at(center_x, "sound", num_sound_per_side + i + 1)
+        if stats:
+            region_stats.append(stats)
+    
+    return region_stats
+
+
 def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Surface:
     """
     Detect the surface of the specimen in the OCT image.
@@ -312,21 +485,32 @@ def run_carl_quant(context):
                 # Detect surface using real algorithm
                 surface = detect_surface(image_array, air_config, region_config)
                 
-                # TODO: Implement region extraction and lesion depth calculation
-                # For now, use dummy data
+                # Extract regions using real algorithm
                 num_sound = context.region_config.get("sound", 3)
                 num_lesion = context.region_config.get("lesion", 3)
+                
+                if region_config:
+                    region_stats = extract_regions(
+                        image_array,
+                        surface,
+                        region_config,
+                        num_sound_regions=num_sound,
+                        num_lesion_regions=num_lesion
+                    )
+                else:
+                    # No region config - use dummy data
+                    region_stats = [
+                        RegionStats("sound", [random.randint(95, 105) for _ in range(100)],
+                                    mean=100.0, median=100.0, sd=2.0, se=1.0)
+                        for _ in range(num_sound)
+                    ] + [
+                        RegionStats("lesion", [random.randint(75, 85) for _ in range(100)],
+                                    mean=80.0, median=80.0, sd=2.0, se=1.0)
+                        for _ in range(num_lesion)
+                    ]
 
-                region_stats = [
-                    RegionStats("sound", [random.randint(95, 105) for _ in range(100)],
-                                mean=100.0, median=100.0, sd=2.0, se=1.0)
-                    for _ in range(num_sound)
-                ] + [
-                    RegionStats("lesion", [random.randint(75, 85) for _ in range(100)],
-                                mean=80.0, median=80.0, sd=2.0, se=1.0)
-                    for _ in range(num_lesion)
-                ]
-
+                # TODO: Implement lesion depth calculation
+                # For now, use dummy data
                 lesion_depth = LesionDepth(
                     depth_points=[(x, 20 + x % 2) for x in range(100)],
                     mean_depth=20.5,
