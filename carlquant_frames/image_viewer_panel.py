@@ -138,6 +138,9 @@ class image_viewer_panel(BaseCanvasPanel):
         
         # Draw surface detection results
         self.draw_surface_results(specimen, current_slice)
+        
+        # Draw extraction regions
+        self.draw_extraction_regions(specimen, current_slice)
 
     # ============================================================================
     # IMAGE DISPLAY (OVERRIDE FOR SPECIMEN-SPECIFIC LOGIC)
@@ -958,3 +961,106 @@ class image_viewer_panel(BaseCanvasPanel):
                     fill='green', width=2,
                     tags="surface_overlay"
                 )
+    
+    def draw_extraction_regions(self, specimen, current_slice):
+        """
+        Draw extraction regions (rotated rectangles with numbers).
+        
+        Args:
+            specimen: Specimen object containing results
+            current_slice: 0-based slice index
+        """
+        # Check if we should show extraction regions
+        display_options = getattr(self.context, 'display_options', {})
+        show_regions = display_options.get('show_extraction_regions', tk.BooleanVar(value=True)).get()
+        
+        if not show_regions:
+            return
+        
+        # Check if results exist for this slice
+        if not hasattr(specimen, 'results') or current_slice not in specimen.results:
+            return
+        
+        slice_result = specimen.results[current_slice]
+        region_stats = slice_result.region_stats
+        
+        if not region_stats:
+            return
+        
+        # Check if we have raw image for coordinate transformation
+        if not hasattr(self, 'rawImage') or self.rawImage is None:
+            return
+        
+        # Calculate zoom factor for coordinate transformation
+        if self.zoom_level == 1.0:
+            current_width = getattr(self, 'fitted_width', self.rawImage.width)
+            current_zoom = current_width / self.rawImage.width
+        else:
+            current_zoom = self.zoom_level
+        
+        # Draw each extraction region
+        for stats in region_stats:
+            if not stats.bounds or len(stats.bounds) == 0:
+                continue
+            
+            # Choose color based on region type
+            if stats.region_type == "sound":
+                color = 'green'  # Green for sound
+            else:
+                color = 'red'    # Red for lesion
+            
+            # Check if we have rotated corners (4 points) or simple bbox (4 values)
+            if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
+                # Rotated rectangle with 4 corner points
+                corners = stats.bounds
+                
+                # Transform corners to canvas coordinates
+                canvas_corners = []
+                for x, y in corners:
+                    canvas_x = x * current_zoom + self.image_offset_x
+                    canvas_y = y * current_zoom + self.image_offset_y
+                    canvas_corners.append((canvas_x, canvas_y))
+                
+                # Draw polygon outline
+                # Create lines between consecutive corners
+                for i in range(4):
+                    x1, y1 = canvas_corners[i]
+                    x2, y2 = canvas_corners[(i + 1) % 4]
+                    self.canvas.create_line(
+                        x1, y1, x2, y2,
+                        fill=color, width=2,
+                        tags="extraction_regions"
+                    )
+                
+                # Calculate center from corners for label
+                center_x = sum(x for x, y in canvas_corners) / 4
+                center_y = sum(y for x, y in canvas_corners) / 4
+                
+            else:
+                # Simple axis-aligned rectangle
+                left_x, top_y, right_x, bottom_y = stats.bounds
+                
+                # Transform to canvas coordinates
+                canvas_x1 = left_x * current_zoom + self.image_offset_x
+                canvas_y1 = top_y * current_zoom + self.image_offset_y
+                canvas_x2 = right_x * current_zoom + self.image_offset_x
+                canvas_y2 = bottom_y * current_zoom + self.image_offset_y
+                
+                # Draw rectangle outline
+                self.canvas.create_rectangle(
+                    canvas_x1, canvas_y1, canvas_x2, canvas_y2,
+                    outline=color, width=2,
+                    tags="extraction_regions"
+                )
+                
+                center_x = (canvas_x1 + canvas_x2) / 2
+                center_y = (canvas_y1 + canvas_y2) / 2
+            
+            # Draw region number in center
+            text = str(stats.region_index)
+            self.canvas.create_text(
+                center_x, center_y,
+                text=text, fill=color,
+                font=("Arial", 12, "bold"),
+                tags="extraction_regions"
+            )

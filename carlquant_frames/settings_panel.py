@@ -25,8 +25,16 @@ class settingsPanel:
 
         self.regionVar = tk.IntVar(value=6)
         self.regionDropdown = ttk.Combobox(self.frame, textvariable=self.regionVar, state="readonly")
-        self.regionDropdown['values'] = list(range(2, 10))  # 2 to 9 regions
+        self.regionDropdown['values'] = list(range(2, 12, 2))  # 2, 4, 6, 8, 10 (even numbers for equal split)
         self.regionDropdown.grid(row=1, column=0, sticky="ew", pady=2)
+        
+        # Add helper text
+        self.regionHelpLabel = ttk.Label(
+            self.frame, 
+            text="(Sound regions split left/right)", 
+            font=("Arial", 8)
+        )
+        self.regionHelpLabel.grid(row=2, column=0, sticky="w", pady=(0, 5))
 
         # Register in context
         self.context.region_config = {
@@ -106,10 +114,20 @@ class settingsPanel:
         )
         self.showReferenceCurveCheck.grid(row=7, column=0, sticky="w", pady=2)
         
+        # Show Extraction Regions checkbox
+        self.showExtractionRegionsVar = tk.BooleanVar(value=True)
+        self.showExtractionRegionsCheck = ttk.Checkbutton(
+            self.frame,
+            text="Show Extraction Regions",
+            variable=self.showExtractionRegionsVar
+        )
+        self.showExtractionRegionsCheck.grid(row=8, column=0, sticky="w", pady=2)
+        
         # Register display options in context
         self.context.display_options = {
             "show_surface_peaks": self.showSurfacePeaksVar,
             "show_fitted_curve": self.showFittedCurveVar,
-            "show_reference_curve": self.showReferenceCurveVar
+            "show_reference_curve": self.showReferenceCurveVar,
+            "show_extraction_regions": self.showExtractionRegionsVar
         }
 
