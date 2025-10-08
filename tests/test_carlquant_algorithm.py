@@ -20,6 +20,7 @@ from PIL import Image
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional
 from sklearn.cluster import DBSCAN
+from scipy.interpolate import splrep, splev
 
 # Add parent directory to path so we can import from carlquant_frames
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -95,8 +96,10 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
         min_cluster_size=180 # Min cluster size to be considered surface
     )
     
-    # Step 5: Placeholder for curve fitting (to be implemented later)
+    # Step 5: Fit smooth spline curve to surface points
     fitted_curves = {}
+    if len(filtered_points) > 3:  # Need at least 4 points for spline
+        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end)
     
     return Surface(
         raw_points=filtered_points,
@@ -248,6 +251,63 @@ def cluster_surface_points(raw_points: List[Tuple[int, int]],
     filtered_labels = cluster_labels[mask]
     
     return filtered_points, filtered_labels.tolist()
+
+
+def fit_surface_curve(surface_points: List[Tuple[int, int]], 
+                     x_start: int, 
+                     x_end: int,
+                     smoothing: float = 0.5) -> Dict[str, List[Tuple[int, int]]]:
+    """
+    Fit a smooth spline curve to surface points to create an intact surface.
+    
+    After clustering, some x-positions may be missing. This function fits
+    a spline to the detected points and evaluates it at all x-positions
+    to create a continuous, smooth surface.
+    
+    Uses modern scipy.interpolate.make_splrep for spline fitting.
+    
+    Args:
+        surface_points: List of (x, y) surface point coordinates
+        x_start: Starting x-coordinate for the fitted curve
+        x_end: Ending x-coordinate for the fitted curve
+        smoothing: Smoothing factor for spline (0=interpolation, higher=smoother)
+    
+    Returns:
+        Dictionary with fitted curve: {"spline": [(x, y), ...]}
+    """
+    if len(surface_points) < 4:
+        return {}
+    
+    # Extract x and y coordinates
+    points_array = np.array(surface_points)
+    x_coords = points_array[:, 0]
+    y_coords = points_array[:, 1]
+    
+    # Sort by x coordinate (required for spline fitting)
+    sort_idx = np.argsort(x_coords)
+    x_sorted = x_coords[sort_idx]
+    y_sorted = y_coords[sort_idx]
+    
+    # Fit cubic spline (k=3) using splrep
+    # s parameter controls smoothing: 0 = interpolation, higher = smoother
+    try:
+        # Create spline representation
+        tck = splrep(x_sorted, y_sorted, k=5, s=smoothing * (len(x_sorted)*3))
+        
+        # Evaluate spline at all x positions in the range
+        x_full = np.arange(x_start, x_end)
+        y_fitted = splev(x_full, tck)
+        
+        # Create list of (x, y) tuples for the fitted curve
+        fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted)]
+        
+        return {"spline": fitted_curve}
+    
+    except Exception as e:
+        # If spline fitting fails, return empty dict
+        print(f"Spline fitting failed: {e}")
+        return {}
+
 
 # =============================================================================
 # REGION EXTRACTION

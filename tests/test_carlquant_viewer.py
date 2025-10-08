@@ -46,6 +46,7 @@ class CarlQuantTestViewer:
         
         # Display state
         self.show_surface = tk.BooleanVar(value=True)
+        self.show_fitted_curve = tk.BooleanVar(value=True)
         self.show_regions = tk.BooleanVar(value=True)
         self.show_air = tk.BooleanVar(value=True)
         self.show_lesion_depth = tk.BooleanVar(value=True)
@@ -135,7 +136,9 @@ class CarlQuantTestViewer:
         display_frame = ttk.LabelFrame(parent, text="Display Options", padding=10)
         display_frame.pack(fill=tk.X, pady=(0, 10))
         
-        ttk.Checkbutton(display_frame, text="Show Surface", variable=self.show_surface,
+        ttk.Checkbutton(display_frame, text="Show Surface Peaks", variable=self.show_surface,
+                       command=self.update_display).pack(anchor=tk.W)
+        ttk.Checkbutton(display_frame, text="Show Fitted Curve", variable=self.show_fitted_curve,
                        command=self.update_display).pack(anchor=tk.W)
         ttk.Checkbutton(display_frame, text="Show Regions", variable=self.show_regions,
                        command=self.update_display).pack(anchor=tk.W)
@@ -332,9 +335,19 @@ class CarlQuantTestViewer:
         if cache_key in self.results_cache:
             region_stats, surface, lesion_depth = self.results_cache[cache_key]
             
-            # Draw surface with cluster coloring (green for peaks)
+            # Draw fitted spline curve (orange) with thickness
+            if self.show_fitted_curve.get() and surface:
+                if surface.fitted_curves and "spline" in surface.fitted_curves:
+                    for x, y in surface.fitted_curves["spline"]:
+                        if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
+                            # Draw thicker line (3 pixels vertical thickness)
+                            for dy in range(-1, 2):
+                                ny = y + dy
+                                if 0 <= ny < display_image.shape[0]:
+                                    display_image[ny, x] = [255, 165, 0]  # Orange
+            
+            # Draw detected surface peaks (green)
             if self.show_surface.get() and surface:
-                # Use green for surface peaks
                 for idx, (x, y) in enumerate(surface.raw_points):
                     if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
                         # Green color for detected peaks
@@ -476,7 +489,11 @@ class CarlQuantTestViewer:
             if cache_key in self.results_cache:
                 region_stats, surface, lesion_depth = self.results_cache[cache_key]
                 info += f"Current Slice {self.current_slice_index + 1}:\n"
-                info += f"Surface points: {len(surface.raw_points)}\n"
+                info += f"Surface peaks: {len(surface.raw_points)}\n"
+                
+                # Show fitted curve information
+                if surface.fitted_curves and "spline" in surface.fitted_curves:
+                    info += f"Fitted curve: {len(surface.fitted_curves['spline'])} points (spline)\n"
                 
                 # Show cluster information
                 if surface.cluster_labels:
@@ -568,11 +585,29 @@ class CarlQuantTestViewer:
         if len(points) > 1:
             draw.line(points, fill='blue', width=2)
         
-        # Mark detected surface point if available
+        # Mark detected surface point and fitted curve if available
         cache_key = (self.current_specimen.specimen_id, self.current_slice_index)
         if cache_key in self.results_cache:
             _, surface, _ = self.results_cache[cache_key]
-            if surface and surface.raw_points:
+            
+            # Draw fitted spline point (orange) if enabled
+            if self.show_fitted_curve.get() and surface and surface.fitted_curves and "spline" in surface.fitted_curves:
+                for x, y in surface.fitted_curves["spline"]:
+                    if x == self.current_ascan_x:
+                        if 0 <= y < image_height:
+                            spline_intensity = ascan_column[y]
+                            plot_x = margin_left + int((spline_intensity / 255.0) * plot_area_width)
+                            plot_y = margin_top + int((y / float(image_height - 1)) * plot_area_height)
+                            
+                            # Draw marker (orange circle for fitted curve)
+                            radius = 4
+                            draw.ellipse([(plot_x - radius, plot_y - radius), 
+                                        (plot_x + radius, plot_y + radius)], 
+                                       fill='orange', outline='darkorange', width=2)
+                        break
+            
+            # Draw detected peak point (green) on top if enabled
+            if self.show_surface.get() and surface and surface.raw_points:
                 # Find surface point for current A-Scan
                 for x, y in surface.raw_points:
                     if x == self.current_ascan_x:
