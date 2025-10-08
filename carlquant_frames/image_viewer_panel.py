@@ -135,6 +135,9 @@ class image_viewer_panel(BaseCanvasPanel):
         # Draw region boundaries and AIR regions
         self.draw_region_boundaries(specimen, current_slice)
         self.draw_air_regions(specimen, current_slice)
+        
+        # Draw surface detection results
+        self.draw_surface_results(specimen, current_slice)
 
     # ============================================================================
     # IMAGE DISPLAY (OVERRIDE FOR SPECIMEN-SPECIFIC LOGIC)
@@ -869,3 +872,63 @@ class image_viewer_panel(BaseCanvasPanel):
         specimen = specimen_data[specimen_id]
         current_slice = int(self.scale.get()) - 1  # Convert to 0-based index
         self.draw_air_regions(specimen, current_slice)
+    
+    
+    def draw_surface_results(self, specimen, current_slice):
+        """
+        Draw surface detection results (peaks and fitted curve).
+        
+        Args:
+            specimen: Specimen object containing results
+            current_slice: 0-based slice index
+        """
+        # Check if results exist for this slice
+        if not hasattr(specimen, 'results') or current_slice not in specimen.results:
+            return
+        
+        slice_result = specimen.results[current_slice]
+        surface = slice_result.surface
+        
+        if not surface:
+            return
+        
+        # Get display options from context
+        display_options = getattr(self.context, 'display_options', {})
+        show_peaks = display_options.get('show_surface_peaks', tk.BooleanVar(value=True)).get()
+        show_curve = display_options.get('show_fitted_curve', tk.BooleanVar(value=True)).get()
+        
+        # Draw fitted curve (orange, thicker line)
+        if show_curve and surface.fitted_curves and "spline" in surface.fitted_curves:
+            for x, y in surface.fitted_curves["spline"]:
+                # Transform coordinates
+                canvas_x, canvas_y = self.image_to_canvas(x, y)
+                
+                # Draw thicker line (3 pixels)
+                for dy in range(-1, 2):
+                    self.canvas.create_oval(
+                        canvas_x - 1, canvas_y + dy - 1,
+                        canvas_x + 1, canvas_y + dy + 1,
+                        fill='orange', outline='orange',
+                        tags="surface_overlay"
+                    )
+        
+        # Draw surface peaks (green crosses)
+        if show_peaks and surface.raw_points:
+            for x, y in surface.raw_points:
+                # Transform coordinates
+                canvas_x, canvas_y = self.image_to_canvas(x, y)
+                
+                # Draw small cross (5x5 pixels)
+                cross_size = 2
+                self.canvas.create_line(
+                    canvas_x - cross_size, canvas_y,
+                    canvas_x + cross_size, canvas_y,
+                    fill='green', width=2,
+                    tags="surface_overlay"
+                )
+                self.canvas.create_line(
+                    canvas_x, canvas_y - cross_size,
+                    canvas_x, canvas_y + cross_size,
+                    fill='green', width=2,
+                    tags="surface_overlay"
+                )

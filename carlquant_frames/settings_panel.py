@@ -74,4 +74,32 @@ class settingsPanel:
 
         self.operatorVar.trace_add("write", update_metadata)
         self.measurementVar.trace_add("write", update_metadata)
+        
+        # Display Options
+        self.displayLabel = ttk.Label(self.frame, text="Display Options:")
+        self.displayLabel.grid(row=4, column=0, sticky="w", pady=(10, 2))
+        
+        # Show Surface Peaks checkbox
+        self.showSurfacePeaksVar = tk.BooleanVar(value=True)
+        self.showSurfacePeaksCheck = ttk.Checkbutton(
+            self.frame, 
+            text="Show Surface Peaks",
+            variable=self.showSurfacePeaksVar
+        )
+        self.showSurfacePeaksCheck.grid(row=5, column=0, sticky="w", pady=2)
+        
+        # Show Fitted Curve checkbox
+        self.showFittedCurveVar = tk.BooleanVar(value=True)
+        self.showFittedCurveCheck = ttk.Checkbutton(
+            self.frame,
+            text="Show Fitted Curve",
+            variable=self.showFittedCurveVar
+        )
+        self.showFittedCurveCheck.grid(row=6, column=0, sticky="w", pady=2)
+        
+        # Register display options in context
+        self.context.display_options = {
+            "show_surface_peaks": self.showSurfacePeaksVar,
+            "show_fitted_curve": self.showFittedCurveVar
+        }
 
