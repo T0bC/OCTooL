@@ -19,6 +19,7 @@ import numpy as np
 from PIL import Image
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional
+from sklearn.cluster import DBSCAN
 
 # Add parent directory to path so we can import from carlquant_frames
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -37,10 +38,10 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
     Detect the surface of the specimen in the OCT image.
     
     Algorithm:
-    1. Calculate IQR from AIR region (if provided)
-    2. For each vertical pixel column (A-Scan) within specimen boundaries, find first pixel > IQR * 1.5
-    3. Store raw surface points
-    4. (Future) Apply smoothing/filtering and curve fitting
+    1. Calculate threshold from AIR region (if provided)
+    2. For each vertical pixel column (A-Scan) within specimen boundaries, find first pixel > threshold
+    3. Apply DBSCAN clustering to remove speckles and identify surface cluster
+    4. Filter points to keep only those in the largest cluster(s)
     
     Args:
         image: 2D numpy array (grayscale image)
@@ -48,7 +49,7 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
         region_config: Region configuration with specimen boundaries
     
     Returns:
-        Surface object with raw_points and fitted_curves
+        Surface object with raw_points, cluster_labels, and fitted_curves
     """
     height, width = image.shape
     
@@ -65,61 +66,99 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
         air_region = image[y1:y2, x1:x2]
         
         # Calculate statistics from AIR region
-        air_mean = np.mean(air_region)
-        air_std = np.std(air_region)
-        air_max = np.max(air_region)
         air_q95 = np.percentile(air_region, 95)
         
-        # Threshold: Use maximum value from AIR region
-        # Surface should be significantly brighter than air
-        # Use 95th percentile to be robust against outliers in AIR
-        threshold = air_q95 *1.5
-        
-        print(f"AIR region: ({x1},{y1}) to ({x2},{y2})")
-        print(f"AIR mean={air_mean:.2f}, std={air_std:.2f}, max={air_max:.2f}, Q95={air_q95:.2f}")
-        print(f"Threshold={threshold:.2f}")
+        # Threshold: Use 95th percentile to be robust against outliers in AIR
+        threshold = air_q95 * 1.5
     else:
         # Fallback: use image statistics if no AIR config
         threshold = np.percentile(image, 50)
-        print(f"No AIR config, using fallback threshold={threshold:.2f}")
     
     # Step 2: Determine search boundaries (specimen start to end)
     if region_config:
         x_start = region_config.specimen_start[0]
         x_end = region_config.tooth_end[0]
-        print(f"Searching for surface from x={x_start} to x={x_end}")
     else:
         # No region config, search entire width
         x_start = 0
         x_end = width
-        print(f"No region config, searching entire width")
     
     # Step 3: For each column (A-Scan) within boundaries, find first pixel above threshold
     # Skip first 25 pixels (typically white/black band)
-    imageOffsett = 25
+    imageOffset = 25
     raw_points = []
     for x in range(x_start, x_end):
-        column = image[imageOffsett:, x]  # Skip first 25 pixels
+        column = image[imageOffset:, x]  # Skip first 25 pixels
         
         # Find first pixel that exceeds threshold
         above_threshold = np.where(column > threshold)[0]
         
         if len(above_threshold) > 0:
-            y = above_threshold[0] + imageOffsett  # First pixel above threshold (add 25 offset back)
+            y = above_threshold[0] + imageOffset  # First pixel above threshold (add offset back)
             raw_points.append((x, y))
-        else:
-            # No pixel found above threshold in this column
-            # Skip this column or use a default value
-            pass
     
-    print(f"Detected {len(raw_points)} surface points out of {x_end - x_start} columns")
+    # Step 4: Apply DBSCAN clustering to remove speckles
+    # =========================================================================
+    # DBSCAN CLUSTERING PARAMETERS - Adjust these for optimal surface detection
+    # =========================================================================
+    # epsilon: Maximum distance between two points to be considered neighbors
+    #          For surface detection, this controls how far apart points can be
+    #          while still being part of the same horizontal line (surface)
+    #          Increase if surface is fragmented, decrease if noise is included
+    epsilon = 20  # pixels (matching MATLAB cutoff parameter)
     
-    # Step 4: Placeholder for curve fitting (to be implemented later)
+    # min_samples: Minimum number of points required to form a dense region (cluster)
+    #              Lower values allow smaller clusters, higher values require more points
+    min_samples = 2  # points
+    
+    # min_cluster_size: Minimum number of points in a cluster to be considered "surface"
+    #                   This filters out small speckle clusters
+    #                   Adjust based on image width and expected surface continuity
+    min_cluster_size = 70  # points (matching MATLAB threshold)
+    # =========================================================================
+    
+    cluster_labels = None
+    filtered_points = raw_points
+    
+    if len(raw_points) > 0:
+        # Convert points to numpy array for clustering
+        points_array = np.array(raw_points)
+        
+        # Perform DBSCAN clustering
+        # Note: DBSCAN works in feature space, so we cluster on (x, y) coordinates
+        dbscan = DBSCAN(eps=epsilon, min_samples=min_samples)
+        cluster_labels = dbscan.fit_predict(points_array)
+        
+        # Find the most frequent cluster(s) representing the surface
+        # Exclude noise points (label = -1)
+        valid_labels = cluster_labels[cluster_labels >= 0]
+        
+        if len(valid_labels) > 0:
+            # Count occurrences of each cluster
+            unique_labels, counts = np.unique(valid_labels, return_counts=True)
+            
+            # Find clusters with more than min_cluster_size points
+            # This filters out small speckle clusters
+            surface_cluster_ids = unique_labels[counts > min_cluster_size]
+            
+            # If no cluster meets the threshold, use the largest cluster
+            if len(surface_cluster_ids) == 0 and len(unique_labels) > 0:
+                largest_cluster_id = unique_labels[np.argmax(counts)]
+                surface_cluster_ids = np.array([largest_cluster_id])
+            
+            # Filter points: keep only those in surface clusters
+            if len(surface_cluster_ids) > 0:
+                mask = np.isin(cluster_labels, surface_cluster_ids)
+                filtered_points = [raw_points[i] for i in range(len(raw_points)) if mask[i]]
+                cluster_labels = cluster_labels[mask]
+    
+    # Step 5: Placeholder for curve fitting (to be implemented later)
     fitted_curves = {}
     
     return Surface(
-        raw_points=raw_points,
-        fitted_curves=fitted_curves
+        raw_points=filtered_points,
+        fitted_curves=fitted_curves,
+        cluster_labels=cluster_labels.tolist() if cluster_labels is not None else None
     )
 
 

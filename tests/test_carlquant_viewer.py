@@ -332,17 +332,36 @@ class CarlQuantTestViewer:
         if cache_key in self.results_cache:
             region_stats, surface, lesion_depth = self.results_cache[cache_key]
             
-            # Draw surface
+            # Draw surface with cluster coloring
             if self.show_surface.get() and surface:
-                for x, y in surface.raw_points:
+                # Define colors for different clusters
+                cluster_colors = [
+                    [255, 0, 0],    # Red - Main surface cluster
+                    [255, 165, 0],  # Orange - Secondary cluster
+                    [255, 255, 0],  # Yellow - Tertiary cluster
+                    [0, 255, 255],  # Cyan - Additional clusters
+                    [255, 0, 255],  # Magenta
+                ]
+                
+                for idx, (x, y) in enumerate(surface.raw_points):
                     if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
+                        # Determine color based on cluster label
+                        if surface.cluster_labels and idx < len(surface.cluster_labels):
+                            cluster_id = surface.cluster_labels[idx]
+                            if cluster_id >= 0:
+                                color = cluster_colors[cluster_id % len(cluster_colors)]
+                            else:
+                                color = [128, 128, 128]  # Gray for noise points
+                        else:
+                            color = [255, 0, 0]  # Default red if no cluster info
+                        
                         # Draw a small cross
                         for dx in range(-2, 3):
                             for dy in range(-2, 3):
                                 nx, ny = x + dx, y + dy
                                 if 0 <= nx < display_image.shape[1] and 0 <= ny < display_image.shape[0]:
                                     if abs(dx) <= 1 or abs(dy) <= 1:
-                                        display_image[ny, nx] = [255, 0, 0]  # Red
+                                        display_image[ny, nx] = color
         
         # Draw region boundaries (4 vertical lines)
         # Green for specimen boundaries, Yellow for lesion boundaries
@@ -473,6 +492,16 @@ class CarlQuantTestViewer:
                 region_stats, surface, lesion_depth = self.results_cache[cache_key]
                 info += f"Current Slice {self.current_slice_index + 1}:\n"
                 info += f"Surface points: {len(surface.raw_points)}\n"
+                
+                # Show cluster information
+                if surface.cluster_labels:
+                    unique_clusters = np.unique(surface.cluster_labels)
+                    info += f"Clusters detected: {len(unique_clusters[unique_clusters >= 0])}\n"
+                    for cluster_id in unique_clusters:
+                        if cluster_id >= 0:
+                            count = np.sum(np.array(surface.cluster_labels) == cluster_id)
+                            info += f"  Cluster {cluster_id}: {count} points\n"
+                
                 info += f"Lesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n\n"
                 info += "Region Statistics:\n"
                 for i, stats in enumerate(region_stats):

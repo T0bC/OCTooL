@@ -22,6 +22,7 @@ class RegionStats:
 class Surface:
     raw_points: List[Tuple[int, int]]  # (x, y)
     fitted_curves: Dict[str, List[Tuple[int, int]]]  # e.g. {"polyfit": [...], "spline": [...]}
+    cluster_labels: Optional[List[int]] = None  # Cluster ID for each point (-1 for noise)
 
 @dataclass
 class LesionDepth:
