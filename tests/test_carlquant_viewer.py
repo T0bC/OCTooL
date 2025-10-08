@@ -20,6 +20,9 @@ import numpy as np
 from typing import Dict, Optional
 from pathlib import Path
 import importlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import multiprocessing
+import time
 
 # Add parent directory to path so we can import from carlquant_frames
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -126,6 +129,19 @@ class CarlQuantTestViewer:
         regions_spin.pack(fill=tk.X, pady=(0, 5))
         
         ttk.Label(algo_frame, text="(Sound: half, Lesion: all)", font=("Arial", 8)).pack(anchor=tk.W, pady=(0, 5))
+        
+        # Parallel processing toggle
+        self.use_parallel_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(algo_frame, text="Use Parallel Processing", 
+                       variable=self.use_parallel_var).pack(anchor=tk.W, pady=(5, 0))
+        
+        # Worker count
+        worker_frame = ttk.Frame(algo_frame)
+        worker_frame.pack(fill=tk.X, pady=(2, 5))
+        ttk.Label(worker_frame, text="Workers:", font=("Arial", 8)).pack(side=tk.LEFT)
+        self.num_workers_var = tk.IntVar(value=max(1, multiprocessing.cpu_count() - 1))
+        ttk.Spinbox(worker_frame, from_=1, to=multiprocessing.cpu_count(), 
+                   textvariable=self.num_workers_var, width=5).pack(side=tk.LEFT, padx=(5, 0))
         
         ttk.Button(algo_frame, text="Run Algorithm", command=self.run_algorithm).pack(fill=tk.X, pady=(5, 0))
         ttk.Button(algo_frame, text="Clear Cache", command=self.clear_cache).pack(fill=tk.X, pady=(5, 0))
@@ -528,7 +544,7 @@ class CarlQuantTestViewer:
         self.update_ascan_plot()
     
     def run_algorithm(self):
-        """Run the CarlQuant algorithm on all slices."""
+        """Run the CarlQuant algorithm on all slices (with optional parallelization)."""
         if self.current_specimen is None or self.current_specimen.config is None:
             messagebox.showwarning("No Configuration", "Please select a specimen with configuration.")
             return
@@ -541,47 +557,107 @@ class CarlQuantTestViewer:
             # Hot-reload the algorithm module to pick up changes
             importlib.reload(test_carlquant_algorithm)
             
-            # Process all slices
+            # Get settings
             num_slices = len(self.current_specimen.images)
+            num_regions = self.num_regions_var.get()
+            num_sound = num_regions // 2
+            num_lesion = num_regions
+            use_parallel = self.use_parallel_var.get()
+            num_workers = self.num_workers_var.get()
+            
+            # Prepare slice tasks (only for slices with configuration)
+            slice_tasks = []
+            for slice_idx in range(num_slices):
+                if slice_idx in self.current_specimen.config.regions:
+                    region_config = self.current_specimen.config.regions[slice_idx]
+                    air_config = self.current_specimen.config.air.get(slice_idx)
+                    image_path = self.current_specimen.images[slice_idx]
+                    slice_tasks.append((slice_idx, image_path, region_config, air_config))
+            
+            if len(slice_tasks) == 0:
+                messagebox.showwarning("No Configuration", "No slices have region configuration.")
+                return
+            
+            start_time = time.time()
             processed_count = 0
             
-            for slice_idx in range(num_slices):
-                # Check if this slice has configuration
-                if slice_idx not in self.current_specimen.config.regions:
-                    continue
+            if use_parallel and len(slice_tasks) > 1 and num_workers > 1:
+                # PARALLEL PROCESSING
+                self.status_label.config(text=f"Processing {len(slice_tasks)} slices using {num_workers} workers...")
+                self.root.update_idletasks()
                 
-                # Update UI less frequently (every 5 slices)
-                if slice_idx % 5 == 0 or slice_idx == num_slices - 1:
-                    self.status_label.config(text=f"Processing {slice_idx + 1}/{num_slices}...")
-                    self.root.update_idletasks()  # Use update_idletasks instead of update
+                def process_slice_wrapper(task):
+                    """Wrapper to call process_slice with unpacked arguments."""
+                    slice_idx, image_path, region_config, air_config = task
+                    try:
+                        region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
+                            image_path, region_config, air_config, num_sound, num_lesion
+                        )
+                        return (slice_idx, region_stats, surface, lesion_depth, None)
+                    except Exception as e:
+                        return (slice_idx, None, None, None, str(e))
                 
-                # Get configuration
-                region_config = self.current_specimen.config.regions[slice_idx]
-                air_config = self.current_specimen.config.air.get(slice_idx)
+                # Process in parallel
+                with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                    future_to_slice = {
+                        executor.submit(process_slice_wrapper, task): task[0]
+                        for task in slice_tasks
+                    }
+                    
+                    for future in as_completed(future_to_slice):
+                        slice_idx = future_to_slice[future]
+                        try:
+                            result_idx, region_stats, surface, lesion_depth, error = future.result()
+                            
+                            if error:
+                                print(f"Error processing slice {result_idx}: {error}")
+                            else:
+                                # Cache results
+                                cache_key = (self.current_specimen.specimen_id, result_idx)
+                                self.results_cache[cache_key] = (region_stats, surface, lesion_depth)
+                                processed_count += 1
+                                
+                                # Update UI periodically
+                                if processed_count % 5 == 0 or processed_count == len(slice_tasks):
+                                    self.status_label.config(text=f"Processed {processed_count}/{len(slice_tasks)}...")
+                                    self.root.update_idletasks()
+                        except Exception as e:
+                            print(f"Exception processing slice {slice_idx}: {e}")
+            
+            else:
+                # SEQUENTIAL PROCESSING
+                self.status_label.config(text=f"Processing {len(slice_tasks)} slices sequentially...")
+                self.root.update_idletasks()
                 
-                # Run algorithm (use reloaded module)
-                image_path = self.current_specimen.images[slice_idx]
-                num_regions = self.num_regions_var.get()
-                # Sound regions: half of total (split between left and right)
-                # Lesion regions: all of total
-                num_sound = num_regions // 2
-                num_lesion = num_regions
-                
-                region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
-                    image_path,
-                    region_config,
-                    air_config,
-                    num_sound,
-                    num_lesion
-                )
-                
-                # Cache results
-                cache_key = (self.current_specimen.specimen_id, slice_idx)
-                self.results_cache[cache_key] = (region_stats, surface, lesion_depth)
-                processed_count += 1
+                for i, task in enumerate(slice_tasks):
+                    slice_idx, image_path, region_config, air_config = task
+                    
+                    try:
+                        region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
+                            image_path, region_config, air_config, num_sound, num_lesion
+                        )
+                        
+                        # Cache results
+                        cache_key = (self.current_specimen.specimen_id, slice_idx)
+                        self.results_cache[cache_key] = (region_stats, surface, lesion_depth)
+                        processed_count += 1
+                        
+                        # Update UI periodically
+                        if (i + 1) % 5 == 0 or (i + 1) == len(slice_tasks):
+                            self.status_label.config(text=f"Processing {i + 1}/{len(slice_tasks)}...")
+                            self.root.update_idletasks()
+                    
+                    except Exception as e:
+                        print(f"Error processing slice {slice_idx}: {e}")
+            
+            # Calculate elapsed time
+            elapsed_time = time.time() - start_time
             
             # Update status and display
-            self.status_label.config(text=f"Completed: {processed_count} slices processed")
+            mode_str = f"parallel ({num_workers} workers)" if use_parallel else "sequential"
+            self.status_label.config(
+                text=f"Completed: {processed_count} slices in {elapsed_time:.1f}s ({mode_str})"
+            )
             
             # Update display (which will automatically update info panel)
             self.update_display()
@@ -624,21 +700,36 @@ class CarlQuantTestViewer:
         if plot_area_width <= 0 or plot_area_height <= 0:
             return
         
-        # Draw axes
+        # Draw grid lines FIRST (behind data)
+        grid_color = '#e0e0e0'  # Light gray for grid
+        
+        # Vertical grid lines (intensity axis) - every 32 intensity units (8 lines)
+        for intensity in range(0, 256, 32):
+            x = margin_left + int((intensity / 255.0) * plot_area_width)
+            draw.line([(x, margin_top), (x, plot_height - margin_bottom)], fill=grid_color, width=1)
+        
+        # Horizontal grid lines (depth axis) - every 50 pixels (or adaptive based on image height)
+        grid_spacing = max(50, image_height // 10)  # At least 10 grid lines
+        for depth in range(0, image_height, grid_spacing):
+            y = margin_top + int((depth / float(image_height - 1)) * plot_area_height)
+            draw.line([(margin_left, y), (plot_width - margin_right, y)], fill=grid_color, width=1)
+        
+        # Draw axes (on top of grid)
         # Y-axis (depth)
         draw.line([(margin_left, margin_top), (margin_left, plot_height - margin_bottom)], fill='black', width=2)
         # X-axis (intensity)
         draw.line([(margin_left, plot_height - margin_bottom), (plot_width - margin_right, plot_height - margin_bottom)], fill='black', width=2)
         
-        # Draw grid and labels
-        # X-axis labels (intensity: 0, 128, 255)
-        for intensity in [0, 128, 255]:
+        # X-axis labels and ticks (intensity: 0, 64, 128, 192, 255)
+        for intensity in [0, 64, 128, 192, 255]:
             x = margin_left + int((intensity / 255.0) * plot_area_width)
             draw.line([(x, plot_height - margin_bottom), (x, plot_height - margin_bottom + 5)], fill='black', width=1)
             draw.text((x - 10, plot_height - margin_bottom + 8), str(intensity), fill='black')
         
-        # Y-axis labels (depth: 0, middle, max)
-        for depth_idx, depth in enumerate([0, image_height // 2, image_height - 1]):
+        # Y-axis labels and ticks (depth: more granular)
+        num_y_ticks = min(8, image_height // 50)  # 8 ticks or fewer
+        for i in range(num_y_ticks + 1):
+            depth = int((i / num_y_ticks) * (image_height - 1))
             y = margin_top + int((depth / float(image_height - 1)) * plot_area_height)
             draw.line([(margin_left - 5, y), (margin_left, y)], fill='black', width=1)
             draw.text((5, y - 5), str(depth), fill='black')
@@ -668,7 +759,7 @@ class CarlQuantTestViewer:
                 surface_y = knee_info['surface_y']
                 fitted_curve = knee_info.get('fitted_curve')
                 
-                # Draw the RAW intensity profile from surface downward (in light gray/thin)
+                # Draw the RAW intensity profile from surface downward (in green)
                 profile_points = []
                 for i, (d_idx, intensity) in enumerate(zip(depth_idx, intensity_profile)):
                     abs_y = surface_y + d_idx
@@ -678,7 +769,7 @@ class CarlQuantTestViewer:
                         profile_points.append((x, y))
                 
                 if len(profile_points) > 1:
-                    draw.line(profile_points, fill='lightgray', width=1)
+                    draw.line(profile_points, fill='green', width=2)
                 
                 # Draw the FITTED exp2 curve (in magenta/thick) if available
                 if fitted_curve is not None:
