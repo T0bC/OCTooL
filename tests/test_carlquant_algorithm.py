@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Optional
 from sklearn.cluster import DBSCAN
 from scipy.interpolate import splrep, splev
+from scipy.optimize import curve_fit
 
 # Add parent directory to path so we can import from carlquant_frames
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -665,44 +666,270 @@ def extract_region_pixels(image: np.ndarray,
 # LESION DEPTH CALCULATION
 # =============================================================================
 
-def calculate_lesion_depth(surface: Surface, 
-                          region_config: RegionConfig,
-                          image: np.ndarray) -> LesionDepth:
+def knee_pt(y: np.ndarray, x: np.ndarray = None) -> Tuple[float, int]:
     """
-    Calculate lesion depth within the specified boundary.
+    Find the knee point of a curve y=f(x).
     
-    Algorithm steps (to be implemented):
-    1. Identify lesion bottom boundary (intensity-based or manual)
-    2. Calculate vertical distance from surface to lesion bottom
-    3. Compute statistics (mean, median, std, se)
+    Translated from MATLAB knee_pt function by D. Kroon.
+    The knee is found by fitting two lines (left and right of each candidate point)
+    and minimizing the sum of fitting errors.
     
     Args:
-        surface: Detected surface
-        region_config: Region configuration with lesion boundaries
-        image: 2D numpy array (grayscale image)
+        y: Vector of y values (must be >= 3 elements)
+        x: Vector of x values (same size as y). If None, uses 1:length(y)
     
     Returns:
-        LesionDepth object with depth measurements
+        Tuple of (x_value_at_knee, index_of_knee)
+    """
+    # Make y a 1D array
+    y = np.asarray(y).flatten()
+    
+    # Check minimum length
+    if len(y) < 3:
+        return np.nan, -1
+    
+    # Create or validate x
+    if x is None:
+        x = np.arange(len(y), dtype=float)
+    else:
+        x = np.asarray(x).flatten()
+    
+    # Check dimensions match
+    if len(x) != len(y):
+        return np.nan, -1
+    
+    # Sort by x if needed
+    if np.any(np.diff(x) < 0):
+        sort_idx = np.argsort(x)
+        x = x[sort_idx]
+        y = y[sort_idx]
+        idx_map = sort_idx
+    else:
+        idx_map = np.arange(len(x))
+    
+    # Compute cumulative sums for forward (left-of-knee) fits
+    sigma_xy = np.cumsum(x * y)
+    sigma_x = np.cumsum(x)
+    sigma_y = np.cumsum(y)
+    sigma_xx = np.cumsum(x * x)
+    n = np.arange(1, len(y) + 1, dtype=float)
+    
+    det = n * sigma_xx - sigma_x * sigma_x
+    # Avoid division by zero
+    det = np.where(det == 0, 1e-10, det)
+    
+    mfwd = (n * sigma_xy - sigma_x * sigma_y) / det
+    bfwd = -(sigma_x * sigma_xy - sigma_xx * sigma_y) / det
+    
+    # Compute cumulative sums for backward (right-of-knee) fits
+    x_rev = x[::-1]
+    y_rev = y[::-1]
+    sigma_xy = np.cumsum(x_rev * y_rev)
+    sigma_x = np.cumsum(x_rev)
+    sigma_y = np.cumsum(y_rev)
+    sigma_xx = np.cumsum(x_rev * x_rev)
+    
+    det = n * sigma_xx - sigma_x * sigma_x
+    det = np.where(det == 0, 1e-10, det)
+    
+    mbck = np.flip((n * sigma_xy - sigma_x * sigma_y) / det)
+    bbck = np.flip(-(sigma_x * sigma_xy - sigma_xx * sigma_y) / det)
+    
+    # Calculate error for each potential breakpoint
+    error_curve = np.full(len(y), np.nan)
+    
+    for breakpt in range(1, len(y) - 1):  # Skip first and last points
+        # Errors for left side (forward fit)
+        y_fit_fwd = mfwd[breakpt] * x[:breakpt+1] + bfwd[breakpt]
+        delsfwd = y_fit_fwd - y[:breakpt+1]
+        
+        # Errors for right side (backward fit)
+        y_fit_bck = mbck[breakpt] * x[breakpt:] + bbck[breakpt]
+        delsbck = y_fit_bck - y[breakpt:]
+        
+        # Sum of absolute errors
+        error_curve[breakpt] = np.sum(np.abs(delsfwd)) + np.sum(np.abs(delsbck))
+    
+    # Find minimum error location
+    loc = np.nanargmin(error_curve)
+    res_x = x[loc]
+    idx_of_result = idx_map[loc]
+    
+    return res_x, idx_of_result
+
+
+def exp2_model(z, a, b, c, d):
+    """
+    Double exponential decay model for OCT intensity.
+    I(z) = a*exp(b*z) + c*exp(d*z)
+    
+    Args:
+        z: Depth values
+        a, b, c, d: Model parameters
+    
+    Returns:
+        Intensity values
+    """
+    return a * np.exp(b * z) + c * np.exp(d * z)
+
+
+def fit_exp2_to_profile(intensity_profile: np.ndarray, depth_indices: np.ndarray) -> Optional[Tuple[np.ndarray, Dict]]:
+    """
+    Fit double exponential model to intensity profile.
+    
+    Args:
+        intensity_profile: Intensity values
+        depth_indices: Corresponding depth indices
+    
+    Returns:
+        Tuple of (fitted_curve, params_dict) or None if fitting fails
+        params_dict contains: {'a', 'b', 'c', 'd', 'success'}
+    """
+    try:
+        # Initial guess for parameters
+        # a, b (fast decay), c, d (slow decay)
+        max_intensity = np.max(intensity_profile)
+        p0 = [max_intensity * 0.7, -0.05, max_intensity * 0.3, -0.01]
+        
+        # Fit the model
+        popt, pcov = curve_fit(
+            exp2_model, 
+            depth_indices, 
+            intensity_profile,
+            p0=p0,
+            maxfev=5000,
+            bounds=(
+                [0, -1, 0, -1],  # Lower bounds
+                [255, 0, 255, 0]  # Upper bounds (intensity max 255, decay must be negative)
+            )
+        )
+        
+        # Generate fitted curve
+        fitted_curve = exp2_model(depth_indices, *popt)
+        
+        params = {
+            'a': popt[0],
+            'b': popt[1],
+            'c': popt[2],
+            'd': popt[3],
+            'success': True
+        }
+        
+        return fitted_curve, params
+        
+    except Exception as e:
+        print(f"Exp2 fitting failed: {e}")
+        return None
+
+
+def calculate_lesion_depth(surface: Surface, 
+                          region_config: RegionConfig,
+                          image: np.ndarray,
+                          search_depth: int = 200,
+                          use_curve_fitting: bool = True) -> Optional[LesionDepth]:
+    """
+    Calculate lesion depth by detecting the knee point in intensity profiles.
+    
+    Algorithm:
+    1. For each A-Scan column in the lesion region
+    2. Extract intensity values from surface downward (search_depth pixels)
+    3. [Optional] Fit exp2 model to smooth the profile
+    4. Find knee point using two-line fitting method
+    5. Calculate depth as distance from surface to knee point
+    
+    Args:
+        surface: Detected surface with fitted curve
+        region_config: Region configuration with lesion boundaries
+        image: 2D numpy array (grayscale image)
+        search_depth: Maximum depth to search below surface (default 200 pixels)
+        use_curve_fitting: If True, fit exp2 model before knee detection (default True)
+    
+    Returns:
+        LesionDepth object with depth measurements, or None if no valid surface
     """
     # Extract lesion boundaries from region config
     start_x, _ = region_config.lesion_start
     end_x, _ = region_config.lesion_end
     
-    # TODO: Implement lesion depth calculation
-    # Placeholder: Generate dummy depth points
-    depth_points = []
-    for x in range(start_x, end_x, 10):
-        depth = 20 + int(5 * np.sin(x / 30))  # Dummy varying depth
-        depth_points.append((x, depth))
+    # Validate surface exists
+    if not surface.fitted_curves or "spline" not in surface.fitted_curves:
+        print("WARNING: No surface detected - cannot calculate lesion depth")
+        return None
     
-    depths = [d for _, d in depth_points]
+    # Convert surface to dictionary for lookup
+    surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    
+    height, width = image.shape
+    depth_points = []
+    knee_data = {}  # Store knee point data for visualization
+    
+    # Process every column in lesion region
+    for x in range(start_x, end_x):
+        if x not in surface_dict:
+            continue
+        
+        surface_y = surface_dict[x]
+        
+        # Extract intensity profile from surface downward
+        start_y = int(surface_y)
+        end_y = min(height, start_y + search_depth)
+        
+        if end_y - start_y < 10:  # Need minimum points for knee detection
+            continue
+        
+        # Get intensity values
+        intensity_profile = image[start_y:end_y, x].astype(float)
+        depth_indices = np.arange(len(intensity_profile))
+        
+        # Optionally fit exp2 model to smooth the profile
+        fitted_curve = None
+        fit_params = None
+        profile_for_knee = intensity_profile  # Default: use raw profile
+        
+        if use_curve_fitting:
+            fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+            if fit_result is not None:
+                fitted_curve, fit_params = fit_result
+                profile_for_knee = fitted_curve  # Use fitted curve for knee detection
+        
+        # Find knee point in the intensity profile (raw or fitted)
+        knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
+        
+        if not np.isnan(knee_depth) and knee_idx >= 0:
+            # Convert relative depth to absolute y-coordinate
+            lesion_bottom_y = start_y + knee_depth
+            depth_value = knee_depth  # Depth from surface
+            
+            depth_points.append((x, lesion_bottom_y, depth_value))
+            
+            # Store data for visualization (for A-Scan viewer)
+            knee_data[x] = {
+                'intensity': intensity_profile.tolist(),
+                'depth_idx': depth_indices.tolist(),
+                'knee_idx': knee_idx,
+                'surface_y': start_y,
+                'knee_depth': knee_depth,
+                'fitted_curve': fitted_curve.tolist() if fitted_curve is not None else None,
+                'fit_params': fit_params
+            }
+    
+    if len(depth_points) == 0:
+        # No valid depth points found
+        print(f"WARNING: No valid lesion depth points detected in range x={start_x} to x={end_x}")
+        return None
+    
+    # Extract depth values for statistics
+    depths = [d for _, _, d in depth_points]
+    # Convert to (x, y) format for compatibility
+    depth_points = [(x, y) for x, y, _ in depth_points]
     
     return LesionDepth(
         depth_points=depth_points,
         mean_depth=np.mean(depths),
         median_depth=np.median(depths),
         sd=np.std(depths),
-        se=np.std(depths) / np.sqrt(len(depths))
+        se=np.std(depths) / np.sqrt(len(depths)),
+        knee_data=knee_data if len(knee_data) > 0 else None
     )
 
 

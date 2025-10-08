@@ -657,7 +657,60 @@ class CarlQuantTestViewer:
         # Mark detected surface point and fitted curve if available
         cache_key = (self.current_specimen.specimen_id, self.current_slice_index)
         if cache_key in self.results_cache:
-            _, surface, _ = self.results_cache[cache_key]
+            _, surface, lesion_depth = self.results_cache[cache_key]
+            
+            # Draw knee point detection visualization if available
+            if lesion_depth and lesion_depth.knee_data and self.current_ascan_x in lesion_depth.knee_data:
+                knee_info = lesion_depth.knee_data[self.current_ascan_x]
+                intensity_profile = np.array(knee_info['intensity'])
+                depth_idx = np.array(knee_info['depth_idx'])
+                knee_idx = knee_info['knee_idx']
+                surface_y = knee_info['surface_y']
+                fitted_curve = knee_info.get('fitted_curve')
+                
+                # Draw the RAW intensity profile from surface downward (in light gray/thin)
+                profile_points = []
+                for i, (d_idx, intensity) in enumerate(zip(depth_idx, intensity_profile)):
+                    abs_y = surface_y + d_idx
+                    if abs_y < image_height:
+                        x = margin_left + int((intensity / 255.0) * plot_area_width)
+                        y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
+                        profile_points.append((x, y))
+                
+                if len(profile_points) > 1:
+                    draw.line(profile_points, fill='lightgray', width=1)
+                
+                # Draw the FITTED exp2 curve (in magenta/thick) if available
+                if fitted_curve is not None:
+                    fitted_curve = np.array(fitted_curve)
+                    fitted_points = []
+                    for i, (d_idx, intensity) in enumerate(zip(depth_idx, fitted_curve)):
+                        abs_y = surface_y + d_idx
+                        if abs_y < image_height:
+                            x = margin_left + int((intensity / 255.0) * plot_area_width)
+                            y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
+                            fitted_points.append((x, y))
+                    
+                    if len(fitted_points) > 1:
+                        draw.line(fitted_points, fill='magenta', width=3)
+                
+                # Draw knee point marker (large red circle)
+                if knee_idx >= 0 and knee_idx < len(intensity_profile):
+                    knee_intensity = intensity_profile[knee_idx]
+                    knee_abs_y = surface_y + depth_idx[knee_idx]
+                    
+                    if knee_abs_y < image_height:
+                        plot_x = margin_left + int((knee_intensity / 255.0) * plot_area_width)
+                        plot_y = margin_top + int((knee_abs_y / float(image_height - 1)) * plot_area_height)
+                        
+                        # Draw large marker for knee point
+                        radius = 6
+                        draw.ellipse([(plot_x - radius, plot_y - radius), 
+                                    (plot_x + radius, plot_y + radius)], 
+                                   fill='red', outline='darkred', width=3)
+                        
+                        # Add label (without font specification - use default)
+                        draw.text((plot_x + 10, plot_y - 10), f"Knee\ny={int(knee_abs_y)}", fill='red')
             
             # Draw fitted spline point (orange) if enabled
             if self.show_fitted_curve.get() and surface and surface.fitted_curves and "spline" in surface.fitted_curves:
