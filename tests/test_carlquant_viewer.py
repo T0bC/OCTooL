@@ -20,7 +20,7 @@ import numpy as np
 from typing import Dict, Optional
 from pathlib import Path
 import importlib
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import time
 
@@ -30,6 +30,31 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from test_carlquant_config import load_test_specimens, load_single_specimen, TestConfig
 import test_carlquant_algorithm
 from carlquant_frames.specimen_model import Specimen
+
+
+# Module-level function for ProcessPoolExecutor (must be picklable)
+def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion):
+    """
+    Process a single slice with pre-loaded image.
+    This function must be at module level to be picklable by ProcessPoolExecutor.
+    """
+    try:
+        slice_start = time.time()
+        
+        # Call algorithm functions directly
+        surface = test_carlquant_algorithm.detect_surface(image_array, air_config, region_config)
+        region_stats = test_carlquant_algorithm.extract_regions(
+            image_array, surface, region_config, num_sound, num_lesion
+        )
+        lesion_depth = test_carlquant_algorithm.calculate_lesion_depth(
+            surface, region_config, image_array
+        )
+        
+        slice_time = time.time() - slice_start
+        return (slice_idx, region_stats, surface, lesion_depth, None, slice_time)
+    except Exception as e:
+        import traceback
+        return (slice_idx, None, None, None, f"{str(e)}\n{traceback.format_exc()}", 0)
 
 
 class CarlQuantTestViewer:
@@ -130,15 +155,23 @@ class CarlQuantTestViewer:
         
         ttk.Label(algo_frame, text="(Sound: half, Lesion: all)", font=("Arial", 8)).pack(anchor=tk.W, pady=(0, 5))
         
-        # Parallel processing toggle
-        self.use_parallel_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(algo_frame, text="Use Parallel Processing", 
-                       variable=self.use_parallel_var).pack(anchor=tk.W, pady=(5, 0))
+        # Parallel processing mode
+        parallel_frame = ttk.Frame(algo_frame)
+        parallel_frame.pack(fill=tk.X, pady=(5, 2))
+        ttk.Label(parallel_frame, text="Processing Mode:", font=("Arial", 9, "bold")).pack(anchor=tk.W)
+        
+        self.parallel_mode_var = tk.StringVar(value="auto")
+        ttk.Radiobutton(parallel_frame, text="Auto (parallel if >10 slices)", 
+                       variable=self.parallel_mode_var, value="auto").pack(anchor=tk.W, padx=(10, 0))
+        ttk.Radiobutton(parallel_frame, text="Always Sequential", 
+                       variable=self.parallel_mode_var, value="sequential").pack(anchor=tk.W, padx=(10, 0))
+        ttk.Radiobutton(parallel_frame, text="Always Parallel", 
+                       variable=self.parallel_mode_var, value="parallel").pack(anchor=tk.W, padx=(10, 0))
         
         # Worker count
         worker_frame = ttk.Frame(algo_frame)
         worker_frame.pack(fill=tk.X, pady=(2, 5))
-        ttk.Label(worker_frame, text="Workers:", font=("Arial", 8)).pack(side=tk.LEFT)
+        ttk.Label(worker_frame, text="Workers (if parallel):", font=("Arial", 8)).pack(side=tk.LEFT)
         self.num_workers_var = tk.IntVar(value=max(1, multiprocessing.cpu_count() - 1))
         ttk.Spinbox(worker_frame, from_=1, to=multiprocessing.cpu_count(), 
                    textvariable=self.num_workers_var, width=5).pack(side=tk.LEFT, padx=(5, 0))
@@ -562,8 +595,16 @@ class CarlQuantTestViewer:
             num_regions = self.num_regions_var.get()
             num_sound = num_regions // 2
             num_lesion = num_regions
-            use_parallel = self.use_parallel_var.get()
+            parallel_mode = self.parallel_mode_var.get()
             num_workers = self.num_workers_var.get()
+            
+            # Determine if we should use parallel processing
+            if parallel_mode == "auto":
+                use_parallel = len(slice_tasks) > 10
+            elif parallel_mode == "parallel":
+                use_parallel = True
+            else:  # sequential
+                use_parallel = False
             
             # Prepare slice tasks (only for slices with configuration)
             slice_tasks = []
@@ -581,37 +622,51 @@ class CarlQuantTestViewer:
             start_time = time.time()
             processed_count = 0
             
-            if use_parallel and len(slice_tasks) > 1 and num_workers > 1:
-                # PARALLEL PROCESSING
-                self.status_label.config(text=f"Processing {len(slice_tasks)} slices using {num_workers} workers...")
+            if use_parallel and num_workers > 1:
+                # PARALLEL PROCESSING WITH PRE-LOADING (ProcessPoolExecutor)
+                # Limit workers to number of slices (no point having more workers than tasks)
+                effective_workers = min(num_workers, len(slice_tasks))
+                
+                print(f"Using parallel processing: {len(slice_tasks)} slices, {effective_workers} workers")
+                
+                # PRE-LOAD ALL IMAGES INTO MEMORY
+                self.status_label.config(text=f"Pre-loading {len(slice_tasks)} images...")
                 self.root.update_idletasks()
                 
-                def process_slice_wrapper(task):
-                    """Wrapper to call process_slice with unpacked arguments."""
-                    slice_idx, image_path, region_config, air_config = task
-                    try:
-                        region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
-                            image_path, region_config, air_config, num_sound, num_lesion
-                        )
-                        return (slice_idx, region_stats, surface, lesion_depth, None)
-                    except Exception as e:
-                        return (slice_idx, None, None, None, str(e))
+                preload_start = time.time()
+                preloaded_images = {}
+                for slice_idx, image_path, region_config, air_config in slice_tasks:
+                    img = Image.open(image_path).convert('L')
+                    preloaded_images[slice_idx] = np.array(img)
+                preload_time = time.time() - preload_start
                 
-                # Process in parallel
-                with ThreadPoolExecutor(max_workers=num_workers) as executor:
-                    future_to_slice = {
-                        executor.submit(process_slice_wrapper, task): task[0]
-                        for task in slice_tasks
-                    }
+                print(f"Pre-loaded {len(preloaded_images)} images in {preload_time:.2f}s")
+                
+                self.status_label.config(text=f"Processing {len(slice_tasks)} slices using {effective_workers} workers...")
+                self.root.update_idletasks()
+                
+                # Process in parallel using ProcessPoolExecutor
+                with ProcessPoolExecutor(max_workers=effective_workers) as executor:
+                    # Submit tasks with pre-loaded images
+                    future_to_slice = {}
+                    for slice_idx, image_path, region_config, air_config in slice_tasks:
+                        image_array = preloaded_images[slice_idx]
+                        future = executor.submit(
+                            process_slice_parallel,
+                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion
+                        )
+                        future_to_slice[future] = slice_idx
                     
+                    slice_times = []
                     for future in as_completed(future_to_slice):
                         slice_idx = future_to_slice[future]
                         try:
-                            result_idx, region_stats, surface, lesion_depth, error = future.result()
+                            result_idx, region_stats, surface, lesion_depth, error, slice_time = future.result()
                             
                             if error:
                                 print(f"Error processing slice {result_idx}: {error}")
                             else:
+                                slice_times.append(slice_time)
                                 # Cache results
                                 cache_key = (self.current_specimen.specimen_id, result_idx)
                                 self.results_cache[cache_key] = (region_stats, surface, lesion_depth)
@@ -623,19 +678,40 @@ class CarlQuantTestViewer:
                                     self.root.update_idletasks()
                         except Exception as e:
                             print(f"Exception processing slice {slice_idx}: {e}")
+                
+                # Calculate elapsed time for parallel
+                elapsed_time = time.time() - start_time
+                
+                # Print timing analysis
+                if slice_times:
+                    avg_slice_time = sum(slice_times) / len(slice_times)
+                    processing_time = elapsed_time - preload_time
+                    print(f"\n=== PARALLEL TIMING (PROCESSES, WITH PRE-LOADING) ===")
+                    print(f"Pre-load time: {preload_time:.2f}s")
+                    print(f"Processing time: {processing_time:.2f}s")
+                    print(f"Total wall time: {elapsed_time:.2f}s")
+                    print(f"Avg slice time: {avg_slice_time:.2f}s")
+                    print(f"Sum of slice times: {sum(slice_times):.2f}s")
+                    print(f"Theoretical speedup: {sum(slice_times) / processing_time:.2f}x")
+                    print(f"Overhead: {processing_time - max(slice_times):.2f}s")
             
             else:
                 # SEQUENTIAL PROCESSING
+                print(f"Using sequential processing: {len(slice_tasks)} slices")
                 self.status_label.config(text=f"Processing {len(slice_tasks)} slices sequentially...")
                 self.root.update_idletasks()
                 
+                slice_times = []
                 for i, task in enumerate(slice_tasks):
                     slice_idx, image_path, region_config, air_config = task
                     
                     try:
+                        slice_start = time.time()
                         region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
                             image_path, region_config, air_config, num_sound, num_lesion
                         )
+                        slice_time = time.time() - slice_start
+                        slice_times.append(slice_time)
                         
                         # Cache results
                         cache_key = (self.current_specimen.specimen_id, slice_idx)
@@ -649,12 +725,26 @@ class CarlQuantTestViewer:
                     
                     except Exception as e:
                         print(f"Error processing slice {slice_idx}: {e}")
-            
-            # Calculate elapsed time
-            elapsed_time = time.time() - start_time
+                
+                # Calculate elapsed time for sequential
+                elapsed_time = time.time() - start_time
+                
+                # Print timing analysis
+                if slice_times:
+                    avg_slice_time = sum(slice_times) / len(slice_times)
+                    print(f"\n=== SEQUENTIAL TIMING ===")
+                    print(f"Total time: {elapsed_time:.2f}s")
+                    print(f"Avg slice time: {avg_slice_time:.2f}s")
+                    print(f"Min slice time: {min(slice_times):.2f}s")
+                    print(f"Max slice time: {max(slice_times):.2f}s")
             
             # Update status and display
-            mode_str = f"parallel ({num_workers} workers)" if use_parallel else "sequential"
+            if use_parallel and len(slice_tasks) > 1 and num_workers > 1:
+                effective_workers = min(num_workers, len(slice_tasks))
+                mode_str = f"parallel ({effective_workers} workers)"
+            else:
+                mode_str = "sequential"
+            
             self.status_label.config(
                 text=f"Completed: {processed_count} slices in {elapsed_time:.1f}s ({mode_str})"
             )
