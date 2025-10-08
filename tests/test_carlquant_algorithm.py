@@ -39,9 +39,10 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
     
     Algorithm:
     1. Calculate threshold from AIR region (if provided)
-    2. For each vertical pixel column (A-Scan) within specimen boundaries, find first pixel > threshold
-    3. Apply DBSCAN clustering to remove speckles and identify surface cluster
-    4. Filter points to keep only those in the largest cluster(s)
+    2. For each A-Scan column, find first pixel > threshold
+    3. Find intensity peak within 250 pixels after threshold (actual surface)
+    4. Apply DBSCAN clustering to remove speckles
+    5. Filter points to keep only those in surface cluster(s)
     
     Args:
         image: 2D numpy array (grayscale image)
@@ -49,7 +50,7 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
         region_config: Region configuration with specimen boundaries
     
     Returns:
-        Surface object with raw_points, cluster_labels, and fitted_curves
+        Surface object with raw_points (peaks), cluster_labels, and fitted_curves
     """
     height, width = image.shape
     
@@ -65,7 +66,7 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
         x_start = 0
         x_end = width
     
-    # Step 3: For each column (A-Scan) within boundaries, find first pixel above threshold
+    # Step 3: For each column (A-Scan) within boundaries, find surface peak
     # Skip first 25 pixels (typically white/black band)
     imageOffset = 25
     raw_points = []
@@ -76,7 +77,13 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
         above_threshold = np.where(column > threshold)[0]
         
         if len(above_threshold) > 0:
-            y = above_threshold[0] + imageOffset  # First pixel above threshold (add offset back)
+            threshold_idx = above_threshold[0]  # First pixel above threshold
+            
+            # Find the actual surface peak after threshold crossing
+            peak_idx = find_surface_peak(column, threshold_idx, search_window=250)
+            
+            # Convert back to image coordinates
+            y = peak_idx + imageOffset
             raw_points.append((x, y))
     
     # Step 4: Apply DBSCAN clustering to remove speckles
@@ -96,6 +103,58 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
         fitted_curves=fitted_curves,
         cluster_labels=cluster_labels
     )
+
+
+def find_surface_peak(column: np.ndarray, threshold_idx: int, search_window: int = 250, 
+                     min_peak_ratio: float = 0.66) -> int:
+    """
+    Find the first significant intensity peak (surface) after threshold crossing.
+    
+    The first pixel above threshold is not necessarily the surface peak.
+    This function searches for the first local maximum (peak) within a window
+    after the threshold crossing. If the first peak is too small compared to
+    the maximum peak, it selects the maximum instead (avoiding tiny peaks).
+    
+    Args:
+        column: 1D array of pixel intensities (A-Scan)
+        threshold_idx: Index where threshold was first crossed
+        search_window: Number of pixels to search after threshold (default 250)
+        min_peak_ratio: Minimum ratio of first peak to max peak (default 0.33 = 1/3)
+    
+    Returns:
+        Index of the peak position (surface)
+    """
+    # Define search range: from threshold point to threshold + search_window
+    search_end = min(threshold_idx + search_window, len(column))
+    search_region = column[threshold_idx:search_end]
+    
+    if len(search_region) == 0:
+        return threshold_idx
+    
+    # Find the maximum peak in the search region
+    max_intensity = np.max(search_region)
+    max_offset = np.argmax(search_region)
+    
+    # Find the first local peak (where intensity stops increasing)
+    for i in range(1, len(search_region) - 1):
+        # Check if current point is a local maximum
+        # (higher than both neighbors)
+        if search_region[i] >= search_region[i-1] and search_region[i] > search_region[i+1]:
+            first_peak_intensity = search_region[i]
+            
+            # Check if first peak is significant enough (at least 1/3 of max peak)
+            if first_peak_intensity >= min_peak_ratio * max_intensity:
+                # First peak is significant, use it
+                peak_idx = threshold_idx + i
+                return peak_idx
+            else:
+                # First peak too small, use maximum peak instead
+                peak_idx = threshold_idx + max_offset
+                return peak_idx
+    
+    # Fallback: if no local peak found, use the maximum in the search region
+    peak_idx = threshold_idx + max_offset
+    return peak_idx
 
 
 def calculate_air_threshold(image: np.ndarray, air_config: Optional[AirConfig] = None) -> float:
@@ -130,6 +189,65 @@ def calculate_air_threshold(image: np.ndarray, air_config: Optional[AirConfig] =
     
     return threshold
 
+
+# =============================================================================
+# CLUSTERING ANALYSIS
+# =============================================================================
+
+def cluster_surface_points(raw_points: List[Tuple[int, int]], 
+                          epsilon: float = 17, 
+                          min_samples: int = 10,
+                          min_cluster_size: int = 180) -> Tuple[List[Tuple[int, int]], Optional[List[int]]]:
+    """
+    Apply DBSCAN clustering to surface points to remove speckles.
+    
+    Args:
+        raw_points: List of (x, y) surface point coordinates
+        epsilon: Maximum distance between neighboring points (pixels)
+        min_samples: Minimum points required to form a cluster
+        min_cluster_size: Minimum cluster size to be considered surface
+    
+    Returns:
+        Tuple of (filtered_points, cluster_labels)
+        - filtered_points: Points belonging to surface clusters only
+        - cluster_labels: Cluster ID for each filtered point
+    """
+    if len(raw_points) == 0:
+        return raw_points, None
+    
+    # Convert points to numpy array for clustering
+    points_array = np.array(raw_points)
+    
+    # Perform DBSCAN clustering
+    dbscan = DBSCAN(eps=epsilon, min_samples=min_samples)
+    cluster_labels = dbscan.fit_predict(points_array)
+    
+    # Find the most frequent cluster(s) representing the surface
+    # Exclude noise points (label = -1)
+    valid_labels = cluster_labels[cluster_labels >= 0]
+    
+    if len(valid_labels) == 0:
+        # No clusters found, return original points
+        return raw_points, None
+    
+    # Count occurrences of each cluster
+    unique_labels, counts = np.unique(valid_labels, return_counts=True)
+    
+    # Find clusters with more than min_cluster_size points
+    # This filters out small speckle clusters
+    surface_cluster_ids = unique_labels[counts > min_cluster_size]
+    
+    # If no cluster meets the threshold, use the largest cluster
+    if len(surface_cluster_ids) == 0:
+        largest_cluster_id = unique_labels[np.argmax(counts)]
+        surface_cluster_ids = np.array([largest_cluster_id])
+    
+    # Filter points: keep only those in surface clusters
+    mask = np.isin(cluster_labels, surface_cluster_ids)
+    filtered_points = [raw_points[i] for i in range(len(raw_points)) if mask[i]]
+    filtered_labels = cluster_labels[mask]
+    
+    return filtered_points, filtered_labels.tolist()
 
 # =============================================================================
 # REGION EXTRACTION
@@ -228,64 +346,7 @@ def extract_region_pixels(image: np.ndarray,
     return pixel_values
 
 
-# =============================================================================
-# CLUSTERING ANALYSIS
-# =============================================================================
 
-def cluster_surface_points(raw_points: List[Tuple[int, int]], 
-                          epsilon: float = 17, 
-                          min_samples: int = 10,
-                          min_cluster_size: int = 180) -> Tuple[List[Tuple[int, int]], Optional[List[int]]]:
-    """
-    Apply DBSCAN clustering to surface points to remove speckles.
-    
-    Args:
-        raw_points: List of (x, y) surface point coordinates
-        epsilon: Maximum distance between neighboring points (pixels)
-        min_samples: Minimum points required to form a cluster
-        min_cluster_size: Minimum cluster size to be considered surface
-    
-    Returns:
-        Tuple of (filtered_points, cluster_labels)
-        - filtered_points: Points belonging to surface clusters only
-        - cluster_labels: Cluster ID for each filtered point
-    """
-    if len(raw_points) == 0:
-        return raw_points, None
-    
-    # Convert points to numpy array for clustering
-    points_array = np.array(raw_points)
-    
-    # Perform DBSCAN clustering
-    dbscan = DBSCAN(eps=epsilon, min_samples=min_samples)
-    cluster_labels = dbscan.fit_predict(points_array)
-    
-    # Find the most frequent cluster(s) representing the surface
-    # Exclude noise points (label = -1)
-    valid_labels = cluster_labels[cluster_labels >= 0]
-    
-    if len(valid_labels) == 0:
-        # No clusters found, return original points
-        return raw_points, None
-    
-    # Count occurrences of each cluster
-    unique_labels, counts = np.unique(valid_labels, return_counts=True)
-    
-    # Find clusters with more than min_cluster_size points
-    # This filters out small speckle clusters
-    surface_cluster_ids = unique_labels[counts > min_cluster_size]
-    
-    # If no cluster meets the threshold, use the largest cluster
-    if len(surface_cluster_ids) == 0:
-        largest_cluster_id = unique_labels[np.argmax(counts)]
-        surface_cluster_ids = np.array([largest_cluster_id])
-    
-    # Filter points: keep only those in surface clusters
-    mask = np.isin(cluster_labels, surface_cluster_ids)
-    filtered_points = [raw_points[i] for i in range(len(raw_points)) if mask[i]]
-    filtered_labels = cluster_labels[mask]
-    
-    return filtered_points, filtered_labels.tolist()
 
 
 # =============================================================================

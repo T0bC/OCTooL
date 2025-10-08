@@ -332,28 +332,13 @@ class CarlQuantTestViewer:
         if cache_key in self.results_cache:
             region_stats, surface, lesion_depth = self.results_cache[cache_key]
             
-            # Draw surface with cluster coloring
+            # Draw surface with cluster coloring (green for peaks)
             if self.show_surface.get() and surface:
-                # Define colors for different clusters
-                cluster_colors = [
-                    [255, 0, 0],    # Red - Main surface cluster
-                    [255, 165, 0],  # Orange - Secondary cluster
-                    [255, 255, 0],  # Yellow - Tertiary cluster
-                    [0, 255, 255],  # Cyan - Additional clusters
-                    [255, 0, 255],  # Magenta
-                ]
-                
+                # Use green for surface peaks
                 for idx, (x, y) in enumerate(surface.raw_points):
                     if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
-                        # Determine color based on cluster label
-                        if surface.cluster_labels and idx < len(surface.cluster_labels):
-                            cluster_id = surface.cluster_labels[idx]
-                            if cluster_id >= 0:
-                                color = cluster_colors[cluster_id % len(cluster_colors)]
-                            else:
-                                color = [128, 128, 128]  # Gray for noise points
-                        else:
-                            color = [255, 0, 0]  # Default red if no cluster info
+                        # Green color for detected peaks
+                        color = [0, 255, 0]  # Green - Surface peaks
                         
                         # Draw a small cross
                         for dx in range(-2, 3):
@@ -496,11 +481,12 @@ class CarlQuantTestViewer:
                 # Show cluster information
                 if surface.cluster_labels:
                     unique_clusters = np.unique(surface.cluster_labels)
-                    info += f"Clusters detected: {len(unique_clusters[unique_clusters >= 0])}\n"
+                    num_clusters = len(unique_clusters[unique_clusters >= 0])
+                    info += f"Surface clusters: {num_clusters}\n"
                     for cluster_id in unique_clusters:
                         if cluster_id >= 0:
                             count = np.sum(np.array(surface.cluster_labels) == cluster_id)
-                            info += f"  Cluster {cluster_id}: {count} points\n"
+                            info += f"  Cluster {cluster_id}: {count} peaks\n"
                 
                 info += f"Lesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n\n"
                 info += "Region Statistics:\n"
@@ -596,14 +582,14 @@ class CarlQuantTestViewer:
                             plot_x = margin_left + int((surface_intensity / 255.0) * plot_area_width)
                             plot_y = margin_top + int((y / float(image_height - 1)) * plot_area_height)
                             
-                            # Draw marker (red circle)
+                            # Draw marker (green circle for peak)
                             radius = 5
                             draw.ellipse([(plot_x - radius, plot_y - radius), 
                                         (plot_x + radius, plot_y + radius)], 
-                                       fill='red', outline='darkred', width=2)
+                                       fill='green', outline='darkgreen', width=2)
                             
                             # Add label
-                            draw.text((plot_x + 8, plot_y - 8), f"Surface\ny={y}", fill='red')
+                            draw.text((plot_x + 8, plot_y - 8), f"Peak\ny={y}", fill='green')
                         break
         
         # Axis labels
