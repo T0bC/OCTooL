@@ -23,7 +23,7 @@ class settingsPanel:
         self.regionLabel = ttk.Label(self.frame, text="Number of Regions:")
         self.regionLabel.grid(row=0, column=0, sticky="w", pady=(5, 2))
 
-        self.regionVar = tk.IntVar(value=3)
+        self.regionVar = tk.IntVar(value=6)
         self.regionDropdown = ttk.Combobox(self.frame, textvariable=self.regionVar, state="readonly")
         self.regionDropdown['values'] = list(range(2, 10))  # 2 to 9 regions
         self.regionDropdown.grid(row=1, column=0, sticky="ew", pady=2)
