@@ -80,7 +80,7 @@ class settingsPanel:
         self.displayLabel.grid(row=4, column=0, sticky="w", pady=(10, 2))
         
         # Show Surface Peaks checkbox
-        self.showSurfacePeaksVar = tk.BooleanVar(value=True)
+        self.showSurfacePeaksVar = tk.BooleanVar(value=False)
         self.showSurfacePeaksCheck = ttk.Checkbutton(
             self.frame, 
             text="Show Surface Peaks",
@@ -92,14 +92,24 @@ class settingsPanel:
         self.showFittedCurveVar = tk.BooleanVar(value=True)
         self.showFittedCurveCheck = ttk.Checkbutton(
             self.frame,
-            text="Show Fitted Curve",
+            text="Show Fitted Curve (Primary)",
             variable=self.showFittedCurveVar
         )
         self.showFittedCurveCheck.grid(row=6, column=0, sticky="w", pady=2)
         
+        # Show Reference Curve checkbox
+        self.showReferenceCurveVar = tk.BooleanVar(value=False)
+        self.showReferenceCurveCheck = ttk.Checkbutton(
+            self.frame,
+            text="Show Reference Curve",
+            variable=self.showReferenceCurveVar
+        )
+        self.showReferenceCurveCheck.grid(row=7, column=0, sticky="w", pady=2)
+        
         # Register display options in context
         self.context.display_options = {
             "show_surface_peaks": self.showSurfacePeaksVar,
-            "show_fitted_curve": self.showFittedCurveVar
+            "show_fitted_curve": self.showFittedCurveVar,
+            "show_reference_curve": self.showReferenceCurveVar
         }
 

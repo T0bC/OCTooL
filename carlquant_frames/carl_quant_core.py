@@ -100,7 +100,10 @@ def cluster_surface_points(raw_points: List[Tuple[int, int]],
 def fit_surface_curve(surface_points: List[Tuple[int, int]], 
                      x_start: int, 
                      x_end: int,
-                     smoothing: float = 0.5) -> Dict[str, List[Tuple[int, int]]]:
+                     smoothing: float = 0.5,
+                     smoothing_multiplier: float = 3.0,
+                     spline_degree: int = 5,
+                     curve_name: str = "spline") -> Dict[str, List[Tuple[int, int]]]:
     """Fit a smooth spline curve to surface points."""
     if len(surface_points) < 4:
         return {}
@@ -114,13 +117,83 @@ def fit_surface_curve(surface_points: List[Tuple[int, int]],
     y_sorted = y_coords[sort_idx]
     
     try:
-        tck = splrep(x_sorted, y_sorted, k=5, s=smoothing * (len(x_sorted)*3))
+        s_param = smoothing * smoothing_multiplier * len(x_sorted)
+        tck = splrep(x_sorted, y_sorted, k=spline_degree, s=s_param)
         x_full = np.arange(x_start, x_end)
         y_fitted = splev(x_full, tck)
         fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted)]
-        return {"spline": fitted_curve}
+        return {curve_name: fitted_curve}
     except Exception as e:
         return {}
+
+
+def fit_reference_surface(surface_points: List[Tuple[int, int]],
+                          region_config,
+                          x_start: int,
+                          x_end: int,
+                          smoothing: float = 2.0,
+                          smoothing_multiplier: float = 5.0,
+                          spline_degree: int = 3) -> Dict[str, List[Tuple[int, int]]]:
+    """Fit reference surface curve excluding lesion area for cavitation detection."""
+    if not region_config or len(surface_points) < 4:
+        return {}
+    
+    lesion_start_x = region_config.lesion_start[0]
+    lesion_end_x = region_config.lesion_end[0]
+    
+    sound_points = [(x, y) for x, y in surface_points 
+                    if x < lesion_start_x or x > lesion_end_x]
+    
+    if len(sound_points) < 4:
+        return {}
+    
+    return fit_surface_curve(
+        sound_points, 
+        x_start, 
+        x_end, 
+        smoothing=smoothing,
+        smoothing_multiplier=smoothing_multiplier,
+        spline_degree=spline_degree,
+        curve_name="reference"
+    )
+
+
+def detect_cavitation(primary_curve: List[Tuple[int, int]],
+                     reference_curve: List[Tuple[int, int]],
+                     region_config,
+                     cavitation_threshold: float = 10.0,
+                     min_cavitation_ratio: float = 0.3) -> Tuple[bool, float]:
+    """Detect surface cavitation by comparing primary and reference curves."""
+    if not primary_curve or not reference_curve or not region_config:
+        return False, 0.0
+    
+    lesion_start_x = region_config.lesion_start[0]
+    lesion_end_x = region_config.lesion_end[0]
+    
+    primary_dict = {x: y for x, y in primary_curve}
+    reference_dict = {x: y for x, y in reference_curve}
+    
+    cavitation_depths = []
+    total_points = 0
+    
+    for x in range(lesion_start_x, lesion_end_x + 1):
+        if x in primary_dict and x in reference_dict:
+            total_points += 1
+            distance = primary_dict[x] - reference_dict[x]
+            
+            if distance > 0:
+                cavitation_depths.append(distance)
+    
+    if not cavitation_depths or total_points == 0:
+        return False, 0.0
+    
+    mean_cavitation_depth = np.mean(cavitation_depths)
+    cavitation_ratio = len(cavitation_depths) / total_points
+    
+    is_cavitated = (mean_cavitation_depth > cavitation_threshold and 
+                   cavitation_ratio >= min_cavitation_ratio)
+    
+    return is_cavitated, mean_cavitation_depth
 
 
 def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Surface:
@@ -170,13 +243,34 @@ def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Su
     
     # Step 5: Fit spline curve
     fitted_curves = {}
+    is_cavitated = False
+    cavitation_depth = 0.0
+    
     if len(filtered_points) > 3:
-        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end)
+        # Primary fit: uses all detected surface points
+        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end, curve_name="spline")
+        
+        # Reference fit: excludes lesion area (for cavitation detection)
+        if region_config:
+            reference_curves = fit_reference_surface(filtered_points, region_config, x_start, x_end)
+            fitted_curves.update(reference_curves)
+            
+            # Detect cavitation by comparing primary and reference curves
+            if "spline" in fitted_curves and "reference" in fitted_curves:
+                is_cavitated, cavitation_depth = detect_cavitation(
+                    fitted_curves["spline"],
+                    fitted_curves["reference"],
+                    region_config,
+                    cavitation_threshold=5.0,
+                    min_cavitation_ratio=0.7
+                )
     
     return Surface(
         raw_points=filtered_points,
         fitted_curves=fitted_curves,
-        cluster_labels=cluster_labels
+        cluster_labels=cluster_labels,
+        is_cavitated=is_cavitated,
+        cavitation_depth=cavitation_depth
     )
 
 
@@ -247,7 +341,7 @@ def run_carl_quant(context):
                 else:
                     DataSaver.store_slice_result(specimen, slice_index, region_stats, surface, lesion_depth)
 
-                context.status_bar.update(f"Processed slice {slice_index + 1} of {specimen_id}", level="info")
+                context.status_bar.update(f"Processed slice {slice_index + 1} of {specimen_id}", level="success")
 
             # Save results after all slices are processed
             # Inject metadata into specimen
