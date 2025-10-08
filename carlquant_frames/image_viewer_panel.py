@@ -896,35 +896,48 @@ class image_viewer_panel(BaseCanvasPanel):
         if not hasattr(self, 'rawImage') or self.rawImage is None:
             return
         
-        # Get display options from context
-        display_options = getattr(self.context, 'display_options', {})
-        show_peaks = display_options.get('show_surface_peaks', tk.BooleanVar(value=True)).get()
-        show_curve = display_options.get('show_fitted_curve', tk.BooleanVar(value=True)).get()
-        
-        # Calculate zoom factor
+        # Calculate zoom factor for coordinate transformation
         if self.zoom_level == 1.0:
             current_width = getattr(self, 'fitted_width', self.rawImage.width)
             current_zoom = current_width / self.rawImage.width
         else:
             current_zoom = self.zoom_level
         
-        # Draw fitted curve (orange, thicker line)
-        if show_curve and surface.fitted_curves and "spline" in surface.fitted_curves:
-            for x, y in surface.fitted_curves["spline"]:
-                # Transform coordinates manually
+        # Get display options from context
+        display_options = getattr(self.context, 'display_options', {})
+        show_peaks = display_options.get('show_surface_peaks', tk.BooleanVar(value=True)).get()
+        show_curve = display_options.get('show_fitted_curve', tk.BooleanVar(value=True)).get()
+        show_reference = display_options.get('show_reference_curve', tk.BooleanVar(value=True)).get()
+        
+        # Draw reference curve first (cyan, thin line) - bottom layer
+        if show_reference and surface.fitted_curves and "reference" in surface.fitted_curves:
+            for x, y in surface.fitted_curves["reference"]:
                 canvas_x = x * current_zoom + self.image_offset_x
                 canvas_y = y * current_zoom + self.image_offset_y
                 
-                # Draw thicker line (3 pixels)
-                for dy in range(-1, 2):
-                    self.canvas.create_oval(
-                        canvas_x - 1, canvas_y + dy - 1,
-                        canvas_x + 1, canvas_y + dy + 1,
-                        fill='orange', outline='orange',
-                        tags="surface_overlay"
-                    )
+                # Draw single pixel point
+                self.canvas.create_oval(
+                    canvas_x - 1, canvas_y - 1,
+                    canvas_x + 1, canvas_y + 1,
+                    fill='cyan', outline='cyan',
+                    tags="surface_overlay"
+                )
         
-        # Draw surface peaks (green crosses)
+        # Draw fitted curve (orange, thin line) - middle layer
+        if show_curve and surface.fitted_curves and "spline" in surface.fitted_curves:
+            for x, y in surface.fitted_curves["spline"]:
+                canvas_x = x * current_zoom + self.image_offset_x
+                canvas_y = y * current_zoom + self.image_offset_y
+                
+                # Draw single pixel point
+                self.canvas.create_oval(
+                    canvas_x - 1, canvas_y - 1,
+                    canvas_x + 1, canvas_y + 1,
+                    fill='orange', outline='orange',
+                    tags="surface_overlay"
+                )
+        
+        # Draw surface peaks (green crosses) - top layer
         if show_peaks and surface.raw_points:
             for x, y in surface.raw_points:
                 # Transform coordinates manually
