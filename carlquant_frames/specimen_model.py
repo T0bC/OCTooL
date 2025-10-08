@@ -31,11 +31,13 @@ class Surface:
 
 @dataclass
 class LesionDepth:
-    depth_points: List[Tuple[int, int]]
+    depth_points: List[Tuple[int, int]]  # (x, y) coordinates of lesion bottom
     mean_depth: float
     median_depth: float
     sd: float
     se: float
+    knee_data: Optional[Dict[int, Dict]] = None  # Per-column knee point data for visualization
+    # knee_data format: {x_column: {'intensity': [...], 'depth_idx': [...], 'knee_idx': int, 'fits': {...}}}
 
 @dataclass
 class RegionConfig:
