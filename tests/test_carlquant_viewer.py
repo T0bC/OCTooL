@@ -739,7 +739,7 @@ class CarlQuantTestViewer:
                     print(f"Max slice time: {max(slice_times):.2f}s")
             
             # Update status and display
-            if use_parallel and len(slice_tasks) > 1 and num_workers > 1:
+            if use_parallel and num_workers > 1:
                 effective_workers = min(num_workers, len(slice_tasks))
                 mode_str = f"parallel ({effective_workers} workers)"
             else:
