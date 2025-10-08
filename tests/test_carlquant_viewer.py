@@ -120,15 +120,12 @@ class CarlQuantTestViewer:
         algo_frame = ttk.LabelFrame(parent, text="Algorithm Settings", padding=10)
         algo_frame.pack(fill=tk.X, pady=(0, 10))
         
-        ttk.Label(algo_frame, text="Sound Regions:").pack(anchor=tk.W)
-        self.sound_regions_var = tk.IntVar(value=3)
-        sound_spin = ttk.Spinbox(algo_frame, from_=1, to=10, textvariable=self.sound_regions_var, width=10)
-        sound_spin.pack(fill=tk.X, pady=(0, 5))
+        ttk.Label(algo_frame, text="Number of Regions:").pack(anchor=tk.W)
+        self.num_regions_var = tk.IntVar(value=6)
+        regions_spin = ttk.Spinbox(algo_frame, from_=2, to=10, textvariable=self.num_regions_var, width=10)
+        regions_spin.pack(fill=tk.X, pady=(0, 5))
         
-        ttk.Label(algo_frame, text="Lesion Regions:").pack(anchor=tk.W)
-        self.lesion_regions_var = tk.IntVar(value=3)
-        lesion_spin = ttk.Spinbox(algo_frame, from_=1, to=10, textvariable=self.lesion_regions_var, width=10)
-        lesion_spin.pack(fill=tk.X, pady=(0, 5))
+        ttk.Label(algo_frame, text="(Sound: half, Lesion: all)", font=("Arial", 8)).pack(anchor=tk.W, pady=(0, 5))
         
         ttk.Button(algo_frame, text="Run Algorithm", command=self.run_algorithm).pack(fill=tk.X, pady=(5, 0))
         ttk.Button(algo_frame, text="Clear Cache", command=self.clear_cache).pack(fill=tk.X, pady=(5, 0))
@@ -417,6 +414,44 @@ class CarlQuantTestViewer:
                         if 0 <= x2 < display_image.shape[1]:
                             display_image[y, x2] = [0, 255, 255]  # Cyan
         
+        # Draw extraction regions (rectangles with numbers)
+        if self.show_regions.get() and cache_key in self.results_cache:
+            region_stats, _, _ = self.results_cache[cache_key]
+            for stats in region_stats:
+                if stats.bounds != (0, 0, 0, 0):
+                    left_x, top_y, right_x, bottom_y = stats.bounds
+                    
+                    # Choose color based on region type
+                    if stats.region_type == "sound":
+                        color = [0, 255, 0]  # Green for sound
+                    else:
+                        color = [255, 0, 0]  # Red for lesion
+                    
+                    # Draw rectangle outline
+                    for x in range(left_x, right_x):
+                        if 0 <= x < display_image.shape[1]:
+                            if 0 <= top_y < display_image.shape[0]:
+                                display_image[top_y, x] = color
+                            if 0 <= bottom_y - 1 < display_image.shape[0]:
+                                display_image[bottom_y - 1, x] = color
+                    for y in range(top_y, bottom_y):
+                        if 0 <= y < display_image.shape[0]:
+                            if 0 <= left_x < display_image.shape[1]:
+                                display_image[y, left_x] = color
+                            if 0 <= right_x - 1 < display_image.shape[1]:
+                                display_image[y, right_x - 1] = color
+                    
+                    # Draw region number in center (simple digit rendering)
+                    center_x = (left_x + right_x) // 2
+                    center_y = (top_y + bottom_y) // 2
+                    # Draw a small cross with the region number nearby
+                    for dx in range(-3, 4):
+                        for dy in range(-3, 4):
+                            nx, ny = center_x + dx, center_y + dy
+                            if 0 <= nx < display_image.shape[1] and 0 <= ny < display_image.shape[0]:
+                                if abs(dx) <= 1 or abs(dy) <= 1:
+                                    display_image[ny, nx] = [255, 255, 255]  # White marker
+        
         # Draw lesion depth
         if self.show_lesion_depth.get() and cache_key in self.results_cache:
             _, _, lesion_depth = self.results_cache[cache_key]
@@ -485,12 +520,18 @@ class CarlQuantTestViewer:
                 
                 # Run algorithm (use reloaded module)
                 image_path = self.current_specimen.images[slice_idx]
+                num_regions = self.num_regions_var.get()
+                # Sound regions: half of total (split between left and right)
+                # Lesion regions: all of total
+                num_sound = num_regions // 2
+                num_lesion = num_regions
+                
                 region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
                     image_path,
                     region_config,
                     air_config,
-                    self.sound_regions_var.get(),
-                    self.lesion_regions_var.get()
+                    num_sound,
+                    num_lesion
                 )
                 
                 # Cache results

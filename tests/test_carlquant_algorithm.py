@@ -468,26 +468,29 @@ def extract_regions(image: np.ndarray,
                    surface: Surface, 
                    region_config: RegionConfig,
                    num_sound_regions: int = 3,
-                   num_lesion_regions: int = 3) -> List[RegionStats]:
+                   num_lesion_regions: int = 3,
+                   region_size: int = 25,
+                   surface_offset: int = 10) -> List[RegionStats]:
     """
     Extract pixel values from sound and lesion regions.
     
-    Algorithm steps (to be implemented):
-    1. Define vertical boundaries from region_config (4 points)
-    2. Divide sound region (specimen_start to lesion_start) into num_sound_regions
-    3. Divide lesion region (lesion_start to lesion_end) into num_lesion_regions
-    4. Extract pixel values from each region (below surface)
-    5. Calculate statistics for each region
+    Algorithm:
+    1. Divide sound areas (left and right of lesion) into num_sound_regions each
+    2. Divide lesion area into num_lesion_regions
+    3. For each region, place 25x25 pixel rectangle 10px below surface
+    4. Extract pixel values and calculate statistics
     
     Args:
         image: 2D numpy array (grayscale image)
-        surface: Detected surface
-        region_config: Region boundaries (4 points: specimen_start, lesion_start, lesion_end, tooth_end)
-        num_sound_regions: Number of sound regions to extract
-        num_lesion_regions: Number of lesion regions to extract
+        surface: Detected surface with fitted curve
+        region_config: Region boundaries (4 points)
+        num_sound_regions: Number of sound regions per sound area (left + right)
+        num_lesion_regions: Number of lesion regions
+        region_size: Size of extraction rectangle (default 25x25)
+        surface_offset: Distance below surface to start extraction (default 10px)
     
     Returns:
-        List of RegionStats (sound regions first, then lesion regions)
+        List of RegionStats with region coordinates
     """
     height, width = image.shape
     
@@ -497,34 +500,84 @@ def extract_regions(image: np.ndarray,
     lesion_end_x, _ = region_config.lesion_end
     tooth_end_x, _ = region_config.tooth_end
     
+    # Use primary surface fit for positioning
+    if not surface.fitted_curves or "spline" not in surface.fitted_curves:
+        return []
+    
+    # Convert surface to dictionary for easy lookup
+    surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    
     region_stats = []
     
-    # TODO: Implement region extraction algorithm
-    # Placeholder: Generate dummy regions
+    # Helper function to extract region
+    def extract_region_at(center_x: int, region_type: str, region_index: int) -> Optional[RegionStats]:
+        """Extract a single region at given x position."""
+        # Get surface y-coordinate at this x
+        if center_x not in surface_dict:
+            return None
+        
+        surface_y = surface_dict[center_x]
+        
+        # Calculate region bounds (25x25 rectangle, 10px below surface)
+        top_y = surface_y + surface_offset
+        bottom_y = top_y + region_size
+        left_x = center_x - region_size // 2
+        right_x = left_x + region_size
+        
+        # Check bounds
+        if left_x < 0 or right_x >= width or bottom_y >= height:
+            return None
+        
+        # Extract pixel values from rectangle
+        region_pixels = image[top_y:bottom_y, left_x:right_x]
+        pixel_values = region_pixels.flatten().tolist()
+        
+        # Calculate statistics
+        mean_val = float(np.mean(pixel_values))
+        median_val = float(np.median(pixel_values))
+        sd_val = float(np.std(pixel_values))
+        se_val = sd_val / np.sqrt(len(pixel_values))
+        
+        return RegionStats(
+            region_type=region_type,
+            pixel_values=pixel_values,
+            mean=mean_val,
+            median=median_val,
+            sd=sd_val,
+            se=se_val,
+            region_index=region_index,
+            bounds=(left_x, top_y, right_x, bottom_y)
+        )
     
-    # Sound regions (left of start_x)
+    # Calculate positions for sound regions (left side: specimen_start to lesion_start)
+    sound_left_width = lesion_start_x - specimen_start_x
+    sound_left_spacing = sound_left_width / (num_sound_regions + 1)
+    
     for i in range(num_sound_regions):
-        pixel_values = list(np.random.randint(95, 105, size=100))  # Dummy data
-        region_stats.append(RegionStats(
-            region_type="sound",
-            pixel_values=pixel_values,
-            mean=np.mean(pixel_values),
-            median=np.median(pixel_values),
-            sd=np.std(pixel_values),
-            se=np.std(pixel_values) / np.sqrt(len(pixel_values))
-        ))
+        center_x = int(specimen_start_x + sound_left_spacing * (i + 1))
+        stats = extract_region_at(center_x, "sound", i + 1)
+        if stats:
+            region_stats.append(stats)
     
-    # Lesion regions (between start_x and end_x)
+    # Calculate positions for lesion regions
+    lesion_width = lesion_end_x - lesion_start_x
+    lesion_spacing = lesion_width / (num_lesion_regions + 1)
+    
     for i in range(num_lesion_regions):
-        pixel_values = list(np.random.randint(75, 85, size=100))  # Dummy data
-        region_stats.append(RegionStats(
-            region_type="lesion",
-            pixel_values=pixel_values,
-            mean=np.mean(pixel_values),
-            median=np.median(pixel_values),
-            sd=np.std(pixel_values),
-            se=np.std(pixel_values) / np.sqrt(len(pixel_values))
-        ))
+        center_x = int(lesion_start_x + lesion_spacing * (i + 1))
+        stats = extract_region_at(center_x, "lesion", i + 1)
+        if stats:
+            region_stats.append(stats)
+    
+    # Calculate positions for sound regions (right side: lesion_end to tooth_end)
+    sound_right_width = tooth_end_x - lesion_end_x
+    sound_right_spacing = sound_right_width / (num_sound_regions + 1)
+    
+    for i in range(num_sound_regions):
+        center_x = int(lesion_end_x + sound_right_spacing * (i + 1))
+        stats = extract_region_at(center_x, "sound", num_sound_regions + i + 1)
+        if stats:
+            region_stats.append(stats)
     
     return region_stats
 

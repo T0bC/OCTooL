@@ -17,6 +17,8 @@ class RegionStats:
     median: float
     sd: float
     se: float
+    region_index: int = 0  # Region number (1, 2, 3, ...)
+    bounds: Tuple[int, int, int, int] = (0, 0, 0, 0)  # (left_x, top_y, right_x, bottom_y)
 
 @dataclass
 class Surface:
