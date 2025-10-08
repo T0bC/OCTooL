@@ -500,6 +500,10 @@ def extract_regions(image: np.ndarray,
     lesion_end_x, _ = region_config.lesion_end
     tooth_end_x, _ = region_config.tooth_end
     
+    # Define overall boundaries for surface lookup
+    x_start = specimen_start_x
+    x_end = tooth_end_x
+    
     # Use primary surface fit for positioning
     if not surface.fitted_curves or "spline" not in surface.fitted_curves:
         return []
@@ -509,28 +513,70 @@ def extract_regions(image: np.ndarray,
     
     region_stats = []
     
-    # Helper function to extract region
+    # Helper function to extract region with rotation
     def extract_region_at(center_x: int, region_type: str, region_index: int) -> Optional[RegionStats]:
-        """Extract a single region at given x position."""
+        """Extract a single region at given x position, rotated to match surface slope."""
         # Get surface y-coordinate at this x
         if center_x not in surface_dict:
             return None
         
         surface_y = surface_dict[center_x]
         
-        # Calculate region bounds (25x25 rectangle, 10px below surface)
-        top_y = surface_y + surface_offset
-        bottom_y = top_y + region_size
-        left_x = center_x - region_size // 2
-        right_x = left_x + region_size
+        # Calculate surface slope at this position (using neighboring points)
+        slope_window = 10  # Look at ±10 pixels for slope calculation
+        x_left = max(x_start, center_x - slope_window)
+        x_right = min(x_end - 1, center_x + slope_window)
         
-        # Check bounds
-        if left_x < 0 or right_x >= width or bottom_y >= height:
+        # Get y values at left and right positions
+        y_left = surface_dict.get(x_left, surface_y)
+        y_right = surface_dict.get(x_right, surface_y)
+        
+        # Calculate slope (dy/dx)
+        if x_right != x_left:
+            slope = (y_right - y_left) / (x_right - x_left)
+            angle_rad = np.arctan(slope)
+        else:
+            angle_rad = 0.0
+        
+        # Calculate rotated rectangle corners
+        # Start with center point offset below surface
+        center_y = surface_y + surface_offset + region_size // 2
+        
+        # Create rotation matrix
+        cos_a = np.cos(angle_rad)
+        sin_a = np.sin(angle_rad)
+        
+        # Define rectangle corners relative to center (before rotation)
+        half_size = region_size // 2
+        corners = [
+            (-half_size, -half_size),  # Top-left
+            (half_size, -half_size),   # Top-right
+            (half_size, half_size),    # Bottom-right
+            (-half_size, half_size)    # Bottom-left
+        ]
+        
+        # Rotate corners and translate to center position
+        rotated_corners = []
+        for dx, dy in corners:
+            rx = dx * cos_a - dy * sin_a + center_x
+            ry = dx * sin_a + dy * cos_a + center_y
+            rotated_corners.append((int(rx), int(ry)))
+        
+        # Extract pixels using rotated sampling
+        pixel_values = []
+        for dy in range(-half_size, half_size):
+            for dx in range(-half_size, half_size):
+                # Rotate point
+                rx = dx * cos_a - dy * sin_a + center_x
+                ry = dx * sin_a + dy * cos_a + center_y
+                
+                # Sample pixel (with bounds checking)
+                ix, iy = int(round(rx)), int(round(ry))
+                if 0 <= ix < width and 0 <= iy < height:
+                    pixel_values.append(int(image[iy, ix]))
+        
+        if len(pixel_values) == 0:
             return None
-        
-        # Extract pixel values from rectangle
-        region_pixels = image[top_y:bottom_y, left_x:right_x]
-        pixel_values = region_pixels.flatten().tolist()
         
         # Calculate statistics
         mean_val = float(np.mean(pixel_values))
@@ -538,6 +584,7 @@ def extract_regions(image: np.ndarray,
         sd_val = float(np.std(pixel_values))
         se_val = sd_val / np.sqrt(len(pixel_values))
         
+        # Store rotated corners for visualization
         return RegionStats(
             region_type=region_type,
             pixel_values=pixel_values,
@@ -546,7 +593,8 @@ def extract_regions(image: np.ndarray,
             sd=sd_val,
             se=se_val,
             region_index=region_index,
-            bounds=(left_x, top_y, right_x, bottom_y)
+            bounds=tuple(rotated_corners),  # Store 4 corner points instead of bbox
+            rotation_angle=float(np.degrees(angle_rad))  # Store rotation in degrees
         )
     
     # Calculate positions for sound regions (left side: specimen_start to lesion_start)

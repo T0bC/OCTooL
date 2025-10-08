@@ -429,25 +429,40 @@ class CarlQuantTestViewer:
                 font = ImageFont.load_default()
             
             for stats in region_stats:
-                if stats.bounds != (0, 0, 0, 0):
-                    left_x, top_y, right_x, bottom_y = stats.bounds
-                    
+                if stats.bounds and len(stats.bounds) > 0:
                     # Choose color based on region type
                     if stats.region_type == "sound":
                         color_rgb = (0, 255, 0)  # Green for sound
                     else:
                         color_rgb = (255, 0, 0)  # Red for lesion
                     
-                    # Draw rectangle outline using PIL
-                    draw.rectangle(
-                        [(left_x, top_y), (right_x - 1, bottom_y - 1)],
-                        outline=color_rgb,
-                        width=1
-                    )
+                    # Check if we have rotated corners (4 points) or simple bbox (4 values)
+                    if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
+                        # Rotated rectangle with 4 corner points
+                        corners = stats.bounds
+                        
+                        # Draw polygon outline
+                        draw.polygon(corners, outline=color_rgb, width=1)
+                        
+                        # Calculate center from corners
+                        center_x = sum(x for x, y in corners) // 4
+                        center_y = sum(y for x, y in corners) // 4
+                        
+                    else:
+                        # Simple axis-aligned rectangle
+                        left_x, top_y, right_x, bottom_y = stats.bounds
+                        
+                        # Draw rectangle outline
+                        draw.rectangle(
+                            [(left_x, top_y), (right_x - 1, bottom_y - 1)],
+                            outline=color_rgb,
+                            width=1
+                        )
+                        
+                        center_x = (left_x + right_x) // 2
+                        center_y = (top_y + bottom_y) // 2
                     
-                    # Draw region number in center
-                    center_x = (left_x + right_x) // 2
-                    center_y = (top_y + bottom_y) // 2
+                    # Draw region number in center (rotated if needed)
                     text = str(stats.region_index)
                     
                     # Get text size for centering
@@ -455,11 +470,25 @@ class CarlQuantTestViewer:
                     text_width = bbox[2] - bbox[0]
                     text_height = bbox[3] - bbox[1]
                     
-                    text_x = center_x - text_width // 2
-                    text_y = center_y - text_height // 2
-                    
-                    # Draw text with same color as border
-                    draw.text((text_x, text_y), text, fill=color_rgb, font=font)
+                    # Create rotated text if rotation angle is significant
+                    if hasattr(stats, 'rotation_angle') and abs(stats.rotation_angle) > 1:
+                        # Create a temporary image for rotated text
+                        text_img = Image.new('RGBA', (text_width + 10, text_height + 10), (0, 0, 0, 0))
+                        text_draw = ImageDraw.Draw(text_img)
+                        text_draw.text((5, 5), text, fill=color_rgb + (255,), font=font)
+                        
+                        # Rotate text
+                        rotated_text = text_img.rotate(-stats.rotation_angle, expand=True, fillcolor=(0, 0, 0, 0))
+                        
+                        # Paste rotated text at center
+                        paste_x = center_x - rotated_text.width // 2
+                        paste_y = center_y - rotated_text.height // 2
+                        pil_image.paste(rotated_text, (paste_x, paste_y), rotated_text)
+                    else:
+                        # Draw unrotated text
+                        text_x = center_x - text_width // 2
+                        text_y = center_y - text_height // 2
+                        draw.text((text_x, text_y), text, fill=color_rgb, font=font)
             
             # Convert back to numpy array
             display_image = np.array(pil_image)
