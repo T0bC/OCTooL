@@ -892,16 +892,28 @@ class image_viewer_panel(BaseCanvasPanel):
         if not surface:
             return
         
+        # Check if we have raw image for coordinate transformation
+        if not hasattr(self, 'rawImage') or self.rawImage is None:
+            return
+        
         # Get display options from context
         display_options = getattr(self.context, 'display_options', {})
         show_peaks = display_options.get('show_surface_peaks', tk.BooleanVar(value=True)).get()
         show_curve = display_options.get('show_fitted_curve', tk.BooleanVar(value=True)).get()
         
+        # Calculate zoom factor
+        if self.zoom_level == 1.0:
+            current_width = getattr(self, 'fitted_width', self.rawImage.width)
+            current_zoom = current_width / self.rawImage.width
+        else:
+            current_zoom = self.zoom_level
+        
         # Draw fitted curve (orange, thicker line)
         if show_curve and surface.fitted_curves and "spline" in surface.fitted_curves:
             for x, y in surface.fitted_curves["spline"]:
-                # Transform coordinates
-                canvas_x, canvas_y = self.image_to_canvas(x, y)
+                # Transform coordinates manually
+                canvas_x = x * current_zoom + self.image_offset_x
+                canvas_y = y * current_zoom + self.image_offset_y
                 
                 # Draw thicker line (3 pixels)
                 for dy in range(-1, 2):
@@ -915,8 +927,9 @@ class image_viewer_panel(BaseCanvasPanel):
         # Draw surface peaks (green crosses)
         if show_peaks and surface.raw_points:
             for x, y in surface.raw_points:
-                # Transform coordinates
-                canvas_x, canvas_y = self.image_to_canvas(x, y)
+                # Transform coordinates manually
+                canvas_x = x * current_zoom + self.image_offset_x
+                canvas_y = y * current_zoom + self.image_offset_y
                 
                 # Draw small cross (5x5 pixels)
                 cross_size = 2
