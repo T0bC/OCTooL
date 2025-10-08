@@ -21,8 +21,10 @@ class RegionStats:
 @dataclass
 class Surface:
     raw_points: List[Tuple[int, int]]  # (x, y)
-    fitted_curves: Dict[str, List[Tuple[int, int]]]  # e.g. {"polyfit": [...], "spline": [...]}
+    fitted_curves: Dict[str, List[Tuple[int, int]]]  # e.g. {"spline": [...], "reference": [...]}
     cluster_labels: Optional[List[int]] = None  # Cluster ID for each point (-1 for noise)
+    is_cavitated: bool = False  # True if cavitation detected
+    cavitation_depth: float = 0.0  # Mean vertical distance between primary and reference curves
 
 @dataclass
 class LesionDepth:

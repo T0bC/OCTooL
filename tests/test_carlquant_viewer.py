@@ -47,6 +47,7 @@ class CarlQuantTestViewer:
         # Display state
         self.show_surface = tk.BooleanVar(value=True)
         self.show_fitted_curve = tk.BooleanVar(value=True)
+        self.show_reference_curve = tk.BooleanVar(value=True)
         self.show_regions = tk.BooleanVar(value=True)
         self.show_air = tk.BooleanVar(value=True)
         self.show_lesion_depth = tk.BooleanVar(value=True)
@@ -138,7 +139,9 @@ class CarlQuantTestViewer:
         
         ttk.Checkbutton(display_frame, text="Show Surface Peaks", variable=self.show_surface,
                        command=self.update_display).pack(anchor=tk.W)
-        ttk.Checkbutton(display_frame, text="Show Fitted Curve", variable=self.show_fitted_curve,
+        ttk.Checkbutton(display_frame, text="Show Fitted Curve (Primary)", variable=self.show_fitted_curve,
+                       command=self.update_display).pack(anchor=tk.W)
+        ttk.Checkbutton(display_frame, text="Show Reference Curve", variable=self.show_reference_curve,
                        command=self.update_display).pack(anchor=tk.W)
         ttk.Checkbutton(display_frame, text="Show Regions", variable=self.show_regions,
                        command=self.update_display).pack(anchor=tk.W)
@@ -319,6 +322,9 @@ class CarlQuantTestViewer:
         if self.current_image is None:
             return
         
+        # Update info panel for current slice
+        self.update_slice_info()
+        
         # Start with grayscale image
         display_image = self.current_image.copy()
         
@@ -335,7 +341,18 @@ class CarlQuantTestViewer:
         if cache_key in self.results_cache:
             region_stats, surface, lesion_depth = self.results_cache[cache_key]
             
-            # Draw fitted spline curve (orange) with thickness
+            # Draw reference curve first (cyan) - bottom layer
+            if self.show_reference_curve.get() and surface:
+                if surface.fitted_curves and "reference" in surface.fitted_curves:
+                    for x, y in surface.fitted_curves["reference"]:
+                        if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
+                            # Draw thicker line (3 pixels vertical thickness)
+                            for dy in range(-1, 2):
+                                ny = y + dy
+                                if 0 <= ny < display_image.shape[0]:
+                                    display_image[ny, x] = [0, 255, 255]  # Cyan
+            
+            # Draw fitted spline curve (orange) with thickness - middle layer
             if self.show_fitted_curve.get() and surface:
                 if surface.fitted_curves and "spline" in surface.fitted_curves:
                     for x, y in surface.fitted_curves["spline"]:
@@ -346,7 +363,7 @@ class CarlQuantTestViewer:
                                 if 0 <= ny < display_image.shape[0]:
                                     display_image[ny, x] = [255, 165, 0]  # Orange
             
-            # Draw detected surface peaks (green)
+            # Draw detected surface peaks (green) - top layer
             if self.show_surface.get() and surface:
                 for idx, (x, y) in enumerate(surface.raw_points):
                     if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
@@ -481,40 +498,10 @@ class CarlQuantTestViewer:
                 self.results_cache[cache_key] = (region_stats, surface, lesion_depth)
                 processed_count += 1
             
-            # Update info with summary (don't update display yet to save time)
-            info = f"Processed {processed_count} slices\n\n"
-            
-            # Show current slice results
-            cache_key = (self.current_specimen.specimen_id, self.current_slice_index)
-            if cache_key in self.results_cache:
-                region_stats, surface, lesion_depth = self.results_cache[cache_key]
-                info += f"Current Slice {self.current_slice_index + 1}:\n"
-                info += f"Surface peaks: {len(surface.raw_points)}\n"
-                
-                # Show fitted curve information
-                if surface.fitted_curves and "spline" in surface.fitted_curves:
-                    info += f"Fitted curve: {len(surface.fitted_curves['spline'])} points (spline)\n"
-                
-                # Show cluster information
-                if surface.cluster_labels:
-                    unique_clusters = np.unique(surface.cluster_labels)
-                    num_clusters = len(unique_clusters[unique_clusters >= 0])
-                    info += f"Surface clusters: {num_clusters}\n"
-                    for cluster_id in unique_clusters:
-                        if cluster_id >= 0:
-                            count = np.sum(np.array(surface.cluster_labels) == cluster_id)
-                            info += f"  Cluster {cluster_id}: {count} peaks\n"
-                
-                info += f"Lesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n\n"
-                info += "Region Statistics:\n"
-                for i, stats in enumerate(region_stats):
-                    info += f"  {stats.region_type.upper()} {i+1}: "
-                    info += f"median={stats.median:.2f}, sd={stats.sd:.2f}\n"
-            
-            self.update_info(info)
+            # Update status and display
             self.status_label.config(text=f"Completed: {processed_count} slices processed")
             
-            # Now update display once at the end
+            # Update display (which will automatically update info panel)
             self.update_display()
             
         except Exception as e:
@@ -646,6 +633,57 @@ class CarlQuantTestViewer:
         """Update the info text panel."""
         self.info_text.delete(1.0, tk.END)
         self.info_text.insert(1.0, text)
+    
+    def update_slice_info(self):
+        """Update info panel with current slice information."""
+        if self.current_specimen is None:
+            return
+        
+        info = f"Specimen: {self.current_specimen.specimen_id}\n"
+        info += f"Slice: {self.current_slice_index + 1} / {len(self.current_specimen.images)}\n\n"
+        
+        # Check if we have results for this slice
+        cache_key = (self.current_specimen.specimen_id, self.current_slice_index)
+        if cache_key in self.results_cache:
+            region_stats, surface, lesion_depth = self.results_cache[cache_key]
+            
+            # Surface information
+            info += f"Surface peaks: {len(surface.raw_points)}\n"
+            
+            # Fitted curve information
+            if surface.fitted_curves and "spline" in surface.fitted_curves:
+                info += f"Fitted curve: {len(surface.fitted_curves['spline'])} points (spline)\n"
+            
+            # Cavitation status
+            if hasattr(surface, 'is_cavitated'):
+                cavitation_status = "YES" if surface.is_cavitated else "NO"
+                info += f"Cavitation detected: {cavitation_status}\n"
+                if surface.is_cavitated:
+                    info += f"Cavitation depth: {surface.cavitation_depth:.2f} pixels\n"
+            
+            # Cluster information
+            if surface.cluster_labels:
+                unique_clusters = np.unique(surface.cluster_labels)
+                num_clusters = len(unique_clusters[unique_clusters >= 0])
+                info += f"Surface clusters: {num_clusters}\n"
+                for cluster_id in unique_clusters:
+                    if cluster_id >= 0:
+                        count = np.sum(np.array(surface.cluster_labels) == cluster_id)
+                        info += f"  Cluster {cluster_id}: {count} peaks\n"
+            
+            # Lesion depth
+            info += f"\nLesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n\n"
+            
+            # Region statistics
+            info += "Region Statistics:\n"
+            for i, stats in enumerate(region_stats):
+                info += f"  {stats.region_type.upper()} {i+1}: "
+                info += f"median={stats.median:.2f}, sd={stats.sd:.2f}\n"
+        else:
+            info += "No analysis results for this slice.\n"
+            info += "Click 'Run Algorithm' to analyze.\n"
+        
+        self.update_info(info)
 
 
 def main():

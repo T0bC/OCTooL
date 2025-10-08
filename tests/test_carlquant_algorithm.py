@@ -98,13 +98,34 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
     
     # Step 5: Fit smooth spline curve to surface points
     fitted_curves = {}
+    is_cavitated = False
+    cavitation_depth = 0.0
+    
     if len(filtered_points) > 3:  # Need at least 4 points for spline
-        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end)
+        # Primary fit: uses all detected surface points
+        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end, curve_name="spline")
+        
+        # Reference fit: excludes lesion area (for cavitation detection)
+        if region_config:
+            reference_curves = fit_reference_surface(filtered_points, region_config, x_start, x_end)
+            fitted_curves.update(reference_curves)
+            
+            # Detect cavitation by comparing primary and reference curves
+            if "spline" in fitted_curves and "reference" in fitted_curves:
+                is_cavitated, cavitation_depth = detect_cavitation(
+                    fitted_curves["spline"],
+                    fitted_curves["reference"],
+                    region_config,
+                    cavitation_threshold=5.0,  # Mean depth threshold in pixels
+                    min_cavitation_ratio=0.7   # At least 70% of points must be cavitated
+                )
     
     return Surface(
         raw_points=filtered_points,
         fitted_curves=fitted_curves,
-        cluster_labels=cluster_labels
+        cluster_labels=cluster_labels,
+        is_cavitated=is_cavitated,
+        cavitation_depth=cavitation_depth
     )
 
 
@@ -256,7 +277,10 @@ def cluster_surface_points(raw_points: List[Tuple[int, int]],
 def fit_surface_curve(surface_points: List[Tuple[int, int]], 
                      x_start: int, 
                      x_end: int,
-                     smoothing: float = 0.5) -> Dict[str, List[Tuple[int, int]]]:
+                     smoothing: float = 0.5,
+                     smoothing_multiplier: float = 3.0,
+                     spline_degree: int = 5,
+                     curve_name: str = "spline") -> Dict[str, List[Tuple[int, int]]]:
     """
     Fit a smooth spline curve to surface points to create an intact surface.
     
@@ -264,16 +288,17 @@ def fit_surface_curve(surface_points: List[Tuple[int, int]],
     a spline to the detected points and evaluates it at all x-positions
     to create a continuous, smooth surface.
     
-    Uses modern scipy.interpolate.make_splrep for spline fitting.
-    
     Args:
         surface_points: List of (x, y) surface point coordinates
         x_start: Starting x-coordinate for the fitted curve
         x_end: Ending x-coordinate for the fitted curve
-        smoothing: Smoothing factor for spline (0=interpolation, higher=smoother)
+        smoothing: Base smoothing factor (0=interpolation, higher=smoother)
+        smoothing_multiplier: Multiplier for smoothing (scales with point count)
+        spline_degree: Degree of spline (1=linear, 3=cubic, 5=quintic)
+        curve_name: Name for the curve in returned dictionary
     
     Returns:
-        Dictionary with fitted curve: {"spline": [(x, y), ...]}
+        Dictionary with fitted curve: {curve_name: [(x, y), ...]}
     """
     if len(surface_points) < 4:
         return {}
@@ -288,11 +313,12 @@ def fit_surface_curve(surface_points: List[Tuple[int, int]],
     x_sorted = x_coords[sort_idx]
     y_sorted = y_coords[sort_idx]
     
-    # Fit cubic spline (k=3) using splrep
-    # s parameter controls smoothing: 0 = interpolation, higher = smoother
+    # Fit spline using splrep
+    # s parameter: smoothing * multiplier * point_count
     try:
         # Create spline representation
-        tck = splrep(x_sorted, y_sorted, k=5, s=smoothing * (len(x_sorted)*3))
+        s_param = smoothing * smoothing_multiplier * len(x_sorted)
+        tck = splrep(x_sorted, y_sorted, k=spline_degree, s=s_param)
         
         # Evaluate spline at all x positions in the range
         x_full = np.arange(x_start, x_end)
@@ -301,12 +327,137 @@ def fit_surface_curve(surface_points: List[Tuple[int, int]],
         # Create list of (x, y) tuples for the fitted curve
         fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted)]
         
-        return {"spline": fitted_curve}
+        return {curve_name: fitted_curve}
     
     except Exception as e:
         # If spline fitting fails, return empty dict
         print(f"Spline fitting failed: {e}")
         return {}
+
+
+def fit_reference_surface(surface_points: List[Tuple[int, int]],
+                          region_config,
+                          x_start: int,
+                          x_end: int,
+                          smoothing: float = 2.0,
+                          smoothing_multiplier: float = 5.0,
+                          spline_degree: int = 3) -> Dict[str, List[Tuple[int, int]]]:
+    """
+    Fit reference surface curve excluding lesion area for cavitation detection.
+    
+    This creates a "spanning" curve that represents the expected intact surface
+    by fitting only to sound tissue points (excluding lesion area). This can be
+    compared to the primary fit to detect cavitation.
+    
+    Uses higher smoothing and lower degree for smoother spanning across lesion.
+    
+    Args:
+        surface_points: List of (x, y) surface point coordinates
+        region_config: Region configuration with lesion boundaries
+        x_start: Starting x-coordinate for the fitted curve
+        x_end: Ending x-coordinate for the fitted curve
+        smoothing: Base smoothing factor (higher = smoother spanning)
+        smoothing_multiplier: Multiplier for smoothing
+        spline_degree: Degree of spline (lower = smoother spanning)
+    
+    Returns:
+        Dictionary with reference curve: {"reference": [(x, y), ...]}
+    """
+    if not region_config or len(surface_points) < 4:
+        return {}
+    
+    # Get lesion boundaries
+    lesion_start_x = region_config.lesion_start[0]
+    lesion_end_x = region_config.lesion_end[0]
+    
+    # Filter out points in lesion area (keep only sound tissue)
+    sound_points = [(x, y) for x, y in surface_points 
+                    if x < lesion_start_x or x > lesion_end_x]
+    
+    if len(sound_points) < 4:
+        return {}
+    
+    # Fit spline to sound tissue points only with higher smoothing for spanning
+    return fit_surface_curve(
+        sound_points, 
+        x_start, 
+        x_end, 
+        smoothing=smoothing,
+        smoothing_multiplier=smoothing_multiplier,
+        spline_degree=spline_degree,
+        curve_name="reference"
+    )
+
+
+def detect_cavitation(primary_curve: List[Tuple[int, int]],
+                     reference_curve: List[Tuple[int, int]],
+                     region_config,
+                     cavitation_threshold: float = 10.0,
+                     min_cavitation_ratio: float = 0.3) -> Tuple[bool, float]:
+    """
+    Detect surface cavitation by comparing primary and reference curves.
+    
+    Cavitation is detected when the primary surface (actual) is significantly
+    deeper than the reference surface (expected intact) in the lesion area.
+    
+    Only considers points where primary is BELOW (deeper than) reference.
+    This avoids false positives when reference fit doesn't match curvature.
+    
+    Args:
+        primary_curve: Primary spline fit using all points
+        reference_curve: Reference spline fit using only sound tissue
+        region_config: Region configuration with lesion boundaries
+        cavitation_threshold: Mean vertical distance threshold (pixels, default 20)
+        min_cavitation_ratio: Minimum ratio of cavitated points (default 0.3 = 30%)
+    
+    Returns:
+        Tuple of (is_cavitated, mean_cavitation_depth)
+        - is_cavitated: True if cavitation detected
+        - mean_cavitation_depth: Mean depth where primary > reference (0 if none)
+    """
+    if not primary_curve or not reference_curve or not region_config:
+        return False, 0.0
+    
+    # Get lesion boundaries
+    lesion_start_x = region_config.lesion_start[0]
+    lesion_end_x = region_config.lesion_end[0]
+    
+    # Convert curves to dictionaries for easy lookup
+    primary_dict = {x: y for x, y in primary_curve}
+    reference_dict = {x: y for x, y in reference_curve}
+    
+    # Calculate vertical distances in lesion area
+    # Only count positive distances (where primary is deeper than reference)
+    cavitation_depths = []
+    total_points = 0
+    
+    for x in range(lesion_start_x, lesion_end_x + 1):
+        if x in primary_dict and x in reference_dict:
+            total_points += 1
+            # Distance = primary - reference (positive if primary is deeper/cavitated)
+            # In image coordinates: higher y = deeper into tissue
+            distance = primary_dict[x] - reference_dict[x]
+            
+            # Only count points where primary is deeper (cavitated)
+            if distance > 0:
+                cavitation_depths.append(distance)
+    
+    if not cavitation_depths or total_points == 0:
+        return False, 0.0
+    
+    # Calculate mean cavitation depth (only from cavitated points)
+    mean_cavitation_depth = np.mean(cavitation_depths)
+    
+    # Calculate ratio of cavitated points
+    cavitation_ratio = len(cavitation_depths) / total_points
+    
+    # Cavitation detected if:
+    # 1. Mean depth exceeds threshold AND
+    # 2. Sufficient percentage of points are cavitated
+    is_cavitated = (mean_cavitation_depth > cavitation_threshold and 
+                   cavitation_ratio >= min_cavitation_ratio)
+    
+    return is_cavitated, mean_cavitation_depth
 
 
 # =============================================================================
