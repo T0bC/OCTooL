@@ -15,10 +15,10 @@ Created on Mon Oct 06 11:50:00 2025
 import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from PIL import Image, ImageTk, ImageDraw
+from PIL import Image, ImageDraw, ImageFont, ImageTk
 import numpy as np
+from typing import Dict, Optional
 from pathlib import Path
-from typing import Optional, Dict
 import importlib
 
 # Add parent directory to path so we can import from carlquant_frames
@@ -417,40 +417,52 @@ class CarlQuantTestViewer:
         # Draw extraction regions (rectangles with numbers)
         if self.show_regions.get() and cache_key in self.results_cache:
             region_stats, _, _ = self.results_cache[cache_key]
+            
+            # Convert to PIL Image for drawing
+            pil_image = Image.fromarray(display_image)
+            draw = ImageDraw.Draw(pil_image)
+            
+            # Try to load a font, fall back to default if not available
+            try:
+                font = ImageFont.truetype("arial.ttf", 14)
+            except:
+                font = ImageFont.load_default()
+            
             for stats in region_stats:
                 if stats.bounds != (0, 0, 0, 0):
                     left_x, top_y, right_x, bottom_y = stats.bounds
                     
                     # Choose color based on region type
                     if stats.region_type == "sound":
-                        color = [0, 255, 0]  # Green for sound
+                        color_rgb = (0, 255, 0)  # Green for sound
                     else:
-                        color = [255, 0, 0]  # Red for lesion
+                        color_rgb = (255, 0, 0)  # Red for lesion
                     
-                    # Draw rectangle outline
-                    for x in range(left_x, right_x):
-                        if 0 <= x < display_image.shape[1]:
-                            if 0 <= top_y < display_image.shape[0]:
-                                display_image[top_y, x] = color
-                            if 0 <= bottom_y - 1 < display_image.shape[0]:
-                                display_image[bottom_y - 1, x] = color
-                    for y in range(top_y, bottom_y):
-                        if 0 <= y < display_image.shape[0]:
-                            if 0 <= left_x < display_image.shape[1]:
-                                display_image[y, left_x] = color
-                            if 0 <= right_x - 1 < display_image.shape[1]:
-                                display_image[y, right_x - 1] = color
+                    # Draw rectangle outline using PIL
+                    draw.rectangle(
+                        [(left_x, top_y), (right_x - 1, bottom_y - 1)],
+                        outline=color_rgb,
+                        width=1
+                    )
                     
-                    # Draw region number in center (simple digit rendering)
+                    # Draw region number in center
                     center_x = (left_x + right_x) // 2
                     center_y = (top_y + bottom_y) // 2
-                    # Draw a small cross with the region number nearby
-                    for dx in range(-3, 4):
-                        for dy in range(-3, 4):
-                            nx, ny = center_x + dx, center_y + dy
-                            if 0 <= nx < display_image.shape[1] and 0 <= ny < display_image.shape[0]:
-                                if abs(dx) <= 1 or abs(dy) <= 1:
-                                    display_image[ny, nx] = [255, 255, 255]  # White marker
+                    text = str(stats.region_index)
+                    
+                    # Get text size for centering
+                    bbox = draw.textbbox((0, 0), text, font=font)
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
+                    
+                    text_x = center_x - text_width // 2
+                    text_y = center_y - text_height // 2
+                    
+                    # Draw text with same color as border
+                    draw.text((text_x, text_y), text, fill=color_rgb, font=font)
+            
+            # Convert back to numpy array
+            display_image = np.array(pil_image)
         
         # Draw lesion depth
         if self.show_lesion_depth.get() and cache_key in self.results_cache:
