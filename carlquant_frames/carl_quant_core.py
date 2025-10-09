@@ -526,6 +526,7 @@ class DepthDetectionMethod(Enum):
     """Available methods for detecting lesion depth from A-Scan profiles."""
     KNEE_POINT = "knee_point"  # Two-line fitting (current method)
     SIGMOID_FIT = "sigmoid_fit"  # Sigmoid fit + inflection point
+    COMBINED_MEAN = "combined_mean"  # Mean of knee_point and sigmoid_fit
     
     @classmethod
     def get_default(cls):
@@ -764,6 +765,7 @@ def calculate_lesion_depth(surface: Surface,
     Available Detection Methods:
     - KNEE_POINT: Two-line fitting (best for exponential decay)
     - SIGMOID_FIT: Sigmoid fit + inflection point (best for smooth S-shaped transitions)
+    - COMBINED_MEAN: Mean of knee_point and sigmoid_fit (balances both approaches)
     
     Args:
         surface: Detected surface with fitted curve
@@ -846,6 +848,65 @@ def calculate_lesion_depth(surface: Surface,
             # Extract fitted curve if available
             if 'fitted_curve' in detection_metadata:
                 fitted_curve = np.array(detection_metadata['fitted_curve'])
+        
+        elif detection_method == DepthDetectionMethod.COMBINED_MEAN:
+            # Run both methods and average the results
+            # Method 1: Knee point with exp2 fit
+            profile_for_knee = intensity_profile
+            knee_fitted_curve = None
+            
+            if use_curve_fitting:
+                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                if fit_result is not None:
+                    knee_fitted_curve, fit_params = fit_result
+                    profile_for_knee = knee_fitted_curve
+            
+            knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
+            
+            # Method 2: Sigmoid fit
+            sigmoid_depth, sigmoid_idx, sigmoid_meta = detect_depth_sigmoid_fit(
+                intensity_profile, depth_indices
+            )
+            
+            # Combine results if both are valid
+            if not np.isnan(knee_depth) and not np.isnan(sigmoid_depth):
+                depth_value = (knee_depth + sigmoid_depth) / 2.0
+                # Use index closest to mean depth
+                depth_idx = int(np.argmin(np.abs(depth_indices - depth_value)))
+                
+                detection_metadata = {
+                    'method': 'combined_mean',
+                    'knee_depth': knee_depth,
+                    'knee_idx': knee_idx,
+                    'sigmoid_depth': sigmoid_depth,
+                    'sigmoid_idx': sigmoid_idx,
+                    'mean_depth': depth_value,
+                    'sigmoid_fitted_curve': sigmoid_meta.get('fitted_curve')
+                }
+                
+                # Store both fitted curves for visualization
+                if knee_fitted_curve is not None:
+                    fitted_curve = knee_fitted_curve
+                    fit_params = fit_params
+            elif not np.isnan(knee_depth):
+                # Fallback to knee point if sigmoid fails
+                depth_value = knee_depth
+                depth_idx = knee_idx
+                detection_metadata = {'method': 'combined_mean', 'fallback': 'knee_point'}
+                if knee_fitted_curve is not None:
+                    fitted_curve = knee_fitted_curve
+            elif not np.isnan(sigmoid_depth):
+                # Fallback to sigmoid if knee point fails
+                depth_value = sigmoid_depth
+                depth_idx = sigmoid_idx
+                detection_metadata = {'method': 'combined_mean', 'fallback': 'sigmoid_fit'}
+                if 'fitted_curve' in sigmoid_meta:
+                    fitted_curve = np.array(sigmoid_meta['fitted_curve'])
+            else:
+                # Both failed
+                depth_value = np.nan
+                depth_idx = -1
+                detection_metadata = {'method': 'combined_mean', 'success': False}
         
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
