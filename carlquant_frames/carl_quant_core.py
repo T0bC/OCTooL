@@ -530,7 +530,7 @@ class DepthDetectionMethod(Enum):
     
     @classmethod
     def get_default(cls):
-        return cls.KNEE_POINT
+        return cls.COMBINED_MEAN  # Use combined method as default
 
 def knee_pt(y, x):
     """
@@ -744,7 +744,7 @@ def calculate_lesion_depth(surface: Surface,
                           region_config,
                           image: np.ndarray,
                           search_depth: int = 200,
-                          detection_method: DepthDetectionMethod = DepthDetectionMethod.KNEE_POINT,
+                          detection_method: DepthDetectionMethod = None,
                           use_curve_fitting: bool = True,
                           smooth_depth_points: bool = True,
                           smoothing: float = 5.0,
@@ -784,6 +784,10 @@ def calculate_lesion_depth(surface: Surface,
     Returns:
         LesionDepth object with depth measurements, or None if no valid surface
     """
+    # Use default detection method if not specified
+    if detection_method is None:
+        detection_method = DepthDetectionMethod.get_default()
+    
     # Extract lesion boundaries from region config
     start_x, _ = region_config.lesion_start
     end_x, _ = region_config.lesion_end
