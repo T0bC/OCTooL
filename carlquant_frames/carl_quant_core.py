@@ -16,6 +16,75 @@ from typing import List, Tuple, Dict, Optional
 from sklearn.cluster import DBSCAN
 from scipy.interpolate import splrep, splev
 from scipy.optimize import curve_fit
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import multiprocessing
+import time
+
+
+# =============================================================================
+# PARALLEL PROCESSING SUPPORT
+# =============================================================================
+
+def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion):
+    """
+    Process a single slice with pre-loaded image.
+    This function must be at module level to be picklable by ProcessPoolExecutor.
+    
+    Args:
+        slice_idx: Index of the slice being processed
+        image_array: Pre-loaded numpy array of the image
+        region_config: Region configuration for this slice
+        air_config: AIR configuration for this slice
+        num_sound: Number of sound regions to extract
+        num_lesion: Number of lesion regions to extract
+    
+    Returns:
+        Tuple of (slice_idx, region_stats, surface, lesion_depth, error, slice_time)
+    """
+    try:
+        slice_start = time.time()
+        
+        # Detect surface
+        surface = detect_surface(image_array, air_config, region_config)
+        
+        # Extract regions
+        if region_config:
+            region_stats = extract_regions(
+                image_array,
+                surface,
+                region_config,
+                num_sound_regions=num_sound,
+                num_lesion_regions=num_lesion
+            )
+        else:
+            # No region config - use dummy data
+            region_stats = [
+                RegionStats("sound", [random.randint(95, 105) for _ in range(100)],
+                            mean=100.0, median=100.0, sd=2.0, se=1.0)
+                for _ in range(num_sound)
+            ] + [
+                RegionStats("lesion", [random.randint(75, 85) for _ in range(100)],
+                            mean=80.0, median=80.0, sd=2.0, se=1.0)
+                for _ in range(num_lesion)
+            ]
+        
+        # Calculate lesion depth
+        if region_config:
+            lesion_depth = calculate_lesion_depth(
+                surface,
+                region_config,
+                image_array,
+                search_depth=200,
+                use_curve_fitting=True
+            )
+        else:
+            lesion_depth = None
+        
+        slice_time = time.time() - slice_start
+        return (slice_idx, region_stats, surface, lesion_depth, None, slice_time)
+    except Exception as e:
+        import traceback
+        return (slice_idx, None, None, None, f"{str(e)}\n{traceback.format_exc()}", 0)
 
 
 # =============================================================================
@@ -688,7 +757,7 @@ def run_carl_quant(context):
     def worker():
         for specimen_id, specimen in context.specimen_data.items():
 
-            # user choice to reanalyze a specemin
+            # user choice to reanalyze a specimen
             choice = getattr(specimen, "analysis_choice", "new")
             if choice == "skip":
                 context.status_bar.update(f"Skipped specimen {specimen_id} (user choice)", level="info")
@@ -696,80 +765,164 @@ def run_carl_quant(context):
             elif choice == "overwrite":
                 specimen.measurement = context.analysis_metadata.get("measurement", 1)
             elif choice == "new":
-                # You could auto-increment or prompt again, but for now:
                 specimen.measurement = context.analysis_metadata.get("measurement", 1)
 
             specimen.operator = context.analysis_metadata.get("operator", "OP")
 
-            # Proceed with slice processing
+            # Get region configuration
+            num_sound = context.region_config.get("sound", 3)
+            num_lesion = context.region_config.get("lesion", 3)
+            
+            # Prepare slice tasks
+            slice_tasks = []
             for slice_index in range(specimen.slices):
-                # Load image for this slice
                 image_path = specimen.images[slice_index]
-                img = Image.open(image_path).convert('L')
-                image_array = np.array(img)
-                
-                # Get configuration for this slice
                 region_config = None
                 air_config = None
                 if specimen.config:
                     region_config = specimen.config.regions.get(slice_index)
                     air_config = specimen.config.air.get(slice_index)
+                slice_tasks.append((slice_index, image_path, region_config, air_config))
+            
+            # Auto-detect parallel processing: use parallel if >10 slices
+            use_parallel = len(slice_tasks) > 10
+            num_workers = max(1, multiprocessing.cpu_count() - 1)
+            
+            start_time = time.time()
+            processed_count = 0
+            
+            if use_parallel and num_workers > 1:
+                # PARALLEL PROCESSING WITH PRE-LOADING
+                effective_workers = min(num_workers, len(slice_tasks))
                 
-                # Detect surface using real algorithm
-                surface = detect_surface(image_array, air_config, region_config)
+                print(f"[CarlQuant] Using parallel processing: {len(slice_tasks)} slices, {effective_workers} workers")
+                context.status_bar.update(f"Pre-loading {len(slice_tasks)} images for {specimen_id}...", level="info")
                 
-                # Extract regions using real algorithm
-                num_sound = context.region_config.get("sound", 3)
-                num_lesion = context.region_config.get("lesion", 3)
+                # PRE-LOAD ALL IMAGES INTO MEMORY
+                preload_start = time.time()
+                preloaded_images = {}
+                for slice_idx, image_path, region_config, air_config in slice_tasks:
+                    img = Image.open(image_path).convert('L')
+                    preloaded_images[slice_idx] = np.array(img)
+                preload_time = time.time() - preload_start
                 
-                if region_config:
-                    region_stats = extract_regions(
-                        image_array,
-                        surface,
-                        region_config,
-                        num_sound_regions=num_sound,
-                        num_lesion_regions=num_lesion
-                    )
-                else:
-                    # No region config - use dummy data
-                    region_stats = [
-                        RegionStats("sound", [random.randint(95, 105) for _ in range(100)],
-                                    mean=100.0, median=100.0, sd=2.0, se=1.0)
-                        for _ in range(num_sound)
-                    ] + [
-                        RegionStats("lesion", [random.randint(75, 85) for _ in range(100)],
-                                    mean=80.0, median=80.0, sd=2.0, se=1.0)
-                        for _ in range(num_lesion)
-                    ]
-
-                # Calculate lesion depth using real algorithm
-                if region_config:
-                    lesion_depth = calculate_lesion_depth(
-                        surface,
-                        region_config,
-                        image_array,
-                        search_depth=200,
-                        use_curve_fitting=True
-                    )
-                else:
-                    lesion_depth = None
-
-                if hasattr(context, "result_lock"):
-                    with context.result_lock:
-                        DataSaver.store_slice_result(specimen, slice_index, region_stats, surface, lesion_depth)
-                else:
-                    DataSaver.store_slice_result(specimen, slice_index, region_stats, surface, lesion_depth)
-
-                context.status_bar.update(f"Processed slice {slice_index + 1} of {specimen_id}", level="success")
+                print(f"[CarlQuant] Pre-loaded {len(preloaded_images)} images in {preload_time:.2f}s")
+                context.status_bar.update(f"Processing {len(slice_tasks)} slices using {effective_workers} workers...", level="info")
+                
+                # Process in parallel using ProcessPoolExecutor
+                with ProcessPoolExecutor(max_workers=effective_workers) as executor:
+                    # Submit tasks with pre-loaded images
+                    future_to_slice = {}
+                    for slice_idx, image_path, region_config, air_config in slice_tasks:
+                        image_array = preloaded_images[slice_idx]
+                        future = executor.submit(
+                            process_slice_parallel,
+                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion
+                        )
+                        future_to_slice[future] = slice_idx
+                    
+                    slice_times = []
+                    for future in as_completed(future_to_slice):
+                        slice_idx = future_to_slice[future]
+                        try:
+                            result_idx, region_stats, surface, lesion_depth, error, slice_time = future.result()
+                            
+                            if error:
+                                print(f"[CarlQuant] Error processing slice {result_idx}: {error}")
+                                context.status_bar.update(f"Error on slice {result_idx + 1}", level="error")
+                            else:
+                                slice_times.append(slice_time)
+                                # Store results with thread safety
+                                if hasattr(context, "result_lock"):
+                                    with context.result_lock:
+                                        DataSaver.store_slice_result(specimen, result_idx, region_stats, surface, lesion_depth)
+                                else:
+                                    DataSaver.store_slice_result(specimen, result_idx, region_stats, surface, lesion_depth)
+                                
+                                processed_count += 1
+                                
+                                # Update UI periodically (thread-safe status updates)
+                                if processed_count % 5 == 0 or processed_count == len(slice_tasks):
+                                    context.status_bar.update(
+                                        f"Processed {processed_count}/{len(slice_tasks)} slices of {specimen_id}",
+                                        level="success"
+                                    )
+                        except Exception as e:
+                            print(f"[CarlQuant] Exception processing slice {slice_idx}: {e}")
+                            context.status_bar.update(f"Exception on slice {slice_idx + 1}: {e}", level="error")
+                
+                # Calculate timing
+                elapsed_time = time.time() - start_time
+                if slice_times:
+                    avg_slice_time = sum(slice_times) / len(slice_times)
+                    processing_time = elapsed_time - preload_time
+                    print(f"[CarlQuant] Parallel timing: Total={elapsed_time:.2f}s, Processing={processing_time:.2f}s, Avg/slice={avg_slice_time:.2f}s")
+            
+            else:
+                # SEQUENTIAL PROCESSING
+                print(f"[CarlQuant] Using sequential processing: {len(slice_tasks)} slices")
+                context.status_bar.update(f"Processing {len(slice_tasks)} slices sequentially...", level="info")
+                
+                for slice_idx, image_path, region_config, air_config in slice_tasks:
+                    try:
+                        # Load image
+                        img = Image.open(image_path).convert('L')
+                        image_array = np.array(img)
+                        
+                        # Detect surface
+                        surface = detect_surface(image_array, air_config, region_config)
+                        
+                        # Extract regions
+                        if region_config:
+                            region_stats = extract_regions(
+                                image_array,
+                                surface,
+                                region_config,
+                                num_sound_regions=num_sound,
+                                num_lesion_regions=num_lesion
+                            )
+                        else:
+                            # No region config - use dummy data
+                            region_stats = [
+                                RegionStats("sound", [random.randint(95, 105) for _ in range(100)],
+                                            mean=100.0, median=100.0, sd=2.0, se=1.0)
+                                for _ in range(num_sound)
+                            ] + [
+                                RegionStats("lesion", [random.randint(75, 85) for _ in range(100)],
+                                            mean=80.0, median=80.0, sd=2.0, se=1.0)
+                                for _ in range(num_lesion)
+                            ]
+                        
+                        # Calculate lesion depth
+                        if region_config:
+                            lesion_depth = calculate_lesion_depth(
+                                surface,
+                                region_config,
+                                image_array,
+                                search_depth=200,
+                                use_curve_fitting=True
+                            )
+                        else:
+                            lesion_depth = None
+                        
+                        # Store results
+                        if hasattr(context, "result_lock"):
+                            with context.result_lock:
+                                DataSaver.store_slice_result(specimen, slice_idx, region_stats, surface, lesion_depth)
+                        else:
+                            DataSaver.store_slice_result(specimen, slice_idx, region_stats, surface, lesion_depth)
+                        
+                        processed_count += 1
+                        context.status_bar.update(f"Processed slice {slice_idx + 1}/{len(slice_tasks)} of {specimen_id}", level="success")
+                    
+                    except Exception as e:
+                        print(f"[CarlQuant] Error processing slice {slice_idx}: {e}")
+                        context.status_bar.update(f"Error on slice {slice_idx + 1}: {e}", level="error")
+                
+                elapsed_time = time.time() - start_time
+                print(f"[CarlQuant] Sequential timing: Total={elapsed_time:.2f}s")
 
             # Save results after all slices are processed
-            # Inject metadata into specimen
-            specimen.operator = context.analysis_metadata.get("operator", "OP")
-            specimen.measurement = context.analysis_metadata.get("measurement", 1)
-
-            # Save results
-            DataSaver.save_results(specimen)
-
             try:
                 DataSaver.save_results(specimen)
                 context.status_bar.update(f"Saved results for {specimen_id}", level="info")
