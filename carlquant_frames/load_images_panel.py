@@ -108,7 +108,7 @@ class loadImagePanel:
                         specimen.status = "analyzed"
                         self.context.status_bar.update(
                             f"Loaded existing results for {specimen_id} (Data_{operator}_{measurement})", 
-                            level="info"
+                            level="success"
                         )
         
         # Update specimen panel display
