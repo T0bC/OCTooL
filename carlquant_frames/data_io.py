@@ -66,7 +66,10 @@ class DataLoader:
 
     @staticmethod
     def load_specimen_config(specimen: Specimen) -> SpecimenConfig:
-        """Load specimen configuration from JSON file if it exists."""
+        """Load specimen configuration from JSON file if it exists.
+        
+        Also loads computed annotations (surface, lesion_depth, extraction_regions) if available.
+        """
         try:
             # Look for config file in any Data_ folder
             for data_folder in specimen.previous_runs:
@@ -117,11 +120,98 @@ class DataLoader:
                                 point2=point2
                             )
                     
+                    # Load computed annotations if available
+                    if 'annotations' in config_data:
+                        DataLoader._load_annotations_into_results(specimen, config_data['annotations'])
+                    
                     return config
             
             return None
         except Exception:
             return None
+    
+    @staticmethod
+    def _load_annotations_into_results(specimen: Specimen, annotations_data: dict):
+        """Load computed annotations from JSON into specimen.results.
+        
+        Args:
+            specimen: Specimen object to populate
+            annotations_data: Dictionary of annotations keyed by slice index
+        """
+        for slice_idx_str, slice_annotations in annotations_data.items():
+            slice_idx = int(slice_idx_str)
+            
+            # Initialize result containers
+            surface = None
+            lesion_depth = None
+            region_stats = []
+            
+            # Load surface detection results
+            if 'surface' in slice_annotations:
+                surface_data = slice_annotations['surface']
+                raw_points = [tuple(pt) for pt in surface_data.get('raw_points', [])]
+                fitted_curves = {}
+                for curve_name, points in surface_data.get('fitted_curves', {}).items():
+                    fitted_curves[curve_name] = [tuple(pt) for pt in points]
+                
+                surface = Surface(
+                    raw_points=raw_points,
+                    fitted_curves=fitted_curves,
+                    is_cavitated=surface_data.get('is_cavitated', False),
+                    cavitation_depth=surface_data.get('cavitation_depth', 0.0)
+                )
+            
+            # Load lesion depth results
+            if 'lesion_depth' in slice_annotations:
+                ld_data = slice_annotations['lesion_depth']
+                depth_points = [tuple(pt) for pt in ld_data.get('depth_points', [])]
+                smoothed_points = None
+                if 'smoothed_depth_points' in ld_data:
+                    smoothed_points = [tuple(pt) for pt in ld_data['smoothed_depth_points']]
+                
+                lesion_depth = LesionDepth(
+                    depth_points=depth_points,
+                    mean_depth=ld_data.get('mean_depth', 0.0),
+                    median_depth=ld_data.get('median_depth', 0.0),
+                    sd=ld_data.get('sd', 0.0),
+                    se=ld_data.get('se', 0.0),
+                    smoothed_depth_points=smoothed_points
+                )
+            
+            # Load extraction region bounds and statistics
+            if 'extraction_regions' in slice_annotations:
+                for region_data in slice_annotations['extraction_regions']:
+                    # Parse bounds
+                    bounds = None
+                    if 'bounds' in region_data and region_data['bounds']:
+                        bounds_data = region_data['bounds']
+                        if isinstance(bounds_data[0], list):
+                            # Rotated corners
+                            bounds = tuple(tuple(pt) for pt in bounds_data)
+                        else:
+                            # Simple bbox
+                            bounds = tuple(bounds_data)
+                    
+                    region_stats.append(RegionStats(
+                        region_type=region_data.get('region_type', 'sound'),
+                        pixel_values=[],  # Not saved in annotations (too large)
+                        mean=region_data.get('mean', 0.0),
+                        median=region_data.get('median', 0.0),
+                        sd=region_data.get('sd', 0.0),
+                        se=region_data.get('se', 0.0),
+                        region_index=region_data.get('region_index', 0),
+                        bounds=bounds if bounds else (0, 0, 0, 0),
+                        rotation_angle=region_data.get('rotation_angle', 0.0)
+                    ))
+            
+            # Store the slice result if we have any data
+            if surface or lesion_depth or region_stats:
+                specimen.results[slice_idx] = SliceResult(
+                    slice_index=slice_idx,
+                    region_stats=region_stats,
+                    surface=surface if surface else Surface([], {}),
+                    lesion_depth=lesion_depth if lesion_depth else LesionDepth([], 0, 0, 0, 0)
+                )
 
     @staticmethod
     def load_results(specimen: Specimen, region_config: dict):
@@ -276,10 +366,18 @@ class DataSaver:
 
         target_file = save_folder / f"{specimen.specimen_id}_results.xlsx"
         wb.save(target_file)
+        
+        # Save annotations to config JSON (includes surface, lesion_depth, extraction_regions)
+        DataSaver.save_specimen_config(specimen, include_annotations=True)
 
     @staticmethod
-    def save_specimen_config(specimen: Specimen):
-        """Save specimen configuration (REGIONS and AIR) to JSON file."""
+    def save_specimen_config(specimen: Specimen, include_annotations: bool = False):
+        """Save specimen configuration (REGIONS, AIR, and optionally computed annotations) to JSON file.
+        
+        Args:
+            specimen: Specimen object to save
+            include_annotations: If True, save computed annotations (surface, lesion_depth, extraction_regions)
+        """
         if not specimen.config:
             return
         
@@ -315,6 +413,75 @@ class DataSaver:
             if air_config.point2:
                 air_data["point2"] = list(air_config.point2)
             config_data["air"][str(slice_idx)] = air_data
+        
+        # Save computed annotations if requested and available
+        if include_annotations and hasattr(specimen, 'results') and specimen.results:
+            config_data["annotations"] = {}
+            
+            for slice_idx, result in specimen.results.items():
+                slice_annotations = {}
+                
+                # Save surface detection results
+                if result.surface:
+                    surface_data = {
+                        "raw_points": [[int(x), int(y)] for x, y in result.surface.raw_points],
+                        "fitted_curves": {}
+                    }
+                    for curve_name, points in result.surface.fitted_curves.items():
+                        surface_data["fitted_curves"][curve_name] = [[int(x), int(y)] for x, y in points]
+                    
+                    # Save cavitation detection if available
+                    if hasattr(result.surface, 'is_cavitated'):
+                        surface_data["is_cavitated"] = bool(result.surface.is_cavitated)
+                        surface_data["cavitation_depth"] = float(result.surface.cavitation_depth)
+                    
+                    slice_annotations["surface"] = surface_data
+                
+                # Save lesion depth results
+                if result.lesion_depth:
+                    lesion_depth_data = {
+                        "depth_points": [[int(x), int(y)] for x, y in result.lesion_depth.depth_points],
+                        "mean_depth": float(result.lesion_depth.mean_depth),
+                        "median_depth": float(result.lesion_depth.median_depth),
+                        "sd": float(result.lesion_depth.sd),
+                        "se": float(result.lesion_depth.se)
+                    }
+                    
+                    # Save smoothed depth points if available
+                    if hasattr(result.lesion_depth, 'smoothed_depth_points') and result.lesion_depth.smoothed_depth_points:
+                        lesion_depth_data["smoothed_depth_points"] = [[int(x), int(y)] for x, y in result.lesion_depth.smoothed_depth_points]
+                    
+                    slice_annotations["lesion_depth"] = lesion_depth_data
+                
+                # Save extraction region bounds and statistics
+                if result.region_stats:
+                    regions_data = []
+                    for stats in result.region_stats:
+                        region_data = {
+                            "region_type": str(stats.region_type),
+                            "region_index": int(stats.region_index),
+                            "mean": float(stats.mean),
+                            "median": float(stats.median),
+                            "sd": float(stats.sd),
+                            "se": float(stats.se),
+                            "rotation_angle": float(stats.rotation_angle)
+                        }
+                        
+                        # Save bounds (can be 4 corner points or simple bbox)
+                        if stats.bounds:
+                            if isinstance(stats.bounds[0], tuple):
+                                # Rotated corners
+                                region_data["bounds"] = [[int(x), int(y)] for x, y in stats.bounds]
+                            else:
+                                # Simple bbox
+                                region_data["bounds"] = [int(v) for v in stats.bounds]
+                        
+                        regions_data.append(region_data)
+                    
+                    slice_annotations["extraction_regions"] = regions_data
+                
+                if slice_annotations:
+                    config_data["annotations"][str(slice_idx)] = slice_annotations
         
         # Save to JSON file
         config_file = save_folder / f"{specimen.specimen_id}_config.json"
