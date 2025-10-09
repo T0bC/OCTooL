@@ -356,27 +356,38 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         """
         Draw lesion depth results.
         
+        Uses smoothed depth points if available for cleaner visualization,
+        otherwise falls back to raw depth points.
+        
         Args:
             lesion_depth: Lesion depth result object
         """
-        if not lesion_depth or not lesion_depth.depth_points:
+        if not lesion_depth:
             return
         
-        points = lesion_depth.depth_points
+        # Prefer smoothed depth points if available, otherwise use raw points
+        points = None
+        if hasattr(lesion_depth, 'smoothed_depth_points') and lesion_depth.smoothed_depth_points:
+            points = lesion_depth.smoothed_depth_points
+        elif lesion_depth.depth_points:
+            points = lesion_depth.depth_points
         
-        if len(points) > 1:
-            # Draw line connecting all points
-            self.draw_line(points, color='red', width=2, tags="lesion_depth_overlay")
-            
-            # Draw small circles at every 10th point for visibility
-            for x, y in points[::10]:
-                canvas_x, canvas_y = self.converter.image_to_canvas(x, y)
-                self.canvas.create_oval(
-                    canvas_x - 2, canvas_y - 2,
-                    canvas_x + 2, canvas_y + 2,
-                    fill='red', outline='darkred',
-                    tags="lesion_depth_overlay"
-                )
+        if not points or len(points) < 2:
+            return
+        
+        # Draw smooth line connecting all points
+        self.draw_line(points, color='red', width=2, tags="lesion_depth_overlay")
+        
+        # Draw small circles at every 20th point for visibility (less frequent for smoothed curves)
+        step = 20 if hasattr(lesion_depth, 'smoothed_depth_points') and lesion_depth.smoothed_depth_points else 10
+        for x, y in points[::step]:
+            canvas_x, canvas_y = self.converter.image_to_canvas(x, y)
+            self.canvas.create_oval(
+                canvas_x - 2, canvas_y - 2,
+                canvas_x + 2, canvas_y + 2,
+                fill='red', outline='darkred',
+                tags="lesion_depth_overlay"
+            )
 
 
 class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):

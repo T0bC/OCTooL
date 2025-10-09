@@ -651,9 +651,21 @@ def calculate_lesion_depth(surface: Surface,
                           region_config,
                           image: np.ndarray,
                           search_depth: int = 200,
-                          use_curve_fitting: bool = True) -> Optional[LesionDepth]:
+                          use_curve_fitting: bool = True,
+                          smooth_depth_points: bool = True,
+                          smoothing: float = 5.0,
+                          smoothing_multiplier: float = 5.0,
+                          spline_degree: int = 2) -> Optional[LesionDepth]:
     """
     Calculate lesion depth by detecting the knee point in intensity profiles.
+    
+    Algorithm:
+    1. For each A-Scan column in the lesion region
+    2. Extract intensity values from surface downward (search_depth pixels)
+    3. [Optional] Fit exp2 model to smooth the profile
+    4. Find knee point using two-line fitting method
+    5. Calculate depth as distance from surface to knee point
+    6. [Optional] Apply spline smoothing to depth points to reduce noise
     
     Args:
         surface: Detected surface with fitted curve
@@ -661,6 +673,10 @@ def calculate_lesion_depth(surface: Surface,
         image: 2D numpy array (grayscale image)
         search_depth: Maximum depth to search below surface (default 200 pixels)
         use_curve_fitting: If True, fit exp2 model before knee detection (default True)
+        smooth_depth_points: If True, apply spline smoothing to depth points (default True)
+        smoothing: Base smoothing factor for depth spline (default 5.0)
+        smoothing_multiplier: Multiplier for smoothing (default 5.0)
+        spline_degree: Degree of spline for depth smoothing (default 2)
     
     Returns:
         LesionDepth object with depth measurements, or None if no valid surface
@@ -737,15 +753,34 @@ def calculate_lesion_depth(surface: Surface,
     # Extract depth values for statistics
     depths = [d for _, _, d in depth_points]
     # Convert to (x, y) format for compatibility
-    depth_points = [(x, y) for x, y, _ in depth_points]
+    raw_depth_points = [(x, y) for x, y, _ in depth_points]
+    
+    # Apply spline smoothing to depth points if requested
+    smoothed_depth_points = None
+    if smooth_depth_points and len(raw_depth_points) >= 4:
+        # Use fit_surface_curve to smooth the depth points
+        # This reuses the same spline fitting logic used for surface detection
+        smoothed_curves = fit_surface_curve(
+            raw_depth_points,
+            start_x,
+            end_x,
+            smoothing=smoothing,
+            smoothing_multiplier=smoothing_multiplier,
+            spline_degree=spline_degree,
+            curve_name="smoothed_depth"
+        )
+        
+        if "smoothed_depth" in smoothed_curves:
+            smoothed_depth_points = smoothed_curves["smoothed_depth"]
     
     return LesionDepth(
-        depth_points=depth_points,
+        depth_points=raw_depth_points,
         mean_depth=np.mean(depths),
         median_depth=np.median(depths),
         sd=np.std(depths),
         se=np.std(depths) / np.sqrt(len(depths)),
-        knee_data=knee_data if len(knee_data) > 0 else None
+        knee_data=knee_data if len(knee_data) > 0 else None,
+        smoothed_depth_points=smoothed_depth_points
     )
 
 
