@@ -1038,6 +1038,17 @@ def run_carl_quant(context):
                 choice = getattr(specimen, "analysis_choice", "new")
                 if choice == "skip":
                     context.status_bar.update(f"Skipped specimen {specimen_id} (user choice)", level="info")
+                    
+                    # Update specimen status to "Skipped"
+                    specimen.status = "Skipped"
+                    specimen_panel = context.get_panel("carl_specimen")
+                    if specimen_panel:
+                        for row_idx in range(specimen_panel.sheet.total_rows()):
+                            if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
+                                specimen_panel.sheet.set_cell_data(row_idx, 4, "Skipped")
+                                specimen_panel._set_column_widths()
+                                break
+                    
                     progress_dialog.complete_specimen(specimen_idx)
                     continue
                 elif choice == "overwrite":
@@ -1257,6 +1268,21 @@ def run_carl_quant(context):
                         f"Saved results for {specimen_id}",
                         color="green"
                     )
+                    
+                    # Update specimen status to "Completed"
+                    specimen.status = "Completed"
+                    
+                    # Update the specimen panel table
+                    specimen_panel = context.get_panel("carl_specimen")
+                    if specimen_panel:
+                        # Find the row for this specimen
+                        for row_idx in range(specimen_panel.sheet.total_rows()):
+                            if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
+                                specimen_panel.sheet.set_cell_data(row_idx, 4, "Completed")
+                                # Refresh column widths to accommodate new status
+                                specimen_panel._set_column_widths()
+                                break
+                    
                 except Exception as e:
                     context.status_bar.update(f"Error saving results for {specimen_id}: {e}", level="error")
                 
