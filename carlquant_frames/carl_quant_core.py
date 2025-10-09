@@ -19,6 +19,7 @@ from scipy.optimize import curve_fit
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import time
+from enum import Enum
 
 
 # =============================================================================
@@ -521,6 +522,15 @@ def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Su
 # LESION DEPTH CALCULATION
 # =============================================================================
 
+class DepthDetectionMethod(Enum):
+    """Available methods for detecting lesion depth from A-Scan profiles."""
+    KNEE_POINT = "knee_point"  # Two-line fitting (current method)
+    SIGMOID_FIT = "sigmoid_fit"  # Sigmoid fit + inflection point
+    
+    @classmethod
+    def get_default(cls):
+        return cls.KNEE_POINT
+
 def knee_pt(y, x):
     """
     Find knee point in a curve using two-line fitting method.
@@ -647,36 +657,127 @@ def fit_exp2_to_profile(intensity_profile: np.ndarray, depth_indices: np.ndarray
         return None
 
 
+# =============================================================================
+# ADVANCED LESION DEPTH DETECTION METHODS
+# =============================================================================
+
+
+def sigmoid_model(z, L, U, k, z0):
+    """
+    Sigmoid model for intensity decay.
+    I(z) = L + (U - L) / (1 + exp(k * (z - z0)))
+    
+    Args:
+        z: Depth values
+        L: Lower asymptote (background intensity)
+        U: Upper asymptote (surface intensity)
+        k: Steepness parameter (positive = decay)
+        z0: Inflection point (lesion depth)
+    """
+    return L + (U - L) / (1 + np.exp(k * (z - z0)))
+
+
+def detect_depth_sigmoid_fit(intensity_profile: np.ndarray, depth_indices: np.ndarray) -> Tuple[float, int, Dict]:
+    """
+    Detect lesion depth by fitting sigmoid and finding inflection point.
+    Best for smooth S-shaped transitions.
+    
+    Args:
+        intensity_profile: Intensity values along depth
+        depth_indices: Corresponding depth indices
+    
+    Returns:
+        Tuple of (depth_value, depth_index, metadata_dict)
+    """
+    if len(intensity_profile) < 5:
+        return np.nan, -1, {'success': False, 'reason': 'insufficient_data'}
+    
+    try:
+        # Initial parameter guesses
+        U_init = np.max(intensity_profile[:len(intensity_profile)//3])  # Surface intensity
+        L_init = np.min(intensity_profile[len(intensity_profile)//2:])  # Background intensity
+        z0_init = depth_indices[len(depth_indices) // 2]  # Middle point
+        k_init = 0.1  # Moderate steepness
+        
+        # Fit sigmoid model
+        popt, pcov = curve_fit(
+            sigmoid_model,
+            depth_indices,
+            intensity_profile,
+            p0=[L_init, U_init, k_init, z0_init],
+            maxfev=5000,
+            bounds=(
+                [0, 0, 0.001, depth_indices[0]],  # Lower bounds
+                [255, 255, 2.0, depth_indices[-1]]  # Upper bounds
+            )
+        )
+        
+        L, U, k, z0 = popt
+        
+        # z0 is the inflection point (lesion depth)
+        depth_value = z0
+        depth_idx = np.argmin(np.abs(depth_indices - z0))
+        
+        # Generate fitted curve
+        fitted_curve = sigmoid_model(depth_indices, *popt)
+        
+        metadata = {
+            'success': True,
+            'method': 'sigmoid_fit',
+            'L': L,
+            'U': U,
+            'k': k,
+            'z0': z0,
+            'fitted_curve': fitted_curve.tolist()
+        }
+        
+        return depth_value, depth_idx, metadata
+        
+    except Exception as e:
+        return np.nan, -1, {'success': False, 'reason': str(e)}
+
+
+
+
 def calculate_lesion_depth(surface: Surface, 
                           region_config,
                           image: np.ndarray,
                           search_depth: int = 200,
+                          detection_method: DepthDetectionMethod = DepthDetectionMethod.KNEE_POINT,
                           use_curve_fitting: bool = True,
                           smooth_depth_points: bool = True,
                           smoothing: float = 5.0,
                           smoothing_multiplier: float = 5.0,
-                          spline_degree: int = 2) -> Optional[LesionDepth]:
+                          spline_degree: int = 2,
+                          threshold_percent: float = 0.5,
+                          gradient_smooth_window: int = 5) -> Optional[LesionDepth]:
     """
-    Calculate lesion depth by detecting the knee point in intensity profiles.
+    Calculate lesion depth using various detection methods.
     
     Algorithm:
     1. For each A-Scan column in the lesion region
     2. Extract intensity values from surface downward (search_depth pixels)
-    3. [Optional] Fit exp2 model to smooth the profile
-    4. Find knee point using two-line fitting method
-    5. Calculate depth as distance from surface to knee point
-    6. [Optional] Apply spline smoothing to depth points to reduce noise
+    3. Apply selected detection method to find lesion depth
+    4. Calculate depth as distance from surface to detected point
+    5. [Optional] Apply spline smoothing to depth points to reduce noise
+    
+    Available Detection Methods:
+    - KNEE_POINT: Two-line fitting (best for exponential decay)
+    - SIGMOID_FIT: Sigmoid fit + inflection point (best for smooth S-shaped transitions)
     
     Args:
         surface: Detected surface with fitted curve
         region_config: Region configuration with lesion boundaries
         image: 2D numpy array (grayscale image)
         search_depth: Maximum depth to search below surface (default 200 pixels)
-        use_curve_fitting: If True, fit exp2 model before knee detection (default True)
+        detection_method: Method to use for depth detection (default KNEE_POINT)
+        use_curve_fitting: If True and method=KNEE_POINT, fit exp2 before detection (default True)
         smooth_depth_points: If True, apply spline smoothing to depth points (default True)
         smoothing: Base smoothing factor for depth spline (default 5.0)
         smoothing_multiplier: Multiplier for smoothing (default 5.0)
         spline_degree: Degree of spline for depth smoothing (default 2)
+        threshold_percent: For THRESHOLD method, fraction of surface intensity (default 0.5)
+        gradient_smooth_window: For MAX_GRADIENT method, smoothing window size (default 5)
     
     Returns:
         LesionDepth object with depth measurements, or None if no valid surface
@@ -694,7 +795,7 @@ def calculate_lesion_depth(surface: Surface,
     
     height, width = image.shape
     depth_points = []
-    knee_data = {}  # Store knee point data for visualization
+    knee_data = {}  # Store detection data for visualization (name kept for compatibility)
     
     # Process every column in lesion region
     for x in range(start_x, end_x):
@@ -707,31 +808,49 @@ def calculate_lesion_depth(surface: Surface,
         start_y = int(surface_y)
         end_y = min(height, start_y + search_depth)
         
-        if end_y - start_y < 10:  # Need minimum points for knee detection
+        if end_y - start_y < 10:  # Need minimum points for detection
             continue
         
         # Get intensity values
         intensity_profile = image[start_y:end_y, x].astype(float)
         depth_indices = np.arange(len(intensity_profile))
         
-        # Optionally fit exp2 model to smooth the profile
+        # Apply detection method
+        depth_value = np.nan
+        depth_idx = -1
+        detection_metadata = {}
         fitted_curve = None
         fit_params = None
-        profile_for_knee = intensity_profile  # Default: use raw profile
         
-        if use_curve_fitting:
-            fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-            if fit_result is not None:
-                fitted_curve, fit_params = fit_result
-                profile_for_knee = fitted_curve  # Use fitted curve for knee detection
+        if detection_method == DepthDetectionMethod.KNEE_POINT:
+            # Original method: optionally fit exp2, then find knee point
+            profile_for_knee = intensity_profile
+            
+            if use_curve_fitting:
+                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                if fit_result is not None:
+                    fitted_curve, fit_params = fit_result
+                    profile_for_knee = fitted_curve
+            
+            depth_value, depth_idx = knee_pt(profile_for_knee, depth_indices)
+            detection_metadata = {
+                'method': 'knee_point',
+                'used_fitting': use_curve_fitting and fitted_curve is not None,
+                'fit_params': fit_params
+            }
+            
+        elif detection_method == DepthDetectionMethod.SIGMOID_FIT:
+            depth_value, depth_idx, detection_metadata = detect_depth_sigmoid_fit(
+                intensity_profile, depth_indices
+            )
+            # Extract fitted curve if available
+            if 'fitted_curve' in detection_metadata:
+                fitted_curve = np.array(detection_metadata['fitted_curve'])
         
-        # Find knee point in the intensity profile (raw or fitted)
-        knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
-        
-        if not np.isnan(knee_depth) and knee_idx >= 0:
+        # Store result if valid
+        if not np.isnan(depth_value) and depth_idx >= 0:
             # Convert relative depth to absolute y-coordinate
-            lesion_bottom_y = start_y + knee_depth
-            depth_value = knee_depth  # Depth from surface
+            lesion_bottom_y = start_y + depth_value
             
             depth_points.append((x, lesion_bottom_y, depth_value))
             
@@ -739,11 +858,12 @@ def calculate_lesion_depth(surface: Surface,
             knee_data[x] = {
                 'intensity': intensity_profile.tolist(),
                 'depth_idx': depth_indices.tolist(),
-                'knee_idx': knee_idx,
+                'knee_idx': depth_idx,  # Name kept for compatibility
                 'surface_y': start_y,
-                'knee_depth': knee_depth,
+                'knee_depth': depth_value,  # Name kept for compatibility
                 'fitted_curve': fitted_curve.tolist() if fitted_curve is not None else None,
-                'fit_params': fit_params
+                'fit_params': fit_params,
+                'detection_metadata': detection_metadata
             }
     
     if len(depth_points) == 0:
