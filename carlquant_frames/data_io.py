@@ -189,7 +189,6 @@ class DataSaver:
             lesion_depth=lesion_depth
         )
 
-
     @staticmethod
     def save_results(specimen: Specimen):
         wb = Workbook()
@@ -211,7 +210,7 @@ class DataSaver:
             row = [slice_index]
             row += [r.median for r in result.region_stats if r.region_type == "sound"]
             row += [r.median for r in result.region_stats if r.region_type == "lesion"]
-            row += [result.lesion_depth.mean_depth]
+            row += [result.lesion_depth.mean_depth if result.lesion_depth else 0]
             ws_summary.append(row)
 
         # === Sheet 2: Region Pixels ===
@@ -236,8 +235,9 @@ class DataSaver:
             for curve_name, points in result.surface.fitted_curves.items():
                 for x, y in points:
                     ws_surface.append([slice_index, f"curve_{curve_name}", x, y])
-            for x, y in result.lesion_depth.depth_points:
-                ws_surface.append([slice_index, "lesion_depth", x, y])
+            if result.lesion_depth and result.lesion_depth.depth_points:
+                for x, y in result.lesion_depth.depth_points:
+                    ws_surface.append([slice_index, "lesion_depth", x, y])
 
         # === Save to disk ===
         operator = getattr(specimen, "operator", "OP")

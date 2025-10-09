@@ -139,6 +139,9 @@ class image_viewer_panel(BaseCanvasPanel):
         # Draw surface detection results
         self.draw_surface_results(specimen, current_slice)
         
+        # Draw lesion depth results
+        self.draw_lesion_depth(specimen, current_slice)
+        
         # Draw extraction regions
         self.draw_extraction_regions(specimen, current_slice)
 
@@ -1064,3 +1067,68 @@ class image_viewer_panel(BaseCanvasPanel):
                 font=("Arial", 12, "bold"),
                 tags="extraction_regions"
             )
+    
+    def draw_lesion_depth(self, specimen, current_slice):
+        """
+        Draw lesion depth results (detected bottom of lesion).
+        
+        Args:
+            specimen: Specimen object containing results
+            current_slice: 0-based slice index
+        """
+        # Check if we should show lesion depth
+        display_options = getattr(self.context, 'display_options', {})
+        show_lesion_depth = display_options.get('show_lesion_depth', tk.BooleanVar(value=True)).get()
+        
+        if not show_lesion_depth:
+            return
+        
+        # Check if results exist for this slice
+        if not hasattr(specimen, 'results') or current_slice not in specimen.results:
+            return
+        
+        slice_result = specimen.results[current_slice]
+        lesion_depth = slice_result.lesion_depth
+        
+        if not lesion_depth or not lesion_depth.depth_points:
+            return
+        
+        # Check if we have raw image for coordinate transformation
+        if not hasattr(self, 'rawImage') or self.rawImage is None:
+            return
+        
+        # Calculate zoom factor for coordinate transformation
+        if self.zoom_level == 1.0:
+            current_width = getattr(self, 'fitted_width', self.rawImage.width)
+            current_zoom = current_width / self.rawImage.width
+        else:
+            current_zoom = self.zoom_level
+        
+        # Draw lesion depth curve (red line)
+        points = lesion_depth.depth_points
+        if len(points) > 1:
+            # Transform all points to canvas coordinates
+            canvas_points = []
+            for x, y in points:
+                canvas_x = x * current_zoom + self.image_offset_x
+                canvas_y = y * current_zoom + self.image_offset_y
+                canvas_points.append((canvas_x, canvas_y))
+            
+            # Draw line connecting all points
+            for i in range(len(canvas_points) - 1):
+                x1, y1 = canvas_points[i]
+                x2, y2 = canvas_points[i + 1]
+                self.canvas.create_line(
+                    x1, y1, x2, y2,
+                    fill='red', width=2,
+                    tags="lesion_depth_overlay"
+                )
+            
+            # Optionally draw small circles at each point for visibility
+            for canvas_x, canvas_y in canvas_points[::10]:  # Every 10th point to avoid clutter
+                self.canvas.create_oval(
+                    canvas_x - 2, canvas_y - 2,
+                    canvas_x + 2, canvas_y + 2,
+                    fill='red', outline='darkred',
+                    tags="lesion_depth_overlay"
+                )
