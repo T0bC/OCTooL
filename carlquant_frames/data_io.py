@@ -53,13 +53,8 @@ class DataLoader:
                         previous_runs=data_folders
                     )
                     
-                    # Load configuration if available
-                    specimen.config = DataLoader.load_specimen_config(specimen)
-                    if specimen.config:
-                        # Update display values based on loaded config
-                        regions_count = len(specimen.config.regions)
-                        air_count = len(specimen.config.air)
-                        specimen.regions = f"{regions_count} regions" if regions_count > 0 else ""
+                    # Don't load configuration here - it will be loaded after metadata is set
+                    # This ensures we load from the correct Data_{operator}_{measurement} folder
                     
                     specimen_data[specimen_id] = specimen
         return specimen_data
@@ -69,66 +64,89 @@ class DataLoader:
         """Load specimen configuration from JSON file if it exists.
         
         Also loads computed annotations (surface, lesion_depth, extraction_regions) if available.
+        Prioritizes loading from Data_{operator}_{measurement} folder if specimen has metadata.
         """
         try:
-            # Look for config file in any Data_ folder
+            # If specimen has operator/measurement metadata, look for specific folder first
+            if hasattr(specimen, 'operator') and hasattr(specimen, 'measurement'):
+                target_folder = specimen.source / f"Data_{specimen.operator}_{specimen.measurement}"
+                if target_folder.exists():
+                    config_file = target_folder / f"{specimen.specimen_id}_config.json"
+                    if config_file.exists():
+                        with open(config_file, 'r') as f:
+                            config_data = json.load(f)
+                        return DataLoader._parse_config_data(specimen, config_data)
+            
+            # Fallback: Look for config file in any Data_ folder (legacy behavior)
             for data_folder in specimen.previous_runs:
                 config_file = data_folder / f"{specimen.specimen_id}_config.json"
                 if config_file.exists():
                     with open(config_file, 'r') as f:
                         config_data = json.load(f)
-                    
-                    # Parse the JSON data into our data structures
-                    config = SpecimenConfig(specimen_id=specimen.specimen_id)
-                    
-                    # Load regions
-                    if 'regions' in config_data:
-                        for slice_idx_str, region_data in config_data['regions'].items():
-                            slice_idx = int(slice_idx_str)
-                            # Support both old (2-point) and new (4-point) format
-                            if 'specimen_start' in region_data:
-                                # New 4-point format
-                                config.regions[slice_idx] = RegionConfig(
-                                    slice_index=slice_idx,
-                                    specimen_start=tuple(region_data['specimen_start']),
-                                    lesion_start=tuple(region_data['lesion_start']),
-                                    lesion_end=tuple(region_data['lesion_end']),
-                                    tooth_end=tuple(region_data['tooth_end'])
-                                )
-                            else:
-                                # Old 2-point format - convert to 4-point
-                                # Assume: specimen_start = start_point, lesion_start = start_point,
-                                #         lesion_end = end_point, tooth_end = end_point
-                                start_pt = tuple(region_data['start_point'])
-                                end_pt = tuple(region_data['end_point'])
-                                config.regions[slice_idx] = RegionConfig(
-                                    slice_index=slice_idx,
-                                    specimen_start=start_pt,
-                                    lesion_start=start_pt,
-                                    lesion_end=end_pt,
-                                    tooth_end=end_pt
-                                )
-                    
-                    # Load air configurations
-                    if 'air' in config_data:
-                        for slice_idx_str, air_data in config_data['air'].items():
-                            slice_idx = int(slice_idx_str)
-                            point2 = tuple(air_data['point2']) if air_data.get('point2') else None
-                            config.air[slice_idx] = AirConfig(
-                                slice_index=slice_idx,
-                                point1=tuple(air_data['point1']),
-                                point2=point2
-                            )
-                    
-                    # Load computed annotations if available
-                    if 'annotations' in config_data:
-                        DataLoader._load_annotations_into_results(specimen, config_data['annotations'])
-                    
-                    return config
+                    return DataLoader._parse_config_data(specimen, config_data)
             
             return None
         except Exception:
             return None
+    
+    @staticmethod
+    def _parse_config_data(specimen: Specimen, config_data: dict) -> SpecimenConfig:
+        """Parse config data from JSON into SpecimenConfig object.
+        
+        Args:
+            specimen: Specimen object
+            config_data: Dictionary loaded from JSON
+        
+        Returns:
+            SpecimenConfig object
+        """
+        # Parse the JSON data into our data structures
+        config = SpecimenConfig(specimen_id=specimen.specimen_id)
+        
+        # Load regions
+        if 'regions' in config_data:
+            for slice_idx_str, region_data in config_data['regions'].items():
+                slice_idx = int(slice_idx_str)
+                # Support both old (2-point) and new (4-point) format
+                if 'specimen_start' in region_data:
+                    # New 4-point format
+                    config.regions[slice_idx] = RegionConfig(
+                        slice_index=slice_idx,
+                        specimen_start=tuple(region_data['specimen_start']),
+                        lesion_start=tuple(region_data['lesion_start']),
+                        lesion_end=tuple(region_data['lesion_end']),
+                        tooth_end=tuple(region_data['tooth_end'])
+                    )
+                else:
+                    # Old 2-point format - convert to 4-point
+                    # Assume: specimen_start = start_point, lesion_start = start_point,
+                    #         lesion_end = end_point, tooth_end = end_point
+                    start_pt = tuple(region_data['start_point'])
+                    end_pt = tuple(region_data['end_point'])
+                    config.regions[slice_idx] = RegionConfig(
+                        slice_index=slice_idx,
+                        specimen_start=start_pt,
+                        lesion_start=start_pt,
+                        lesion_end=end_pt,
+                        tooth_end=end_pt
+                    )
+        
+        # Load air configurations
+        if 'air' in config_data:
+            for slice_idx_str, air_data in config_data['air'].items():
+                slice_idx = int(slice_idx_str)
+                point2 = tuple(air_data['point2']) if air_data.get('point2') else None
+                config.air[slice_idx] = AirConfig(
+                    slice_index=slice_idx,
+                    point1=tuple(air_data['point1']),
+                    point2=point2
+                )
+        
+        # Load computed annotations if available
+        if 'annotations' in config_data:
+            DataLoader._load_annotations_into_results(specimen, config_data['annotations'])
+        
+        return config
     
     @staticmethod
     def _load_annotations_into_results(specimen: Specimen, annotations_data: dict):
@@ -491,8 +509,19 @@ class DataSaver:
     @staticmethod
     def update_specimen_region(specimen: Specimen, slice_index: int, 
                               specimen_start: tuple, lesion_start: tuple,
-                              lesion_end: tuple, tooth_end: tuple):
-        """Update region configuration for a specific slice (4 points)."""
+                              lesion_end: tuple, tooth_end: tuple,
+                              context=None):
+        """Update region configuration for a specific slice (4 points).
+        
+        Args:
+            specimen: Specimen to update
+            slice_index: Slice index
+            specimen_start: Specimen start point
+            lesion_start: Lesion start point
+            lesion_end: Lesion end point
+            tooth_end: Tooth end point
+            context: Application context (for metadata)
+        """
         if not specimen.config:
             specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
         
@@ -504,12 +533,28 @@ class DataSaver:
             tooth_end=tooth_end
         )
         
+        # Store metadata in specimen if available from context
+        if context:
+            metadata = getattr(context, "analysis_metadata", {})
+            operator = metadata.get("operator", "OP")
+            measurement = metadata.get("measurement", 1)
+            specimen.operator = operator
+            specimen.measurement = measurement
+        
         # Auto-save configuration
         DataSaver.save_specimen_config(specimen)
 
     @staticmethod
-    def update_specimen_air(specimen: Specimen, slice_index: int, point1: tuple, point2: tuple = None):
-        """Update AIR configuration for a specific slice."""
+    def update_specimen_air(specimen: Specimen, slice_index: int, point1: tuple, point2: tuple = None, context=None):
+        """Update AIR configuration for a specific slice.
+        
+        Args:
+            specimen: Specimen to update
+            slice_index: Slice index
+            point1: First point
+            point2: Second point
+            context: Application context (for metadata)
+        """
         if not specimen.config:
             specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
         
@@ -518,6 +563,14 @@ class DataSaver:
             point1=point1,
             point2=point2
         )
+        
+        # Store metadata in specimen if available from context
+        if context:
+            metadata = getattr(context, "analysis_metadata", {})
+            operator = metadata.get("operator", "OP")
+            measurement = metadata.get("measurement", 1)
+            specimen.operator = operator
+            specimen.measurement = measurement
         
         # Auto-save configuration
         DataSaver.save_specimen_config(specimen)
