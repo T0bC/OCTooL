@@ -105,7 +105,7 @@ class loadImagePanel:
                     
                     # Check if results were loaded (annotations)
                     if specimen.results:
-                        specimen.status = "analyzed"
+                        specimen.status = "Analyzed"
                         self.context.status_bar.update(
                             f"Loaded existing results for {specimen_id} (Data_{operator}_{measurement})", 
                             level="success"

@@ -48,7 +48,7 @@ class DataLoader:
                         images=image_files,
                         slices=len(image_files),
                         regions="",
-                        status="new",
+                        status="New",
                         date=subdir.stat().st_mtime,
                         previous_runs=data_folders
                     )
