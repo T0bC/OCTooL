@@ -598,14 +598,6 @@ class CarlQuantTestViewer:
             parallel_mode = self.parallel_mode_var.get()
             num_workers = self.num_workers_var.get()
             
-            # Determine if we should use parallel processing
-            if parallel_mode == "auto":
-                use_parallel = len(slice_tasks) > 10
-            elif parallel_mode == "parallel":
-                use_parallel = True
-            else:  # sequential
-                use_parallel = False
-            
             # Prepare slice tasks (only for slices with configuration)
             slice_tasks = []
             for slice_idx in range(num_slices):
@@ -614,6 +606,14 @@ class CarlQuantTestViewer:
                     air_config = self.current_specimen.config.air.get(slice_idx)
                     image_path = self.current_specimen.images[slice_idx]
                     slice_tasks.append((slice_idx, image_path, region_config, air_config))
+            
+            # Determine if we should use parallel processing
+            if parallel_mode == "auto":
+                use_parallel = len(slice_tasks) > 10
+            elif parallel_mode == "parallel":
+                use_parallel = True
+            else:  # sequential
+                use_parallel = False
             
             if len(slice_tasks) == 0:
                 messagebox.showwarning("No Configuration", "No slices have region configuration.")
