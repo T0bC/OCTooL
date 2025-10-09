@@ -215,14 +215,43 @@ class DataSaver:
 
         # === Sheet 2: Region Pixels ===
         ws_pixels = wb.create_sheet("Region Pixels")
-        pixel_headers = ["SLICE", "REGION_TYPE", "REGION_INDEX"]
-        pixel_headers += [f"PIXEL_{i+1}" for i in range(100)]  # Assuming 100 pixels per region
+        
+        # Create headers: SLICE, PIXEL_INDEX, SOUND_1..SOUND_N, LESION_1..LESION_N
+        pixel_headers = ["SLICE", "PIXEL_INDEX"]
+        pixel_headers += [f"SOUND_{i+1}" for i in range(num_sound)]
+        pixel_headers += [f"LESION_{i+1}" for i in range(num_lesion)]
         ws_pixels.append(pixel_headers)
-
+        
+        # Transpose data: one row per pixel instead of one row per region
         for slice_index, result in specimen.results.items():
-            for idx, region in enumerate(result.region_stats):
-                row = [slice_index, region.region_type, idx + 1]
-                row += region.pixel_values
+            # Get all regions for this slice
+            sound_regions = [r for r in result.region_stats if r.region_type == "sound"]
+            lesion_regions = [r for r in result.region_stats if r.region_type == "lesion"]
+            
+            # Determine max pixel count across all regions
+            max_pixels = max(
+                max((len(r.pixel_values) for r in sound_regions), default=0),
+                max((len(r.pixel_values) for r in lesion_regions), default=0)
+            )
+            
+            # Write one row per pixel
+            for pixel_idx in range(max_pixels):
+                row = [slice_index, pixel_idx + 1]
+                
+                # Add sound region values for this pixel
+                for sound_region in sound_regions:
+                    if pixel_idx < len(sound_region.pixel_values):
+                        row.append(sound_region.pixel_values[pixel_idx])
+                    else:
+                        row.append(None)  # Empty cell if region has fewer pixels
+                
+                # Add lesion region values for this pixel
+                for lesion_region in lesion_regions:
+                    if pixel_idx < len(lesion_region.pixel_values):
+                        row.append(lesion_region.pixel_values[pixel_idx])
+                    else:
+                        row.append(None)  # Empty cell if region has fewer pixels
+                
                 ws_pixels.append(row)
 
         # === Sheet 3: Surface & Depth ===
