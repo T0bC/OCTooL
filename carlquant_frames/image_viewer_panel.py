@@ -20,6 +20,7 @@ from PIL import Image, ImageTk
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
+from utils.metadata_prompt import ensure_metadata_set
 from carlquant_frames.data_io import DataSaver
 from carlquant_frames.annotation_renderer import (
     CoordinateConverter,
@@ -440,35 +441,41 @@ class image_viewer_panel(BaseCanvasPanel):
             lesion_end: (x, y) tuple for lesion end
             tooth_end: (x, y) tuple for tooth end
         """
-        total_slices = len(specimen.images)
-        
-        # Check if any regions exist
-        has_existing_regions = specimen.config and len(specimen.config.regions) > 0
-        
-        if not has_existing_regions:
-            # First-time initialization: propagate to all slices
-            for slice_idx in range(total_slices):
-                DataSaver.update_specimen_region(
-                    specimen, slice_idx, 
-                    specimen_start, lesion_start, lesion_end, tooth_end
+        def do_save():
+            total_slices = len(specimen.images)
+            
+            # Check if any regions exist
+            has_existing_regions = specimen.config and len(specimen.config.regions) > 0
+            
+            if not has_existing_regions:
+                # First-time initialization: propagate to all slices
+                for slice_idx in range(total_slices):
+                    DataSaver.update_specimen_region(
+                        specimen, slice_idx, 
+                        specimen_start, lesion_start, lesion_end, tooth_end,
+                        context=self.context
+                    )
+                self.context.status_bar.update(
+                    f"Region initialized for all {total_slices} slices (4 boundaries)", 
+                    level="success"
                 )
-            self.context.status_bar.update(
-                f"Region initialized for all {total_slices} slices (4 boundaries)", 
-                level="success"
-            )
-        else:
-            # Regions already exist: only update current slice
-            DataSaver.update_specimen_region(
-                specimen, current_slice,
-                specimen_start, lesion_start, lesion_end, tooth_end
-            )
-            self.context.status_bar.update(
-                f"Region updated for slice {current_slice + 1} (4 boundaries)", 
-                level="success"
-            )
+            else:
+                # Regions already exist: only update current slice
+                DataSaver.update_specimen_region(
+                    specimen, current_slice,
+                    specimen_start, lesion_start, lesion_end, tooth_end,
+                    context=self.context
+                )
+                self.context.status_bar.update(
+                    f"Region updated for slice {current_slice + 1} (4 boundaries)", 
+                    level="success"
+                )
 
-        # Update specimen panel display
-        self.update_specimen_panel_display(specimen)
+            # Update specimen panel display
+            self.update_specimen_panel_display(specimen)
+        
+        # Ensure metadata is set before saving
+        ensure_metadata_set(self.root, self.context, do_save)
 
 
     def update_specimen_panel_display(self, specimen):
@@ -641,26 +648,30 @@ class image_viewer_panel(BaseCanvasPanel):
             point1: (x, y) tuple for top-left corner
             point2: (x, y) tuple for bottom-right corner
         """
-        total_slices = len(specimen.images)
+        def do_save():
+            total_slices = len(specimen.images)
+            
+            # Check if any AIR regions exist
+            has_existing_air = specimen.config and len(specimen.config.air) > 0
+            
+            if not has_existing_air:
+                # First-time initialization: propagate to all slices
+                for slice_idx in range(total_slices):
+                    DataSaver.update_specimen_air(specimen, slice_idx, point1, point2, context=self.context)
+                self.context.status_bar.update(
+                    f"AIR region initialized for all {total_slices} slices: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
+                    level="success"
+                )
+            else:
+                # AIR regions already exist: only update current slice
+                DataSaver.update_specimen_air(specimen, current_slice, point1, point2, context=self.context)
+                self.context.status_bar.update(
+                    f"AIR region updated for slice {current_slice + 1}: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
+                    level="success"
+                )
         
-        # Check if any AIR regions exist
-        has_existing_air = specimen.config and len(specimen.config.air) > 0
-        
-        if not has_existing_air:
-            # First-time initialization: propagate to all slices
-            for slice_idx in range(total_slices):
-                DataSaver.update_specimen_air(specimen, slice_idx, point1, point2)
-            self.context.status_bar.update(
-                f"AIR region initialized for all {total_slices} slices: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
-                level="success"
-            )
-        else:
-            # AIR regions already exist: only update current slice
-            DataSaver.update_specimen_air(specimen, current_slice, point1, point2)
-            self.context.status_bar.update(
-                f"AIR region updated for slice {current_slice + 1}: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
-                level="success"
-            )
+        # Ensure metadata is set before saving
+        ensure_metadata_set(self.root, self.context, do_save)
 
 
     # ============================================================================
