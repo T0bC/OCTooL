@@ -927,6 +927,45 @@ def calculate_lesion_depth(surface: Surface,
             if 'fitted_curve' in detection_metadata:
                 fitted_curve = np.array(detection_metadata['fitted_curve'])
         
+        elif detection_method == "combined_mean":
+            # Run both methods and average
+            profile_for_knee = intensity_profile
+            knee_fitted_curve = None
+            
+            if use_curve_fitting:
+                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                if fit_result is not None:
+                    knee_fitted_curve, fit_params = fit_result
+                    profile_for_knee = knee_fitted_curve
+            
+            knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
+            sigmoid_depth, sigmoid_idx, sigmoid_meta = detect_depth_sigmoid_fit(
+                intensity_profile, depth_indices
+            )
+            
+            if not np.isnan(knee_depth) and not np.isnan(sigmoid_depth):
+                depth_value = (knee_depth + sigmoid_depth) / 2.0
+                depth_idx = int(np.argmin(np.abs(depth_indices - depth_value)))
+                detection_metadata = {
+                    'method': 'combined_mean',
+                    'knee_depth': knee_depth,
+                    'knee_idx': knee_idx,
+                    'sigmoid_depth': sigmoid_depth,
+                    'sigmoid_idx': sigmoid_idx,
+                    'sigmoid_fitted_curve': sigmoid_meta.get('fitted_curve')
+                }
+                if knee_fitted_curve is not None:
+                    fitted_curve = knee_fitted_curve
+            elif not np.isnan(knee_depth):
+                depth_value, depth_idx = knee_depth, knee_idx
+                detection_metadata = {'method': 'combined_mean', 'fallback': 'knee_point'}
+            elif not np.isnan(sigmoid_depth):
+                depth_value, depth_idx = sigmoid_depth, sigmoid_idx
+                detection_metadata = {'method': 'combined_mean', 'fallback': 'sigmoid_fit'}
+            else:
+                depth_value, depth_idx = np.nan, -1
+                detection_metadata = {'method': 'combined_mean', 'success': False}
+        
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
             # Convert relative depth to absolute y-coordinate

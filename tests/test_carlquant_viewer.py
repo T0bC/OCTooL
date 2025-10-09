@@ -169,7 +169,8 @@ class CarlQuantTestViewer:
         
         method_options = [
             ("Knee Point (exp2)", "knee_point"),
-            ("Sigmoid Fit", "sigmoid_fit")
+            ("Sigmoid Fit", "sigmoid_fit"),
+            ("Combined (Mean)", "combined_mean")
         ]
         
         for label, value in method_options:
@@ -1048,20 +1049,31 @@ class CarlQuantTestViewer:
                             fitted_points.append((x, y))
                     
                     if len(fitted_points) > 1:
-                        # Set color and label based on method
+                        # Set color based on method
                         if method_used == 'knee_point':
                             fit_color = 'magenta'
-                            fit_label = 'Exp2 Fit'
                         elif method_used == 'sigmoid_fit':
                             fit_color = 'purple'
-                            fit_label = 'Sigmoid Fit'
+                        elif method_used == 'combined_mean':
+                            fit_color = 'magenta'
                         
                         draw.line(fitted_points, fill=fit_color, width=3)
+                
+                # For combined method, also draw sigmoid fit
+                if method_used == 'combined_mean' and 'sigmoid_fitted_curve' in detection_metadata:
+                    sigmoid_curve = detection_metadata['sigmoid_fitted_curve']
+                    if sigmoid_curve is not None:
+                        sigmoid_curve = np.array(sigmoid_curve)
+                        sigmoid_points = []
+                        for i, (d_idx, intensity) in enumerate(zip(depth_idx, sigmoid_curve)):
+                            abs_y = surface_y + d_idx
+                            if abs_y < image_height:
+                                x = margin_left + int((intensity / 255.0) * plot_area_width)
+                                y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
+                                sigmoid_points.append((x, y))
                         
-                        # Add fit label in top-right corner
-                        if fit_label:
-                            draw.text((plot_width - margin_right - 100, margin_top + 5), 
-                                    fit_label, fill=fit_color)
+                        if len(sigmoid_points) > 1:
+                            draw.line(sigmoid_points, fill='purple', width=3)
                 
                 # Draw knee point marker (large red circle)
                 if knee_idx >= 0 and knee_idx < len(intensity_profile):
@@ -1081,10 +1093,43 @@ class CarlQuantTestViewer:
                         # Add label (without font specification - use default)
                         method_labels = {
                             'knee_point': 'Knee',
-                            'sigmoid_fit': 'Sigmoid'
+                            'sigmoid_fit': 'Sigmoid',
+                            'combined_mean': 'Mean'
                         }
                         label_text = method_labels.get(method_used, 'Depth')
                         draw.text((plot_x + 10, plot_y - 10), f"{label_text}\ny={int(knee_abs_y)}", fill='red')
+                        
+                        # For combined method, draw individual markers (band already drawn)
+                        if method_used == 'combined_mean':
+                            # Draw knee point marker (blue square)
+                            if 'knee_depth' in detection_metadata and 'knee_idx' in detection_metadata:
+                                k_idx = detection_metadata['knee_idx']
+                                if 0 <= k_idx < len(intensity_profile):
+                                    k_intensity = intensity_profile[k_idx]
+                                    k_abs_y = surface_y + detection_metadata['knee_depth']
+                                    k_plot_x = margin_left + int((k_intensity / 255.0) * plot_area_width)
+                                    k_plot_y = margin_top + int((k_abs_y / float(image_height - 1)) * plot_area_height)
+                                    
+                                    size = 4
+                                    draw.rectangle([(k_plot_x - size, k_plot_y - size), 
+                                                  (k_plot_x + size, k_plot_y + size)], 
+                                                 fill='blue', outline='darkblue', width=2)
+                                    draw.text((k_plot_x - 40, k_plot_y - 5), f"K:{int(k_abs_y)}", fill='blue')
+                            
+                            # Draw sigmoid point marker (purple square)
+                            if 'sigmoid_depth' in detection_metadata and 'sigmoid_idx' in detection_metadata:
+                                s_idx = detection_metadata['sigmoid_idx']
+                                if 0 <= s_idx < len(intensity_profile):
+                                    s_intensity = intensity_profile[s_idx]
+                                    s_abs_y = surface_y + detection_metadata['sigmoid_depth']
+                                    s_plot_x = margin_left + int((s_intensity / 255.0) * plot_area_width)
+                                    s_plot_y = margin_top + int((s_abs_y / float(image_height - 1)) * plot_area_height)
+                                    
+                                    size = 4
+                                    draw.rectangle([(s_plot_x - size, s_plot_y - size), 
+                                                  (s_plot_x + size, s_plot_y + size)], 
+                                                 fill='purple', outline='darkviolet', width=2)
+                                    draw.text((s_plot_x - 40, s_plot_y - 5), f"S:{int(s_abs_y)}", fill='purple')
                 
                 # If comparison mode is enabled, run all methods and show results
                 if self.compare_methods.get():
@@ -1133,11 +1178,31 @@ class CarlQuantTestViewer:
         draw.text((plot_width // 2 - 30, plot_height - 10), "Intensity", fill='black')
         draw.text((5, 5), "Depth (px)", fill='black')
         
-        # Add legend for profile colors
-        legend_x = margin_left + 5
-        legend_y = margin_top + 5
+        # Add legend in lower right corner
+        legend_x = plot_width - margin_right - 120
+        legend_y = plot_height - margin_bottom - 40
         draw.text((legend_x, legend_y), "Blue: Full A-Scan", fill='blue')
         draw.text((legend_x, legend_y + 12), "Green: Lesion Profile", fill='green')
+        
+        # Add fit curve labels in top right
+        if cache_key in self.results_cache:
+            _, _, lesion_depth = self.results_cache[cache_key]
+            if lesion_depth and lesion_depth.knee_data and self.current_ascan_x in lesion_depth.knee_data:
+                knee_info = lesion_depth.knee_data[self.current_ascan_x]
+                detection_meta = knee_info.get('detection_metadata', {})
+                method_used = detection_meta.get('method', 'knee_point')
+                fitted_curve = knee_info.get('fitted_curve')
+                
+                label_y = margin_top + 5
+                if fitted_curve is not None:
+                    if method_used == 'knee_point':
+                        draw.text((plot_width - margin_right - 100, label_y), 'Exp2 Fit', fill='magenta')
+                    elif method_used == 'sigmoid_fit':
+                        draw.text((plot_width - margin_right - 100, label_y), 'Sigmoid Fit', fill='purple')
+                    elif method_used == 'combined_mean':
+                        draw.text((plot_width - margin_right - 100, label_y), 'Exp2 Fit', fill='magenta')
+                        if 'sigmoid_fitted_curve' in detection_meta:
+                            draw.text((plot_width - margin_right - 100, label_y + 15), 'Sigmoid Fit', fill='purple')
         
         # Convert to PhotoImage and display
         self.plot_photo = ImageTk.PhotoImage(plot_img)
@@ -1201,6 +1266,30 @@ class CarlQuantTestViewer:
                 if 'detection_metadata' in lesion_depth.knee_data[first_x]:
                     method = lesion_depth.knee_data[first_x]['detection_metadata'].get('method', 'unknown')
                     info += f"Detection method: {method}\n"
+                    
+                    # For combined method, show method comparison info
+                    if method == 'combined_mean':
+                        detection_meta = lesion_depth.knee_data[first_x]['detection_metadata']
+                        if 'knee_depth' in detection_meta and 'sigmoid_depth' in detection_meta:
+                            # Calculate statistics across all A-Scans
+                            differences = []
+                            
+                            for x, knee_info in lesion_depth.knee_data.items():
+                                meta = knee_info.get('detection_metadata', {})
+                                if 'knee_depth' in meta and 'sigmoid_depth' in meta:
+                                    k_depth = meta['knee_depth']
+                                    s_depth = meta['sigmoid_depth']
+                                    diff = abs(k_depth - s_depth)
+                                    differences.append(diff)
+                            
+                            if differences:
+                                avg_diff = np.mean(differences)
+                                min_diff = np.min(differences)
+                                max_diff = np.max(differences)
+                                
+                                info += f"  Method disagreement:\n"
+                                info += f"    Average: {avg_diff:.2f} px\n"
+                                info += f"    Range: {min_diff:.2f} - {max_diff:.2f} px\n"
             if lesion_depth.depth_points:
                 info += f"  Raw depth points: {len(lesion_depth.depth_points)}\n"
             if lesion_depth.smoothed_depth_points:
