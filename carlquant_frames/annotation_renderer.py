@@ -352,15 +352,21 @@ class SurfaceAnnotationRenderer(BaseAnnotationRenderer):
 class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for lesion depth results."""
     
-    def draw(self, lesion_depth):
+    def draw(self, lesion_depth, show_markers=False, marker_step=None):
         """
         Draw lesion depth results.
         
         Uses smoothed depth points if available for cleaner visualization,
         otherwise falls back to raw depth points.
         
+        Note: The lesion depth is calculated for EVERY A-Scan in the lesion region
+        (see carl_quant_core.py line 807). The marker points are added only for
+        visualization purposes to make the curve more visible on the image.
+        
         Args:
             lesion_depth: Lesion depth result object
+            show_markers: If True, draw circular markers along the line (default: True)
+            marker_step: Spacing between markers. If None, uses 20 for smoothed, 10 for raw
         """
         if not lesion_depth:
             return
@@ -378,20 +384,28 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         # Draw smooth line connecting all points
         self.draw_line(points, color='red', width=2, tags="lesion_depth_overlay")
         
-        # Draw small circles at every 20th point for visibility (less frequent for smoothed curves)
-        step = 20 if hasattr(lesion_depth, 'smoothed_depth_points') and lesion_depth.smoothed_depth_points else 10
-        for x, y in points[::step]:
-            canvas_x, canvas_y = self.converter.image_to_canvas(x, y)
-            self.canvas.create_oval(
-                canvas_x - 2, canvas_y - 2,
-                canvas_x + 2, canvas_y + 2,
-                fill='red', outline='darkred',
-                tags="lesion_depth_overlay"
-            )
+        # Draw small circles at intervals for better visibility
+        if show_markers:
+            if marker_step is None:
+                # Default: less frequent markers for smoothed curves (every 20th point)
+                # More frequent for raw points (every 10th point)
+                marker_step = 20 if hasattr(lesion_depth, 'smoothed_depth_points') and lesion_depth.smoothed_depth_points else 10
+            
+            for x, y in points[::marker_step]:
+                canvas_x, canvas_y = self.converter.image_to_canvas(x, y)
+                self.canvas.create_oval(
+                    canvas_x - 2, canvas_y - 2,
+                    canvas_x + 2, canvas_y + 2,
+                    fill='red', outline='darkred',
+                    tags="lesion_depth_overlay"
+                )
 
 
 class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for extraction regions (rotated rectangles with numbers)."""
+    
+    # Custom bright green for better visibility on grayscale images
+    BRIGHT_GREEN = '#00FF66'
     
     def draw(self, region_stats):
         """
@@ -408,7 +422,8 @@ class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
                 continue
             
             # Choose color based on region type
-            color = 'green' if stats.region_type == "sound" else 'red'
+            # Use bright green (#00FF66) for sound regions for better visibility on grayscale
+            color = self.BRIGHT_GREEN if stats.region_type == "sound" else 'red'
             
             # Check if we have rotated corners (4 points) or simple bbox (4 values)
             if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
@@ -444,6 +459,9 @@ class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
 class RegionBoundaryAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for region boundaries (4 vertical lines)."""
     
+    # Custom bright green for better visibility on grayscale images
+    BRIGHT_GREEN = '#00FF66'
+    
     def draw(self, region):
         """
         Draw region boundaries.
@@ -455,12 +473,12 @@ class RegionBoundaryAnnotationRenderer(BaseAnnotationRenderer):
             return
         
         # Define boundaries with color scheme:
-        # Green for specimen boundaries, Yellow for lesion boundaries
+        # Bright green (#00FF66) for specimen boundaries, Yellow for lesion boundaries
         boundaries = [
-            (region.specimen_start, "green", "Specimen Start"),
+            (region.specimen_start, self.BRIGHT_GREEN, "Specimen Start"),
             (region.lesion_start, "yellow", "Lesion Start"),
             (region.lesion_end, "yellow", "Lesion End"),
-            (region.tooth_end, "green", "Tooth End")
+            (region.tooth_end, self.BRIGHT_GREEN, "Tooth End")
         ]
         
         for (point, color, label) in boundaries:
