@@ -9,6 +9,7 @@ from time import sleep
 from threading import Thread
 from carlquant_frames.data_io import DataSaver
 from carlquant_frames.specimen_model import RegionStats, Surface, LesionDepth
+from carlquant_frames.progress_dialog import ProgressDialog
 import random
 import numpy as np
 from PIL import Image
@@ -40,16 +41,20 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
         num_lesion: Number of lesion regions to extract
     
     Returns:
-        Tuple of (slice_idx, region_stats, surface, lesion_depth, error, slice_time)
+        Tuple of (slice_idx, region_stats, surface, lesion_depth, error, slice_time, processing_steps)
     """
     try:
         slice_start = time.time()
+        processing_steps = []
         
         # Detect surface
+        step_start = time.time()
         surface = detect_surface(image_array, air_config, region_config)
+        processing_steps.append(("Surface detection", time.time() - step_start))
         
         # Extract regions
         if region_config:
+            step_start = time.time()
             region_stats = extract_regions(
                 image_array,
                 surface,
@@ -57,6 +62,7 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
                 num_sound_regions=num_sound,
                 num_lesion_regions=num_lesion
             )
+            processing_steps.append(("Region extraction", time.time() - step_start))
         else:
             # No region config - use dummy data
             region_stats = [
@@ -71,6 +77,7 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
         
         # Calculate lesion depth
         if region_config:
+            step_start = time.time()
             lesion_depth = calculate_lesion_depth(
                 surface,
                 region_config,
@@ -78,14 +85,15 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
                 search_depth=200,
                 use_curve_fitting=True
             )
+            processing_steps.append(("Lesion depth calculation", time.time() - step_start))
         else:
             lesion_depth = None
         
         slice_time = time.time() - slice_start
-        return (slice_idx, region_stats, surface, lesion_depth, None, slice_time)
+        return (slice_idx, region_stats, surface, lesion_depth, None, slice_time, processing_steps)
     except Exception as e:
         import traceback
-        return (slice_idx, None, None, None, f"{str(e)}\n{traceback.format_exc()}", 0)
+        return (slice_idx, None, None, None, f"{str(e)}\n{traceback.format_exc()}", 0, [])
 
 
 # =============================================================================
@@ -974,182 +982,297 @@ def calculate_lesion_depth(surface: Surface,
 # =============================================================================
 
 def run_carl_quant(context):
+    """
+    Run CarlQuant analysis with progress dialog and cancellation support.
+    
+    The progress dialog shows:
+    - Overall specimen progress
+    - Current specimen being processed
+    - Slice progress within each specimen
+    - Cancel button for graceful interruption
+    
+    Cancellation behavior:
+    - Waits for current slice(s) to finish processing
+    - Saves results for completed specimens
+    - Does not corrupt Excel/JSON files
+    """
     def worker():
-        for specimen_id, specimen in context.specimen_data.items():
+        # Prepare specimen list
+        specimen_list = list(context.specimen_data.items())
+        specimen_ids = [sid for sid, _ in specimen_list]
+        
+        # Create progress dialog on main thread
+        progress_dialog = None
+        def create_dialog():
+            nonlocal progress_dialog
+            progress_dialog = ProgressDialog(
+                context.root,
+                total_specimens=len(specimen_list),
+                specimen_names=specimen_ids
+            )
+        
+        context.root.after(0, create_dialog)
+        
+        # Wait for dialog to be created
+        while progress_dialog is None:
+            time.sleep(0.01)
+        
+        cancelled = False
+        
+        try:
+            for specimen_idx, (specimen_id, specimen) in enumerate(specimen_list):
+                # Check for cancellation before starting new specimen
+                if progress_dialog.is_cancelled():
+                    cancelled = True
+                    context.status_bar.update("Analysis cancelled by user", level="warning")
+                    break
+                
+                # Update progress dialog
+                progress_dialog.update_specimen(
+                    specimen_idx,
+                    specimen_id,
+                    specimen.slices
+                )
+                
+                # User choice to reanalyze a specimen
+                choice = getattr(specimen, "analysis_choice", "new")
+                if choice == "skip":
+                    context.status_bar.update(f"Skipped specimen {specimen_id} (user choice)", level="info")
+                    progress_dialog.complete_specimen(specimen_idx)
+                    continue
+                elif choice == "overwrite":
+                    specimen.measurement = context.analysis_metadata.get("measurement", 1)
+                elif choice == "new":
+                    specimen.measurement = context.analysis_metadata.get("measurement", 1)
 
-            # user choice to reanalyze a specimen
-            choice = getattr(specimen, "analysis_choice", "new")
-            if choice == "skip":
-                context.status_bar.update(f"Skipped specimen {specimen_id} (user choice)", level="info")
-                continue
-            elif choice == "overwrite":
-                specimen.measurement = context.analysis_metadata.get("measurement", 1)
-            elif choice == "new":
-                specimen.measurement = context.analysis_metadata.get("measurement", 1)
+                specimen.operator = context.analysis_metadata.get("operator", "OP")
 
-            specimen.operator = context.analysis_metadata.get("operator", "OP")
-
-            # Get region configuration
-            num_sound = context.region_config.get("sound", 3)
-            num_lesion = context.region_config.get("lesion", 3)
-            
-            # Prepare slice tasks
-            slice_tasks = []
-            for slice_index in range(specimen.slices):
-                image_path = specimen.images[slice_index]
-                region_config = None
-                air_config = None
-                if specimen.config:
-                    region_config = specimen.config.regions.get(slice_index)
-                    air_config = specimen.config.air.get(slice_index)
-                slice_tasks.append((slice_index, image_path, region_config, air_config))
-            
-            # Auto-detect parallel processing: use parallel if >10 slices
-            use_parallel = len(slice_tasks) > 10
-            num_workers = max(1, multiprocessing.cpu_count() - 1)
-            
-            start_time = time.time()
-            processed_count = 0
-            
-            if use_parallel and num_workers > 1:
-                # PARALLEL PROCESSING WITH PRE-LOADING
-                effective_workers = min(num_workers, len(slice_tasks))
+                # Get region configuration
+                num_sound = context.region_config.get("sound", 3)
+                num_lesion = context.region_config.get("lesion", 3)
                 
-                print(f"[CarlQuant] Using parallel processing: {len(slice_tasks)} slices, {effective_workers} workers")
-                context.status_bar.update(f"Pre-loading {len(slice_tasks)} images for {specimen_id}...", level="info")
+                # Prepare slice tasks
+                slice_tasks = []
+                for slice_index in range(specimen.slices):
+                    image_path = specimen.images[slice_index]
+                    region_config = None
+                    air_config = None
+                    if specimen.config:
+                        region_config = specimen.config.regions.get(slice_index)
+                        air_config = specimen.config.air.get(slice_index)
+                    slice_tasks.append((slice_index, image_path, region_config, air_config))
                 
-                # PRE-LOAD ALL IMAGES INTO MEMORY
-                preload_start = time.time()
-                preloaded_images = {}
-                for slice_idx, image_path, region_config, air_config in slice_tasks:
-                    img = Image.open(image_path).convert('L')
-                    preloaded_images[slice_idx] = np.array(img)
-                preload_time = time.time() - preload_start
+                # Auto-detect parallel processing: use parallel if >10 slices
+                use_parallel = len(slice_tasks) > 10
+                num_workers = max(1, multiprocessing.cpu_count() - 1)
                 
-                print(f"[CarlQuant] Pre-loaded {len(preloaded_images)} images in {preload_time:.2f}s")
-                context.status_bar.update(f"Processing {len(slice_tasks)} slices using {effective_workers} workers...", level="info")
+                start_time = time.time()
+                processed_count = 0
                 
-                # Process in parallel using ProcessPoolExecutor
-                with ProcessPoolExecutor(max_workers=effective_workers) as executor:
-                    # Submit tasks with pre-loaded images
-                    future_to_slice = {}
+                if use_parallel and num_workers > 1:
+                    # PARALLEL PROCESSING WITH PRE-LOADING
+                    effective_workers = min(num_workers, len(slice_tasks))
+                    
+                    progress_dialog.update_status(
+                        f"Pre-loading {len(slice_tasks)} images...",
+                        color="blue"
+                    )
+                    
+                    # PRE-LOAD ALL IMAGES INTO MEMORY
+                    preload_start = time.time()
+                    preloaded_images = {}
                     for slice_idx, image_path, region_config, air_config in slice_tasks:
-                        image_array = preloaded_images[slice_idx]
-                        future = executor.submit(
-                            process_slice_parallel,
-                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion
-                        )
-                        future_to_slice[future] = slice_idx
-                    
-                    slice_times = []
-                    for future in as_completed(future_to_slice):
-                        slice_idx = future_to_slice[future]
-                        try:
-                            result_idx, region_stats, surface, lesion_depth, error, slice_time = future.result()
-                            
-                            if error:
-                                print(f"[CarlQuant] Error processing slice {result_idx}: {error}")
-                                context.status_bar.update(f"Error on slice {result_idx + 1}", level="error")
-                            else:
-                                slice_times.append(slice_time)
-                                # Store results with thread safety
-                                if hasattr(context, "result_lock"):
-                                    with context.result_lock:
-                                        DataSaver.store_slice_result(specimen, result_idx, region_stats, surface, lesion_depth)
-                                else:
-                                    DataSaver.store_slice_result(specimen, result_idx, region_stats, surface, lesion_depth)
-                                
-                                processed_count += 1
-                                
-                                # Update UI periodically (thread-safe status updates)
-                                if processed_count % 5 == 0 or processed_count == len(slice_tasks):
-                                    context.status_bar.update(
-                                        f"Processed {processed_count}/{len(slice_tasks)} slices of {specimen_id}",
-                                        level="success"
-                                    )
-                        except Exception as e:
-                            print(f"[CarlQuant] Exception processing slice {slice_idx}: {e}")
-                            context.status_bar.update(f"Exception on slice {slice_idx + 1}: {e}", level="error")
-                
-                # Calculate timing
-                elapsed_time = time.time() - start_time
-                if slice_times:
-                    avg_slice_time = sum(slice_times) / len(slice_times)
-                    processing_time = elapsed_time - preload_time
-                    print(f"[CarlQuant] Parallel timing: Total={elapsed_time:.2f}s, Processing={processing_time:.2f}s, Avg/slice={avg_slice_time:.2f}s")
-            
-            else:
-                # SEQUENTIAL PROCESSING
-                print(f"[CarlQuant] Using sequential processing: {len(slice_tasks)} slices")
-                context.status_bar.update(f"Processing {len(slice_tasks)} slices sequentially...", level="info")
-                
-                for slice_idx, image_path, region_config, air_config in slice_tasks:
-                    try:
-                        # Load image
+                        # Check for cancellation during pre-loading
+                        if progress_dialog.is_cancelled():
+                            cancelled = True
+                            break
+                        
                         img = Image.open(image_path).convert('L')
-                        image_array = np.array(img)
-                        
-                        # Detect surface
-                        surface = detect_surface(image_array, air_config, region_config)
-                        
-                        # Extract regions
-                        if region_config:
-                            region_stats = extract_regions(
-                                image_array,
-                                surface,
-                                region_config,
-                                num_sound_regions=num_sound,
-                                num_lesion_regions=num_lesion
-                            )
-                        else:
-                            # No region config - use dummy data
-                            region_stats = [
-                                RegionStats("sound", [random.randint(95, 105) for _ in range(100)],
-                                            mean=100.0, median=100.0, sd=2.0, se=1.0)
-                                for _ in range(num_sound)
-                            ] + [
-                                RegionStats("lesion", [random.randint(75, 85) for _ in range(100)],
-                                            mean=80.0, median=80.0, sd=2.0, se=1.0)
-                                for _ in range(num_lesion)
-                            ]
-                        
-                        # Calculate lesion depth
-                        if region_config:
-                            lesion_depth = calculate_lesion_depth(
-                                surface,
-                                region_config,
-                                image_array,
-                                search_depth=200,
-                                use_curve_fitting=True
-                            )
-                        else:
-                            lesion_depth = None
-                        
-                        # Store results
-                        if hasattr(context, "result_lock"):
-                            with context.result_lock:
-                                DataSaver.store_slice_result(specimen, slice_idx, region_stats, surface, lesion_depth)
-                        else:
-                            DataSaver.store_slice_result(specimen, slice_idx, region_stats, surface, lesion_depth)
-                        
-                        processed_count += 1
-                        context.status_bar.update(f"Processed slice {slice_idx + 1}/{len(slice_tasks)} of {specimen_id}", level="success")
+                        preloaded_images[slice_idx] = np.array(img)
                     
-                    except Exception as e:
-                        print(f"[CarlQuant] Error processing slice {slice_idx}: {e}")
-                        context.status_bar.update(f"Error on slice {slice_idx + 1}: {e}", level="error")
+                    if cancelled:
+                        break
+                    
+                    preload_time = time.time() - preload_start
+                    progress_dialog.update_status(
+                        f"Processing with {effective_workers} workers...",
+                        color="blue"
+                    )
+                    
+                    # Process in parallel using ProcessPoolExecutor
+                    with ProcessPoolExecutor(max_workers=effective_workers) as executor:
+                        # Submit tasks with pre-loaded images
+                        future_to_slice = {}
+                        for slice_idx, image_path, region_config, air_config in slice_tasks:
+                            image_array = preloaded_images[slice_idx]
+                            future = executor.submit(
+                                process_slice_parallel,
+                                slice_idx, image_array, region_config, air_config, num_sound, num_lesion
+                            )
+                            future_to_slice[future] = slice_idx
+                        
+                        slice_times = []
+                        for future in as_completed(future_to_slice):
+                            # Check for cancellation (wait for current futures to complete)
+                            if progress_dialog.is_cancelled():
+                                cancelled = True
+                                # Don't break immediately - let submitted tasks finish
+                            
+                            slice_idx = future_to_slice[future]
+                            try:
+                                result_idx, region_stats, surface, lesion_depth, error, slice_time, processing_steps = future.result()
+                                
+                                if error:
+                                    context.status_bar.update(f"Error on slice {result_idx + 1}", level="error")
+                                else:
+                                    slice_times.append(slice_time)
+                                    # Store results with thread safety
+                                    if hasattr(context, "result_lock"):
+                                        with context.result_lock:
+                                            DataSaver.store_slice_result(specimen, result_idx, region_stats, surface, lesion_depth)
+                                    else:
+                                        DataSaver.store_slice_result(specimen, result_idx, region_stats, surface, lesion_depth)
+                                    
+                                    processed_count += 1
+                                    
+                                    # Update progress dialog with detailed status
+                                    progress_dialog.update_slice(processed_count - 1, len(slice_tasks))
+                                    
+                                    # Show what was just completed (last step from processing_steps)
+                                    if processing_steps:
+                                        last_step = processing_steps[-1][0]
+                                        progress_dialog.update_status(
+                                            f"Completed: {last_step} (slice {result_idx + 1})",
+                                            color="blue"
+                                        )
+                                    
+                            except Exception as e:
+                                context.status_bar.update(f"Exception on slice {slice_idx + 1}: {e}", level="error")
+                    
+                    # If cancelled during parallel processing, break specimen loop
+                    if cancelled:
+                        break
                 
-                elapsed_time = time.time() - start_time
-                print(f"[CarlQuant] Sequential timing: Total={elapsed_time:.2f}s")
+                else:
+                    # SEQUENTIAL PROCESSING
+                    progress_dialog.update_status(
+                        f"Processing {len(slice_tasks)} slices sequentially...",
+                        color="blue"
+                    )
+                    
+                    for slice_idx, image_path, region_config, air_config in slice_tasks:
+                        # Check for cancellation before each slice
+                        if progress_dialog.is_cancelled():
+                            cancelled = True
+                            break
+                        
+                        try:
+                            # Load image
+                            progress_dialog.update_status(
+                                f"Loading image for slice {slice_idx + 1}...",
+                                color="blue"
+                            )
+                            img = Image.open(image_path).convert('L')
+                            image_array = np.array(img)
+                            
+                            # Detect surface
+                            progress_dialog.update_status(
+                                f"Detecting surface (slice {slice_idx + 1})...",
+                                color="blue"
+                            )
+                            surface = detect_surface(image_array, air_config, region_config)
+                            
+                            # Extract regions
+                            if region_config:
+                                progress_dialog.update_status(
+                                    f"Extracting regions (slice {slice_idx + 1})...",
+                                    color="blue"
+                                )
+                                region_stats = extract_regions(
+                                    image_array,
+                                    surface,
+                                    region_config,
+                                    num_sound_regions=num_sound,
+                                    num_lesion_regions=num_lesion
+                                )
+                            else:
+                                # No region config - use dummy data
+                                region_stats = [
+                                    RegionStats("sound", [random.randint(95, 105) for _ in range(100)],
+                                                mean=100.0, median=100.0, sd=2.0, se=1.0)
+                                    for _ in range(num_sound)
+                                ] + [
+                                    RegionStats("lesion", [random.randint(75, 85) for _ in range(100)],
+                                                mean=80.0, median=80.0, sd=2.0, se=1.0)
+                                    for _ in range(num_lesion)
+                                ]
+                            
+                            # Calculate lesion depth
+                            if region_config:
+                                progress_dialog.update_status(
+                                    f"Calculating lesion depth (slice {slice_idx + 1})...",
+                                    color="blue"
+                                )
+                                lesion_depth = calculate_lesion_depth(
+                                    surface,
+                                    region_config,
+                                    image_array,
+                                    search_depth=200,
+                                    use_curve_fitting=True
+                                )
+                            else:
+                                lesion_depth = None
+                            
+                            # Store results
+                            progress_dialog.update_status(
+                                f"Storing results (slice {slice_idx + 1})...",
+                                color="blue"
+                            )
+                            if hasattr(context, "result_lock"):
+                                with context.result_lock:
+                                    DataSaver.store_slice_result(specimen, slice_idx, region_stats, surface, lesion_depth)
+                            else:
+                                DataSaver.store_slice_result(specimen, slice_idx, region_stats, surface, lesion_depth)
+                            
+                            processed_count += 1
+                            
+                            # Update progress dialog
+                            progress_dialog.update_slice(slice_idx, len(slice_tasks))
+                            progress_dialog.update_status(
+                                f"Completed slice {slice_idx + 1}",
+                                color="green"
+                            )
+                        
+                        except Exception as e:
+                            context.status_bar.update(f"Error on slice {slice_idx + 1}: {e}", level="error")
+                    
+                    # If cancelled during sequential processing, break specimen loop
+                    if cancelled:
+                        break
 
-            # Save results after all slices are processed
-            try:
-                DataSaver.save_results(specimen)
-                context.status_bar.update(f"Saved results for {specimen_id}", level="info")
-            except Exception as e:
-                context.status_bar.update(f"Error saving results for {specimen_id}: {e}", level="error")
+                # Save results after all slices are processed (or if cancelled mid-specimen)
+                try:
+                    DataSaver.save_results(specimen)
+                    progress_dialog.update_status(
+                        f"Saved results for {specimen_id}",
+                        color="green"
+                    )
+                except Exception as e:
+                    context.status_bar.update(f"Error saving results for {specimen_id}: {e}", level="error")
+                
+                # Mark specimen as complete
+                progress_dialog.complete_specimen(specimen_idx)
 
-        context.status_bar.update("CarlQuant analysis complete.", level="success")
+            # Analysis complete or cancelled
+            if cancelled:
+                context.status_bar.update("Analysis cancelled by user", level="warning")
+            else:
+                context.status_bar.update("CarlQuant analysis complete.", level="success")
+        
+        finally:
+            # Close progress dialog
+            if progress_dialog:
+                progress_dialog.finish(cancelled=cancelled)
 
     Thread(target=worker, daemon=True).start()
 
