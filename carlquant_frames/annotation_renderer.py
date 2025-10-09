@@ -318,35 +318,25 @@ class BaseAnnotationRenderer:
 class SurfaceAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for surface detection results (peaks and fitted curves)."""
     
-    def draw(self, surface, display_options):
+    def draw(self, surface):
         """
         Draw surface detection results.
         
         Args:
             surface: Surface detection result object
-            display_options: Dictionary with display flags
         """
         if not surface:
             return
         
-        show_peaks = display_options.get('show_surface_peaks', True)
-        show_curve = display_options.get('show_fitted_curve', True)
-        show_reference = display_options.get('show_reference_curve', True)
-        
         # Draw reference curve (cyan, thin line) - bottom layer
-        if show_reference and surface.fitted_curves and "reference" in surface.fitted_curves:
+        if surface.fitted_curves and "reference" in surface.fitted_curves:
             for x, y in surface.fitted_curves["reference"]:
                 self.draw_point(x, y, color='cyan', size=1, tags="surface_overlay")
         
         # Draw fitted curve (orange, thin line) - middle layer
-        if show_curve and surface.fitted_curves and "spline" in surface.fitted_curves:
+        if surface.fitted_curves and "spline" in surface.fitted_curves:
             for x, y in surface.fitted_curves["spline"]:
                 self.draw_point(x, y, color='orange', size=1, tags="surface_overlay")
-        
-        # Draw surface peaks (green crosses) - top layer
-        if show_peaks and surface.raw_points:
-            for x, y in surface.raw_points:
-                self.draw_cross(x, y, color='green', size=2, width=2, tags="surface_overlay")
 
 
 class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
