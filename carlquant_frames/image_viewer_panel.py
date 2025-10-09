@@ -21,6 +21,15 @@ from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
 from carlquant_frames.data_io import DataSaver
+from carlquant_frames.annotation_renderer import (
+    CoordinateConverter,
+    SurfaceAnnotationRenderer,
+    LesionDepthAnnotationRenderer,
+    ExtractionRegionAnnotationRenderer,
+    RegionBoundaryAnnotationRenderer,
+    AIRAnnotationRenderer,
+    RegionMarkerAnnotationRenderer
+)
 from base import BaseCanvasPanel
 
 
@@ -371,6 +380,25 @@ class image_viewer_panel(BaseCanvasPanel):
             self.draw_region_boundaries(specimen, current_slice)
 
 
+    def _get_coordinate_converter(self):
+        """
+        Get a CoordinateConverter instance for current view state.
+        
+        Returns:
+            CoordinateConverter instance or None if no image loaded
+        """
+        if not hasattr(self, 'rawImage') or self.rawImage is None:
+            return None
+        
+        return CoordinateConverter(
+            self.rawImage,
+            self.zoom_level,
+            self.image_offset_x,
+            self.image_offset_y,
+            getattr(self, 'fitted_width', self.rawImage.width),
+            getattr(self, 'fitted_height', self.rawImage.height)
+        )
+    
     def canvas_to_image_coords(self, canvas_x, canvas_y):
         """
         Convert canvas coordinates to image coordinates.
@@ -385,26 +413,11 @@ class image_viewer_panel(BaseCanvasPanel):
         Returns:
             tuple: (image_x, image_y) as integers, or (None, None) if out of bounds
         """
-        if not hasattr(self, 'rawImage'):
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return None, None
-
-        # Use fitted size if zoom_level == 1.0
-        if self.zoom_level == 1.0:
-            current_width = getattr(self, 'fitted_width', self.rawImage.width)
-            current_height = getattr(self, 'fitted_height', self.rawImage.height)
-            current_zoom = current_width / self.rawImage.width
-        else:
-            current_zoom = self.zoom_level
-
-        # Convert to image-relative coordinates
-        rel_x = (canvas_x - self.image_offset_x) / current_zoom
-        rel_y = (canvas_y - self.image_offset_y) / current_zoom
-
-        # Check if click is within image bounds
-        if rel_x < 0 or rel_x >= self.rawImage.width or rel_y < 0 or rel_y >= self.rawImage.height:
-            return None, None
-
-        return int(rel_x), int(rel_y)
+        
+        return converter.canvas_to_image(canvas_x, canvas_y)
 
 
     def save_region_configuration(self, specimen, current_slice, 
@@ -669,24 +682,12 @@ class image_viewer_panel(BaseCanvasPanel):
         if not specimen.config or current_slice not in specimen.config.air:
             return
 
-        air_config = specimen.config.air[current_slice]
-        x1, y1 = air_config.point1
-        x2, y2 = air_config.point2
-
-        # Convert image coordinates to canvas coordinates
-        canvas_coords = self.image_to_canvas_coords(x1, y1, x2, y2)
-        if not canvas_coords:
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return
-
-        canvas_x1, canvas_y1, canvas_x2, canvas_y2 = canvas_coords
-
-        # Draw rectangle for AIR region
-        rect = self.canvas.create_rectangle(
-            canvas_x1, canvas_y1, canvas_x2, canvas_y2,
-            outline="cyan", width=2, tags="air_visual"
-        )
-
-        self.air_visual_elements.append(rect)
+        
+        renderer = AIRAnnotationRenderer(self.canvas, converter)
+        renderer.draw(specimen.config.air[current_slice])
 
 
     def clear_air_visuals(self):
@@ -710,35 +711,12 @@ class image_viewer_panel(BaseCanvasPanel):
         """
         self.clear_region_visuals()
         
-        # Use cyan for temporary markers (will become green/yellow after sorting)
-        color = "cyan"
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
         
-        for i, (image_x, image_y) in enumerate(self.region_points):
-            # Convert image coords to canvas coords for single point
-            if not hasattr(self, 'rawImage'):
-                continue
-                
-            if self.zoom_level == 1.0:
-                current_width = getattr(self, 'fitted_width', self.rawImage.width)
-                current_zoom = current_width / self.rawImage.width
-            else:
-                current_zoom = self.zoom_level
-            
-            canvas_x = image_x * current_zoom + self.image_offset_x
-            canvas_y = image_y * current_zoom + self.image_offset_y
-            
-            # Draw circle
-            marker = self.canvas.create_oval(
-                canvas_x - 6, canvas_y - 6, canvas_x + 6, canvas_y + 6,
-                fill=color, outline="white", width=2, tags="region_visual"
-            )
-            # Draw number label (click order)
-            label = self.canvas.create_text(
-                canvas_x, canvas_y,
-                text=str(i + 1), fill="black", font=("Arial", 10, "bold"),
-                tags="region_visual"
-            )
-            self.region_visual_elements.extend([marker, label])
+        renderer = RegionMarkerAnnotationRenderer(self.canvas, converter)
+        renderer.draw(self.region_points)
 
 
     def draw_region_boundaries(self, specimen, current_slice):
@@ -757,41 +735,12 @@ class image_viewer_panel(BaseCanvasPanel):
         if not specimen.config or current_slice not in specimen.config.regions:
             return
 
-        region = specimen.config.regions[current_slice]
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
         
-        # Get all 4 boundary points with color scheme:
-        # Green for specimen boundaries, Yellow for lesion boundaries
-        points = [
-            (region.specimen_start, "green", "Specimen Start"),
-            (region.lesion_start, "yellow", "Lesion Start"),
-            (region.lesion_end, "yellow", "Lesion End"),
-            (region.tooth_end, "green", "Tooth End")
-        ]
-        
-        canvas_height = self.canvas.winfo_height()
-        
-        for (point, color, label) in points:
-            x, y = point
-            
-            # Convert image coordinates to canvas coordinates
-            if not hasattr(self, 'rawImage'):
-                continue
-                
-            if self.zoom_level == 1.0:
-                current_width = getattr(self, 'fitted_width', self.rawImage.width)
-                current_zoom = current_width / self.rawImage.width
-            else:
-                current_zoom = self.zoom_level
-            
-            canvas_x = x * current_zoom + self.image_offset_x
-            
-            # Draw vertical line
-            line = self.canvas.create_line(
-                canvas_x, 0, canvas_x, canvas_height,
-                fill=color, width=2, tags="region_visual"
-            )
-            
-            self.region_visual_elements.append(line)
+        renderer = RegionBoundaryAnnotationRenderer(self.canvas, converter)
+        renderer.draw(specimen.config.regions[current_slice])
 
 
     def image_to_canvas_coords(self, start_x, start_y, end_x, end_y):
@@ -811,23 +760,11 @@ class image_viewer_panel(BaseCanvasPanel):
             tuple: (canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y)
                    or None if no image is loaded
         """
-        if not hasattr(self, 'rawImage'):
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return None
-
-        # Use fitted size if zoom_level == 1.0
-        if self.zoom_level == 1.0:
-            current_width = getattr(self, 'fitted_width', self.rawImage.width)
-            current_height = getattr(self, 'fitted_height', self.rawImage.height)
-            current_zoom = current_width / self.rawImage.width
-        else:
-            current_zoom = self.zoom_level
-
-        canvas_start_x = start_x * current_zoom + self.image_offset_x
-        canvas_start_y = start_y * current_zoom + self.image_offset_y
-        canvas_end_x = end_x * current_zoom + self.image_offset_x
-        canvas_end_y = end_y * current_zoom + self.image_offset_y
-
-        return canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y
+        
+        return converter.image_to_canvas_rect(start_x, start_y, end_x, end_y)
 
 
     def clear_region_visuals(self):
@@ -898,72 +835,20 @@ class image_viewer_panel(BaseCanvasPanel):
         if not surface:
             return
         
-        # Check if we have raw image for coordinate transformation
-        if not hasattr(self, 'rawImage') or self.rawImage is None:
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return
-        
-        # Calculate zoom factor for coordinate transformation
-        if self.zoom_level == 1.0:
-            current_width = getattr(self, 'fitted_width', self.rawImage.width)
-            current_zoom = current_width / self.rawImage.width
-        else:
-            current_zoom = self.zoom_level
         
         # Get display options from context
         display_options = getattr(self.context, 'display_options', {})
-        show_peaks = display_options.get('show_surface_peaks', tk.BooleanVar(value=True)).get()
-        show_curve = display_options.get('show_fitted_curve', tk.BooleanVar(value=True)).get()
-        show_reference = display_options.get('show_reference_curve', tk.BooleanVar(value=True)).get()
+        display_flags = {
+            'show_surface_peaks': display_options.get('show_surface_peaks', tk.BooleanVar(value=True)).get(),
+            'show_fitted_curve': display_options.get('show_fitted_curve', tk.BooleanVar(value=True)).get(),
+            'show_reference_curve': display_options.get('show_reference_curve', tk.BooleanVar(value=True)).get()
+        }
         
-        # Draw reference curve first (cyan, thin line) - bottom layer
-        if show_reference and surface.fitted_curves and "reference" in surface.fitted_curves:
-            for x, y in surface.fitted_curves["reference"]:
-                canvas_x = x * current_zoom + self.image_offset_x
-                canvas_y = y * current_zoom + self.image_offset_y
-                
-                # Draw single pixel point
-                self.canvas.create_oval(
-                    canvas_x - 1, canvas_y - 1,
-                    canvas_x + 1, canvas_y + 1,
-                    fill='cyan', outline='cyan',
-                    tags="surface_overlay"
-                )
-        
-        # Draw fitted curve (orange, thin line) - middle layer
-        if show_curve and surface.fitted_curves and "spline" in surface.fitted_curves:
-            for x, y in surface.fitted_curves["spline"]:
-                canvas_x = x * current_zoom + self.image_offset_x
-                canvas_y = y * current_zoom + self.image_offset_y
-                
-                # Draw single pixel point
-                self.canvas.create_oval(
-                    canvas_x - 1, canvas_y - 1,
-                    canvas_x + 1, canvas_y + 1,
-                    fill='orange', outline='orange',
-                    tags="surface_overlay"
-                )
-        
-        # Draw surface peaks (green crosses) - top layer
-        if show_peaks and surface.raw_points:
-            for x, y in surface.raw_points:
-                # Transform coordinates manually
-                canvas_x = x * current_zoom + self.image_offset_x
-                canvas_y = y * current_zoom + self.image_offset_y
-                
-                # Draw small cross (5x5 pixels)
-                cross_size = 2
-                self.canvas.create_line(
-                    canvas_x - cross_size, canvas_y,
-                    canvas_x + cross_size, canvas_y,
-                    fill='green', width=2,
-                    tags="surface_overlay"
-                )
-                self.canvas.create_line(
-                    canvas_x, canvas_y - cross_size,
-                    canvas_x, canvas_y + cross_size,
-                    fill='green', width=2,
-                    tags="surface_overlay"
-                )
+        renderer = SurfaceAnnotationRenderer(self.canvas, converter)
+        renderer.draw(surface, display_flags)
     
     def draw_extraction_regions(self, specimen, current_slice):
         """
@@ -990,83 +875,12 @@ class image_viewer_panel(BaseCanvasPanel):
         if not region_stats:
             return
         
-        # Check if we have raw image for coordinate transformation
-        if not hasattr(self, 'rawImage') or self.rawImage is None:
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return
         
-        # Calculate zoom factor for coordinate transformation
-        if self.zoom_level == 1.0:
-            current_width = getattr(self, 'fitted_width', self.rawImage.width)
-            current_zoom = current_width / self.rawImage.width
-        else:
-            current_zoom = self.zoom_level
-        
-        # Draw each extraction region
-        for stats in region_stats:
-            if not stats.bounds or len(stats.bounds) == 0:
-                continue
-            
-            # Choose color based on region type
-            if stats.region_type == "sound":
-                color = 'green'  # Green for sound
-            else:
-                color = 'red'    # Red for lesion
-            
-            # Check if we have rotated corners (4 points) or simple bbox (4 values)
-            if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
-                # Rotated rectangle with 4 corner points
-                corners = stats.bounds
-                
-                # Transform corners to canvas coordinates
-                canvas_corners = []
-                for x, y in corners:
-                    canvas_x = x * current_zoom + self.image_offset_x
-                    canvas_y = y * current_zoom + self.image_offset_y
-                    canvas_corners.append((canvas_x, canvas_y))
-                
-                # Draw polygon outline
-                # Create lines between consecutive corners
-                for i in range(4):
-                    x1, y1 = canvas_corners[i]
-                    x2, y2 = canvas_corners[(i + 1) % 4]
-                    self.canvas.create_line(
-                        x1, y1, x2, y2,
-                        fill=color, width=2,
-                        tags="extraction_regions"
-                    )
-                
-                # Calculate center from corners for label
-                center_x = sum(x for x, y in canvas_corners) / 4
-                center_y = sum(y for x, y in canvas_corners) / 4
-                
-            else:
-                # Simple axis-aligned rectangle
-                left_x, top_y, right_x, bottom_y = stats.bounds
-                
-                # Transform to canvas coordinates
-                canvas_x1 = left_x * current_zoom + self.image_offset_x
-                canvas_y1 = top_y * current_zoom + self.image_offset_y
-                canvas_x2 = right_x * current_zoom + self.image_offset_x
-                canvas_y2 = bottom_y * current_zoom + self.image_offset_y
-                
-                # Draw rectangle outline
-                self.canvas.create_rectangle(
-                    canvas_x1, canvas_y1, canvas_x2, canvas_y2,
-                    outline=color, width=2,
-                    tags="extraction_regions"
-                )
-                
-                center_x = (canvas_x1 + canvas_x2) / 2
-                center_y = (canvas_y1 + canvas_y2) / 2
-            
-            # Draw region number in center
-            text = str(stats.region_index)
-            self.canvas.create_text(
-                center_x, center_y,
-                text=text, fill=color,
-                font=("Arial", 12, "bold"),
-                tags="extraction_regions"
-            )
+        renderer = ExtractionRegionAnnotationRenderer(self.canvas, converter)
+        renderer.draw(region_stats)
     
     def draw_lesion_depth(self, specimen, current_slice):
         """
@@ -1093,42 +907,9 @@ class image_viewer_panel(BaseCanvasPanel):
         if not lesion_depth or not lesion_depth.depth_points:
             return
         
-        # Check if we have raw image for coordinate transformation
-        if not hasattr(self, 'rawImage') or self.rawImage is None:
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return
         
-        # Calculate zoom factor for coordinate transformation
-        if self.zoom_level == 1.0:
-            current_width = getattr(self, 'fitted_width', self.rawImage.width)
-            current_zoom = current_width / self.rawImage.width
-        else:
-            current_zoom = self.zoom_level
-        
-        # Draw lesion depth curve (red line)
-        points = lesion_depth.depth_points
-        if len(points) > 1:
-            # Transform all points to canvas coordinates
-            canvas_points = []
-            for x, y in points:
-                canvas_x = x * current_zoom + self.image_offset_x
-                canvas_y = y * current_zoom + self.image_offset_y
-                canvas_points.append((canvas_x, canvas_y))
-            
-            # Draw line connecting all points
-            for i in range(len(canvas_points) - 1):
-                x1, y1 = canvas_points[i]
-                x2, y2 = canvas_points[i + 1]
-                self.canvas.create_line(
-                    x1, y1, x2, y2,
-                    fill='red', width=2,
-                    tags="lesion_depth_overlay"
-                )
-            
-            # Optionally draw small circles at each point for visibility
-            for canvas_x, canvas_y in canvas_points[::10]:  # Every 10th point to avoid clutter
-                self.canvas.create_oval(
-                    canvas_x - 2, canvas_y - 2,
-                    canvas_x + 2, canvas_y + 2,
-                    fill='red', outline='darkred',
-                    tags="lesion_depth_overlay"
-                )
+        renderer = LesionDepthAnnotationRenderer(self.canvas, converter)
+        renderer.draw(lesion_depth)
