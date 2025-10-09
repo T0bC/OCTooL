@@ -15,6 +15,7 @@ from PIL import Image
 from typing import List, Tuple, Dict, Optional
 from sklearn.cluster import DBSCAN
 from scipy.interpolate import splrep, splev
+from scipy.optimize import curve_fit
 
 
 # =============================================================================
@@ -448,6 +449,238 @@ def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Su
 
 
 # =============================================================================
+# LESION DEPTH CALCULATION
+# =============================================================================
+
+def knee_pt(y, x):
+    """
+    Find knee point in a curve using two-line fitting method.
+    Translated from MATLAB knee_pt function by D. Kroon.
+    
+    Args:
+        y: Y-values (e.g., intensity profile)
+        x: X-values (e.g., depth indices)
+    
+    Returns:
+        Tuple of (knee_x_value, knee_index)
+    """
+    # Convert to numpy arrays
+    y = np.asarray(y, dtype=float)
+    x = np.asarray(x, dtype=float)
+    
+    n = len(x)
+    if n < 3:
+        return np.nan, -1
+    
+    # Normalize x and y to [0, 1]
+    x_norm = (x - np.min(x)) / (np.max(x) - np.min(x) + 1e-10)
+    y_norm = (y - np.min(y)) / (np.max(y) - np.min(y) + 1e-10)
+    
+    # Calculate error for each potential knee point
+    error_curve = np.full(n, np.nan)
+    idx_map = {}
+    
+    for idx in range(1, n - 1):
+        # Left segment: fit line from start to current point
+        x_left = x_norm[:idx + 1]
+        y_left = y_norm[:idx + 1]
+        
+        if len(x_left) > 1:
+            # Fit line: y = a*x + b
+            A_left = np.vstack([x_left, np.ones(len(x_left))]).T
+            try:
+                coeffs_left = np.linalg.lstsq(A_left, y_left, rcond=None)[0]
+                y_fit_left = A_left @ coeffs_left
+                delsfwd = y_left - y_fit_left
+            except:
+                delsfwd = np.zeros(len(x_left))
+        else:
+            delsfwd = np.zeros(len(x_left))
+        
+        # Right segment: fit line from current point to end
+        x_right = x_norm[idx:]
+        y_right = y_norm[idx:]
+        
+        if len(x_right) > 1:
+            A_right = np.vstack([x_right, np.ones(len(x_right))]).T
+            try:
+                coeffs_right = np.linalg.lstsq(A_right, y_right, rcond=None)[0]
+                y_fit_right = A_right @ coeffs_right
+                delsbck = y_right - y_fit_right
+            except:
+                delsbck = np.zeros(len(x_right))
+        else:
+            delsbck = np.zeros(len(x_right))
+        
+        # Total error is sum of absolute errors
+        idx_map[idx] = idx
+        error_curve[idx] = np.sum(np.abs(delsfwd)) + np.sum(np.abs(delsbck))
+    
+    # Find minimum error location
+    valid_errors = error_curve[~np.isnan(error_curve)]
+    if len(valid_errors) == 0:
+        return np.nan, -1
+    
+    loc = np.nanargmin(error_curve)
+    res_x = x[loc]
+    idx_of_result = loc
+    
+    return res_x, idx_of_result
+
+
+def exp2_model(z, a, b, c, d):
+    """
+    Double exponential decay model for OCT intensity.
+    I(z) = a*exp(b*z) + c*exp(d*z)
+    """
+    return a * np.exp(b * z) + c * np.exp(d * z)
+
+
+def fit_exp2_to_profile(intensity_profile: np.ndarray, depth_indices: np.ndarray) -> Optional[Tuple[np.ndarray, Dict]]:
+    """
+    Fit double exponential model to intensity profile.
+    
+    Returns:
+        Tuple of (fitted_curve, params_dict) or None if fitting fails
+    """
+    try:
+        # Initial guess for parameters
+        max_intensity = np.max(intensity_profile)
+        p0 = [max_intensity * 0.7, -0.05, max_intensity * 0.3, -0.01]
+        
+        # Fit the model
+        popt, pcov = curve_fit(
+            exp2_model, 
+            depth_indices, 
+            intensity_profile,
+            p0=p0,
+            maxfev=5000,
+            bounds=(
+                [0, -1, 0, -1],  # Lower bounds
+                [255, 0, 255, 0]  # Upper bounds
+            )
+        )
+        
+        # Generate fitted curve
+        fitted_curve = exp2_model(depth_indices, *popt)
+        
+        params = {
+            'a': popt[0],
+            'b': popt[1],
+            'c': popt[2],
+            'd': popt[3],
+            'success': True
+        }
+        
+        return fitted_curve, params
+        
+    except Exception:
+        return None
+
+
+def calculate_lesion_depth(surface: Surface, 
+                          region_config,
+                          image: np.ndarray,
+                          search_depth: int = 200,
+                          use_curve_fitting: bool = True) -> Optional[LesionDepth]:
+    """
+    Calculate lesion depth by detecting the knee point in intensity profiles.
+    
+    Args:
+        surface: Detected surface with fitted curve
+        region_config: Region configuration with lesion boundaries
+        image: 2D numpy array (grayscale image)
+        search_depth: Maximum depth to search below surface (default 200 pixels)
+        use_curve_fitting: If True, fit exp2 model before knee detection (default True)
+    
+    Returns:
+        LesionDepth object with depth measurements, or None if no valid surface
+    """
+    # Extract lesion boundaries from region config
+    start_x, _ = region_config.lesion_start
+    end_x, _ = region_config.lesion_end
+    
+    # Validate surface exists
+    if not surface.fitted_curves or "spline" not in surface.fitted_curves:
+        return None
+    
+    # Convert surface to dictionary for lookup
+    surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    
+    height, width = image.shape
+    depth_points = []
+    knee_data = {}  # Store knee point data for visualization
+    
+    # Process every column in lesion region
+    for x in range(start_x, end_x):
+        if x not in surface_dict:
+            continue
+        
+        surface_y = surface_dict[x]
+        
+        # Extract intensity profile from surface downward
+        start_y = int(surface_y)
+        end_y = min(height, start_y + search_depth)
+        
+        if end_y - start_y < 10:  # Need minimum points for knee detection
+            continue
+        
+        # Get intensity values
+        intensity_profile = image[start_y:end_y, x].astype(float)
+        depth_indices = np.arange(len(intensity_profile))
+        
+        # Optionally fit exp2 model to smooth the profile
+        fitted_curve = None
+        fit_params = None
+        profile_for_knee = intensity_profile  # Default: use raw profile
+        
+        if use_curve_fitting:
+            fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+            if fit_result is not None:
+                fitted_curve, fit_params = fit_result
+                profile_for_knee = fitted_curve  # Use fitted curve for knee detection
+        
+        # Find knee point in the intensity profile (raw or fitted)
+        knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
+        
+        if not np.isnan(knee_depth) and knee_idx >= 0:
+            # Convert relative depth to absolute y-coordinate
+            lesion_bottom_y = start_y + knee_depth
+            depth_value = knee_depth  # Depth from surface
+            
+            depth_points.append((x, lesion_bottom_y, depth_value))
+            
+            # Store data for visualization (for A-Scan viewer)
+            knee_data[x] = {
+                'intensity': intensity_profile.tolist(),
+                'depth_idx': depth_indices.tolist(),
+                'knee_idx': knee_idx,
+                'surface_y': start_y,
+                'knee_depth': knee_depth,
+                'fitted_curve': fitted_curve.tolist() if fitted_curve is not None else None,
+                'fit_params': fit_params
+            }
+    
+    if len(depth_points) == 0:
+        # No valid depth points found
+        return None
+    
+    # Extract depth values for statistics
+    depths = [d for _, _, d in depth_points]
+    # Convert to (x, y) format for compatibility
+    depth_points = [(x, y) for x, y, _ in depth_points]
+    
+    return LesionDepth(
+        depth_points=depth_points,
+        mean_depth=np.mean(depths),
+        median_depth=np.median(depths),
+        sd=np.std(depths),
+        se=np.std(depths) / np.sqrt(len(depths)),
+        knee_data=knee_data if len(knee_data) > 0 else None
+    )
+
+
+# =============================================================================
 # MAIN ANALYSIS FUNCTION
 # =============================================================================
 
@@ -509,15 +742,17 @@ def run_carl_quant(context):
                         for _ in range(num_lesion)
                     ]
 
-                # TODO: Implement lesion depth calculation
-                # For now, use dummy data
-                lesion_depth = LesionDepth(
-                    depth_points=[(x, 20 + x % 2) for x in range(100)],
-                    mean_depth=20.5,
-                    median_depth=20.0,
-                    sd=1.0,
-                    se=0.5
-                )
+                # Calculate lesion depth using real algorithm
+                if region_config:
+                    lesion_depth = calculate_lesion_depth(
+                        surface,
+                        region_config,
+                        image_array,
+                        search_depth=200,
+                        use_curve_fitting=True
+                    )
+                else:
+                    lesion_depth = None
 
                 if hasattr(context, "result_lock"):
                     with context.result_lock:
