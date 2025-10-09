@@ -29,6 +29,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from carlquant_frames.specimen_model import (
     RegionStats, Surface, LesionDepth, RegionConfig, AirConfig
 )
+from carlquant_frames.carl_quant_core import (
+    DepthDetectionMethod,
+    detect_depth_sigmoid_fit,
+    fit_exp2_to_profile
+)
 
 
 # =============================================================================
@@ -826,6 +831,7 @@ def calculate_lesion_depth(surface: Surface,
                           region_config: RegionConfig,
                           image: np.ndarray,
                           search_depth: int = 200,
+                          detection_method: str = "knee_point",
                           use_curve_fitting: bool = True,
                           smooth_depth_points: bool = True,
                           smoothing: float = 5.0,
@@ -890,24 +896,41 @@ def calculate_lesion_depth(surface: Surface,
         intensity_profile = image[start_y:end_y, x].astype(float)
         depth_indices = np.arange(len(intensity_profile))
         
-        # Optionally fit exp2 model to smooth the profile
+        # Apply detection method
+        depth_value = np.nan
+        depth_idx = -1
+        detection_metadata = {}
         fitted_curve = None
         fit_params = None
-        profile_for_knee = intensity_profile  # Default: use raw profile
         
-        if use_curve_fitting:
-            fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-            if fit_result is not None:
-                fitted_curve, fit_params = fit_result
-                profile_for_knee = fitted_curve  # Use fitted curve for knee detection
+        if detection_method == "knee_point":
+            # Original method: optionally fit exp2, then find knee point
+            profile_for_knee = intensity_profile
+            
+            if use_curve_fitting:
+                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                if fit_result is not None:
+                    fitted_curve, fit_params = fit_result
+                    profile_for_knee = fitted_curve
+            
+            depth_value, depth_idx = knee_pt(profile_for_knee, depth_indices)
+            detection_metadata = {
+                'method': 'knee_point',
+                'used_fitting': use_curve_fitting and fitted_curve is not None,
+                'fit_params': fit_params
+            }
+            
+        elif detection_method == "sigmoid_fit":
+            depth_value, depth_idx, detection_metadata = detect_depth_sigmoid_fit(
+                intensity_profile, depth_indices
+            )
+            if 'fitted_curve' in detection_metadata:
+                fitted_curve = np.array(detection_metadata['fitted_curve'])
         
-        # Find knee point in the intensity profile (raw or fitted)
-        knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
-        
-        if not np.isnan(knee_depth) and knee_idx >= 0:
+        # Store result if valid
+        if not np.isnan(depth_value) and depth_idx >= 0:
             # Convert relative depth to absolute y-coordinate
-            lesion_bottom_y = start_y + knee_depth
-            depth_value = knee_depth  # Depth from surface
+            lesion_bottom_y = start_y + depth_value
             
             depth_points.append((x, lesion_bottom_y, depth_value))
             
@@ -915,11 +938,12 @@ def calculate_lesion_depth(surface: Surface,
             knee_data[x] = {
                 'intensity': intensity_profile.tolist(),
                 'depth_idx': depth_indices.tolist(),
-                'knee_idx': knee_idx,
+                'knee_idx': depth_idx,  # Name kept for compatibility
                 'surface_y': start_y,
-                'knee_depth': knee_depth,
+                'knee_depth': depth_value,  # Name kept for compatibility
                 'fitted_curve': fitted_curve.tolist() if fitted_curve is not None else None,
-                'fit_params': fit_params
+                'fit_params': fit_params,
+                'detection_metadata': detection_metadata
             }
     
     if len(depth_points) == 0:
@@ -992,7 +1016,8 @@ def process_slice(image_path: Path,
                  region_config: RegionConfig,
                  air_config: Optional[AirConfig] = None,
                  num_sound_regions: int = 3,
-                 num_lesion_regions: int = 3) -> Tuple[List[RegionStats], Surface, LesionDepth]:
+                 num_lesion_regions: int = 3,
+                 detection_method: str = "knee_point") -> Tuple[List[RegionStats], Surface, LesionDepth]:
     """
     Process a single OCT slice through the complete pipeline.
     
@@ -1026,7 +1051,7 @@ def process_slice(image_path: Path,
     )
     
     # Step 3: Calculate lesion depth
-    lesion_depth = calculate_lesion_depth(surface, region_config, image_array)
+    lesion_depth = calculate_lesion_depth(surface, region_config, image_array, detection_method=detection_method)
     
     return region_stats, surface, lesion_depth
 

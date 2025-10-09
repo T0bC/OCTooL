@@ -30,10 +30,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from test_carlquant_config import load_test_specimens, load_single_specimen, TestConfig
 import test_carlquant_algorithm
 from carlquant_frames.specimen_model import Specimen
+from carlquant_frames.carl_quant_core import DepthDetectionMethod
 
 
 # Module-level function for ProcessPoolExecutor (must be picklable)
-def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion):
+def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method="knee_point"):
     """
     Process a single slice with pre-loaded image.
     This function must be at module level to be picklable by ProcessPoolExecutor.
@@ -47,7 +48,7 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
             image_array, surface, region_config, num_sound, num_lesion
         )
         lesion_depth = test_carlquant_algorithm.calculate_lesion_depth(
-            surface, region_config, image_array
+            surface, region_config, image_array, detection_method=detection_method
         )
         
         slice_time = time.time() - slice_start
@@ -81,6 +82,10 @@ class CarlQuantTestViewer:
         self.show_lesion_depth = tk.BooleanVar(value=True)
         self.show_raw_depth = tk.BooleanVar(value=False)  # Show raw knee points
         self.show_ascan = tk.BooleanVar(value=True)
+        
+        # Detection method selection
+        self.detection_method_var = tk.StringVar(value="knee_point")
+        self.compare_methods = tk.BooleanVar(value=False)  # Compare all methods
         
         # Results cache
         self.results_cache = {}  # (specimen_id, slice_idx) -> (region_stats, surface, lesion_depth)
@@ -155,6 +160,24 @@ class CarlQuantTestViewer:
         regions_spin.pack(fill=tk.X, pady=(0, 5))
         
         ttk.Label(algo_frame, text="(Sound: half, Lesion: all)", font=("Arial", 8)).pack(anchor=tk.W, pady=(0, 5))
+        
+        # Lesion depth detection method
+        ttk.Label(algo_frame, text="Depth Detection Method:", font=("Arial", 9, "bold")).pack(anchor=tk.W, pady=(5, 2))
+        
+        methods_frame = ttk.Frame(algo_frame)
+        methods_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        method_options = [
+            ("Knee Point (exp2)", "knee_point"),
+            ("Sigmoid Fit", "sigmoid_fit")
+        ]
+        
+        for label, value in method_options:
+            ttk.Radiobutton(methods_frame, text=label, 
+                          variable=self.detection_method_var, value=value).pack(anchor=tk.W, padx=(10, 0))
+        
+        ttk.Checkbutton(algo_frame, text="Compare All Methods (A-Scan plot)", 
+                       variable=self.compare_methods).pack(anchor=tk.W, pady=(5, 0))
         
         # Parallel processing mode
         parallel_frame = ttk.Frame(algo_frame)
@@ -577,6 +600,12 @@ class CarlQuantTestViewer:
                             if 0 <= y < display_image.shape[0]:
                                 display_image[y, x] = [0, 255, 0]  # Green for smoothed
         
+        # Draw method comparison on image if enabled
+        if self.compare_methods.get() and cache_key in self.results_cache:
+            _, surface, lesion_depth = self.results_cache[cache_key]
+            if lesion_depth and lesion_depth.knee_data and surface.fitted_curves and "spline" in surface.fitted_curves:
+                self.draw_method_comparison_on_image(display_image, lesion_depth, surface)
+        
         # Convert to PIL and display
         pil_image = Image.fromarray(display_image.astype(np.uint8))
         
@@ -620,6 +649,7 @@ class CarlQuantTestViewer:
             num_lesion = num_regions
             parallel_mode = self.parallel_mode_var.get()
             num_workers = self.num_workers_var.get()
+            detection_method = self.detection_method_var.get()
             
             # Prepare slice tasks (only for slices with configuration)
             slice_tasks = []
@@ -676,7 +706,7 @@ class CarlQuantTestViewer:
                         image_array = preloaded_images[slice_idx]
                         future = executor.submit(
                             process_slice_parallel,
-                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion
+                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method
                         )
                         future_to_slice[future] = slice_idx
                     
@@ -731,7 +761,7 @@ class CarlQuantTestViewer:
                     try:
                         slice_start = time.time()
                         region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
-                            image_path, region_config, air_config, num_sound, num_lesion
+                            image_path, region_config, air_config, num_sound, num_lesion, detection_method
                         )
                         slice_time = time.time() - slice_start
                         slice_times.append(slice_time)
@@ -780,6 +810,121 @@ class CarlQuantTestViewer:
             self.status_label.config(text="Error")
             import traceback
             traceback.print_exc()
+    
+    def draw_method_comparison_on_image(self, display_image, lesion_depth, surface):
+        """Draw all detection methods' results on the main image."""
+        from carlquant_frames.carl_quant_core import (
+            detect_depth_sigmoid_fit,
+            knee_pt,
+            fit_exp2_to_profile
+        )
+        
+        # Get surface dictionary
+        surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+        
+        # Method colors (RGB)
+        method_colors = {
+            "knee_point": [255, 0, 0],      # Red
+            "sigmoid_fit": [128, 0, 128]    # Purple
+        }
+        
+        # Sample every N columns to avoid clutter
+        sample_interval = max(1, len(lesion_depth.knee_data) // 50)  # Max 50 samples
+        
+        for idx, (x, knee_info) in enumerate(lesion_depth.knee_data.items()):
+            if idx % sample_interval != 0:
+                continue
+                
+            if x not in surface_dict:
+                continue
+            
+            intensity_profile = np.array(knee_info['intensity'])
+            depth_idx = np.array(knee_info['depth_idx'])
+            surface_y = knee_info['surface_y']
+            
+            # Run all methods
+            methods = ["knee_point", "sigmoid_fit"]
+            
+            for method_name in methods:
+                try:
+                    if method_name == "knee_point":
+                        fit_result = fit_exp2_to_profile(intensity_profile, depth_idx)
+                        if fit_result is not None:
+                            fitted_curve, _ = fit_result
+                            depth_value, depth_index = knee_pt(fitted_curve, depth_idx)
+                        else:
+                            depth_value, depth_index = knee_pt(intensity_profile, depth_idx)
+                    elif method_name == "sigmoid_fit":
+                        depth_value, depth_index, _ = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
+                    
+                    if not np.isnan(depth_value) and depth_index >= 0:
+                        abs_y = int(surface_y + depth_value)
+                        if 0 <= abs_y < display_image.shape[0] and 0 <= x < display_image.shape[1]:
+                            # Draw small marker (2x2 pixel)
+                            color = method_colors[method_name]
+                            for dx in range(-1, 2):
+                                for dy in range(-1, 2):
+                                    nx, ny = x + dx, abs_y + dy
+                                    if 0 <= nx < display_image.shape[1] and 0 <= ny < display_image.shape[0]:
+                                        display_image[ny, nx] = color
+                except Exception:
+                    pass  # Skip failed methods silently
+    
+    def draw_method_comparison(self, draw, intensity_profile, depth_idx, surface_y, 
+                              image_height, margin_left, margin_top, 
+                              plot_area_width, plot_area_height):
+        """Draw comparison of all detection methods on the A-Scan plot."""
+        from carlquant_frames.carl_quant_core import (
+            detect_depth_sigmoid_fit,
+            knee_pt,
+            fit_exp2_to_profile
+        )
+        
+        # Define methods and their colors
+        methods = [
+            ("knee_point", "red", "Knee"),
+            ("sigmoid_fit", "purple", "Sigmoid")
+        ]
+        
+        results = {}
+        
+        for method_name, color, label in methods:
+            try:
+                if method_name == "knee_point":
+                    # Use exp2 fit + knee point
+                    fit_result = fit_exp2_to_profile(intensity_profile, depth_idx)
+                    if fit_result is not None:
+                        fitted_curve, _ = fit_result
+                        depth_value, depth_index = knee_pt(fitted_curve, depth_idx)
+                    else:
+                        depth_value, depth_index = knee_pt(intensity_profile, depth_idx)
+                elif method_name == "sigmoid_fit":
+                    depth_value, depth_index, _ = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
+                
+                if not np.isnan(depth_value) and depth_index >= 0 and depth_index < len(intensity_profile):
+                    results[method_name] = (depth_value, depth_index, color, label)
+            except Exception as e:
+                print(f"Method {method_name} failed: {e}")
+        
+        # Draw markers for each method
+        marker_offset = 0
+        for method_name, (depth_value, depth_index, color, label) in results.items():
+            intensity = intensity_profile[depth_index]
+            abs_y = surface_y + depth_value
+            
+            if abs_y < image_height:
+                plot_x = margin_left + int((intensity / 255.0) * plot_area_width)
+                plot_y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
+                
+                # Draw marker (small square)
+                size = 4
+                draw.rectangle([(plot_x - size, plot_y - size), (plot_x + size, plot_y + size)], 
+                             fill=color, outline='black', width=1)
+                
+                # Draw label to the right with offset
+                draw.text((plot_x + 15, plot_y - 8 + marker_offset), 
+                         f"{label}:{int(abs_y)}", fill=color)
+                marker_offset += 12  # Stack labels vertically
     
     def update_ascan_plot(self):
         """Update the A-Scan intensity profile plot."""
@@ -884,7 +1029,14 @@ class CarlQuantTestViewer:
                 if len(profile_points) > 1:
                     draw.line(profile_points, fill='green', width=2)
                 
-                # Draw the FITTED exp2 curve (in magenta/thick) if available
+                # Determine which fitted curve to show based on detection method
+                detection_metadata = knee_info.get('detection_metadata', {})
+                method_used = detection_metadata.get('method', 'knee_point')
+                
+                # Draw the FITTED curve (method-specific) if available
+                fit_label = None
+                fit_color = 'magenta'
+                
                 if fitted_curve is not None:
                     fitted_curve = np.array(fitted_curve)
                     fitted_points = []
@@ -896,7 +1048,20 @@ class CarlQuantTestViewer:
                             fitted_points.append((x, y))
                     
                     if len(fitted_points) > 1:
-                        draw.line(fitted_points, fill='magenta', width=3)
+                        # Set color and label based on method
+                        if method_used == 'knee_point':
+                            fit_color = 'magenta'
+                            fit_label = 'Exp2 Fit'
+                        elif method_used == 'sigmoid_fit':
+                            fit_color = 'purple'
+                            fit_label = 'Sigmoid Fit'
+                        
+                        draw.line(fitted_points, fill=fit_color, width=3)
+                        
+                        # Add fit label in top-right corner
+                        if fit_label:
+                            draw.text((plot_width - margin_right - 100, margin_top + 5), 
+                                    fit_label, fill=fit_color)
                 
                 # Draw knee point marker (large red circle)
                 if knee_idx >= 0 and knee_idx < len(intensity_profile):
@@ -914,7 +1079,18 @@ class CarlQuantTestViewer:
                                    fill='red', outline='darkred', width=3)
                         
                         # Add label (without font specification - use default)
-                        draw.text((plot_x + 10, plot_y - 10), f"Knee\ny={int(knee_abs_y)}", fill='red')
+                        method_labels = {
+                            'knee_point': 'Knee',
+                            'sigmoid_fit': 'Sigmoid'
+                        }
+                        label_text = method_labels.get(method_used, 'Depth')
+                        draw.text((plot_x + 10, plot_y - 10), f"{label_text}\ny={int(knee_abs_y)}", fill='red')
+                
+                # If comparison mode is enabled, run all methods and show results
+                if self.compare_methods.get():
+                    self.draw_method_comparison(draw, intensity_profile, depth_idx, surface_y, 
+                                               image_height, margin_left, margin_top, 
+                                               plot_area_width, plot_area_height)
             
             # Draw fitted spline point (orange) if enabled
             if self.show_fitted_curve.get() and surface and surface.fitted_curves and "spline" in surface.fitted_curves:
@@ -956,6 +1132,12 @@ class CarlQuantTestViewer:
         # Axis labels
         draw.text((plot_width // 2 - 30, plot_height - 10), "Intensity", fill='black')
         draw.text((5, 5), "Depth (px)", fill='black')
+        
+        # Add legend for profile colors
+        legend_x = margin_left + 5
+        legend_y = margin_top + 5
+        draw.text((legend_x, legend_y), "Blue: Full A-Scan", fill='blue')
+        draw.text((legend_x, legend_y + 12), "Green: Lesion Profile", fill='green')
         
         # Convert to PhotoImage and display
         self.plot_photo = ImageTk.PhotoImage(plot_img)
@@ -1012,6 +1194,13 @@ class CarlQuantTestViewer:
             
             # Lesion depth
             info += f"\nLesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n"
+            
+            # Detection method used (if available in knee_data)
+            if lesion_depth and lesion_depth.knee_data:
+                first_x = next(iter(lesion_depth.knee_data))
+                if 'detection_metadata' in lesion_depth.knee_data[first_x]:
+                    method = lesion_depth.knee_data[first_x]['detection_metadata'].get('method', 'unknown')
+                    info += f"Detection method: {method}\n"
             if lesion_depth.depth_points:
                 info += f"  Raw depth points: {len(lesion_depth.depth_points)}\n"
             if lesion_depth.smoothed_depth_points:
