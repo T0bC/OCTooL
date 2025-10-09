@@ -850,16 +850,8 @@ class image_viewer_panel(BaseCanvasPanel):
         if converter is None:
             return
         
-        # Get display options from context
-        display_options = getattr(self.context, 'display_options', {})
-        display_flags = {
-            'show_surface_peaks': display_options.get('show_surface_peaks', tk.BooleanVar(value=True)).get(),
-            'show_fitted_curve': display_options.get('show_fitted_curve', tk.BooleanVar(value=True)).get(),
-            'show_reference_curve': display_options.get('show_reference_curve', tk.BooleanVar(value=True)).get()
-        }
-        
         renderer = SurfaceAnnotationRenderer(self.canvas, converter)
-        renderer.draw(surface, display_flags)
+        renderer.draw(surface)
     
     def draw_extraction_regions(self, specimen, current_slice):
         """
@@ -869,13 +861,6 @@ class image_viewer_panel(BaseCanvasPanel):
             specimen: Specimen object containing results
             current_slice: 0-based slice index
         """
-        # Check if we should show extraction regions
-        display_options = getattr(self.context, 'display_options', {})
-        show_regions = display_options.get('show_extraction_regions', tk.BooleanVar(value=True)).get()
-        
-        if not show_regions:
-            return
-        
         # Check if results exist for this slice
         if not hasattr(specimen, 'results') or current_slice not in specimen.results:
             return
@@ -901,13 +886,6 @@ class image_viewer_panel(BaseCanvasPanel):
             specimen: Specimen object containing results
             current_slice: 0-based slice index
         """
-        # Check if we should show lesion depth
-        display_options = getattr(self.context, 'display_options', {})
-        show_lesion_depth = display_options.get('show_lesion_depth', tk.BooleanVar(value=True)).get()
-        
-        if not show_lesion_depth:
-            return
-        
         # Check if results exist for this slice
         if not hasattr(specimen, 'results') or current_slice not in specimen.results:
             return
