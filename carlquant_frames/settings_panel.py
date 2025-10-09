@@ -27,14 +27,6 @@ class settingsPanel:
         self.regionDropdown = ttk.Combobox(self.frame, textvariable=self.regionVar, state="readonly")
         self.regionDropdown['values'] = list(range(2, 12, 2))  # 2, 4, 6, 8, 10 (even numbers for equal split)
         self.regionDropdown.grid(row=1, column=0, sticky="ew", pady=2)
-        
-        # Add helper text
-        self.regionHelpLabel = ttk.Label(
-            self.frame, 
-            text="(Sound regions split left/right)", 
-            font=("Arial", 8)
-        )
-        self.regionHelpLabel.grid(row=2, column=0, sticky="w", pady=(0, 5))
 
         # Register in context
         self.context.region_config = {
@@ -50,9 +42,8 @@ class settingsPanel:
 
         self.regionDropdown.bind("<<ComboboxSelected>>", update_region_config)
 
-
         self.metaLabel = ttk.Label(self.frame, text="Operator and Measurement:")
-        self.metaLabel.grid(row=2, column=0, columnspan=2 , sticky="w", pady=(10, 2))
+        self.metaLabel.grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 2))
 
         # Operator Entry
         self.metaFrame = ttk.Frame(self.frame)
