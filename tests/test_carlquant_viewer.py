@@ -79,6 +79,7 @@ class CarlQuantTestViewer:
         self.show_regions = tk.BooleanVar(value=True)
         self.show_air = tk.BooleanVar(value=True)
         self.show_lesion_depth = tk.BooleanVar(value=True)
+        self.show_raw_depth = tk.BooleanVar(value=False)  # Show raw knee points
         self.show_ascan = tk.BooleanVar(value=True)
         
         # Results cache
@@ -193,7 +194,9 @@ class CarlQuantTestViewer:
                        command=self.update_display).pack(anchor=tk.W)
         ttk.Checkbutton(display_frame, text="Show AIR", variable=self.show_air,
                        command=self.update_display).pack(anchor=tk.W)
-        ttk.Checkbutton(display_frame, text="Show Lesion Depth", variable=self.show_lesion_depth,
+        ttk.Checkbutton(display_frame, text="Show Lesion Depth (Smoothed)", variable=self.show_lesion_depth,
+                       command=self.update_display).pack(anchor=tk.W)
+        ttk.Checkbutton(display_frame, text="Show Raw Depth Points", variable=self.show_raw_depth,
                        command=self.update_display).pack(anchor=tk.W)
         ttk.Checkbutton(display_frame, text="Show A-Scan", variable=self.show_ascan,
                        command=self.update_display).pack(anchor=tk.W)
@@ -542,17 +545,37 @@ class CarlQuantTestViewer:
             # Convert back to numpy array
             display_image = np.array(pil_image)
         
-        # Draw lesion depth
-        if self.show_lesion_depth.get() and cache_key in self.results_cache:
+        # Draw lesion depth (raw knee points - small markers)
+        if self.show_raw_depth.get() and cache_key in self.results_cache:
             _, _, lesion_depth = self.results_cache[cache_key]
-            if lesion_depth:
+            if lesion_depth and lesion_depth.depth_points:
                 for x, depth in lesion_depth.depth_points:
                     if 0 <= x < display_image.shape[1]:
-                        # Draw depth marker
+                        # Draw small cross marker for raw points
+                        y = int(depth)
+                        if 0 <= y < display_image.shape[0]:
+                            # Draw cross pattern
+                            for dx in range(-1, 2):
+                                nx = x + dx
+                                if 0 <= nx < display_image.shape[1]:
+                                    display_image[y, nx] = [255, 255, 0]  # Yellow for raw
+                            for dy in range(-1, 2):
+                                ny = y + dy
+                                if 0 <= ny < display_image.shape[0]:
+                                    display_image[ny, x] = [255, 255, 0]  # Yellow for raw
+        
+        # Draw smoothed lesion depth (spline-fitted curve - thicker line)
+        if self.show_lesion_depth.get() and cache_key in self.results_cache:
+            _, _, lesion_depth = self.results_cache[cache_key]
+            if lesion_depth and lesion_depth.smoothed_depth_points:
+                # Draw smoothed curve with thickness
+                for x, depth in lesion_depth.smoothed_depth_points:
+                    if 0 <= x < display_image.shape[1]:
+                        # Draw thicker line (3 pixels vertical thickness)
                         for dy in range(-1, 2):
                             y = int(depth) + dy
                             if 0 <= y < display_image.shape[0]:
-                                display_image[y, x] = [0, 255, 0]  # Green
+                                display_image[y, x] = [0, 255, 0]  # Green for smoothed
         
         # Convert to PIL and display
         pil_image = Image.fromarray(display_image.astype(np.uint8))
@@ -988,7 +1011,12 @@ class CarlQuantTestViewer:
                         info += f"  Cluster {cluster_id}: {count} peaks\n"
             
             # Lesion depth
-            info += f"\nLesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n\n"
+            info += f"\nLesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n"
+            if lesion_depth.depth_points:
+                info += f"  Raw depth points: {len(lesion_depth.depth_points)}\n"
+            if lesion_depth.smoothed_depth_points:
+                info += f"  Smoothed depth points: {len(lesion_depth.smoothed_depth_points)}\n"
+            info += "\n"
             
             # Region statistics
             info += "Region Statistics:\n"
