@@ -27,7 +27,7 @@ from enum import Enum
 # PARALLEL PROCESSING SUPPORT
 # =============================================================================
 
-def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion):
+def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method_str='combined_mean'):
     """
     Process a single slice with pre-loaded image.
     This function must be at module level to be picklable by ProcessPoolExecutor.
@@ -39,6 +39,7 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
         air_config: AIR configuration for this slice
         num_sound: Number of sound regions to extract
         num_lesion: Number of lesion regions to extract
+        detection_method_str: Detection method string (default 'combined_mean')
     
     Returns:
         Tuple of (slice_idx, region_stats, surface, lesion_depth, error, slice_time, processing_steps)
@@ -78,12 +79,16 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
         # Calculate lesion depth
         if region_config:
             step_start = time.time()
+            detection_method = DepthDetectionMethod(detection_method_str)
             lesion_depth = calculate_lesion_depth(
                 surface,
                 region_config,
                 image_array,
                 search_depth=200,
-                use_curve_fitting=True
+                use_curve_fitting=True,
+                detection_method=detection_method,
+                stability_threshold=20.0,
+                preserve_wobbliness=True
             )
             processing_steps.append(("Lesion depth calculation", time.time() - step_start))
         else:
@@ -776,6 +781,186 @@ def detect_depth_sigmoid_fit(intensity_profile: np.ndarray, depth_indices: np.nd
         return np.nan, -1, {'success': False, 'reason': str(e)}
 
 
+def compute_method_stability(method_raw_points: dict, 
+                            knee_data: dict,
+                            stability_threshold: float = 20.0) -> dict:
+    """
+    Compute stability metrics for each detection method.
+    
+    Uses ABSOLUTE standard deviation to measure consistency of depth detection
+    across A-scans. Lower SD indicates more stable (less wobbly) detection.
+    
+    This is better than CV (std/mean) because:
+    - CV unfairly penalizes shallow detections (small mean → high CV)
+    - Absolute SD directly measures wobbliness regardless of depth
+    - A straight line at any depth will have low SD
+    
+    Args:
+        method_raw_points: Dict mapping method names to list of (x, y) points
+        knee_data: Dict containing per-column detection metadata
+        stability_threshold: SD threshold (in pixels) above which a method is unstable
+                           Recommended: 10-20 pixels for typical OCT images
+        
+    Returns:
+        Dict with stability info:
+        {
+            'method_name': {
+                'cv': float,  # Kept for backward compatibility (now actually SD)
+                'is_stable': bool,  # True if SD <= threshold
+                'n_points': int,  # Number of valid detections
+                'mean_depth': float,
+                'std_depth': float
+            }
+        }
+    """
+    stability_info = {}
+    
+    for method_name, raw_points in method_raw_points.items():
+        if len(raw_points) < 3:  # Need at least 3 points for meaningful statistics
+            stability_info[method_name] = {
+                'cv': np.inf,
+                'is_stable': False,
+                'n_points': len(raw_points),
+                'mean_depth': np.nan,
+                'std_depth': np.nan
+            }
+            continue
+        
+        # Extract depth values (relative to surface) for this method
+        depth_values = []
+        for x, abs_y in raw_points:
+            if x in knee_data:
+                surface_y = knee_data[x]['surface_y']
+                relative_depth = abs_y - surface_y
+                depth_values.append(relative_depth)
+        
+        if len(depth_values) < 3:
+            stability_info[method_name] = {
+                'cv': np.inf,
+                'is_stable': False,
+                'n_points': len(depth_values),
+                'mean_depth': np.nan,
+                'std_depth': np.nan
+            }
+            continue
+        
+        # Compute statistics
+        mean_depth = np.mean(depth_values)
+        std_depth = np.std(depth_values)
+        
+        # Use ABSOLUTE standard deviation as stability metric
+        # (not CV, because CV unfairly penalizes shallow detections)
+        stability_metric = std_depth
+        
+        stability_info[method_name] = {
+            'cv': stability_metric,  # Field name kept for compatibility, but now contains SD
+            'is_stable': stability_metric <= stability_threshold,
+            'n_points': len(depth_values),
+            'mean_depth': mean_depth,
+            'std_depth': std_depth
+        }
+    
+    return stability_info
+
+
+def compute_stable_combined_depth(knee_data: dict, 
+                                  stability_info: dict,
+                                  x: int,
+                                  preserve_wobbliness: bool = True) -> tuple:
+    """
+    Compute combined depth using only stable methods with optional wobbliness preservation.
+    
+    When preserve_wobbliness=True, uses weighted averaging where methods with higher
+    variability (more wobbly) get MORE weight. This preserves the natural texture of
+    irregular lesions instead of smoothing them out.
+    
+    Args:
+        knee_data: Dict containing per-column detection metadata
+        stability_info: Dict with stability metrics for each method
+        x: Current x-coordinate
+        preserve_wobbliness: If True, weight by SD to preserve variation (default True)
+        
+    Returns:
+        (depth_value, method_used) tuple
+        method_used is a string indicating which methods were combined
+    """
+    if x not in knee_data:
+        return np.nan, "none"
+    
+    metadata = knee_data[x].get('detection_metadata', {})
+    
+    # Collect available depth values and their stability
+    available_methods = []
+    
+    # Knee point
+    knee_depth = metadata.get('knee_depth', np.nan)
+    if not np.isnan(knee_depth) and stability_info.get('knee_point', {}).get('is_stable', False):
+        available_methods.append(('knee_point', knee_depth))
+    
+    # Sigmoid inflection
+    inflection_depth = metadata.get('inflection_depth', np.nan)
+    if not np.isnan(inflection_depth) and stability_info.get('sigmoid_fit', {}).get('is_stable', False):
+        available_methods.append(('sigmoid_fit', inflection_depth))
+    
+    # Sigmoid shoulder
+    shoulder_depth = metadata.get('shoulder_depth', np.nan)
+    if not np.isnan(shoulder_depth) and stability_info.get('sigmoid_shoulder', {}).get('is_stable', False):
+        available_methods.append(('sigmoid_shoulder', shoulder_depth))
+    
+    # If no stable methods, use the most stable one (lowest CV)
+    if len(available_methods) == 0:
+        # Find method with lowest CV
+        min_cv = np.inf
+        best_method = None
+        best_depth = np.nan
+        
+        for method_name in ['knee_point', 'sigmoid_fit', 'sigmoid_shoulder']:
+            cv = stability_info.get(method_name, {}).get('cv', np.inf)
+            if cv < min_cv:
+                if method_name == 'knee_point':
+                    depth = metadata.get('knee_depth', np.nan)
+                elif method_name == 'sigmoid_fit':
+                    depth = metadata.get('inflection_depth', np.nan)
+                else:  # sigmoid_shoulder
+                    depth = metadata.get('shoulder_depth', np.nan)
+                
+                if not np.isnan(depth):
+                    min_cv = cv
+                    best_method = method_name
+                    best_depth = depth
+        
+        if best_method is not None:
+            return best_depth, f"fallback_{best_method}"
+        else:
+            return np.nan, "none"
+    
+    # Combine stable methods
+    depths = [d for _, d in available_methods]
+    method_names = [m for m, _ in available_methods]
+    
+    if preserve_wobbliness and len(available_methods) > 1:
+        # Weighted average: methods with higher SD get MORE weight
+        # This preserves the natural wobbliness of irregular lesions
+        weights = []
+        for method_name, _ in available_methods:
+            sd = stability_info.get(method_name, {}).get('std_depth', 1.0)
+            # Use SD as weight (higher SD = more weight)
+            # Add small constant to avoid division by zero
+            weights.append(max(sd, 0.1))
+        
+        # Normalize weights
+        total_weight = sum(weights)
+        weights = [w / total_weight for w in weights]
+        
+        # Weighted average
+        combined_depth = sum(d * w for d, w in zip(depths, weights))
+        method_used = "+".join(method_names) + "_weighted"
+    else:
+        # Simple average (original behavior)
+        combined_depth = np.mean(depths)
+        method_used = "+".join(method_names)
+    
+    return combined_depth, method_used
 
 
 def calculate_lesion_depth(surface: Surface, 
@@ -790,7 +975,9 @@ def calculate_lesion_depth(surface: Surface,
                           spline_degree: int = 2,
                           threshold_percent: float = 0.5,
                           gradient_smooth_window: int = 5,
-                          surface_offset: int = 0) -> Optional[LesionDepth]:
+                          surface_offset: int = 0,
+                          stability_threshold: float = 20.0,
+                          preserve_wobbliness: bool = True) -> Optional[LesionDepth]:
     """
     Calculate lesion depth using various detection methods.
     
@@ -805,7 +992,7 @@ def calculate_lesion_depth(surface: Surface,
     - KNEE_POINT: Two-line fitting (best for exponential decay)
     - SIGMOID_FIT: Sigmoid inflection point (50% transition, maximum rate of change)
     - SIGMOID_SHOULDER: Sigmoid shoulder point (15% from upper asymptote, early transition)
-    - COMBINED_MEAN: Mean of knee_point and sigmoid_fit (balances both approaches)
+    - COMBINED_MEAN: Weighted combination of stable methods (preserves natural lesion texture)
     
     Args:
         surface: Detected surface with fitted curve
@@ -820,8 +1007,12 @@ def calculate_lesion_depth(surface: Surface,
         spline_degree: Degree of spline for depth smoothing (default 2)
         threshold_percent: For THRESHOLD method, fraction of surface intensity (default 0.5)
         gradient_smooth_window: For MAX_GRADIENT method, smoothing window size (default 5)
-        surface_offset: Pixels to skip below surface before starting profile (default 10)
+        surface_offset: Pixels to skip below surface before starting profile (default 0)
                        This avoids saturated surface peak values in curve fitting
+        stability_threshold: SD threshold in pixels for method stability (default 20.0)
+                           Methods with SD > threshold are excluded from combining
+        preserve_wobbliness: If True, use weighted averaging to preserve lesion texture (default True)
+                           Methods with higher SD get more weight
     
     Returns:
         LesionDepth object with depth measurements, or None if no valid surface
@@ -915,7 +1106,7 @@ def calculate_lesion_depth(surface: Surface,
                 detection_metadata = {'method': 'sigmoid_shoulder', 'success': False}
         
         elif detection_method == DepthDetectionMethod.COMBINED_MEAN:
-            # Run both methods and average the results
+            # Compute all three methods and store in metadata
             # Method 1: Knee point with exp2 fit
             profile_for_knee = intensity_profile
             knee_fitted_curve = None
@@ -928,50 +1119,41 @@ def calculate_lesion_depth(surface: Surface,
             
             knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
             
-            # Method 2: Sigmoid fit
+            # Method 2: Sigmoid fit (inflection and shoulder)
             sigmoid_depth, sigmoid_idx, sigmoid_meta = detect_depth_sigmoid_fit(
                 intensity_profile, depth_indices
             )
             
-            # Combine results if both are valid
-            if not np.isnan(knee_depth) and not np.isnan(sigmoid_depth):
-                depth_value = (knee_depth + sigmoid_depth) / 2.0
-                # Use index closest to mean depth
+            # Store all method results in metadata for stability analysis
+            detection_metadata = {
+                'method': 'combined_mean',
+                'knee_depth': knee_depth,
+                'knee_idx': knee_idx,
+                'inflection_depth': sigmoid_meta.get('inflection_depth', np.nan) if sigmoid_meta.get('success') else np.nan,
+                'inflection_idx': sigmoid_meta.get('inflection_idx', -1) if sigmoid_meta.get('success') else -1,
+                'shoulder_depth': sigmoid_meta.get('shoulder_depth', np.nan) if sigmoid_meta.get('success') else np.nan,
+                'shoulder_idx': sigmoid_meta.get('shoulder_idx', -1) if sigmoid_meta.get('success') else -1,
+            }
+            
+            # For now, use simple average as placeholder (will be replaced after stability analysis)
+            # This ensures we have valid depth_points for the first pass
+            valid_depths = []
+            if not np.isnan(knee_depth):
+                valid_depths.append(knee_depth)
+            if not np.isnan(sigmoid_depth):
+                valid_depths.append(sigmoid_depth)
+            
+            if len(valid_depths) > 0:
+                depth_value = np.mean(valid_depths)
                 depth_idx = int(np.argmin(np.abs(depth_indices - depth_value)))
                 
-                detection_metadata = {
-                    'method': 'combined_mean',
-                    'knee_depth': knee_depth,
-                    'knee_idx': knee_idx,
-                    'sigmoid_depth': sigmoid_depth,
-                    'sigmoid_idx': sigmoid_idx,
-                    'mean_depth': depth_value,
-                    'sigmoid_fitted_curve': sigmoid_meta.get('fitted_curve')
-                }
-                
-                # Store both fitted curves for visualization
+                # Store fitted curve for visualization
                 if knee_fitted_curve is not None:
                     fitted_curve = knee_fitted_curve
-                    fit_params = fit_params
-            elif not np.isnan(knee_depth):
-                # Fallback to knee point if sigmoid fails
-                depth_value = knee_depth
-                depth_idx = knee_idx
-                detection_metadata = {'method': 'combined_mean', 'fallback': 'knee_point'}
-                if knee_fitted_curve is not None:
-                    fitted_curve = knee_fitted_curve
-            elif not np.isnan(sigmoid_depth):
-                # Fallback to sigmoid if knee point fails
-                depth_value = sigmoid_depth
-                depth_idx = sigmoid_idx
-                detection_metadata = {'method': 'combined_mean', 'fallback': 'sigmoid_fit'}
-                if 'fitted_curve' in sigmoid_meta:
-                    fitted_curve = np.array(sigmoid_meta['fitted_curve'])
             else:
-                # Both failed
                 depth_value = np.nan
                 depth_idx = -1
-                detection_metadata = {'method': 'combined_mean', 'success': False}
+                detection_metadata['success'] = False
         
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
@@ -1001,6 +1183,81 @@ def calculate_lesion_depth(surface: Surface,
     if len(depth_points) == 0:
         # No valid depth points found
         return None
+    
+    # For COMBINED_MEAN method: perform stability analysis and recompute with weighted averaging
+    if detection_method == DepthDetectionMethod.COMBINED_MEAN:
+        # Collect raw points for each method
+        method_raw_points = {
+            'knee_point': [],
+            'sigmoid_fit': [],
+            'sigmoid_shoulder': []
+        }
+        
+        for x in range(start_x, end_x):
+            if x not in knee_data:
+                continue
+            
+            metadata = knee_data[x].get('detection_metadata', {})
+            surface_y = knee_data[x]['surface_y']
+            profile_start_y = knee_data[x]['profile_start_y']
+            
+            # Knee point
+            knee_depth = metadata.get('knee_depth', np.nan)
+            if not np.isnan(knee_depth):
+                abs_y = profile_start_y + knee_depth
+                method_raw_points['knee_point'].append((x, abs_y))
+            
+            # Sigmoid inflection
+            inflection_depth = metadata.get('inflection_depth', np.nan)
+            if not np.isnan(inflection_depth):
+                abs_y = profile_start_y + inflection_depth
+                method_raw_points['sigmoid_fit'].append((x, abs_y))
+            
+            # Sigmoid shoulder
+            shoulder_depth = metadata.get('shoulder_depth', np.nan)
+            if not np.isnan(shoulder_depth):
+                abs_y = profile_start_y + shoulder_depth
+                method_raw_points['sigmoid_shoulder'].append((x, abs_y))
+        
+        # Compute stability metrics
+        stability_info = compute_method_stability(
+            method_raw_points,
+            knee_data,
+            stability_threshold=stability_threshold
+        )
+        
+        # Recompute depth points using stable weighted combination
+        depth_points = []
+        for x in range(start_x, end_x):
+            if x not in knee_data:
+                continue
+            
+            # Get weighted combined depth
+            combined_depth, method_used = compute_stable_combined_depth(
+                knee_data,
+                stability_info,
+                x,
+                preserve_wobbliness=preserve_wobbliness
+            )
+            
+            if not np.isnan(combined_depth):
+                surface_y = knee_data[x]['surface_y']
+                profile_start_y = knee_data[x]['profile_start_y']
+                
+                # Convert relative depth to absolute y-coordinate
+                lesion_bottom_y = profile_start_y + combined_depth
+                # Actual depth from surface
+                actual_depth_from_surface = surface_offset + combined_depth
+                
+                depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
+                
+                # Update knee_data with combined result
+                knee_data[x]['knee_depth'] = combined_depth
+                knee_data[x]['actual_depth'] = actual_depth_from_surface
+                knee_data[x]['detection_metadata']['combined_method_used'] = method_used
+        
+        if len(depth_points) == 0:
+            return None
     
     # Extract depth values for statistics
     depths = [d for _, _, d in depth_points]
@@ -1170,6 +1427,9 @@ def run_carl_quant(context):
                     )
                     
                     # Process in parallel using ProcessPoolExecutor
+                    # Get detection method from context
+                    detection_method_str = getattr(context, 'detection_method', 'combined_mean')
+                    
                     with ProcessPoolExecutor(max_workers=effective_workers) as executor:
                         # Submit tasks with pre-loaded images
                         future_to_slice = {}
@@ -1177,7 +1437,7 @@ def run_carl_quant(context):
                             image_array = preloaded_images[slice_idx]
                             future = executor.submit(
                                 process_slice_parallel,
-                                slice_idx, image_array, region_config, air_config, num_sound, num_lesion
+                                slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method_str
                             )
                             future_to_slice[future] = slice_idx
                         
@@ -1283,12 +1543,19 @@ def run_carl_quant(context):
                                     f"Calculating lesion depth (slice {slice_idx + 1})...",
                                     color="blue"
                                 )
+                                # Get detection method from context (default to COMBINED_MEAN)
+                                detection_method_str = getattr(context, 'detection_method', 'combined_mean')
+                                detection_method = DepthDetectionMethod(detection_method_str)
+                                
                                 lesion_depth = calculate_lesion_depth(
                                     surface,
                                     region_config,
                                     image_array,
                                     search_depth=200,
-                                    use_curve_fitting=True
+                                    use_curve_fitting=True,
+                                    detection_method=detection_method,
+                                    stability_threshold=20.0,
+                                    preserve_wobbliness=True
                                 )
                             else:
                                 lesion_depth = None
