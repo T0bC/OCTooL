@@ -9,6 +9,7 @@ from tkinter import ttk
 import tkinter as tk
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
+from carlquant_frames.carl_quant_core import DepthDetectionMethod
 
 class settingsPanel:
     @handle_errors("settingsPanel.__init__")
@@ -42,12 +43,42 @@ class settingsPanel:
 
         self.regionDropdown.bind("<<ComboboxSelected>>", update_region_config)
 
+        # Detection Method Dropdown
+        self.methodLabel = ttk.Label(self.frame, text="Lesion Depth Detection Method:")
+        self.methodLabel.grid(row=2, column=0, sticky="w", pady=(10, 2))
+
+        self.methodVar = tk.StringVar(value="combined_mean")
+        self.methodDropdown = ttk.Combobox(self.frame, textvariable=self.methodVar, state="readonly")
+        self.methodDropdown['values'] = [
+            "knee_point",
+            "sigmoid_fit", 
+            "sigmoid_shoulder",
+            "combined_mean"
+        ]
+        self.methodDropdown.grid(row=3, column=0, sticky="ew", pady=2)
+        
+        # Add tooltip for detection method
+        Tooltip(self.methodDropdown, 
+                text="Knee Point: Two-line fitting (best for exponential decay)\n"
+                     "Sigmoid Inflection: 50% transition point\n"
+                     "Sigmoid Shoulder: 15% from upper asymptote\n"
+                     "Combined Mean: Weighted combination of stable methods")
+
+        # Register in context
+        self.context.detection_method = self.methodVar.get()
+
+        # Update context on change
+        def update_detection_method(event):
+            self.context.detection_method = self.methodVar.get()
+
+        self.methodDropdown.bind("<<ComboboxSelected>>", update_detection_method)
+
         self.metaLabel = ttk.Label(self.frame, text="Operator and Measurement:")
-        self.metaLabel.grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 2))
+        self.metaLabel.grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 2))
 
         # Operator Entry
         self.metaFrame = ttk.Frame(self.frame)
-        self.metaFrame.grid(row=3, column=0, sticky="w", pady=2)
+        self.metaFrame.grid(row=5, column=0, sticky="w", pady=2)
 
         self.operatorVar = tk.StringVar()
         self.operatorEntry = ttk.Entry(self.metaFrame, textvariable=self.operatorVar, width=11)
