@@ -921,7 +921,7 @@ def calculate_lesion_depth(
         
         # If compute_all_methods is True, compute all three methods and store in metadata
         if compute_all_methods:
-            # Compute knee point
+            # Compute knee point with Exp2 fitting
             profile_for_knee = intensity_profile
             knee_fitted_curve = None
             if use_curve_fitting:
@@ -939,6 +939,9 @@ def calculate_lesion_depth(
             # Store all methods in metadata for visualization
             detection_metadata['knee_depth'] = knee_depth
             detection_metadata['knee_idx'] = knee_idx
+            # Store Exp2 fitted curve for knee point visualization
+            if knee_fitted_curve is not None:
+                detection_metadata['exp2_fitted_curve'] = knee_fitted_curve.tolist()
             if sigmoid_meta.get('success'):
                 detection_metadata['inflection_depth'] = sigmoid_meta.get('inflection_depth', np.nan)
                 detection_metadata['inflection_idx'] = sigmoid_meta.get('inflection_idx', -1)
@@ -947,84 +950,124 @@ def calculate_lesion_depth(
                 if 'fitted_curve' in sigmoid_meta:
                     detection_metadata['sigmoid_fitted_curve'] = sigmoid_meta['fitted_curve']
         
+        # Determine which depth value to use for the primary result
+        # (this affects depth_points and statistics, but not visualization in compare mode)
         if detection_method == "knee_point":
             # Original method: optionally fit exp2, then find knee point
-            profile_for_knee = intensity_profile
-            
-            if use_curve_fitting:
-                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-                if fit_result is not None:
-                    fitted_curve, fit_params = fit_result
-                    profile_for_knee = fitted_curve
-            
-            depth_value, depth_idx = knee_pt(profile_for_knee, depth_indices)
-            detection_metadata = {
-                'method': 'knee_point',
-                'used_fitting': use_curve_fitting and fitted_curve is not None,
-                'fit_params': fit_params
-            }
+            if not compute_all_methods:
+                # Only compute if not already done in compute_all_methods
+                profile_for_knee = intensity_profile
+                
+                if use_curve_fitting:
+                    fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                    if fit_result is not None:
+                        fitted_curve, fit_params = fit_result
+                        profile_for_knee = fitted_curve
+                
+                depth_value, depth_idx = knee_pt(profile_for_knee, depth_indices)
+                detection_metadata = {
+                    'method': 'knee_point',
+                    'used_fitting': use_curve_fitting and fitted_curve is not None,
+                    'fit_params': fit_params
+                }
+            else:
+                # Use already computed values
+                depth_value = detection_metadata.get('knee_depth', np.nan)
+                depth_idx = detection_metadata.get('knee_idx', -1)
+                detection_metadata['method'] = 'knee_point'
             
         elif detection_method == "sigmoid_fit":
-            depth_value, depth_idx, detection_metadata = detect_depth_sigmoid_fit(
-                intensity_profile, depth_indices
-            )
-            if 'fitted_curve' in detection_metadata:
-                fitted_curve = np.array(detection_metadata['fitted_curve'])
+            if not compute_all_methods:
+                depth_value, depth_idx, detection_metadata = detect_depth_sigmoid_fit(
+                    intensity_profile, depth_indices
+                )
+                if 'fitted_curve' in detection_metadata:
+                    fitted_curve = np.array(detection_metadata['fitted_curve'])
+            else:
+                # Use already computed values
+                depth_value = detection_metadata.get('inflection_depth', np.nan)
+                depth_idx = detection_metadata.get('inflection_idx', -1)
+                detection_metadata['method'] = 'sigmoid_fit'
         
         elif detection_method == "sigmoid_shoulder":
-            # Use shoulder point from sigmoid fit
-            _, _, sigmoid_meta = detect_depth_sigmoid_fit(
-                intensity_profile, depth_indices
-            )
-            if sigmoid_meta.get('success') and not np.isnan(sigmoid_meta.get('shoulder_depth', np.nan)):
-                depth_value = sigmoid_meta['shoulder_depth']
-                depth_idx = sigmoid_meta['shoulder_idx']
-                detection_metadata = sigmoid_meta.copy()
-                detection_metadata['method'] = 'sigmoid_shoulder'
-                if 'fitted_curve' in sigmoid_meta:
-                    fitted_curve = np.array(sigmoid_meta['fitted_curve'])
+            if not compute_all_methods:
+                # Use shoulder point from sigmoid fit
+                _, _, sigmoid_meta = detect_depth_sigmoid_fit(
+                    intensity_profile, depth_indices
+                )
+                if sigmoid_meta.get('success') and not np.isnan(sigmoid_meta.get('shoulder_depth', np.nan)):
+                    depth_value = sigmoid_meta['shoulder_depth']
+                    depth_idx = sigmoid_meta['shoulder_idx']
+                    detection_metadata = sigmoid_meta.copy()
+                    detection_metadata['method'] = 'sigmoid_shoulder'
+                    if 'fitted_curve' in sigmoid_meta:
+                        fitted_curve = np.array(sigmoid_meta['fitted_curve'])
+                else:
+                    depth_value, depth_idx = np.nan, -1
+                    detection_metadata = {'method': 'sigmoid_shoulder', 'success': False}
             else:
-                depth_value, depth_idx = np.nan, -1
-                detection_metadata = {'method': 'sigmoid_shoulder', 'success': False}
+                # Use already computed values
+                depth_value = detection_metadata.get('shoulder_depth', np.nan)
+                depth_idx = detection_metadata.get('shoulder_idx', -1)
+                detection_metadata['method'] = 'sigmoid_shoulder'
         
         elif detection_method == "combined_mean":
-            # Run both methods and average
-            profile_for_knee = intensity_profile
-            knee_fitted_curve = None
-            
-            if use_curve_fitting:
-                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-                if fit_result is not None:
-                    knee_fitted_curve, fit_params = fit_result
-                    profile_for_knee = knee_fitted_curve
-            
-            knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
-            sigmoid_depth, sigmoid_idx, sigmoid_meta = detect_depth_sigmoid_fit(
-                intensity_profile, depth_indices
-            )
-            
-            if not np.isnan(knee_depth) and not np.isnan(sigmoid_depth):
-                depth_value = (knee_depth + sigmoid_depth) / 2.0
-                depth_idx = int(np.argmin(np.abs(depth_indices - depth_value)))
-                detection_metadata = {
-                    'method': 'combined_mean',
-                    'knee_depth': knee_depth,
-                    'knee_idx': knee_idx,
-                    'sigmoid_depth': sigmoid_depth,
-                    'sigmoid_idx': sigmoid_idx,
-                    'sigmoid_fitted_curve': sigmoid_meta.get('fitted_curve')
-                }
-                if knee_fitted_curve is not None:
-                    fitted_curve = knee_fitted_curve
-            elif not np.isnan(knee_depth):
-                depth_value, depth_idx = knee_depth, knee_idx
-                detection_metadata = {'method': 'combined_mean', 'fallback': 'knee_point'}
-            elif not np.isnan(sigmoid_depth):
-                depth_value, depth_idx = sigmoid_depth, sigmoid_idx
-                detection_metadata = {'method': 'combined_mean', 'fallback': 'sigmoid_fit'}
+            if not compute_all_methods:
+                # Run both methods and average
+                profile_for_knee = intensity_profile
+                knee_fitted_curve = None
+                
+                if use_curve_fitting:
+                    fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                    if fit_result is not None:
+                        knee_fitted_curve, fit_params = fit_result
+                        profile_for_knee = knee_fitted_curve
+                
+                knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
+                sigmoid_depth, sigmoid_idx, sigmoid_meta = detect_depth_sigmoid_fit(
+                    intensity_profile, depth_indices
+                )
+                
+                if not np.isnan(knee_depth) and not np.isnan(sigmoid_depth):
+                    depth_value = (knee_depth + sigmoid_depth) / 2.0
+                    depth_idx = int(np.argmin(np.abs(depth_indices - depth_value)))
+                    detection_metadata = {
+                        'method': 'combined_mean',
+                        'knee_depth': knee_depth,
+                        'knee_idx': knee_idx,
+                        'sigmoid_depth': sigmoid_depth,
+                        'sigmoid_idx': sigmoid_idx,
+                        'sigmoid_fitted_curve': sigmoid_meta.get('fitted_curve')
+                    }
+                    if knee_fitted_curve is not None:
+                        fitted_curve = knee_fitted_curve
+                elif not np.isnan(knee_depth):
+                    depth_value, depth_idx = knee_depth, knee_idx
+                    detection_metadata = {'method': 'combined_mean', 'fallback': 'knee_point'}
+                elif not np.isnan(sigmoid_depth):
+                    depth_value, depth_idx = sigmoid_depth, sigmoid_idx
+                    detection_metadata = {'method': 'combined_mean', 'fallback': 'sigmoid_fit'}
+                else:
+                    depth_value, depth_idx = np.nan, -1
+                    detection_metadata = {'method': 'combined_mean', 'success': False}
             else:
-                depth_value, depth_idx = np.nan, -1
-                detection_metadata = {'method': 'combined_mean', 'success': False}
+                # Use already computed values and average
+                knee_depth = detection_metadata.get('knee_depth', np.nan)
+                sigmoid_depth = detection_metadata.get('inflection_depth', np.nan)
+                
+                if not np.isnan(knee_depth) and not np.isnan(sigmoid_depth):
+                    depth_value = (knee_depth + sigmoid_depth) / 2.0
+                    depth_idx = int(np.argmin(np.abs(depth_indices - depth_value)))
+                elif not np.isnan(knee_depth):
+                    depth_value = knee_depth
+                    depth_idx = detection_metadata.get('knee_idx', -1)
+                elif not np.isnan(sigmoid_depth):
+                    depth_value = sigmoid_depth
+                    depth_idx = detection_metadata.get('inflection_idx', -1)
+                else:
+                    depth_value, depth_idx = np.nan, -1
+                
+                detection_metadata['method'] = 'combined_mean'
         
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
@@ -1035,6 +1078,12 @@ def calculate_lesion_depth(
             actual_depth_from_surface = surface_offset + depth_value
             
             depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
+            
+            # Ensure fitted_curve is set for A-Scan visualization
+            # In compare mode, use exp2_fitted_curve from metadata if available
+            if compute_all_methods and fitted_curve is None:
+                if 'exp2_fitted_curve' in detection_metadata:
+                    fitted_curve = np.array(detection_metadata['exp2_fitted_curve'])
             
             # Store data for visualization (for A-Scan viewer)
             knee_data[x] = {
@@ -1080,6 +1129,53 @@ def calculate_lesion_depth(
             smoothed_depth_points = smoothed_curves["smoothed_depth"]
             print(f"Applied spline smoothing to {len(raw_depth_points)} depth points -> {len(smoothed_depth_points)} smoothed points")
     
+    # If compute_all_methods is True, compute smoothed splines for all three methods
+    method_splines = None
+    if compute_all_methods and knee_data:
+        method_splines = {}
+        
+        # Collect raw points for each method from knee_data
+        method_raw_points = {
+            "knee_point": [],
+            "sigmoid_fit": [],
+            "sigmoid_shoulder": []
+        }
+        
+        for x, knee_info in knee_data.items():
+            surface_y = knee_info['surface_y']
+            metadata = knee_info.get('detection_metadata', {})
+            
+            # Knee point
+            if 'knee_depth' in metadata and not np.isnan(metadata['knee_depth']):
+                abs_y = int(surface_y + metadata['knee_depth'])
+                method_raw_points["knee_point"].append((x, abs_y))
+            
+            # Sigmoid inflection
+            if 'inflection_depth' in metadata and not np.isnan(metadata['inflection_depth']):
+                abs_y = int(surface_y + metadata['inflection_depth'])
+                method_raw_points["sigmoid_fit"].append((x, abs_y))
+            
+            # Sigmoid shoulder
+            if 'shoulder_depth' in metadata and not np.isnan(metadata['shoulder_depth']):
+                abs_y = int(surface_y + metadata['shoulder_depth'])
+                method_raw_points["sigmoid_shoulder"].append((x, abs_y))
+        
+        # Fit splines for each method using SAME parameters as single method
+        for method_name, raw_points in method_raw_points.items():
+            if len(raw_points) >= 4:
+                smoothed_curves = fit_surface_curve(
+                    raw_points,
+                    start_x,
+                    end_x,
+                    smoothing=smoothing,
+                    smoothing_multiplier=smoothing_multiplier,
+                    spline_degree=spline_degree,
+                    curve_name=method_name
+                )
+                if method_name in smoothed_curves:
+                    method_splines[method_name] = smoothed_curves[method_name]
+                    print(f"Fitted spline for {method_name}: {len(raw_points)} raw points -> {len(smoothed_curves[method_name])} smoothed points")
+    
     return LesionDepth(
         depth_points=raw_depth_points,
         mean_depth=np.mean(depths),
@@ -1087,7 +1183,8 @@ def calculate_lesion_depth(
         sd=np.std(depths),
         se=np.std(depths) / np.sqrt(len(depths)),
         knee_data=knee_data if len(knee_data) > 0 else None,
-        smoothed_depth_points=smoothed_depth_points
+        smoothed_depth_points=smoothed_depth_points,
+        method_splines=method_splines  # Store pre-computed splines for all methods
     )
 
 

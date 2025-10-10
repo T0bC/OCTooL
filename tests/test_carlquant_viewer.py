@@ -610,15 +610,8 @@ class CarlQuantTestViewer:
         if self.compare_methods.get() and cache_key in self.results_cache:
             _, surface, lesion_depth = self.results_cache[cache_key]
             if lesion_depth and lesion_depth.knee_data and surface.fitted_curves and "spline" in surface.fitted_curves:
-                # Update status to show we're computing comparison
-                original_status = self.status_label.cget("text")
-                self.status_label.config(text="Drawing method comparison...")
-                self.root.update_idletasks()
-                
+                # OPTIMIZED: No status update needed - drawing is now fast!
                 self.draw_method_comparison_on_image(display_image, lesion_depth, surface)
-                
-                # Restore status
-                self.status_label.config(text=original_status)
         
         # Convert to PIL and display
         pil_image = Image.fromarray(display_image.astype(np.uint8))
@@ -834,8 +827,8 @@ class CarlQuantTestViewer:
     def draw_method_comparison_on_image(self, display_image, lesion_depth, surface):
         """Draw all detection methods' results on the main image with smoothed splines.
         
-        If compute_all_methods was enabled during algorithm run, uses pre-computed data.
-        Otherwise, computes methods on-the-fly (slower).
+        Uses pre-computed splines from lesion_depth.method_splines if available (fast!).
+        Falls back to on-the-fly computation if not available (slower, backward compatible).
         """
         from carlquant_frames.carl_quant_core import (
             detect_depth_sigmoid_fit,
@@ -853,6 +846,72 @@ class CarlQuantTestViewer:
             "sigmoid_fit": [128, 0, 128],   # Purple
             "sigmoid_shoulder": [0, 255, 255]  # Cyan
         }
+        
+        # Check if we have pre-computed splines (FAST PATH - OPTIMIZED)
+        if hasattr(lesion_depth, 'method_splines') and lesion_depth.method_splines:
+            # Use pre-computed splines - no computation needed!
+            for method_name, smoothed_points in lesion_depth.method_splines.items():
+                if method_name in method_colors:
+                    color = method_colors[method_name]
+                    
+                    # OPTIMIZED: Vectorized drawing of smoothed spline (3-pixel thickness)
+                    if len(smoothed_points) > 0:
+                        # Convert to numpy arrays for vectorized operations
+                        points_array = np.array(smoothed_points, dtype=np.int32)
+                        x_coords = points_array[:, 0]
+                        y_coords = points_array[:, 1]
+                        
+                        # Filter valid coordinates
+                        valid_mask = (x_coords >= 0) & (x_coords < display_image.shape[1]) & \
+                                    (y_coords >= 0) & (y_coords < display_image.shape[0])
+                        x_valid = x_coords[valid_mask]
+                        y_valid = y_coords[valid_mask]
+                        
+                        # Draw with 3-pixel thickness (center + above + below)
+                        for dy in [-1, 0, 1]:
+                            y_offset = y_valid + dy
+                            # Additional bounds check for offset
+                            offset_valid = (y_offset >= 0) & (y_offset < display_image.shape[0])
+                            display_image[y_offset[offset_valid], x_valid[offset_valid]] = color
+                    
+                    # Draw raw points if toggle is enabled (OPTIMIZED)
+                    if self.show_raw_depth.get() and lesion_depth.knee_data:
+                        # Determine depth key for this method
+                        depth_key_map = {
+                            "knee_point": 'knee_depth',
+                            "sigmoid_fit": 'inflection_depth',
+                            "sigmoid_shoulder": 'shoulder_depth'
+                        }
+                        depth_key = depth_key_map.get(method_name)
+                        
+                        if depth_key:
+                            # Collect all valid raw points for this method
+                            raw_points = []
+                            for x, knee_info in lesion_depth.knee_data.items():
+                                if x not in surface_dict:
+                                    continue
+                                surface_y = knee_info['surface_y']
+                                metadata = knee_info.get('detection_metadata', {})
+                                
+                                if depth_key in metadata:
+                                    depth = metadata[depth_key]
+                                    if not np.isnan(depth):
+                                        abs_y = int(surface_y + depth)
+                                        if 0 <= abs_y < display_image.shape[0]:
+                                            raw_points.append((x, abs_y))
+                            
+                            # Vectorized drawing of raw point markers (3x3 squares)
+                            if len(raw_points) > 0:
+                                raw_array = np.array(raw_points, dtype=np.int32)
+                                for dx in [-1, 0, 1]:
+                                    for dy in [-1, 0, 1]:
+                                        x_offset = raw_array[:, 0] + dx
+                                        y_offset = raw_array[:, 1] + dy
+                                        # Bounds check
+                                        valid = (x_offset >= 0) & (x_offset < display_image.shape[1]) & \
+                                               (y_offset >= 0) & (y_offset < display_image.shape[0])
+                                        display_image[y_offset[valid], x_offset[valid]] = color
+            return  # Done! No need for fallback computation
         
         # Collect raw depth data for each method
         method_raw_depths = {
@@ -950,70 +1009,73 @@ class CarlQuantTestViewer:
                 curve_name=method_name
             )
             
-            # Draw smoothed spline (always shown in comparison mode)
+            # Draw smoothed spline (always shown in comparison mode) - OPTIMIZED
             if method_name in smoothed_curves:
                 smoothed_points = smoothed_curves[method_name]
-                for x, y in smoothed_points:
-                    if 0 <= x < display_image.shape[1]:
-                        for dy in range(-1, 2):  # 3 pixel thickness
-                            ny = int(y) + dy
-                            if 0 <= ny < display_image.shape[0]:
-                                display_image[ny, x] = color
+                if len(smoothed_points) > 0:
+                    # Vectorized drawing
+                    points_array = np.array(smoothed_points, dtype=np.int32)
+                    x_coords = points_array[:, 0]
+                    y_coords = points_array[:, 1]
+                    
+                    valid_mask = (x_coords >= 0) & (x_coords < display_image.shape[1]) & \
+                                (y_coords >= 0) & (y_coords < display_image.shape[0])
+                    x_valid = x_coords[valid_mask]
+                    y_valid = y_coords[valid_mask]
+                    
+                    # Draw with 3-pixel thickness
+                    for dy in [-1, 0, 1]:
+                        y_offset = y_valid + dy
+                        offset_valid = (y_offset >= 0) & (y_offset < display_image.shape[0])
+                        display_image[y_offset[offset_valid], x_valid[offset_valid]] = color
             
-            # Draw raw points if toggle is enabled
-            if self.show_raw_depth.get():
-                for x, y in raw_points:
-                    if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
-                        # Draw small marker (single pixel with 1-pixel border)
-                        for dx in range(-1, 2):
-                            for dy in range(-1, 2):
-                                nx, ny_offset = x + dx, y + dy
-                                if 0 <= nx < display_image.shape[1] and 0 <= ny_offset < display_image.shape[0]:
-                                    display_image[ny_offset, nx] = color
+            # Draw raw points if toggle is enabled - OPTIMIZED
+            if self.show_raw_depth.get() and len(raw_points) > 0:
+                raw_array = np.array(raw_points, dtype=np.int32)
+                for dx in [-1, 0, 1]:
+                    for dy in [-1, 0, 1]:
+                        x_offset = raw_array[:, 0] + dx
+                        y_offset = raw_array[:, 1] + dy
+                        valid = (x_offset >= 0) & (x_offset < display_image.shape[1]) & \
+                               (y_offset >= 0) & (y_offset < display_image.shape[0])
+                        display_image[y_offset[valid], x_offset[valid]] = color
     
     def draw_method_comparison(self, draw, intensity_profile, depth_idx, surface_y, 
                               image_height, margin_left, margin_top, 
                               plot_area_width, plot_area_height):
-        """Draw comparison of all detection methods on the A-Scan plot."""
-        from carlquant_frames.carl_quant_core import (
-            detect_depth_sigmoid_fit,
-            knee_pt,
-            fit_exp2_to_profile
-        )
+        """Draw comparison of all detection methods on the A-Scan plot.
+        
+        OPTIMIZED: Uses pre-computed values from detection_metadata instead of recomputing.
+        """
+        # Get pre-computed detection metadata for current A-scan
+        cache_key = (self.current_specimen.specimen_id, self.current_slice_index)
+        if cache_key not in self.results_cache:
+            return
+        
+        _, _, lesion_depth = self.results_cache[cache_key]
+        if not lesion_depth or not lesion_depth.knee_data or self.current_ascan_x not in lesion_depth.knee_data:
+            return
+        
+        knee_info = lesion_depth.knee_data[self.current_ascan_x]
+        detection_metadata = knee_info.get('detection_metadata', {})
         
         # Define methods and their colors
         methods = [
-            ("knee_point", "red", "Knee"),
-            ("sigmoid_fit", "purple", "Inflection"),
-            ("sigmoid_shoulder", "cyan", "Shoulder")
+            ("knee_point", "red", "Knee", 'knee_depth', 'knee_idx'),
+            ("sigmoid_fit", "purple", "Inflection", 'inflection_depth', 'inflection_idx'),
+            ("sigmoid_shoulder", "cyan", "Shoulder", 'shoulder_depth', 'shoulder_idx')
         ]
         
         results = {}
         
-        for method_name, color, label in methods:
-            try:
-                if method_name == "knee_point":
-                    # Use exp2 fit + knee point
-                    fit_result = fit_exp2_to_profile(intensity_profile, depth_idx)
-                    if fit_result is not None:
-                        fitted_curve, _ = fit_result
-                        depth_value, depth_index = knee_pt(fitted_curve, depth_idx)
-                    else:
-                        depth_value, depth_index = knee_pt(intensity_profile, depth_idx)
-                elif method_name == "sigmoid_fit":
-                    depth_value, depth_index, _ = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
-                elif method_name == "sigmoid_shoulder":
-                    _, _, sigmoid_meta = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
-                    if sigmoid_meta.get('success'):
-                        depth_value = sigmoid_meta.get('shoulder_depth', np.nan)
-                        depth_index = sigmoid_meta.get('shoulder_idx', -1)
-                    else:
-                        depth_value, depth_index = np.nan, -1
+        # Use pre-computed values from metadata (FAST!)
+        for method_name, color, label, depth_key, idx_key in methods:
+            if depth_key in detection_metadata and idx_key in detection_metadata:
+                depth_value = detection_metadata[depth_key]
+                depth_index = detection_metadata[idx_key]
                 
                 if not np.isnan(depth_value) and depth_index >= 0 and depth_index < len(intensity_profile):
                     results[method_name] = (depth_value, depth_index, color, label)
-            except Exception as e:
-                print(f"Method {method_name} failed: {e}")
         
         # Draw markers for each method
         marker_offset = 0
@@ -1142,146 +1204,194 @@ class CarlQuantTestViewer:
                 detection_metadata = knee_info.get('detection_metadata', {})
                 method_used = detection_metadata.get('method', 'knee_point')
                 
-                # Draw the FITTED curve (method-specific) if available
-                fit_label = None
-                fit_color = 'magenta'
-                
-                if fitted_curve is not None:
-                    fitted_curve = np.array(fitted_curve)
-                    fitted_points = []
-                    for i, (d_idx, intensity) in enumerate(zip(depth_idx, fitted_curve)):
-                        abs_y = surface_y + d_idx
-                        if abs_y < image_height:
-                            x = margin_left + int((intensity / 255.0) * plot_area_width)
-                            y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
-                            fitted_points.append((x, y))
-                    
-                    if len(fitted_points) > 1:
-                        # Set color based on method
-                        if method_used == 'knee_point':
-                            fit_color = 'magenta'
-                        elif method_used == 'sigmoid_fit':
-                            fit_color = 'purple'
-                        elif method_used == 'combined_mean':
-                            fit_color = 'magenta'
-                        
-                        draw.line(fitted_points, fill=fit_color, width=3)
-                
-                # For combined method, also draw sigmoid fit
-                if method_used == 'combined_mean' and 'sigmoid_fitted_curve' in detection_metadata:
-                    sigmoid_curve = detection_metadata['sigmoid_fitted_curve']
-                    if sigmoid_curve is not None:
-                        sigmoid_curve = np.array(sigmoid_curve)
-                        sigmoid_points = []
-                        for i, (d_idx, intensity) in enumerate(zip(depth_idx, sigmoid_curve)):
+                # COMPARISON MODE: Show all three methods with their fitted curves
+                if self.compare_methods.get():
+                    # Draw BOTH fitted curves (Exp2 and Sigmoid) if available
+                    # Exp2 fit (magenta) - for knee_point method
+                    # Use exp2_fitted_curve from metadata if available (compare mode)
+                    exp2_curve = detection_metadata.get('exp2_fitted_curve')
+                    if exp2_curve is not None:
+                        exp2_curve_array = np.array(exp2_curve)
+                        fitted_points = []
+                        for i, (d_idx, intensity) in enumerate(zip(depth_idx, exp2_curve_array)):
                             abs_y = surface_y + d_idx
                             if abs_y < image_height:
                                 x = margin_left + int((intensity / 255.0) * plot_area_width)
                                 y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
-                                sigmoid_points.append((x, y))
+                                fitted_points.append((x, y))
                         
-                        if len(sigmoid_points) > 1:
-                            draw.line(sigmoid_points, fill='purple', width=3)
-                
-                # Draw knee point marker (large red circle)
-                if knee_idx >= 0 and knee_idx < len(intensity_profile):
-                    knee_intensity = intensity_profile[knee_idx]
-                    knee_abs_y = surface_y + depth_idx[knee_idx]
+                        if len(fitted_points) > 1:
+                            draw.line(fitted_points, fill='magenta', width=2)
+                    elif fitted_curve is not None:
+                        # Fallback to fitted_curve if exp2_fitted_curve not available
+                        fitted_curve_array = np.array(fitted_curve)
+                        fitted_points = []
+                        for i, (d_idx, intensity) in enumerate(zip(depth_idx, fitted_curve_array)):
+                            abs_y = surface_y + d_idx
+                            if abs_y < image_height:
+                                x = margin_left + int((intensity / 255.0) * plot_area_width)
+                                y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
+                                fitted_points.append((x, y))
+                        
+                        if len(fitted_points) > 1:
+                            draw.line(fitted_points, fill='magenta', width=2)
                     
-                    if knee_abs_y < image_height:
-                        plot_x = margin_left + int((knee_intensity / 255.0) * plot_area_width)
-                        plot_y = margin_top + int((knee_abs_y / float(image_height - 1)) * plot_area_height)
-                        
-                        # Draw large marker for knee point
-                        radius = 6
-                        draw.ellipse([(plot_x - radius, plot_y - radius), 
-                                    (plot_x + radius, plot_y + radius)], 
-                                   fill='red', outline='darkred', width=3)
-                        
-                        # Add label (without font specification - use default)
-                        method_labels = {
-                            'knee_point': 'Knee',
-                            'sigmoid_fit': 'Inflection',
-                            'sigmoid_shoulder': 'Shoulder',
-                            'combined_mean': 'Mean'
-                        }
-                        label_text = method_labels.get(method_used, 'Depth')
-                        draw.text((plot_x + 10, plot_y - 10), f"{label_text}\ny={int(knee_abs_y)}", fill='red')
-                        
-                        # For combined method, draw individual markers (band already drawn)
-                        if method_used == 'combined_mean':
-                            # Draw knee point marker (blue square)
-                            if 'knee_depth' in detection_metadata and 'knee_idx' in detection_metadata:
-                                k_idx = detection_metadata['knee_idx']
-                                if 0 <= k_idx < len(intensity_profile):
-                                    k_intensity = intensity_profile[k_idx]
-                                    k_abs_y = surface_y + detection_metadata['knee_depth']
-                                    k_plot_x = margin_left + int((k_intensity / 255.0) * plot_area_width)
-                                    k_plot_y = margin_top + int((k_abs_y / float(image_height - 1)) * plot_area_height)
-                                    
-                                    size = 4
-                                    draw.rectangle([(k_plot_x - size, k_plot_y - size), 
-                                                  (k_plot_x + size, k_plot_y + size)], 
-                                                 fill='blue', outline='darkblue', width=2)
-                                    draw.text((k_plot_x - 40, k_plot_y - 5), f"K:{int(k_abs_y)}", fill='blue')
+                    # Sigmoid fit (purple) - for sigmoid methods
+                    if 'sigmoid_fitted_curve' in detection_metadata:
+                        sigmoid_curve = detection_metadata['sigmoid_fitted_curve']
+                        if sigmoid_curve is not None:
+                            sigmoid_curve = np.array(sigmoid_curve)
+                            sigmoid_points = []
+                            for i, (d_idx, intensity) in enumerate(zip(depth_idx, sigmoid_curve)):
+                                abs_y = surface_y + d_idx
+                                if abs_y < image_height:
+                                    x = margin_left + int((intensity / 255.0) * plot_area_width)
+                                    y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
+                                    sigmoid_points.append((x, y))
                             
-                            # Draw sigmoid point marker (purple square)
-                            if 'sigmoid_depth' in detection_metadata and 'sigmoid_idx' in detection_metadata:
-                                s_idx = detection_metadata['sigmoid_idx']
-                                if 0 <= s_idx < len(intensity_profile):
-                                    s_intensity = intensity_profile[s_idx]
-                                    s_abs_y = surface_y + detection_metadata['sigmoid_depth']
-                                    s_plot_x = margin_left + int((s_intensity / 255.0) * plot_area_width)
-                                    s_plot_y = margin_top + int((s_abs_y / float(image_height - 1)) * plot_area_height)
-                                    
-                                    size = 4
-                                    draw.rectangle([(s_plot_x - size, s_plot_y - size), 
-                                                  (s_plot_x + size, s_plot_y + size)], 
-                                                 fill='purple', outline='darkviolet', width=2)
-                                    draw.text((s_plot_x - 40, s_plot_y - 5), f"S:{int(s_abs_y)}", fill='purple')
-                        
-                        # For sigmoid-based methods, also show shoulder point
-                        if method_used in ['sigmoid_fit', 'sigmoid_shoulder']:
-                            # Draw shoulder point (cyan diamond)
-                            if 'shoulder_depth' in detection_metadata and 'shoulder_idx' in detection_metadata:
-                                sh_idx = detection_metadata['shoulder_idx']
-                                if 0 <= sh_idx < len(intensity_profile):
-                                    sh_intensity = intensity_profile[sh_idx]
-                                    sh_abs_y = surface_y + detection_metadata['shoulder_depth']
-                                    sh_plot_x = margin_left + int((sh_intensity / 255.0) * plot_area_width)
-                                    sh_plot_y = margin_top + int((sh_abs_y / float(image_height - 1)) * plot_area_height)
-                                    
-                                    # Draw diamond shape for shoulder
-                                    size = 5
-                                    diamond_points = [
-                                        (sh_plot_x, sh_plot_y - size),  # Top
-                                        (sh_plot_x + size, sh_plot_y),  # Right
-                                        (sh_plot_x, sh_plot_y + size),  # Bottom
-                                        (sh_plot_x - size, sh_plot_y)   # Left
-                                    ]
-                                    draw.polygon(diamond_points, fill='cyan', outline='darkcyan')
-                                    draw.text((sh_plot_x + 10, sh_plot_y - 20), f"Shoulder\ny={int(sh_abs_y)}", fill='cyan')
-                            
-                            # Draw inflection point (if not already the main marker)
-                            if method_used != 'sigmoid_fit' and 'inflection_depth' in detection_metadata and 'inflection_idx' in detection_metadata:
-                                i_idx = detection_metadata['inflection_idx']
-                                if 0 <= i_idx < len(intensity_profile):
-                                    i_intensity = intensity_profile[i_idx]
-                                    i_abs_y = surface_y + detection_metadata['inflection_depth']
-                                    i_plot_x = margin_left + int((i_intensity / 255.0) * plot_area_width)
-                                    i_plot_y = margin_top + int((i_abs_y / float(image_height - 1)) * plot_area_height)
-                                    
-                                    # Draw small circle for inflection
-                                    radius = 3
-                                    draw.ellipse([(i_plot_x - radius, i_plot_y - radius), 
-                                                (i_plot_x + radius, i_plot_y + radius)], 
-                                               fill='purple', outline='darkviolet', width=1)
-                
-                # If comparison mode is enabled, run all methods and show results
-                if self.compare_methods.get():
+                            if len(sigmoid_points) > 1:
+                                draw.line(sigmoid_points, fill='purple', width=2)
+                    
+                    # Draw all three method markers
                     self.draw_method_comparison(draw, intensity_profile, depth_idx, surface_y, 
                                                image_height, margin_left, margin_top, 
                                                plot_area_width, plot_area_height)
+                
+                # SINGLE METHOD MODE: Show only the selected method
+                else:
+                    # Draw the FITTED curve (method-specific) if available
+                    fit_color = 'magenta'
+                    
+                    if fitted_curve is not None:
+                        fitted_curve = np.array(fitted_curve)
+                        fitted_points = []
+                        for i, (d_idx, intensity) in enumerate(zip(depth_idx, fitted_curve)):
+                            abs_y = surface_y + d_idx
+                            if abs_y < image_height:
+                                x = margin_left + int((intensity / 255.0) * plot_area_width)
+                                y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
+                                fitted_points.append((x, y))
+                        
+                        if len(fitted_points) > 1:
+                            # Set color based on method
+                            if method_used == 'knee_point':
+                                fit_color = 'magenta'
+                            elif method_used == 'sigmoid_fit':
+                                fit_color = 'purple'
+                            elif method_used == 'combined_mean':
+                                fit_color = 'magenta'
+                            
+                            draw.line(fitted_points, fill=fit_color, width=3)
+                    
+                    # For combined method, also draw sigmoid fit
+                    if method_used == 'combined_mean' and 'sigmoid_fitted_curve' in detection_metadata:
+                        sigmoid_curve = detection_metadata['sigmoid_fitted_curve']
+                        if sigmoid_curve is not None:
+                            sigmoid_curve = np.array(sigmoid_curve)
+                            sigmoid_points = []
+                            for i, (d_idx, intensity) in enumerate(zip(depth_idx, sigmoid_curve)):
+                                abs_y = surface_y + d_idx
+                                if abs_y < image_height:
+                                    x = margin_left + int((intensity / 255.0) * plot_area_width)
+                                    y = margin_top + int((abs_y / float(image_height - 1)) * plot_area_height)
+                                    sigmoid_points.append((x, y))
+                            
+                            if len(sigmoid_points) > 1:
+                                draw.line(sigmoid_points, fill='purple', width=3)
+                    
+                    # Draw primary method marker (large red circle)
+                    if knee_idx >= 0 and knee_idx < len(intensity_profile):
+                        knee_intensity = intensity_profile[knee_idx]
+                        knee_abs_y = surface_y + depth_idx[knee_idx]
+                        
+                        if knee_abs_y < image_height:
+                            plot_x = margin_left + int((knee_intensity / 255.0) * plot_area_width)
+                            plot_y = margin_top + int((knee_abs_y / float(image_height - 1)) * plot_area_height)
+                            
+                            # Draw large marker for knee point
+                            radius = 6
+                            draw.ellipse([(plot_x - radius, plot_y - radius), 
+                                        (plot_x + radius, plot_y + radius)], 
+                                       fill='red', outline='darkred', width=3)
+                            
+                            # Add label (without font specification - use default)
+                            method_labels = {
+                                'knee_point': 'Knee',
+                                'sigmoid_fit': 'Inflection',
+                                'sigmoid_shoulder': 'Shoulder',
+                                'combined_mean': 'Mean'
+                            }
+                            label_text = method_labels.get(method_used, 'Depth')
+                            draw.text((plot_x + 10, plot_y - 10), f"{label_text}\ny={int(knee_abs_y)}", fill='red')
+                            
+                            # For combined method, draw individual markers
+                            if method_used == 'combined_mean':
+                                # Draw knee point marker (blue square)
+                                if 'knee_depth' in detection_metadata and 'knee_idx' in detection_metadata:
+                                    k_idx = detection_metadata['knee_idx']
+                                    if 0 <= k_idx < len(intensity_profile):
+                                        k_intensity = intensity_profile[k_idx]
+                                        k_abs_y = surface_y + detection_metadata['knee_depth']
+                                        k_plot_x = margin_left + int((k_intensity / 255.0) * plot_area_width)
+                                        k_plot_y = margin_top + int((k_abs_y / float(image_height - 1)) * plot_area_height)
+                                        
+                                        size = 4
+                                        draw.rectangle([(k_plot_x - size, k_plot_y - size), 
+                                                      (k_plot_x + size, k_plot_y + size)], 
+                                                     fill='blue', outline='darkblue', width=2)
+                                        draw.text((k_plot_x - 40, k_plot_y - 5), f"K:{int(k_abs_y)}", fill='blue')
+                                
+                                # Draw sigmoid point marker (purple square)
+                                if 'sigmoid_depth' in detection_metadata and 'sigmoid_idx' in detection_metadata:
+                                    s_idx = detection_metadata['sigmoid_idx']
+                                    if 0 <= s_idx < len(intensity_profile):
+                                        s_intensity = intensity_profile[s_idx]
+                                        s_abs_y = surface_y + detection_metadata['sigmoid_depth']
+                                        s_plot_x = margin_left + int((s_intensity / 255.0) * plot_area_width)
+                                        s_plot_y = margin_top + int((s_abs_y / float(image_height - 1)) * plot_area_height)
+                                        
+                                        size = 4
+                                        draw.rectangle([(s_plot_x - size, s_plot_y - size), 
+                                                      (s_plot_x + size, s_plot_y + size)], 
+                                                     fill='purple', outline='darkviolet', width=2)
+                                        draw.text((s_plot_x - 40, s_plot_y - 5), f"S:{int(s_abs_y)}", fill='purple')
+                            
+                            # For sigmoid-based methods, also show shoulder point
+                            if method_used in ['sigmoid_fit', 'sigmoid_shoulder']:
+                                # Draw shoulder point (cyan diamond)
+                                if 'shoulder_depth' in detection_metadata and 'shoulder_idx' in detection_metadata:
+                                    sh_idx = detection_metadata['shoulder_idx']
+                                    if 0 <= sh_idx < len(intensity_profile):
+                                        sh_intensity = intensity_profile[sh_idx]
+                                        sh_abs_y = surface_y + detection_metadata['shoulder_depth']
+                                        sh_plot_x = margin_left + int((sh_intensity / 255.0) * plot_area_width)
+                                        sh_plot_y = margin_top + int((sh_abs_y / float(image_height - 1)) * plot_area_height)
+                                        
+                                        # Draw diamond shape for shoulder
+                                        size = 5
+                                        diamond_points = [
+                                            (sh_plot_x, sh_plot_y - size),  # Top
+                                            (sh_plot_x + size, sh_plot_y),  # Right
+                                            (sh_plot_x, sh_plot_y + size),  # Bottom
+                                            (sh_plot_x - size, sh_plot_y)   # Left
+                                        ]
+                                        draw.polygon(diamond_points, fill='cyan', outline='darkcyan')
+                                        draw.text((sh_plot_x + 10, sh_plot_y - 20), f"Shoulder\ny={int(sh_abs_y)}", fill='cyan')
+                                
+                                # Draw inflection point (if not already the main marker)
+                                if method_used != 'sigmoid_fit' and 'inflection_depth' in detection_metadata and 'inflection_idx' in detection_metadata:
+                                    i_idx = detection_metadata['inflection_idx']
+                                    if 0 <= i_idx < len(intensity_profile):
+                                        i_intensity = intensity_profile[i_idx]
+                                        i_abs_y = surface_y + detection_metadata['inflection_depth']
+                                        i_plot_x = margin_left + int((i_intensity / 255.0) * plot_area_width)
+                                        i_plot_y = margin_top + int((i_abs_y / float(image_height - 1)) * plot_area_height)
+                                        
+                                        # Draw small circle for inflection
+                                        radius = 3
+                                        draw.ellipse([(i_plot_x - radius, i_plot_y - radius), 
+                                                    (i_plot_x + radius, i_plot_y + radius)], 
+                                                   fill='purple', outline='darkviolet', width=1)
             
             # Draw fitted spline point (orange) if enabled
             if self.show_fitted_curve.get() and surface and surface.fitted_curves and "spline" in surface.fitted_curves:
@@ -1340,15 +1450,26 @@ class CarlQuantTestViewer:
                 fitted_curve = knee_info.get('fitted_curve')
                 
                 label_y = margin_top + 5
-                if fitted_curve is not None:
-                    if method_used == 'knee_point':
+                
+                # In comparison mode, always show both fits if available
+                if self.compare_methods.get():
+                    # Check for exp2_fitted_curve in metadata (compare mode) or fallback to fitted_curve
+                    if detection_meta.get('exp2_fitted_curve') is not None or fitted_curve is not None:
                         draw.text((plot_width - margin_right - 100, label_y), 'Exp2 Fit', fill='magenta')
-                    elif method_used == 'sigmoid_fit':
-                        draw.text((plot_width - margin_right - 100, label_y), 'Sigmoid Fit', fill='purple')
-                    elif method_used == 'combined_mean':
-                        draw.text((plot_width - margin_right - 100, label_y), 'Exp2 Fit', fill='magenta')
-                        if 'sigmoid_fitted_curve' in detection_meta:
-                            draw.text((plot_width - margin_right - 100, label_y + 15), 'Sigmoid Fit', fill='purple')
+                    if 'sigmoid_fitted_curve' in detection_meta:
+                        draw.text((plot_width - margin_right - 100, label_y + 15), 'Sigmoid Fit', fill='purple')
+                
+                # In single method mode, show only the relevant fit
+                else:
+                    if fitted_curve is not None:
+                        if method_used == 'knee_point':
+                            draw.text((plot_width - margin_right - 100, label_y), 'Exp2 Fit', fill='magenta')
+                        elif method_used == 'sigmoid_fit':
+                            draw.text((plot_width - margin_right - 100, label_y), 'Sigmoid Fit', fill='purple')
+                        elif method_used == 'combined_mean':
+                            draw.text((plot_width - margin_right - 100, label_y), 'Exp2 Fit', fill='magenta')
+                            if 'sigmoid_fitted_curve' in detection_meta:
+                                draw.text((plot_width - margin_right - 100, label_y + 15), 'Sigmoid Fit', fill='purple')
         
         # Convert to PhotoImage and display
         self.plot_photo = ImageTk.PhotoImage(plot_img)
