@@ -827,17 +827,20 @@ def fit_exp2_to_profile(intensity_profile: np.ndarray, depth_indices: np.ndarray
         return None
 
 
-def calculate_lesion_depth(surface: Surface, 
-                          region_config: RegionConfig,
-                          image: np.ndarray,
-                          search_depth: int = 200,
-                          detection_method: str = "knee_point",
-                          use_curve_fitting: bool = True,
-                          smooth_depth_points: bool = True,
-                          smoothing: float = 5.0,
-                          smoothing_multiplier: float = 5.0,
-                          spline_degree: int = 2,
-                          surface_offset: int = 0) -> Optional[LesionDepth]:
+def calculate_lesion_depth(
+    surface: Surface,
+    region_config: RegionConfig,
+    image: np.ndarray,
+    search_depth: int = 200,
+    use_curve_fitting: bool = True,
+    smooth_depth_points: bool = True,
+    surface_offset: int = 0,
+    detection_method: str = "knee_point",
+    compute_all_methods: bool = False,
+    smoothing: float = 5.0,
+    smoothing_multiplier: float = 5.0,
+    spline_degree: int = 2
+) -> Optional[LesionDepth]:
     """
     Calculate lesion depth using various detection methods.
     
@@ -915,6 +918,34 @@ def calculate_lesion_depth(surface: Surface,
         detection_metadata = {}
         fitted_curve = None
         fit_params = None
+        
+        # If compute_all_methods is True, compute all three methods and store in metadata
+        if compute_all_methods:
+            # Compute knee point
+            profile_for_knee = intensity_profile
+            knee_fitted_curve = None
+            if use_curve_fitting:
+                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                if fit_result is not None:
+                    knee_fitted_curve, _ = fit_result
+                    profile_for_knee = knee_fitted_curve
+            knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
+            
+            # Compute sigmoid (inflection and shoulder)
+            sigmoid_depth, sigmoid_idx, sigmoid_meta = detect_depth_sigmoid_fit(
+                intensity_profile, depth_indices
+            )
+            
+            # Store all methods in metadata for visualization
+            detection_metadata['knee_depth'] = knee_depth
+            detection_metadata['knee_idx'] = knee_idx
+            if sigmoid_meta.get('success'):
+                detection_metadata['inflection_depth'] = sigmoid_meta.get('inflection_depth', np.nan)
+                detection_metadata['inflection_idx'] = sigmoid_meta.get('inflection_idx', -1)
+                detection_metadata['shoulder_depth'] = sigmoid_meta.get('shoulder_depth', np.nan)
+                detection_metadata['shoulder_idx'] = sigmoid_meta.get('shoulder_idx', -1)
+                if 'fitted_curve' in sigmoid_meta:
+                    detection_metadata['sigmoid_fitted_curve'] = sigmoid_meta['fitted_curve']
         
         if detection_method == "knee_point":
             # Original method: optionally fit exp2, then find knee point
@@ -1091,7 +1122,8 @@ def process_slice(image_path: Path,
                  air_config: Optional[AirConfig] = None,
                  num_sound_regions: int = 3,
                  num_lesion_regions: int = 3,
-                 detection_method: str = "knee_point") -> Tuple[List[RegionStats], Surface, LesionDepth]:
+                 detection_method: str = "knee_point",
+                 compute_all_methods: bool = False) -> Tuple[List[RegionStats], Surface, LesionDepth]:
     """
     Process a single OCT slice through the complete pipeline.
     
@@ -1125,7 +1157,7 @@ def process_slice(image_path: Path,
     )
     
     # Step 3: Calculate lesion depth
-    lesion_depth = calculate_lesion_depth(surface, region_config, image_array, detection_method=detection_method)
+    lesion_depth = calculate_lesion_depth(surface, region_config, image_array, detection_method=detection_method, compute_all_methods=compute_all_methods)
     
     return region_stats, surface, lesion_depth
 

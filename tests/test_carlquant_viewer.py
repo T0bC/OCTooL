@@ -34,10 +34,13 @@ from carlquant_frames.carl_quant_core import DepthDetectionMethod
 
 
 # Module-level function for ProcessPoolExecutor (must be picklable)
-def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method="knee_point"):
+def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method="knee_point", compute_all_methods=False):
     """
     Process a single slice with pre-loaded image.
     This function must be at module level to be picklable by ProcessPoolExecutor.
+    
+    Args:
+        compute_all_methods: If True, compute all detection methods and store in metadata
     """
     try:
         slice_start = time.time()
@@ -48,7 +51,8 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
             image_array, surface, region_config, num_sound, num_lesion
         )
         lesion_depth = test_carlquant_algorithm.calculate_lesion_depth(
-            surface, region_config, image_array, detection_method=detection_method
+            surface, region_config, image_array, detection_method=detection_method,
+            compute_all_methods=compute_all_methods
         )
         
         slice_time = time.time() - slice_start
@@ -570,10 +574,12 @@ class CarlQuantTestViewer:
             # Convert back to numpy array
             display_image = np.array(pil_image)
         
-        # Draw lesion depth (raw knee points - small markers)
-        if self.show_raw_depth.get() and cache_key in self.results_cache:
+        # Draw single-method results (only when NOT in comparison mode)
+        if not self.compare_methods.get() and cache_key in self.results_cache:
             _, _, lesion_depth = self.results_cache[cache_key]
-            if lesion_depth and lesion_depth.depth_points:
+            
+            # Draw lesion depth (raw knee points - small markers)
+            if self.show_raw_depth.get() and lesion_depth and lesion_depth.depth_points:
                 for x, depth in lesion_depth.depth_points:
                     if 0 <= x < display_image.shape[1]:
                         # Draw small cross marker for raw points
@@ -588,11 +594,9 @@ class CarlQuantTestViewer:
                                 ny = y + dy
                                 if 0 <= ny < display_image.shape[0]:
                                     display_image[ny, x] = [255, 255, 0]  # Yellow for raw
-        
-        # Draw smoothed lesion depth (spline-fitted curve - thicker line)
-        if self.show_lesion_depth.get() and cache_key in self.results_cache:
-            _, _, lesion_depth = self.results_cache[cache_key]
-            if lesion_depth and lesion_depth.smoothed_depth_points:
+            
+            # Draw smoothed lesion depth (spline-fitted curve - thicker line)
+            if self.show_lesion_depth.get() and lesion_depth and lesion_depth.smoothed_depth_points:
                 # Draw smoothed curve with thickness
                 for x, depth in lesion_depth.smoothed_depth_points:
                     if 0 <= x < display_image.shape[1]:
@@ -606,7 +610,15 @@ class CarlQuantTestViewer:
         if self.compare_methods.get() and cache_key in self.results_cache:
             _, surface, lesion_depth = self.results_cache[cache_key]
             if lesion_depth and lesion_depth.knee_data and surface.fitted_curves and "spline" in surface.fitted_curves:
+                # Update status to show we're computing comparison
+                original_status = self.status_label.cget("text")
+                self.status_label.config(text="Drawing method comparison...")
+                self.root.update_idletasks()
+                
                 self.draw_method_comparison_on_image(display_image, lesion_depth, surface)
+                
+                # Restore status
+                self.status_label.config(text=original_status)
         
         # Convert to PIL and display
         pil_image = Image.fromarray(display_image.astype(np.uint8))
@@ -697,6 +709,9 @@ class CarlQuantTestViewer:
                 
                 print(f"Pre-loaded {len(preloaded_images)} images in {preload_time:.2f}s")
                 
+                # Determine if we should compute all methods (for comparison)
+                compute_all_methods = self.compare_methods.get()
+                
                 self.status_label.config(text=f"Processing {len(slice_tasks)} slices using {effective_workers} workers...")
                 self.root.update_idletasks()
                 
@@ -708,7 +723,7 @@ class CarlQuantTestViewer:
                         image_array = preloaded_images[slice_idx]
                         future = executor.submit(
                             process_slice_parallel,
-                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method
+                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method, compute_all_methods
                         )
                         future_to_slice[future] = slice_idx
                     
@@ -752,6 +767,9 @@ class CarlQuantTestViewer:
             
             else:
                 # SEQUENTIAL PROCESSING
+                # Determine if we should compute all methods (for comparison)
+                compute_all_methods = self.compare_methods.get()
+                
                 print(f"Using sequential processing: {len(slice_tasks)} slices")
                 self.status_label.config(text=f"Processing {len(slice_tasks)} slices sequentially...")
                 self.root.update_idletasks()
@@ -763,7 +781,7 @@ class CarlQuantTestViewer:
                     try:
                         slice_start = time.time()
                         region_stats, surface, lesion_depth = test_carlquant_algorithm.process_slice(
-                            image_path, region_config, air_config, num_sound, num_lesion, detection_method
+                            image_path, region_config, air_config, num_sound, num_lesion, detection_method, compute_all_methods
                         )
                         slice_time = time.time() - slice_start
                         slice_times.append(slice_time)
@@ -814,71 +832,144 @@ class CarlQuantTestViewer:
             traceback.print_exc()
     
     def draw_method_comparison_on_image(self, display_image, lesion_depth, surface):
-        """Draw all detection methods' results on the main image."""
+        """Draw all detection methods' results on the main image with smoothed splines.
+        
+        If compute_all_methods was enabled during algorithm run, uses pre-computed data.
+        Otherwise, computes methods on-the-fly (slower).
+        """
         from carlquant_frames.carl_quant_core import (
             detect_depth_sigmoid_fit,
             knee_pt,
             fit_exp2_to_profile
         )
+        from test_carlquant_algorithm import fit_surface_curve
         
         # Get surface dictionary
         surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
         
-        # Method colors (RGB)
+        # Method colors (RGB) - using distinct colors for visibility
         method_colors = {
             "knee_point": [255, 0, 0],      # Red
             "sigmoid_fit": [128, 0, 128],   # Purple
             "sigmoid_shoulder": [0, 255, 255]  # Cyan
         }
         
-        # Sample every N columns to avoid clutter
-        sample_interval = max(1, len(lesion_depth.knee_data) // 50)  # Max 50 samples
+        # Collect raw depth data for each method
+        method_raw_depths = {
+            "knee_point": [],
+            "sigmoid_fit": [],
+            "sigmoid_shoulder": []
+        }
         
-        for idx, (x, knee_info) in enumerate(lesion_depth.knee_data.items()):
-            if idx % sample_interval != 0:
-                continue
-                
+        # Process each column to collect raw depth points
+        for x, knee_info in lesion_depth.knee_data.items():
             if x not in surface_dict:
                 continue
             
+            surface_y = knee_info['surface_y']
+            detection_metadata = knee_info.get('detection_metadata', {})
+            
+            # Get intensity profile for computing missing methods
             intensity_profile = np.array(knee_info['intensity'])
             depth_idx = np.array(knee_info['depth_idx'])
-            surface_y = knee_info['surface_y']
             
-            # Run all methods
-            methods = ["knee_point", "sigmoid_fit", "sigmoid_shoulder"]
-            
-            for method_name in methods:
+            # Extract or compute knee point depth
+            if 'knee_depth' in knee_info:
+                knee_depth = knee_info['knee_depth']
+            else:
+                # Compute knee point if not available
                 try:
-                    if method_name == "knee_point":
-                        fit_result = fit_exp2_to_profile(intensity_profile, depth_idx)
-                        if fit_result is not None:
-                            fitted_curve, _ = fit_result
-                            depth_value, depth_index = knee_pt(fitted_curve, depth_idx)
-                        else:
-                            depth_value, depth_index = knee_pt(intensity_profile, depth_idx)
-                    elif method_name == "sigmoid_fit":
-                        depth_value, depth_index, _ = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
-                    elif method_name == "sigmoid_shoulder":
-                        _, _, sigmoid_meta = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
-                        if sigmoid_meta.get('success'):
-                            depth_value = sigmoid_meta.get('shoulder_depth', np.nan)
-                            depth_index = sigmoid_meta.get('shoulder_idx', -1)
-                        else:
-                            depth_value, depth_index = np.nan, -1
-                    
-                    if not np.isnan(depth_value) and depth_index >= 0:
-                        abs_y = int(surface_y + depth_value)
-                        if 0 <= abs_y < display_image.shape[0] and 0 <= x < display_image.shape[1]:
-                            # Draw small marker (2x2 pixel)
-                            color = method_colors[method_name]
-                            for dx in range(-1, 2):
-                                for dy in range(-1, 2):
-                                    nx, ny = x + dx, abs_y + dy
-                                    if 0 <= nx < display_image.shape[1] and 0 <= ny < display_image.shape[0]:
-                                        display_image[ny, nx] = color
-                except Exception:
-                    pass  # Skip failed methods silently
+                    fit_result = fit_exp2_to_profile(intensity_profile, depth_idx)
+                    if fit_result is not None:
+                        fitted_curve, _ = fit_result
+                        knee_depth, _ = knee_pt(fitted_curve, depth_idx)
+                    else:
+                        knee_depth, _ = knee_pt(intensity_profile, depth_idx)
+                except:
+                    knee_depth = np.nan
+            
+            if not np.isnan(knee_depth):
+                abs_y = int(surface_y + knee_depth)
+                if 0 <= abs_y < display_image.shape[0]:
+                    method_raw_depths["knee_point"].append((x, abs_y))
+            
+            # Extract or compute sigmoid depths
+            if 'inflection_depth' in detection_metadata and 'shoulder_depth' in detection_metadata:
+                # Already computed - use stored values
+                inflection_depth = detection_metadata.get('inflection_depth')
+                shoulder_depth = detection_metadata.get('shoulder_depth')
+            else:
+                # Compute sigmoid if not available
+                try:
+                    _, _, sigmoid_meta = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
+                    if sigmoid_meta.get('success'):
+                        inflection_depth = sigmoid_meta.get('inflection_depth', np.nan)
+                        shoulder_depth = sigmoid_meta.get('shoulder_depth', np.nan)
+                    else:
+                        inflection_depth = np.nan
+                        shoulder_depth = np.nan
+                except:
+                    inflection_depth = np.nan
+                    shoulder_depth = np.nan
+            
+            # Add sigmoid inflection
+            if not np.isnan(inflection_depth):
+                abs_y = int(surface_y + inflection_depth)
+                if 0 <= abs_y < display_image.shape[0]:
+                    method_raw_depths["sigmoid_fit"].append((x, abs_y))
+            
+            # Add sigmoid shoulder
+            if not np.isnan(shoulder_depth):
+                abs_y = int(surface_y + shoulder_depth)
+                if 0 <= abs_y < display_image.shape[0]:
+                    method_raw_depths["sigmoid_shoulder"].append((x, abs_y))
+        
+        # Get lesion region bounds for spline fitting
+        if hasattr(lesion_depth, 'knee_data') and lesion_depth.knee_data:
+            x_coords = list(lesion_depth.knee_data.keys())
+            start_x = min(x_coords)
+            end_x = max(x_coords)
+        else:
+            return
+        
+        # Draw each method
+        for method_name, raw_points in method_raw_depths.items():
+            if len(raw_points) < 4:  # Need at least 4 points for spline
+                continue
+            
+            color = method_colors[method_name]
+            
+            # Compute smoothed spline for this method
+            smoothed_curves = fit_surface_curve(
+                raw_points,
+                start_x,
+                end_x,
+                smoothing=0.5,
+                smoothing_multiplier=1.0,
+                spline_degree=3,
+                curve_name=method_name
+            )
+            
+            # Draw smoothed spline (always shown in comparison mode)
+            if method_name in smoothed_curves:
+                smoothed_points = smoothed_curves[method_name]
+                for x, y in smoothed_points:
+                    if 0 <= x < display_image.shape[1]:
+                        for dy in range(-1, 2):  # 3 pixel thickness
+                            ny = int(y) + dy
+                            if 0 <= ny < display_image.shape[0]:
+                                display_image[ny, x] = color
+            
+            # Draw raw points if toggle is enabled
+            if self.show_raw_depth.get():
+                for x, y in raw_points:
+                    if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
+                        # Draw small marker (single pixel with 1-pixel border)
+                        for dx in range(-1, 2):
+                            for dy in range(-1, 2):
+                                nx, ny_offset = x + dx, y + dy
+                                if 0 <= nx < display_image.shape[1] and 0 <= ny_offset < display_image.shape[0]:
+                                    display_image[ny_offset, nx] = color
     
     def draw_method_comparison(self, draw, intensity_profile, depth_idx, surface_y, 
                               image_height, margin_left, margin_top, 
