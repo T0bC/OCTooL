@@ -66,6 +66,9 @@ def load_test_specimens() -> dict[str, Specimen]:
         specimens = DataLoader.find_image_stacks(test_path)
 
         for specimen_id, specimen in specimens.items():
+            # Load configuration from any available Data_ folder
+            specimen.config = DataLoader.load_specimen_config(specimen)
+            
             # Verify that configuration exists
             if specimen.config is None:
                 print(f"Warning: No configuration found for {specimen_id}")
@@ -103,6 +106,9 @@ def load_single_specimen(specimen_path: str) -> Specimen:
 
     if specimen_id in specimens:
         specimen = specimens[specimen_id]
+        # Load configuration from any available Data_ folder
+        specimen.config = DataLoader.load_specimen_config(specimen)
+        
         print(f"Loaded specimen: {specimen_id}")
         print(f"  Images: {len(specimen.images)}")
         print(f"  Regions configured: {len(specimen.config.regions) if specimen.config else 0}")
