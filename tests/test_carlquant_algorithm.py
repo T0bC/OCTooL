@@ -994,7 +994,7 @@ def calculate_lesion_depth(
     smoothing_multiplier: float = 5.0,
     spline_degree: int = 2,
     slice_id: str = "unknown",
-    stability_threshold: float = 0.9
+    stability_threshold: float = 0.4
 ) -> Optional[LesionDepth]:
     """
     Calculate lesion depth using various detection methods.

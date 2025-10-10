@@ -1623,11 +1623,61 @@ class CarlQuantTestViewer:
                 info += f"  Smoothed depth points: {len(lesion_depth.smoothed_depth_points)}\n"
             info += "\n"
             
-            # Region statistics
-            info += "Region Statistics:\n"
-            for i, stats in enumerate(region_stats):
-                info += f"  {stats.region_type.upper()} {i+1}: "
-                info += f"median={stats.median:.2f}, sd={stats.sd:.2f}\n"
+            # Method Stability Analysis (if available)
+            if hasattr(lesion_depth, 'method_splines') and lesion_depth.method_splines:
+                if 'stability_info' in lesion_depth.method_splines:
+                    stability_info = lesion_depth.method_splines['stability_info']
+                    
+                    info += "═══ Method Stability Analysis ═══\n"
+                    info += "(CV = Coefficient of Variation)\n\n"
+                    
+                    # Define method display names
+                    method_names = {
+                        'knee_point': 'Knee Point (Exp2)',
+                        'sigmoid_fit': 'Sigmoid Inflection',
+                        'sigmoid_shoulder': 'Sigmoid Shoulder'
+                    }
+                    
+                    # Sort methods by CV (most stable first)
+                    sorted_methods = sorted(
+                        stability_info.items(),
+                        key=lambda x: x[1].get('cv', float('inf'))
+                    )
+                    
+                    for method_key, stats in sorted_methods:
+                        if method_key in method_names:
+                            display_name = method_names[method_key]
+                            cv = stats.get('cv', float('inf'))
+                            is_stable = stats.get('is_stable', False)
+                            n_points = stats.get('n_points', 0)
+                            mean_depth = stats.get('mean_depth', 0)
+                            std_depth = stats.get('std_depth', 0)
+                            
+                            # Status indicator
+                            status = "✓ STABLE" if is_stable else "✗ UNSTABLE"
+                            status_color = "✓" if is_stable else "✗"
+                            
+                            info += f"{status_color} {display_name}:\n"
+                            info += f"    CV: {cv:.3f} ({cv*100:.1f}%) - {status}\n"
+                            info += f"    Mean: {mean_depth:.1f}px, SD: {std_depth:.1f}px\n"
+                            info += f"    Points: {n_points}\n"
+                            info += "\n"
+                    
+                    # Show which methods were used for combined mean
+                    if lesion_depth.knee_data:
+                        first_x = next(iter(lesion_depth.knee_data))
+                        detection_meta = lesion_depth.knee_data[first_x].get('detection_metadata', {})
+                        if 'combined_method_used' in detection_meta:
+                            methods_used = detection_meta['combined_method_used']
+                            info += f"Combined Mean Uses:\n"
+                            if methods_used.startswith('fallback_'):
+                                fallback_method = methods_used.replace('fallback_', '')
+                                info += f"  ⚠ Fallback: {method_names.get(fallback_method, fallback_method)}\n"
+                                info += f"  (No methods were stable)\n"
+                            else:
+                                used_methods = methods_used.split('+')
+                                for m in used_methods:
+                                    info += f"  • {method_names.get(m, m)}\n"
         else:
             info += "No analysis results for this slice.\n"
             info += "Click 'Run Algorithm' to analyze.\n"
