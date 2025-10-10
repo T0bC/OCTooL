@@ -29,7 +29,7 @@ class MainGui:
         self.context = AppContext()
         self.context.root = self.mainWin
 
-        self.version = ' [v. 1.1.0 - 20250807]'
+        self.version = ' [v. 1.2.0 - 20251010]'
         self.mainWin.title(str('OCTexVIEW' + self.version))
         self.pathToFolder = None
         self.mainWin['padx'] = 5

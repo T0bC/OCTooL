@@ -78,42 +78,42 @@
     "workflow_steps": [
       {
         "number": "1",
-        "title": "Load Data",
+        "title": "Load Images",
         "panel": "Load Panel",
         "actions": [
-          "▸ Click 'Load Folder' to select data directory",
-          "▸ Browse and select image stack",
-          "▸ Data loads into image viewer"
+          "▸ Click 'Select Folder' to choose image directory",
+          "▸ Optional: 'Load Config' for existing table config",
+          "▸ Browse and select image stack"
         ]
       },
       {
         "number": "2",
-        "title": "Annotate Images",
-        "panel": "Image Viewer",
+        "title": "Create Config",
+        "panel": "Add Columns Panel",
         "actions": [
-          "▸ Click on image to add annotation points",
-          "▸ Drag points to adjust position",
-          "▸ Use keyboard shortcuts for navigation"
+          "▸ Column name: Mixed case + underscores (e.g., tG, gap_width)",
+          "▸ Meta/Comments: CAPITALS + underscores only",
+          "▸ Set key binding, data type, color → Add column"
         ]
       },
       {
         "number": "3",
-        "title": "Add Columns",
+        "title": "Finalize Config",
         "panel": "Add Columns Panel",
         "actions": [
-          "▸ Define custom data columns",
-          "▸ Set column types (numeric, text, boolean)",
-          "▸ Add metadata for analysis"
+          "▸ Review config with 'Show Config' button",
+          "▸ Define metadata fields if needed",
+          "▸ Save config to desired location"
         ]
       },
       {
         "number": "4",
-        "title": "Export Data",
-        "panel": "Export Panel",
+        "title": "Annotate Images",
+        "panel": "Image Viewer",
         "actions": [
-          "▸ Configure export settings",
-          "▸ Select output format",
-          "▸ Save annotated data"
+          "▸ Click to add points | Right-click to remove",
+          "▸ Press key binding when feature complete",
+          "▸ Auto-saves after each annotation | Resume anytime"
         ]
       }
     ],
@@ -124,8 +124,8 @@
         "⊕ Ctrl+Wheel: Zoom",
         "✋ Drag points to adjust",
         "⌨ H key: Toggle annotations",
-        "🖱️ Click to add points",
-        "⌫ Delete to remove points"
+        "🖱️ Left-click: Add | Right-click: Remove",
+        "💾 Auto-saves to disk"
       ]
     }
   },
