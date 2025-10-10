@@ -169,7 +169,8 @@ class CarlQuantTestViewer:
         
         method_options = [
             ("Knee Point (exp2)", "knee_point"),
-            ("Sigmoid Fit", "sigmoid_fit"),
+            ("Sigmoid Inflection", "sigmoid_fit"),
+            ("Sigmoid Shoulder", "sigmoid_shoulder"),
             ("Combined (Mean)", "combined_mean")
         ]
         
@@ -826,7 +827,8 @@ class CarlQuantTestViewer:
         # Method colors (RGB)
         method_colors = {
             "knee_point": [255, 0, 0],      # Red
-            "sigmoid_fit": [128, 0, 128]    # Purple
+            "sigmoid_fit": [128, 0, 128],   # Purple
+            "sigmoid_shoulder": [0, 255, 255]  # Cyan
         }
         
         # Sample every N columns to avoid clutter
@@ -844,7 +846,7 @@ class CarlQuantTestViewer:
             surface_y = knee_info['surface_y']
             
             # Run all methods
-            methods = ["knee_point", "sigmoid_fit"]
+            methods = ["knee_point", "sigmoid_fit", "sigmoid_shoulder"]
             
             for method_name in methods:
                 try:
@@ -857,6 +859,13 @@ class CarlQuantTestViewer:
                             depth_value, depth_index = knee_pt(intensity_profile, depth_idx)
                     elif method_name == "sigmoid_fit":
                         depth_value, depth_index, _ = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
+                    elif method_name == "sigmoid_shoulder":
+                        _, _, sigmoid_meta = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
+                        if sigmoid_meta.get('success'):
+                            depth_value = sigmoid_meta.get('shoulder_depth', np.nan)
+                            depth_index = sigmoid_meta.get('shoulder_idx', -1)
+                        else:
+                            depth_value, depth_index = np.nan, -1
                     
                     if not np.isnan(depth_value) and depth_index >= 0:
                         abs_y = int(surface_y + depth_value)
@@ -884,7 +893,8 @@ class CarlQuantTestViewer:
         # Define methods and their colors
         methods = [
             ("knee_point", "red", "Knee"),
-            ("sigmoid_fit", "purple", "Sigmoid")
+            ("sigmoid_fit", "purple", "Inflection"),
+            ("sigmoid_shoulder", "cyan", "Shoulder")
         ]
         
         results = {}
@@ -901,6 +911,13 @@ class CarlQuantTestViewer:
                         depth_value, depth_index = knee_pt(intensity_profile, depth_idx)
                 elif method_name == "sigmoid_fit":
                     depth_value, depth_index, _ = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
+                elif method_name == "sigmoid_shoulder":
+                    _, _, sigmoid_meta = detect_depth_sigmoid_fit(intensity_profile, depth_idx)
+                    if sigmoid_meta.get('success'):
+                        depth_value = sigmoid_meta.get('shoulder_depth', np.nan)
+                        depth_index = sigmoid_meta.get('shoulder_idx', -1)
+                    else:
+                        depth_value, depth_index = np.nan, -1
                 
                 if not np.isnan(depth_value) and depth_index >= 0 and depth_index < len(intensity_profile):
                     results[method_name] = (depth_value, depth_index, color, label)
@@ -1093,7 +1110,8 @@ class CarlQuantTestViewer:
                         # Add label (without font specification - use default)
                         method_labels = {
                             'knee_point': 'Knee',
-                            'sigmoid_fit': 'Sigmoid',
+                            'sigmoid_fit': 'Inflection',
+                            'sigmoid_shoulder': 'Shoulder',
                             'combined_mean': 'Mean'
                         }
                         label_text = method_labels.get(method_used, 'Depth')
@@ -1130,6 +1148,43 @@ class CarlQuantTestViewer:
                                                   (s_plot_x + size, s_plot_y + size)], 
                                                  fill='purple', outline='darkviolet', width=2)
                                     draw.text((s_plot_x - 40, s_plot_y - 5), f"S:{int(s_abs_y)}", fill='purple')
+                        
+                        # For sigmoid-based methods, also show shoulder point
+                        if method_used in ['sigmoid_fit', 'sigmoid_shoulder']:
+                            # Draw shoulder point (cyan diamond)
+                            if 'shoulder_depth' in detection_metadata and 'shoulder_idx' in detection_metadata:
+                                sh_idx = detection_metadata['shoulder_idx']
+                                if 0 <= sh_idx < len(intensity_profile):
+                                    sh_intensity = intensity_profile[sh_idx]
+                                    sh_abs_y = surface_y + detection_metadata['shoulder_depth']
+                                    sh_plot_x = margin_left + int((sh_intensity / 255.0) * plot_area_width)
+                                    sh_plot_y = margin_top + int((sh_abs_y / float(image_height - 1)) * plot_area_height)
+                                    
+                                    # Draw diamond shape for shoulder
+                                    size = 5
+                                    diamond_points = [
+                                        (sh_plot_x, sh_plot_y - size),  # Top
+                                        (sh_plot_x + size, sh_plot_y),  # Right
+                                        (sh_plot_x, sh_plot_y + size),  # Bottom
+                                        (sh_plot_x - size, sh_plot_y)   # Left
+                                    ]
+                                    draw.polygon(diamond_points, fill='cyan', outline='darkcyan')
+                                    draw.text((sh_plot_x + 10, sh_plot_y - 20), f"Shoulder\ny={int(sh_abs_y)}", fill='cyan')
+                            
+                            # Draw inflection point (if not already the main marker)
+                            if method_used != 'sigmoid_fit' and 'inflection_depth' in detection_metadata and 'inflection_idx' in detection_metadata:
+                                i_idx = detection_metadata['inflection_idx']
+                                if 0 <= i_idx < len(intensity_profile):
+                                    i_intensity = intensity_profile[i_idx]
+                                    i_abs_y = surface_y + detection_metadata['inflection_depth']
+                                    i_plot_x = margin_left + int((i_intensity / 255.0) * plot_area_width)
+                                    i_plot_y = margin_top + int((i_abs_y / float(image_height - 1)) * plot_area_height)
+                                    
+                                    # Draw small circle for inflection
+                                    radius = 3
+                                    draw.ellipse([(i_plot_x - radius, i_plot_y - radius), 
+                                                (i_plot_x + radius, i_plot_y + radius)], 
+                                               fill='purple', outline='darkviolet', width=1)
                 
                 # If comparison mode is enabled, run all methods and show results
                 if self.compare_methods.get():

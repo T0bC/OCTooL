@@ -839,15 +839,20 @@ def calculate_lesion_depth(surface: Surface,
                           spline_degree: int = 2,
                           surface_offset: int = 0) -> Optional[LesionDepth]:
     """
-    Calculate lesion depth by detecting the knee point in intensity profiles.
+    Calculate lesion depth using various detection methods.
     
     Algorithm:
     1. For each A-Scan column in the lesion region
     2. Extract intensity values from surface downward (search_depth pixels)
-    3. [Optional] Fit exp2 model to smooth the profile
-    4. Find knee point using two-line fitting method
-    5. Calculate depth as distance from surface to knee point
-    6. [Optional] Apply spline smoothing to depth points to reduce noise
+    3. Apply selected detection method to find lesion depth
+    4. Calculate depth as distance from surface to detected point
+    5. [Optional] Apply spline smoothing to depth points to reduce noise
+    
+    Available Detection Methods:
+    - knee_point: Two-line fitting (best for exponential decay)
+    - sigmoid_fit: Sigmoid inflection point (50% transition)
+    - sigmoid_shoulder: Sigmoid shoulder point (15% from upper asymptote)
+    - combined_mean: Mean of knee_point and sigmoid_fit
     
     Args:
         surface: Detected surface with fitted curve
@@ -934,6 +939,22 @@ def calculate_lesion_depth(surface: Surface,
             )
             if 'fitted_curve' in detection_metadata:
                 fitted_curve = np.array(detection_metadata['fitted_curve'])
+        
+        elif detection_method == "sigmoid_shoulder":
+            # Use shoulder point from sigmoid fit
+            _, _, sigmoid_meta = detect_depth_sigmoid_fit(
+                intensity_profile, depth_indices
+            )
+            if sigmoid_meta.get('success') and not np.isnan(sigmoid_meta.get('shoulder_depth', np.nan)):
+                depth_value = sigmoid_meta['shoulder_depth']
+                depth_idx = sigmoid_meta['shoulder_idx']
+                detection_metadata = sigmoid_meta.copy()
+                detection_metadata['method'] = 'sigmoid_shoulder'
+                if 'fitted_curve' in sigmoid_meta:
+                    fitted_curve = np.array(sigmoid_meta['fitted_curve'])
+            else:
+                depth_value, depth_idx = np.nan, -1
+                detection_metadata = {'method': 'sigmoid_shoulder', 'success': False}
         
         elif detection_method == "combined_mean":
             # Run both methods and average
