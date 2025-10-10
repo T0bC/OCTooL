@@ -1609,6 +1609,11 @@ def run_carl_quant(context):
                                 specimen_panel._set_column_widths()
                                 break
                     
+                    # Lock region dropdown after analysis completes
+                    settings_panel = context.get_panel("carl_settings")
+                    if settings_panel:
+                        context.root.after(0, lambda: settings_panel.lock_region_dropdown(True))
+                    
                 except Exception as e:
                     context.status_bar.update(f"Error saving results for {specimen_id}: {e}", level="error")
                 

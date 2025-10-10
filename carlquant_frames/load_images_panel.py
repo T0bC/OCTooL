@@ -121,6 +121,15 @@ class loadImagePanel:
                             f"Loaded existing results for {specimen_id} (Data_{operator}_{measurement})", 
                             level="success"
                         )
+                        
+                        # Lock region dropdown when existing results are loaded
+                        settings_panel = self.context.get_panel("carl_settings")
+                        if settings_panel:
+                            # Detect region count from loaded data
+                            first_result = next(iter(specimen.results.values()))
+                            num_regions = sum(1 for r in first_result.region_stats if r.region_type == "sound")
+                            settings_panel.regionVar.set(num_regions)
+                            settings_panel.lock_region_dropdown(True)
         
         # Update specimen panel display
         specimen_panel = self.context.get_panel("carl_specimen")
