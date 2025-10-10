@@ -1,0 +1,25 @@
+1. Knee Point Approach (detection_method="knee_point")
+Process:
+Optional Curve Fitting: Fits a double exponential decay model (exp2) to smooth the intensity profile:
+Model: I(z) = a*exp(b*z) + c*exp(d*z)
+This smooths noisy data before knee detection
+Knee Point Detection: Uses the 
+knee_pt()
+ function which:
+Fits two linear segments (left and right) at each candidate breakpoint
+Finds the point that minimizes the sum of fitting errors
+The "knee" represents where the intensity decay pattern changes most dramatically
+Physical Interpretation: The knee point represents where the OCT signal transitions from one decay regime to another, indicating the lesion boundary.
+2. Sigmoid Approach (detection_method="sigmoid_fit")
+Process:
+Sigmoid Model Fitting: Fits a sigmoid curve to the intensity profile:
+I(z) = L + (U - L) / (1 + exp(k * (z - z0)))
+Where:
+L: Lower asymptote (background/deep tissue intensity)
+U: Upper asymptote (surface intensity)
+k: Steepness parameter (how fast the transition occurs)
+z0: Inflection point (the lesion depth)
+Inflection Point Detection: The parameter z0 from the fitted sigmoid is used as the lesion depth
+This is the point where the sigmoid curve has maximum rate of change
+Mathematically, it's where the second derivative equals zero
+Physical Interpretation: The inflection point (z0) represents the midpoint of the intensity transition from high (surface) to low (deep tissue), which corresponds to the center of the lesion boundary.
