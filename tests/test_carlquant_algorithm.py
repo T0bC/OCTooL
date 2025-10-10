@@ -836,7 +836,8 @@ def calculate_lesion_depth(surface: Surface,
                           smooth_depth_points: bool = True,
                           smoothing: float = 5.0,
                           smoothing_multiplier: float = 5.0,
-                          spline_degree: int = 2) -> Optional[LesionDepth]:
+                          spline_degree: int = 2,
+                          surface_offset: int = 0) -> Optional[LesionDepth]:
     """
     Calculate lesion depth by detecting the knee point in intensity profiles.
     
@@ -855,9 +856,13 @@ def calculate_lesion_depth(surface: Surface,
         search_depth: Maximum depth to search below surface (default 200 pixels)
         use_curve_fitting: If True, fit exp2 model before knee detection (default True)
         smooth_depth_points: If True, apply spline smoothing to depth points (default True)
+        surface_offset: Pixels to skip below surface before starting profile (default 10)
+                       This avoids saturated surface peak values in curve fitting
         smoothing: Base smoothing factor for depth spline (default 5.0)
         smoothing_multiplier: Multiplier for smoothing (default 5.0)
         spline_degree: Degree of spline for depth smoothing (default 2)
+        surface_offset: Pixels to skip below surface before starting profile (default 10)
+                        This avoids saturated surface peak values in curve fitting
     
     Returns:
         LesionDepth object with depth measurements, or None if no valid surface
@@ -886,7 +891,9 @@ def calculate_lesion_depth(surface: Surface,
         surface_y = surface_dict[x]
         
         # Extract intensity profile from surface downward
-        start_y = int(surface_y)
+        # Skip surface_offset pixels to avoid saturated surface peak (typically 255)
+        surface_y_int = int(surface_y)
+        start_y = surface_y_int + surface_offset
         end_y = min(height, start_y + search_depth)
         
         if end_y - start_y < 10:  # Need minimum points for knee detection
@@ -894,6 +901,7 @@ def calculate_lesion_depth(surface: Surface,
         
         # Get intensity values
         intensity_profile = image[start_y:end_y, x].astype(float)
+        # Depth indices start from 0 but represent depth from surface (including offset)
         depth_indices = np.arange(len(intensity_profile))
         
         # Apply detection method
@@ -969,17 +977,23 @@ def calculate_lesion_depth(surface: Surface,
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
             # Convert relative depth to absolute y-coordinate
+            # depth_value is relative to start_y, which already includes surface_offset
             lesion_bottom_y = start_y + depth_value
+            # Actual depth from surface (including the offset we skipped)
+            actual_depth_from_surface = surface_offset + depth_value
             
-            depth_points.append((x, lesion_bottom_y, depth_value))
+            depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
             
             # Store data for visualization (for A-Scan viewer)
             knee_data[x] = {
                 'intensity': intensity_profile.tolist(),
                 'depth_idx': depth_indices.tolist(),
                 'knee_idx': depth_idx,  # Name kept for compatibility
-                'surface_y': start_y,
-                'knee_depth': depth_value,  # Name kept for compatibility
+                'surface_y': surface_y_int,  # Original surface position
+                'profile_start_y': start_y,  # Where profile extraction started (surface + offset)
+                'surface_offset': surface_offset,  # Offset applied
+                'knee_depth': depth_value,  # Depth relative to profile start
+                'actual_depth': actual_depth_from_surface,  # Total depth from surface
                 'fitted_curve': fitted_curve.tolist() if fitted_curve is not None else None,
                 'fit_params': fit_params,
                 'detection_metadata': detection_metadata
