@@ -31,9 +31,9 @@
         "title": "Define Regions",
         "panel": "Image Viewer",
         "actions": [
-          "▸ REGION: Click twice for vertical boundaries",
-          "▸ AIR: Click & drag for rectangle",
-          "▸ First definition applies to ALL slices"
+          "▸ REGION: Click 4× for boundaries",
+          "▸ Order: specimen start → lesion start → lesion end → specimen end",
+          "▸ AIR: Click & drag rectangle | Applies to ALL slices"
         ]
       },
       {
@@ -42,8 +42,8 @@
         "panel": "Settings Panel",
         "actions": [
           "▸ Set operator name & measurement #",
-          "▸ Configure region parameters",
-          "▸ Adjust analysis settings"
+          "▸ Select detection method (default: Combined)",
+          "▸ Adjust region count if needed"
         ]
       },
       {
