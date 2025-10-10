@@ -57,6 +57,13 @@ class settingsPanel:
             count = self.regionVar.get()
             self.context.region_config["sound"] = count
             self.context.region_config["lesion"] = count
+            
+            # Note: Region dropdown should be locked when data is loaded,
+            # so this callback should only fire when no data is present.
+            # Refresh results panel to reflect new region count
+            results_panel = self.context.get_panel("carl_results")
+            if results_panel:
+                results_panel.refresh_display()
 
         self.regionDropdown.bind("<<ComboboxSelected>>", update_region_config)
 
@@ -166,4 +173,15 @@ class settingsPanel:
 
         self.operatorVar.trace_add("write", update_metadata)
         self.measurementVar.trace_add("write", update_metadata)
+
+    def lock_region_dropdown(self, lock: bool = True):
+        """Lock or unlock the region dropdown.
+        
+        Args:
+            lock: If True, disable the dropdown. If False, enable it.
+        """
+        if lock:
+            self.regionDropdown.config(state="disabled")
+        else:
+            self.regionDropdown.config(state="readonly")
 
