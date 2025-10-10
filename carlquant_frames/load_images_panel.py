@@ -36,6 +36,17 @@ class loadImagePanel:
         self.selectFolderBtn.grid(row=0, column=0, sticky="ew", pady=3)
         Tooltip(self.selectFolderBtn, text=self.selectFolderTooltip, wraplength=200)
 
+        # Remove Selected Button
+        self.removeSelectedTooltip = 'Remove the selected specimen from the list to exclude it from processing'
+        self.removeSelectedBtn = ttk.Button(
+            self.frame,
+            text='Remove Selected',
+            command=self.removeSelected,
+            bootstyle="danger"
+        )
+        self.removeSelectedBtn.grid(row=1, column=0, sticky="ew", pady=3)
+        Tooltip(self.removeSelectedBtn, text=self.removeSelectedTooltip, wraplength=200)
+
         # Start Analyzing Button
         self.startAnalyzingTooltip = 'Begin analyzing the selected CarlQuant data folder'
         self.startAnalyzingBtn = ttk.Button(
@@ -44,7 +55,7 @@ class loadImagePanel:
             command=self.startAnalyzing,
             bootstyle="success"
         )
-        self.startAnalyzingBtn.grid(row=1, column=0, sticky="ew", pady=3)
+        self.startAnalyzingBtn.grid(row=2, column=0, sticky="ew", pady=3)
         Tooltip(self.startAnalyzingBtn, text=self.startAnalyzingTooltip, wraplength=200)
 
 
@@ -146,6 +157,69 @@ class loadImagePanel:
             settings_panel.operatorVar.set(operator)
             settings_panel.measurementVar.set(str(measurement))
 
+    @handle_errors("loadImagePanel.removeSelected")
+    def removeSelected(self):
+        """Remove the selected specimen from the table and specimen_data."""
+        # Check if specimen data exists
+        if not hasattr(self.context, "specimen_data") or not self.context.specimen_data:
+            self.context.status_bar.update("No specimens loaded.", level="warning")
+            return
+        
+        # Get specimen panel
+        specimen_panel = self.context.get_panel("carl_specimen")
+        if not specimen_panel:
+            self.context.status_bar.update("Specimen panel not found.", level="error")
+            return
+        
+        # Get currently selected row
+        selected = specimen_panel.sheet.get_currently_selected()
+        if not selected or selected[0] is None:
+            self.context.status_bar.update("No specimen selected. Please select a row first.", level="warning")
+            return
+        
+        row_index = selected[0]
+        
+        # Get specimen ID from the selected row
+        specimen_id = specimen_panel.sheet.get_cell_data(row_index, 0)
+        
+        if not specimen_id:
+            self.context.status_bar.update("Could not identify specimen.", level="error")
+            return
+        
+        # Remove from specimen_data dictionary
+        if specimen_id in self.context.specimen_data:
+            del self.context.specimen_data[specimen_id]
+        
+        # Remove row from table
+        specimen_panel.sheet.delete_row(row_index)
+        
+        # Update column widths after deletion
+        specimen_panel._set_column_widths()
+        
+        # Clear current specimen if it was the one removed
+        if hasattr(self.context, 'current_specimen_id') and self.context.current_specimen_id == specimen_id:
+            self.context.current_specimen_id = None
+            
+            # Clear viewer and results panels if methods exist
+            viewer_panel = self.context.get_panel("carl_image")
+            if viewer_panel and hasattr(viewer_panel, 'clear_display'):
+                viewer_panel.clear_display()
+            
+            results_panel = self.context.get_panel("carl_results")
+            if results_panel and hasattr(results_panel, 'clear_results'):
+                results_panel.clear_results()
+        
+        # Clear highlight tracking if this was the last selected row
+        if specimen_panel.last_selected_row == row_index:
+            specimen_panel.last_selected_row = None
+        elif specimen_panel.last_selected_row is not None and specimen_panel.last_selected_row > row_index:
+            # Adjust tracking if a row above was deleted
+            specimen_panel.last_selected_row -= 1
+        
+        self.context.status_bar.update(
+            f"Removed specimen '{specimen_id}' from processing list.", 
+            level="success"
+        )
 
     @handle_errors("loadImagePanel.startAnalyzing")
     def startAnalyzing(self):
