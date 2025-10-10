@@ -827,6 +827,159 @@ def fit_exp2_to_profile(intensity_profile: np.ndarray, depth_indices: np.ndarray
         return None
 
 
+def compute_method_stability(method_raw_points: dict, 
+                            knee_data: dict,
+                            stability_threshold: float = 0.3) -> dict:
+    """
+    Compute stability metrics for each detection method.
+    
+    Uses coefficient of variation (CV = std/mean) to measure consistency
+    of depth detection across A-scans. Lower CV indicates more stable detection.
+    
+    Args:
+        method_raw_points: Dict mapping method names to list of (x, y) points
+        knee_data: Dict containing per-column detection metadata
+        stability_threshold: CV threshold above which a method is considered unstable
+        
+    Returns:
+        Dict with stability info:
+        {
+            'method_name': {
+                'cv': float,  # Coefficient of variation
+                'is_stable': bool,  # True if CV <= threshold
+                'n_points': int,  # Number of valid detections
+                'mean_depth': float,
+                'std_depth': float
+            }
+        }
+    """
+    stability_info = {}
+    
+    for method_name, raw_points in method_raw_points.items():
+        if len(raw_points) < 3:  # Need at least 3 points for meaningful statistics
+            stability_info[method_name] = {
+                'cv': np.inf,
+                'is_stable': False,
+                'n_points': len(raw_points),
+                'mean_depth': np.nan,
+                'std_depth': np.nan
+            }
+            continue
+        
+        # Extract depth values (relative to surface) for this method
+        depth_values = []
+        for x, abs_y in raw_points:
+            if x in knee_data:
+                surface_y = knee_data[x]['surface_y']
+                relative_depth = abs_y - surface_y
+                depth_values.append(relative_depth)
+        
+        if len(depth_values) < 3:
+            stability_info[method_name] = {
+                'cv': np.inf,
+                'is_stable': False,
+                'n_points': len(depth_values),
+                'mean_depth': np.nan,
+                'std_depth': np.nan
+            }
+            continue
+        
+        # Compute statistics
+        mean_depth = np.mean(depth_values)
+        std_depth = np.std(depth_values)
+        
+        # Coefficient of variation (normalized measure of dispersion)
+        if mean_depth > 0:
+            cv = std_depth / mean_depth
+        else:
+            cv = np.inf
+        
+        stability_info[method_name] = {
+            'cv': cv,
+            'is_stable': cv <= stability_threshold,
+            'n_points': len(depth_values),
+            'mean_depth': mean_depth,
+            'std_depth': std_depth
+        }
+    
+    return stability_info
+
+
+def compute_stable_combined_depth(knee_data: dict, 
+                                  stability_info: dict,
+                                  x: int) -> tuple:
+    """
+    Compute combined depth using only stable methods.
+    
+    Args:
+        knee_data: Dict containing per-column detection metadata
+        stability_info: Dict with stability metrics for each method
+        x: Current x-coordinate
+        
+    Returns:
+        (depth_value, method_used) tuple
+        method_used is a string indicating which methods were combined
+    """
+    if x not in knee_data:
+        return np.nan, "none"
+    
+    metadata = knee_data[x].get('detection_metadata', {})
+    
+    # Collect available depth values and their stability
+    available_methods = []
+    
+    # Knee point
+    knee_depth = metadata.get('knee_depth', np.nan)
+    if not np.isnan(knee_depth) and stability_info.get('knee_point', {}).get('is_stable', False):
+        available_methods.append(('knee_point', knee_depth))
+    
+    # Sigmoid inflection
+    inflection_depth = metadata.get('inflection_depth', np.nan)
+    if not np.isnan(inflection_depth) and stability_info.get('sigmoid_fit', {}).get('is_stable', False):
+        available_methods.append(('sigmoid_fit', inflection_depth))
+    
+    # Sigmoid shoulder
+    shoulder_depth = metadata.get('shoulder_depth', np.nan)
+    if not np.isnan(shoulder_depth) and stability_info.get('sigmoid_shoulder', {}).get('is_stable', False):
+        available_methods.append(('sigmoid_shoulder', shoulder_depth))
+    
+    # If no stable methods, use the most stable one (lowest CV)
+    if len(available_methods) == 0:
+        # Find method with lowest CV
+        min_cv = np.inf
+        best_method = None
+        best_depth = np.nan
+        
+        for method_name in ['knee_point', 'sigmoid_fit', 'sigmoid_shoulder']:
+            cv = stability_info.get(method_name, {}).get('cv', np.inf)
+            if cv < min_cv:
+                if method_name == 'knee_point':
+                    depth = metadata.get('knee_depth', np.nan)
+                elif method_name == 'sigmoid_fit':
+                    depth = metadata.get('inflection_depth', np.nan)
+                else:  # sigmoid_shoulder
+                    depth = metadata.get('shoulder_depth', np.nan)
+                
+                if not np.isnan(depth):
+                    min_cv = cv
+                    best_method = method_name
+                    best_depth = depth
+        
+        if best_method is not None:
+            return best_depth, f"fallback_{best_method}"
+        else:
+            return np.nan, "none"
+    
+    # Average stable methods
+    depths = [d for _, d in available_methods]
+    method_names = [m for m, _ in available_methods]
+    
+    combined_depth = np.mean(depths)
+    method_used = "+".join(method_names)
+    
+    return combined_depth, method_used
+
+
 def calculate_lesion_depth(
     surface: Surface,
     region_config: RegionConfig,
@@ -839,7 +992,9 @@ def calculate_lesion_depth(
     compute_all_methods: bool = False,
     smoothing: float = 5.0,
     smoothing_multiplier: float = 5.0,
-    spline_degree: int = 2
+    spline_degree: int = 2,
+    slice_id: str = "unknown",
+    stability_threshold: float = 0.9
 ) -> Optional[LesionDepth]:
     """
     Calculate lesion depth using various detection methods.
@@ -850,6 +1005,18 @@ def calculate_lesion_depth(
     3. Apply selected detection method to find lesion depth
     4. Calculate depth as distance from surface to detected point
     5. [Optional] Apply spline smoothing to depth points to reduce noise
+    
+    Stability-Based Method Selection (for "combined_mean"):
+    - Computes Coefficient of Variation (CV = std/mean) for each method
+    - CV measures relative variability of depth detection across A-scans
+    - Methods with CV > stability_threshold are excluded from averaging
+    - If no methods are stable, uses the one with lowest CV
+    
+    Args:
+        stability_threshold: CV threshold for method stability (default 0.3 = 30%)
+                           Lower = stricter (only very consistent methods)
+                           Higher = more lenient (allows more variation)
+                           Recommended range: 0.2 - 0.4
     
     Available Detection Methods:
     - knee_point: Two-line fitting (best for exponential decay)
@@ -1102,7 +1269,7 @@ def calculate_lesion_depth(
     
     if len(depth_points) == 0:
         # No valid depth points found
-        print(f"WARNING: No valid lesion depth points detected in range x={start_x} to x={end_x}")
+        print(f"[Slice {slice_id}] WARNING: No valid lesion depth points detected in range x={start_x} to x={end_x}")
         return None
     
     # Extract depth values for statistics
@@ -1127,11 +1294,11 @@ def calculate_lesion_depth(
         
         if "smoothed_depth" in smoothed_curves:
             smoothed_depth_points = smoothed_curves["smoothed_depth"]
-            print(f"Applied spline smoothing to {len(raw_depth_points)} depth points -> {len(smoothed_depth_points)} smoothed points")
+            print(f"[Slice {slice_id}] Applied spline smoothing to {len(raw_depth_points)} depth points -> {len(smoothed_depth_points)} smoothed points")
     
-    # If compute_all_methods is True, compute smoothed splines for all three methods
+    # If compute_all_methods is True OR using combined_mean, compute smoothed splines for all three methods
     method_splines = None
-    if compute_all_methods and knee_data:
+    if (compute_all_methods or detection_method == "combined_mean") and knee_data:
         method_splines = {}
         
         # Collect raw points for each method from knee_data
@@ -1160,6 +1327,63 @@ def calculate_lesion_depth(
                 abs_y = int(surface_y + metadata['shoulder_depth'])
                 method_raw_points["sigmoid_shoulder"].append((x, abs_y))
         
+        # Compute stability metrics for each method
+        stability_info = compute_method_stability(method_raw_points, knee_data, stability_threshold=stability_threshold)
+        
+        # Log stability results
+        print(f"\n[Slice {slice_id}] === Method Stability Analysis ===")
+        for method_name, info in stability_info.items():
+            status = "STABLE" if info['is_stable'] else "UNSTABLE"
+            print(f"[Slice {slice_id}] {method_name:20s}: CV={info['cv']:.3f} ({status}), n={info['n_points']}, mean={info['mean_depth']:.1f}px, std={info['std_depth']:.1f}px")
+        
+        # Store stability info in method_splines for later access
+        method_splines = {'stability_info': stability_info}
+        
+        # If using combined_mean with stability-based selection, recompute depth_points
+        if detection_method == "combined_mean":
+            print(f"\n[Slice {slice_id}] === Recomputing Combined Mean with Stability-Based Selection ===")
+            depth_points = []  # Reset depth points
+            
+            for x in sorted(knee_data.keys()):
+                combined_depth, method_used = compute_stable_combined_depth(knee_data, stability_info, x)
+                
+                if not np.isnan(combined_depth):
+                    surface_y = knee_data[x]['surface_y']
+                    surface_offset_val = knee_data[x]['surface_offset']
+                    
+                    # Convert to absolute y-coordinate
+                    lesion_bottom_y = surface_y + surface_offset_val + combined_depth
+                    actual_depth_from_surface = surface_offset_val + combined_depth
+                    
+                    depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
+                    
+                    # Update knee_data with new combined depth
+                    knee_data[x]['knee_depth'] = combined_depth
+                    knee_data[x]['actual_depth'] = actual_depth_from_surface
+                    knee_data[x]['detection_metadata']['combined_method_used'] = method_used
+            
+            print(f"[Slice {slice_id}] Recomputed {len(depth_points)} depth points using stability-based method selection")
+            
+            # Recompute statistics with new depth points
+            if len(depth_points) > 0:
+                depths = [d for _, _, d in depth_points]
+                raw_depth_points = [(x, y) for x, y, _ in depth_points]
+                
+                # Fit spline for the combined mean result
+                if len(raw_depth_points) >= 4:
+                    combined_curves = fit_surface_curve(
+                        raw_depth_points,
+                        start_x,
+                        end_x,
+                        smoothing=smoothing,
+                        smoothing_multiplier=smoothing_multiplier,
+                        spline_degree=spline_degree,
+                        curve_name="combined_mean"
+                    )
+                    if "combined_mean" in combined_curves:
+                        method_splines["combined_mean"] = combined_curves["combined_mean"]
+                        print(f"[Slice {slice_id}] Fitted spline for combined_mean: {len(raw_depth_points)} raw points -> {len(combined_curves['combined_mean'])} smoothed points")
+        
         # Fit splines for each method using SAME parameters as single method
         for method_name, raw_points in method_raw_points.items():
             if len(raw_points) >= 4:
@@ -1174,7 +1398,7 @@ def calculate_lesion_depth(
                 )
                 if method_name in smoothed_curves:
                     method_splines[method_name] = smoothed_curves[method_name]
-                    print(f"Fitted spline for {method_name}: {len(raw_points)} raw points -> {len(smoothed_curves[method_name])} smoothed points")
+                    print(f"[Slice {slice_id}] Fitted spline for {method_name}: {len(raw_points)} raw points -> {len(smoothed_curves[method_name])} smoothed points")
     
     return LesionDepth(
         depth_points=raw_depth_points,
@@ -1254,7 +1478,14 @@ def process_slice(image_path: Path,
     )
     
     # Step 3: Calculate lesion depth
-    lesion_depth = calculate_lesion_depth(surface, region_config, image_array, detection_method=detection_method, compute_all_methods=compute_all_methods)
+    # Extract slice ID from image path for logging
+    slice_id = Path(image_path).stem if isinstance(image_path, (str, Path)) else "unknown"
+    lesion_depth = calculate_lesion_depth(
+        surface, region_config, image_array, 
+        detection_method=detection_method, 
+        compute_all_methods=compute_all_methods,
+        slice_id=slice_id
+    )
     
     return region_stats, surface, lesion_depth
 

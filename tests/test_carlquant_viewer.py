@@ -34,13 +34,14 @@ from carlquant_frames.carl_quant_core import DepthDetectionMethod
 
 
 # Module-level function for ProcessPoolExecutor (must be picklable)
-def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method="knee_point", compute_all_methods=False):
+def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method="knee_point", compute_all_methods=False, specimen_id="unknown"):
     """
     Process a single slice with pre-loaded image.
     This function must be at module level to be picklable by ProcessPoolExecutor.
     
     Args:
         compute_all_methods: If True, compute all detection methods and store in metadata
+        specimen_id: Specimen identifier for logging
     """
     try:
         slice_start = time.time()
@@ -50,9 +51,12 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
         region_stats = test_carlquant_algorithm.extract_regions(
             image_array, surface, region_config, num_sound, num_lesion
         )
+        # Extract slice ID for logging
+        slice_id = f"{specimen_id}_slice{slice_idx}"
         lesion_depth = test_carlquant_algorithm.calculate_lesion_depth(
             surface, region_config, image_array, detection_method=detection_method,
-            compute_all_methods=compute_all_methods
+            compute_all_methods=compute_all_methods,
+            slice_id=slice_id
         )
         
         slice_time = time.time() - slice_start
@@ -612,6 +616,49 @@ class CarlQuantTestViewer:
             if lesion_depth and lesion_depth.knee_data and surface.fitted_curves and "spline" in surface.fitted_curves:
                 # OPTIMIZED: No status update needed - drawing is now fast!
                 self.draw_method_comparison_on_image(display_image, lesion_depth, surface)
+                
+                # Add legend for comparison mode
+                pil_temp = Image.fromarray(display_image.astype(np.uint8))
+                draw = ImageDraw.Draw(pil_temp)
+                
+                # Try to load a font
+                try:
+                    font = ImageFont.truetype("arial.ttf", 12)
+                except:
+                    font = ImageFont.load_default()
+                
+                # Legend position (top-left corner)
+                legend_x = 10
+                legend_y = 10
+                line_height = 15
+                
+                # Define legend entries based on what's visible
+                legend_entries = [
+                    ("Red: Knee Point", (255, 0, 0)),
+                    ("Purple: Sigmoid Inflection", (128, 0, 128)),
+                    ("Cyan: Sigmoid Shoulder", (0, 255, 255))
+                ]
+                
+                # Add combined mean if it exists in the results
+                if hasattr(lesion_depth, 'method_splines') and lesion_depth.method_splines:
+                    if 'combined_mean' in lesion_depth.method_splines:
+                        legend_entries.append(("Yellow: Combined Mean", (255, 255, 0)))
+                
+                # Draw legend background (semi-transparent black)
+                legend_width = 200
+                legend_height = len(legend_entries) * line_height + 10
+                for y in range(legend_y, legend_y + legend_height):
+                    for x in range(legend_x, legend_x + legend_width):
+                        if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
+                            # Blend with existing pixel (50% transparency)
+                            display_image[y, x] = display_image[y, x] // 2
+                
+                # Draw legend text
+                for i, (text, color) in enumerate(legend_entries):
+                    y_pos = legend_y + 5 + i * line_height
+                    draw.text((legend_x + 5, y_pos), text, fill=color, font=font)
+                
+                display_image = np.array(pil_temp)
         
         # Convert to PIL and display
         pil_image = Image.fromarray(display_image.astype(np.uint8))
@@ -716,7 +763,7 @@ class CarlQuantTestViewer:
                         image_array = preloaded_images[slice_idx]
                         future = executor.submit(
                             process_slice_parallel,
-                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method, compute_all_methods
+                            slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method, compute_all_methods, self.current_specimen.specimen_id
                         )
                         future_to_slice[future] = slice_idx
                     
@@ -844,15 +891,28 @@ class CarlQuantTestViewer:
         method_colors = {
             "knee_point": [255, 0, 0],      # Red
             "sigmoid_fit": [128, 0, 128],   # Purple
-            "sigmoid_shoulder": [0, 255, 255]  # Cyan
+            "sigmoid_shoulder": [0, 255, 255],  # Cyan
+            "combined_mean": [255, 255, 0]  # Yellow - for stability-based combined result
         }
         
         # Check if we have pre-computed splines (FAST PATH - OPTIMIZED)
         if hasattr(lesion_depth, 'method_splines') and lesion_depth.method_splines:
             # Use pre-computed splines - no computation needed!
             for method_name, smoothed_points in lesion_depth.method_splines.items():
+                # Skip non-spline entries (like stability_info)
+                if method_name == 'stability_info':
+                    continue
                 if method_name in method_colors:
                     color = method_colors[method_name]
+                    
+                    # Only draw smoothed splines if "Show Lesion Depth (Smoothed)" is enabled
+                    # OR if "Show Raw Depth Points" is disabled (default behavior)
+                    if not self.show_lesion_depth.get() and not self.show_raw_depth.get():
+                        # Default: show smoothed splines when neither toggle is explicitly set
+                        pass  # Continue to draw
+                    elif not self.show_lesion_depth.get():
+                        # User explicitly disabled smoothed depth
+                        continue  # Skip this spline
                     
                     # OPTIMIZED: Vectorized drawing of smoothed spline (3-pixel thickness)
                     if len(smoothed_points) > 0:
