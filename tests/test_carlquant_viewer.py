@@ -1629,7 +1629,7 @@ class CarlQuantTestViewer:
                     stability_info = lesion_depth.method_splines['stability_info']
                     
                     info += "═══ Method Stability Analysis ═══\n"
-                    info += "(CV = Coefficient of Variation)\n\n"
+                    info += "(SD = Standard Deviation in pixels)\n\n"
                     
                     # Define method display names
                     method_names = {
@@ -1638,10 +1638,10 @@ class CarlQuantTestViewer:
                         'sigmoid_shoulder': 'Sigmoid Shoulder'
                     }
                     
-                    # Sort methods by CV (most stable first)
+                    # Sort methods by SD (most stable/lowest SD first)
                     sorted_methods = sorted(
                         stability_info.items(),
-                        key=lambda x: x[1].get('cv', float('inf'))
+                        key=lambda x: x[1].get('cv', float('inf'))  # 'cv' field now contains SD
                     )
                     
                     for method_key, stats in sorted_methods:
@@ -1658,8 +1658,8 @@ class CarlQuantTestViewer:
                             status_color = "✓" if is_stable else "✗"
                             
                             info += f"{status_color} {display_name}:\n"
-                            info += f"    CV: {cv:.3f} ({cv*100:.1f}%) - {status}\n"
-                            info += f"    Mean: {mean_depth:.1f}px, SD: {std_depth:.1f}px\n"
+                            info += f"    SD: {cv:.1f}px - {status}\n"
+                            info += f"    Mean: {mean_depth:.1f}px\n"
                             info += f"    Points: {n_points}\n"
                             info += "\n"
                     

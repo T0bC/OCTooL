@@ -833,20 +833,26 @@ def compute_method_stability(method_raw_points: dict,
     """
     Compute stability metrics for each detection method.
     
-    Uses coefficient of variation (CV = std/mean) to measure consistency
-    of depth detection across A-scans. Lower CV indicates more stable detection.
+    Uses ABSOLUTE standard deviation to measure consistency of depth detection
+    across A-scans. Lower SD indicates more stable (less wobbly) detection.
+    
+    This is better than CV (std/mean) because:
+    - CV unfairly penalizes shallow detections (small mean → high CV)
+    - Absolute SD directly measures wobbliness regardless of depth
+    - A straight line at any depth will have low SD
     
     Args:
         method_raw_points: Dict mapping method names to list of (x, y) points
         knee_data: Dict containing per-column detection metadata
-        stability_threshold: CV threshold above which a method is considered unstable
+        stability_threshold: SD threshold (in pixels) above which a method is unstable
+                           Recommended: 10-15 pixels for typical OCT images
         
     Returns:
         Dict with stability info:
         {
             'method_name': {
-                'cv': float,  # Coefficient of variation
-                'is_stable': bool,  # True if CV <= threshold
+                'cv': float,  # Kept for backward compatibility (now actually SD)
+                'is_stable': bool,  # True if SD <= threshold
                 'n_points': int,  # Number of valid detections
                 'mean_depth': float,
                 'std_depth': float
@@ -888,15 +894,13 @@ def compute_method_stability(method_raw_points: dict,
         mean_depth = np.mean(depth_values)
         std_depth = np.std(depth_values)
         
-        # Coefficient of variation (normalized measure of dispersion)
-        if mean_depth > 0:
-            cv = std_depth / mean_depth
-        else:
-            cv = np.inf
+        # Use ABSOLUTE standard deviation as stability metric
+        # (not CV, because CV unfairly penalizes shallow detections)
+        stability_metric = std_depth
         
         stability_info[method_name] = {
-            'cv': cv,
-            'is_stable': cv <= stability_threshold,
+            'cv': stability_metric,  # Field name kept for compatibility, but now contains SD
+            'is_stable': stability_metric <= stability_threshold,
             'n_points': len(depth_values),
             'mean_depth': mean_depth,
             'std_depth': std_depth
@@ -907,14 +911,20 @@ def compute_method_stability(method_raw_points: dict,
 
 def compute_stable_combined_depth(knee_data: dict, 
                                   stability_info: dict,
-                                  x: int) -> tuple:
+                                  x: int,
+                                  preserve_wobbliness: bool = True) -> tuple:
     """
-    Compute combined depth using only stable methods.
+    Compute combined depth using only stable methods with optional wobbliness preservation.
+    
+    When preserve_wobbliness=True, uses weighted averaging where methods with higher
+    variability (more wobbly) get MORE weight. This preserves the natural texture of
+    irregular lesions instead of smoothing them out.
     
     Args:
         knee_data: Dict containing per-column detection metadata
         stability_info: Dict with stability metrics for each method
         x: Current x-coordinate
+        preserve_wobbliness: If True, weight by SD to preserve variation (default True)
         
     Returns:
         (depth_value, method_used) tuple
@@ -970,12 +980,31 @@ def compute_stable_combined_depth(knee_data: dict,
         else:
             return np.nan, "none"
     
-    # Average stable methods
+    # Combine stable methods
     depths = [d for _, d in available_methods]
     method_names = [m for m, _ in available_methods]
     
-    combined_depth = np.mean(depths)
-    method_used = "+".join(method_names)
+    if preserve_wobbliness and len(available_methods) > 1:
+        # Weighted average: methods with higher SD get MORE weight
+        # This preserves the natural wobbliness of irregular lesions
+        weights = []
+        for method_name, _ in available_methods:
+            sd = stability_info.get(method_name, {}).get('std_depth', 1.0)
+            # Use SD as weight (higher SD = more weight)
+            # Add small constant to avoid division by zero
+            weights.append(max(sd, 0.1))
+        
+        # Normalize weights
+        total_weight = sum(weights)
+        weights = [w / total_weight for w in weights]
+        
+        # Weighted average
+        combined_depth = sum(d * w for d, w in zip(depths, weights))
+        method_used = "+".join(method_names) + "_weighted"
+    else:
+        # Simple average (original behavior)
+        combined_depth = np.mean(depths)
+        method_used = "+".join(method_names)
     
     return combined_depth, method_used
 
@@ -994,7 +1023,8 @@ def calculate_lesion_depth(
     smoothing_multiplier: float = 5.0,
     spline_degree: int = 2,
     slice_id: str = "unknown",
-    stability_threshold: float = 0.4
+    stability_threshold: float = 20.0,
+    preserve_wobbliness: bool = True
 ) -> Optional[LesionDepth]:
     """
     Calculate lesion depth using various detection methods.
@@ -1007,16 +1037,19 @@ def calculate_lesion_depth(
     5. [Optional] Apply spline smoothing to depth points to reduce noise
     
     Stability-Based Method Selection (for "combined_mean"):
-    - Computes Coefficient of Variation (CV = std/mean) for each method
-    - CV measures relative variability of depth detection across A-scans
-    - Methods with CV > stability_threshold are excluded from averaging
-    - If no methods are stable, uses the one with lowest CV
+    - Computes ABSOLUTE standard deviation for each method across A-scans
+    - SD measures wobbliness/variation in depth detection (in pixels)
+    - Methods with SD > stability_threshold are excluded from averaging
+    - If no methods are stable, uses the one with lowest SD
     
     Args:
-        stability_threshold: CV threshold for method stability (default 0.3 = 30%)
-                           Lower = stricter (only very consistent methods)
+        stability_threshold: SD threshold in pixels (default 20.0 pixels)
+                           Lower = stricter (filters out scattered detections)
                            Higher = more lenient (allows more variation)
-                           Recommended range: 0.2 - 0.4
+                           Recommended range: 10-30 pixels for typical OCT images
+        preserve_wobbliness: If True, use weighted averaging to preserve natural
+                           lesion texture (default True). Methods with higher SD
+                           get more weight, preventing over-smoothing
     
     Available Detection Methods:
     - knee_point: Two-line fitting (best for exponential decay)
@@ -1334,7 +1367,7 @@ def calculate_lesion_depth(
         print(f"\n[Slice {slice_id}] === Method Stability Analysis ===")
         for method_name, info in stability_info.items():
             status = "STABLE" if info['is_stable'] else "UNSTABLE"
-            print(f"[Slice {slice_id}] {method_name:20s}: CV={info['cv']:.3f} ({status}), n={info['n_points']}, mean={info['mean_depth']:.1f}px, std={info['std_depth']:.1f}px")
+            print(f"[Slice {slice_id}] {method_name:20s}: SD={info['cv']:.1f}px ({status}), n={info['n_points']}, mean={info['mean_depth']:.1f}px")
         
         # Store stability info in method_splines for later access
         method_splines = {'stability_info': stability_info}
@@ -1342,10 +1375,23 @@ def calculate_lesion_depth(
         # If using combined_mean with stability-based selection, recompute depth_points
         if detection_method == "combined_mean":
             print(f"\n[Slice {slice_id}] === Recomputing Combined Mean with Stability-Based Selection ===")
+            
+            # Show weighting strategy
+            if preserve_wobbliness:
+                print(f"[Slice {slice_id}] Using WEIGHTED averaging (preserves wobbliness)")
+                stable_methods = [m for m, info in stability_info.items() if info.get('is_stable', False)]
+                if len(stable_methods) > 1:
+                    print(f"[Slice {slice_id}] Weights based on SD (higher SD = more weight):")
+                    for method in stable_methods:
+                        sd = stability_info[method].get('std_depth', 0)
+                        print(f"[Slice {slice_id}]   {method}: SD={sd:.1f}px")
+            else:
+                print(f"[Slice {slice_id}] Using SIMPLE averaging (equal weights)")
+            
             depth_points = []  # Reset depth points
             
             for x in sorted(knee_data.keys()):
-                combined_depth, method_used = compute_stable_combined_depth(knee_data, stability_info, x)
+                combined_depth, method_used = compute_stable_combined_depth(knee_data, stability_info, x, preserve_wobbliness)
                 
                 if not np.isnan(combined_depth):
                     surface_y = knee_data[x]['surface_y']
