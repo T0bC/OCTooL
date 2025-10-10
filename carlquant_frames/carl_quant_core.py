@@ -532,8 +532,9 @@ def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Su
 
 class DepthDetectionMethod(Enum):
     """Available methods for detecting lesion depth from A-Scan profiles."""
-    KNEE_POINT = "knee_point"  # Two-line fitting (current method)
-    SIGMOID_FIT = "sigmoid_fit"  # Sigmoid fit + inflection point
+    KNEE_POINT = "knee_point"  # Two-line fitting (best for exponential decay)
+    SIGMOID_FIT = "sigmoid_fit"  # Sigmoid inflection point (50% transition)
+    SIGMOID_SHOULDER = "sigmoid_shoulder"  # Sigmoid shoulder (15% from upper asymptote)
     COMBINED_MEAN = "combined_mean"  # Mean of knee_point and sigmoid_fit
     
     @classmethod
@@ -723,9 +724,33 @@ def detect_depth_sigmoid_fit(intensity_profile: np.ndarray, depth_indices: np.nd
         
         L, U, k, z0 = popt
         
-        # z0 is the inflection point (lesion depth)
+        # Calculate key points on sigmoid curve:
+        # 1. Inflection point (z0): Maximum rate of change (50% transition)
+        # 2. Shoulder: Upper transition region (~15% from U to L)
+        
+        # Inflection point (current method)
         depth_value = z0
         depth_idx = np.argmin(np.abs(depth_indices - z0))
+        
+        # Calculate shoulder point
+        # For sigmoid: I(z) = L + (U - L) / (1 + exp(k * (z - z0)))
+        # Shoulder: Point where I(z) = U - 0.15*(U - L) (15% down from upper asymptote)
+        
+        intensity_range = U - L
+        shoulder_intensity = U - 0.15 * intensity_range  # 85% of range
+        
+        # Solve for z where sigmoid equals target intensity
+        # I(z) = L + (U - L) / (1 + exp(k * (z - z0))) = target
+        # Rearranging: z = z0 - (1/k) * ln((U - L)/(target - L) - 1)
+        
+        try:
+            # Shoulder depth (earlier in profile, closer to surface)
+            shoulder_depth = z0 - (1/k) * np.log((U - L)/(shoulder_intensity - L) - 1)
+            shoulder_idx = np.argmin(np.abs(depth_indices - shoulder_depth))
+            shoulder_depth = float(shoulder_depth)
+        except (ValueError, ZeroDivisionError):
+            shoulder_depth = np.nan
+            shoulder_idx = -1
         
         # Generate fitted curve
         fitted_curve = sigmoid_model(depth_indices, *popt)
@@ -737,6 +762,11 @@ def detect_depth_sigmoid_fit(intensity_profile: np.ndarray, depth_indices: np.nd
             'U': U,
             'k': k,
             'z0': z0,
+            'inflection_depth': float(z0),
+            'inflection_idx': depth_idx,
+            'shoulder_depth': shoulder_depth,
+            'shoulder_idx': shoulder_idx,
+            'shoulder_intensity': float(shoulder_intensity),
             'fitted_curve': fitted_curve.tolist()
         }
         
@@ -773,7 +803,8 @@ def calculate_lesion_depth(surface: Surface,
     
     Available Detection Methods:
     - KNEE_POINT: Two-line fitting (best for exponential decay)
-    - SIGMOID_FIT: Sigmoid fit + inflection point (best for smooth S-shaped transitions)
+    - SIGMOID_FIT: Sigmoid inflection point (50% transition, maximum rate of change)
+    - SIGMOID_SHOULDER: Sigmoid shoulder point (15% from upper asymptote, early transition)
     - COMBINED_MEAN: Mean of knee_point and sigmoid_fit (balances both approaches)
     
     Args:
@@ -866,6 +897,22 @@ def calculate_lesion_depth(surface: Surface,
             # Extract fitted curve if available
             if 'fitted_curve' in detection_metadata:
                 fitted_curve = np.array(detection_metadata['fitted_curve'])
+        
+        elif detection_method == DepthDetectionMethod.SIGMOID_SHOULDER:
+            # Use shoulder point from sigmoid fit
+            _, _, sigmoid_meta = detect_depth_sigmoid_fit(
+                intensity_profile, depth_indices
+            )
+            if sigmoid_meta.get('success') and not np.isnan(sigmoid_meta.get('shoulder_depth', np.nan)):
+                depth_value = sigmoid_meta['shoulder_depth']
+                depth_idx = sigmoid_meta['shoulder_idx']
+                detection_metadata = sigmoid_meta.copy()
+                detection_metadata['method'] = 'sigmoid_shoulder'
+                if 'fitted_curve' in sigmoid_meta:
+                    fitted_curve = np.array(sigmoid_meta['fitted_curve'])
+            else:
+                depth_value, depth_idx = np.nan, -1
+                detection_metadata = {'method': 'sigmoid_shoulder', 'success': False}
         
         elif detection_method == DepthDetectionMethod.COMBINED_MEAN:
             # Run both methods and average the results
