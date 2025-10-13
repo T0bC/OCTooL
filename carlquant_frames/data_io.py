@@ -18,6 +18,8 @@ from carlquant_frames.specimen_model import (
     Specimen, SliceResult, RegionStats, LesionDepth, Surface,
     SpecimenConfig, RegionConfig, AirConfig
 )
+from PIL import Image, ImageDraw
+import numpy as np
 
 
 
@@ -582,5 +584,146 @@ class DataSaver:
         
         # Auto-save configuration
         DataSaver.save_specimen_config(specimen)
+
+    @staticmethod
+    def save_annotated_images(specimen: Specimen):
+        """
+        Save images with annotations overlaid for visualization.
+        
+        Creates an 'annotations' folder inside Data_{operator}_{measurement}
+        and saves each slice with surface, lesion depth, regions, and boundaries drawn.
+        
+        Args:
+            specimen: Specimen object with results and config
+        """
+        if not specimen.results:
+            return
+        
+        # Create annotations folder
+        operator = getattr(specimen, "operator", "OP")
+        measurement = getattr(specimen, "measurement", 1)
+        save_folder = specimen.source / f"Data_{operator}_{measurement}" / "annotations"
+        save_folder.mkdir(parents=True, exist_ok=True)
+        
+        # Process each slice
+        for slice_idx, result in specimen.results.items():
+            try:
+                # Load original image
+                if slice_idx >= len(specimen.images):
+                    continue
+                
+                image_path = specimen.images[slice_idx]
+                img = Image.open(image_path).convert('RGB')  # Convert to RGB for colored annotations
+                draw = ImageDraw.Draw(img)
+                
+                # Get configurations for this slice
+                region_config = specimen.config.regions.get(slice_idx) if specimen.config else None
+                air_config = specimen.config.air.get(slice_idx) if specimen.config else None
+                
+                # Draw AIR region (cyan rectangle)
+                if air_config and air_config.point2:
+                    x1, y1 = air_config.point1
+                    x2, y2 = air_config.point2
+                    draw.rectangle([x1, y1, x2, y2], outline='cyan', width=2)
+                
+                # Draw region boundaries (vertical lines)
+                if region_config:
+                    # Specimen start (green)
+                    x = region_config.specimen_start[0]
+                    draw.line([(x, 0), (x, img.height)], fill='#00FF66', width=2)
+                    
+                    # Lesion start (yellow)
+                    x = region_config.lesion_start[0]
+                    draw.line([(x, 0), (x, img.height)], fill='yellow', width=2)
+                    
+                    # Lesion end (yellow)
+                    x = region_config.lesion_end[0]
+                    draw.line([(x, 0), (x, img.height)], fill='yellow', width=2)
+                    
+                    # Tooth end (green)
+                    x = region_config.tooth_end[0]
+                    draw.line([(x, 0), (x, img.height)], fill='#00FF66', width=2)
+                
+                # Draw surface curves
+                if result.surface and result.surface.fitted_curves:
+                    # Reference curve (cyan) - if cavitated
+                    if "reference" in result.surface.fitted_curves:
+                        points = result.surface.fitted_curves["reference"]
+                        if len(points) > 1:
+                            for i in range(len(points) - 1):
+                                draw.line([points[i], points[i+1]], fill='cyan', width=1)
+                    
+                    # Primary spline curve (orange)
+                    if "spline" in result.surface.fitted_curves:
+                        points = result.surface.fitted_curves["spline"]
+                        if len(points) > 1:
+                            for i in range(len(points) - 1):
+                                draw.line([points[i], points[i+1]], fill='orange', width=2)
+                
+                # Draw lesion depth
+                if result.lesion_depth:
+                    # Use smoothed points if available, otherwise raw points
+                    points = None
+                    if hasattr(result.lesion_depth, 'smoothed_depth_points') and result.lesion_depth.smoothed_depth_points:
+                        points = result.lesion_depth.smoothed_depth_points
+                    elif result.lesion_depth.depth_points:
+                        points = result.lesion_depth.depth_points
+                    
+                    if points and len(points) > 1:
+                        # Draw line
+                        for i in range(len(points) - 1):
+                            draw.line([points[i], points[i+1]], fill='red', width=2)
+                        
+                        # Draw markers every 20th point
+                        for x, y in points[::20]:
+                            draw.ellipse([x-2, y-2, x+2, y+2], fill='red', outline='darkred')
+                
+                # Draw extraction regions
+                if result.region_stats:
+                    from PIL import ImageFont
+                    try:
+                        font = ImageFont.truetype("arial.ttf", 12)
+                    except:
+                        font = ImageFont.load_default()
+                    
+                    for stats in result.region_stats:
+                        if not stats.bounds or len(stats.bounds) == 0:
+                            continue
+                        
+                        color = '#00FF66' if stats.region_type == "sound" else 'red'
+                        
+                        # Check if rotated corners or simple bbox
+                        if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
+                            # Rotated rectangle - draw polygon
+                            corners = list(stats.bounds) + [stats.bounds[0]]  # Close the polygon
+                            draw.line(corners, fill=color, width=2)
+                            
+                            # Calculate center for label
+                            center_x = sum(x for x, y in stats.bounds) / 4
+                            center_y = sum(y for x, y in stats.bounds) / 4
+                        else:
+                            # Simple rectangle
+                            left_x, top_y, right_x, bottom_y = stats.bounds
+                            draw.rectangle([left_x, top_y, right_x, bottom_y], outline=color, width=2)
+                            
+                            center_x = (left_x + right_x) / 2
+                            center_y = (top_y + bottom_y) / 2
+                        
+                        # Draw region number
+                        text = str(stats.region_index)
+                        bbox = draw.textbbox((center_x, center_y), text, font=font)
+                        text_width = bbox[2] - bbox[0]
+                        text_height = bbox[3] - bbox[1]
+                        draw.text((center_x - text_width/2, center_y - text_height/2), text, fill=color, font=font)
+                
+                # Save annotated image
+                output_filename = f"slice_{slice_idx:03d}_annotated.png"
+                output_path = save_folder / output_filename
+                img.save(output_path, 'PNG')
+                
+            except Exception as e:
+                # Log error but continue with other slices
+                print(f"Error saving annotated image for slice {slice_idx}: {e}")
+                continue
 
 
