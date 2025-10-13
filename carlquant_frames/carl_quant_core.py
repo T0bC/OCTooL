@@ -1199,24 +1199,26 @@ def calculate_lesion_depth(surface: Surface,
             
             metadata = knee_data[x].get('detection_metadata', {})
             surface_y = knee_data[x]['surface_y']
-            profile_start_y = knee_data[x]['profile_start_y']
+            surface_offset_val = knee_data[x]['surface_offset']
             
             # Knee point
+            # Note: depths in metadata are relative to profile_start_y (surface_y + surface_offset)
+            # For stability analysis, we need absolute y-coordinates
             knee_depth = metadata.get('knee_depth', np.nan)
             if not np.isnan(knee_depth):
-                abs_y = profile_start_y + knee_depth
+                abs_y = surface_y + surface_offset_val + knee_depth
                 method_raw_points['knee_point'].append((x, abs_y))
             
             # Sigmoid inflection
             inflection_depth = metadata.get('inflection_depth', np.nan)
             if not np.isnan(inflection_depth):
-                abs_y = profile_start_y + inflection_depth
+                abs_y = surface_y + surface_offset_val + inflection_depth
                 method_raw_points['sigmoid_fit'].append((x, abs_y))
             
             # Sigmoid shoulder
             shoulder_depth = metadata.get('shoulder_depth', np.nan)
             if not np.isnan(shoulder_depth):
-                abs_y = profile_start_y + shoulder_depth
+                abs_y = surface_y + surface_offset_val + shoulder_depth
                 method_raw_points['sigmoid_shoulder'].append((x, abs_y))
         
         # Compute stability metrics
@@ -1242,12 +1244,13 @@ def calculate_lesion_depth(surface: Surface,
             
             if not np.isnan(combined_depth):
                 surface_y = knee_data[x]['surface_y']
-                profile_start_y = knee_data[x]['profile_start_y']
+                surface_offset_val = knee_data[x]['surface_offset']
                 
                 # Convert relative depth to absolute y-coordinate
-                lesion_bottom_y = profile_start_y + combined_depth
-                # Actual depth from surface
-                actual_depth_from_surface = surface_offset + combined_depth
+                # combined_depth is relative to profile_start_y (surface_y + surface_offset)
+                lesion_bottom_y = surface_y + surface_offset_val + combined_depth
+                # Actual depth from surface (including offset)
+                actual_depth_from_surface = surface_offset_val + combined_depth
                 
                 depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
                 
