@@ -68,6 +68,14 @@ class specimenPanel:
 
         if specimen_data:
             self.context.current_specimen_id = specimen_id
+            
+            # MEMORY OPTIMIZATION: Reload results from disk if they were cleared
+            # Results are cleared after saving to reduce memory usage during batch processing
+            # They are reloaded on-demand when user selects a specimen for viewing
+            if not specimen_data.results and specimen_data.config:
+                from carlquant_frames.data_io import DataLoader
+                # Reload annotations (surface, lesion_depth, extraction_regions) from JSON
+                DataLoader.load_specimen_config(specimen_data)
 
             viewer_panel = self.context.get_panel("carl_image")
             viewer_panel.display_image(0)
