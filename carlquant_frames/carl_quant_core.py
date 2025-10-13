@@ -1584,6 +1584,17 @@ def run_carl_quant(context):
                         color="green"
                     )
                     
+                    # Save annotated images
+                    progress_dialog.update_status(
+                        f"Saving annotated images for {specimen_id}...",
+                        color="blue"
+                    )
+                    DataSaver.save_annotated_images(specimen)
+                    progress_dialog.update_status(
+                        f"Saved annotated images for {specimen_id}",
+                        color="green"
+                    )
+                    
                     # MEMORY CLEANUP: Clear results from memory after saving to disk
                     # Results will be reloaded from JSON when user selects specimen for viewing
                     specimen.results.clear()
