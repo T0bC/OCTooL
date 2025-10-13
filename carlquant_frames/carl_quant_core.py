@@ -27,14 +27,14 @@ from enum import Enum
 # PARALLEL PROCESSING SUPPORT
 # =============================================================================
 
-def process_slice_parallel(slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method_str='combined_mean'):
+def process_slice_parallel(slice_idx, image_path, region_config, air_config, num_sound, num_lesion, detection_method_str='combined_mean'):
     """
-    Process a single slice with pre-loaded image.
+    Process a single slice by loading image on-demand in worker process.
     This function must be at module level to be picklable by ProcessPoolExecutor.
     
     Args:
         slice_idx: Index of the slice being processed
-        image_array: Pre-loaded numpy array of the image
+        image_path: Path to the image file (loaded on-demand by worker)
         region_config: Region configuration for this slice
         air_config: AIR configuration for this slice
         num_sound: Number of sound regions to extract
@@ -42,20 +42,19 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
         detection_method_str: Detection method string (default 'combined_mean')
     
     Returns:
-        Tuple of (slice_idx, region_stats, surface, lesion_depth, error, slice_time, processing_steps)
+        Tuple of (slice_idx, region_stats, surface, lesion_depth, error)
     """
     try:
-        slice_start = time.time()
-        processing_steps = []
+        # Load image in worker process (on-demand)
+        img = Image.open(image_path).convert('L')
+        image_array = np.array(img)
+        img.close()
         
         # Detect surface
-        step_start = time.time()
         surface = detect_surface(image_array, air_config, region_config)
-        processing_steps.append(("Surface detection", time.time() - step_start))
         
         # Extract regions
         if region_config:
-            step_start = time.time()
             region_stats = extract_regions(
                 image_array,
                 surface,
@@ -63,7 +62,6 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
                 num_sound_regions=num_sound,
                 num_lesion_regions=num_lesion
             )
-            processing_steps.append(("Region extraction", time.time() - step_start))
         else:
             # No region config - use dummy data
             region_stats = [
@@ -78,7 +76,6 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
         
         # Calculate lesion depth
         if region_config:
-            step_start = time.time()
             detection_method = DepthDetectionMethod(detection_method_str)
             lesion_depth = calculate_lesion_depth(
                 surface,
@@ -90,15 +87,13 @@ def process_slice_parallel(slice_idx, image_array, region_config, air_config, nu
                 stability_threshold=20.0,
                 preserve_wobbliness=True
             )
-            processing_steps.append(("Lesion depth calculation", time.time() - step_start))
         else:
             lesion_depth = None
         
-        slice_time = time.time() - slice_start
-        return (slice_idx, region_stats, surface, lesion_depth, None, slice_time, processing_steps)
+        return (slice_idx, region_stats, surface, lesion_depth, None)
     except Exception as e:
         import traceback
-        return (slice_idx, None, None, None, f"{str(e)}\n{traceback.format_exc()}", 0, [])
+        return (slice_idx, None, None, None, f"{str(e)}\n{traceback.format_exc()}")
 
 
 # =============================================================================
@@ -1029,8 +1024,13 @@ def calculate_lesion_depth(surface: Surface,
     if not surface.fitted_curves or "spline" not in surface.fitted_curves:
         return None
     
-    # Convert surface to dictionary for lookup
-    surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    # Select surface based on cavitation status
+    # If cavitated, use reference surface (fitted excluding lesion area)
+    # Otherwise, use primary spline surface
+    if surface.is_cavitated and "reference" in surface.fitted_curves:
+        surface_dict = {x: y for x, y in surface.fitted_curves["reference"]}
+    else:
+        surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
     
     height, width = image.shape
     depth_points = []
@@ -1397,51 +1397,35 @@ def run_carl_quant(context):
                 processed_count = 0
                 
                 if use_parallel and num_workers > 1:
-                    # PARALLEL PROCESSING WITH PRE-LOADING
+                    # PARALLEL PROCESSING WITH ON-DEMAND LOADING
                     effective_workers = min(num_workers, len(slice_tasks))
                     
                     progress_dialog.update_status(
-                        f"Pre-loading {len(slice_tasks)} images...",
+                        f"Processing {len(slice_tasks)} slices with {effective_workers} workers...",
                         color="blue"
                     )
                     
-                    # PRE-LOAD ALL IMAGES INTO MEMORY
-                    preload_start = time.time()
-                    preloaded_images = {}
-                    for slice_idx, image_path, region_config, air_config in slice_tasks:
-                        # Check for cancellation during pre-loading
-                        if progress_dialog.is_cancelled():
-                            cancelled = True
-                            break
-                        
-                        img = Image.open(image_path).convert('L')
-                        preloaded_images[slice_idx] = np.array(img)
-                    
-                    if cancelled:
-                        break
-                    
-                    preload_time = time.time() - preload_start
-                    progress_dialog.update_status(
-                        f"Processing with {effective_workers} workers...",
-                        color="blue"
-                    )
-                    
-                    # Process in parallel using ProcessPoolExecutor
                     # Get detection method from context
                     detection_method_str = getattr(context, 'detection_method', 'combined_mean')
                     
                     with ProcessPoolExecutor(max_workers=effective_workers) as executor:
-                        # Submit tasks with pre-loaded images
+                        # Submit tasks - each worker loads its own image on-demand
                         future_to_slice = {}
                         for slice_idx, image_path, region_config, air_config in slice_tasks:
-                            image_array = preloaded_images[slice_idx]
+                            # Check for cancellation before submitting
+                            if progress_dialog.is_cancelled():
+                                cancelled = True
+                                break
+                            
                             future = executor.submit(
                                 process_slice_parallel,
-                                slice_idx, image_array, region_config, air_config, num_sound, num_lesion, detection_method_str
+                                slice_idx, image_path, region_config, air_config, num_sound, num_lesion, detection_method_str
                             )
                             future_to_slice[future] = slice_idx
                         
-                        slice_times = []
+                        if cancelled:
+                            break
+                        
                         for future in as_completed(future_to_slice):
                             # Check for cancellation (wait for current futures to complete)
                             if progress_dialog.is_cancelled():
@@ -1450,12 +1434,11 @@ def run_carl_quant(context):
                             
                             slice_idx = future_to_slice[future]
                             try:
-                                result_idx, region_stats, surface, lesion_depth, error, slice_time, processing_steps = future.result()
+                                result_idx, region_stats, surface, lesion_depth, error = future.result()
                                 
                                 if error:
                                     context.status_bar.update(f"Error on slice {result_idx + 1}", level="error")
                                 else:
-                                    slice_times.append(slice_time)
                                     # Store results with thread safety
                                     if hasattr(context, "result_lock"):
                                         with context.result_lock:
@@ -1465,19 +1448,19 @@ def run_carl_quant(context):
                                     
                                     processed_count += 1
                                     
-                                    # Update progress dialog with detailed status
+                                    # Update progress dialog
                                     progress_dialog.update_slice(processed_count - 1, len(slice_tasks))
-                                    
-                                    # Show what was just completed (last step from processing_steps)
-                                    if processing_steps:
-                                        last_step = processing_steps[-1][0]
-                                        progress_dialog.update_status(
-                                            f"Completed: {last_step} (slice {result_idx + 1})",
-                                            color="blue"
-                                        )
+                                    progress_dialog.update_status(
+                                        f"Completed slice {result_idx + 1}",
+                                        color="blue"
+                                    )
                                     
                             except Exception as e:
                                 context.status_bar.update(f"Exception on slice {slice_idx + 1}: {e}", level="error")
+                    
+                    # MEMORY CLEANUP: Force garbage collection after parallel processing
+                    import gc
+                    gc.collect()
                     
                     # If cancelled during parallel processing, break specimen loop
                     if cancelled:
@@ -1504,6 +1487,8 @@ def run_carl_quant(context):
                             )
                             img = Image.open(image_path).convert('L')
                             image_array = np.array(img)
+                            img.close()  # MEMORY CLEANUP: Explicitly close PIL image
+                            del img
                             
                             # Detect surface
                             progress_dialog.update_status(
@@ -1582,6 +1567,10 @@ def run_carl_quant(context):
                         
                         except Exception as e:
                             context.status_bar.update(f"Error on slice {slice_idx + 1}: {e}", level="error")
+                        finally:
+                            # MEMORY CLEANUP: Ensure image_array is released
+                            if 'image_array' in locals():
+                                del image_array
                     
                     # If cancelled during sequential processing, break specimen loop
                     if cancelled:
@@ -1594,6 +1583,12 @@ def run_carl_quant(context):
                         f"Saved results for {specimen_id}",
                         color="green"
                     )
+                    
+                    # MEMORY CLEANUP: Clear results from memory after saving to disk
+                    # Results will be reloaded from JSON when user selects specimen for viewing
+                    specimen.results.clear()
+                    import gc
+                    gc.collect()
                     
                     # Update specimen status to "Completed"
                     specimen.status = "Completed"

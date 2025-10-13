@@ -311,7 +311,7 @@ class DataSaver:
         headers = ["SLICE"]
         headers += [f"SOUND_{i+1}_MEDIAN" for i in range(num_sound)]
         headers += [f"LESION_{i+1}_MEDIAN" for i in range(num_lesion)]
-        headers += ["LESION_DEPTH_MEAN"]
+        headers += ["LESION_DEPTH_MEAN", "IS_CAVITATED"]
         ws_summary.append(headers)
 
         for slice_index, result in specimen.results.items():
@@ -319,6 +319,7 @@ class DataSaver:
             row += [r.median for r in result.region_stats if r.region_type == "sound"]
             row += [r.median for r in result.region_stats if r.region_type == "lesion"]
             row += [result.lesion_depth.mean_depth if result.lesion_depth else 0]
+            row += [result.surface.is_cavitated if result.surface else False]
             ws_summary.append(row)
 
         # === Sheet 2: Region Pixels ===
@@ -361,6 +362,13 @@ class DataSaver:
                         row.append(None)  # Empty cell if region has fewer pixels
                 
                 ws_pixels.append(row)
+        
+        # MEMORY CLEANUP: Clear pixel_values after writing to Excel
+        # Pixel values are large (625 per region × 12 regions × N slices)
+        # They're preserved in Excel and not needed in memory anymore
+        for result in specimen.results.values():
+            for stats in result.region_stats:
+                stats.pixel_values.clear()
 
         # === Sheet 3: Surface & Depth ===
         ws_surface = wb.create_sheet("Surface & Depth")
