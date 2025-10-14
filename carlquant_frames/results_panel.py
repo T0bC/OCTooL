@@ -89,9 +89,28 @@ class resultsPanel:
         if not specimen.results:
             self.context.status_bar.update(f"No results available for '{specimen_id}'.", level="warning")
             self.sheet.set_sheet_data([])  # Clear table
+            # Unlock region dropdown when no data is loaded
+            settings_panel = self.context.get_panel("carl_settings")
+            if settings_panel:
+                settings_panel.lock_region_dropdown(False)
             return
 
-        # Regenerate headers in case region config changed
+        # Detect region count from loaded data
+        first_result = next(iter(specimen.results.values()))
+        num_sound = sum(1 for r in first_result.region_stats if r.region_type == "sound")
+        num_lesion = sum(1 for r in first_result.region_stats if r.region_type == "lesion")
+        
+        # Update context region config to match loaded data
+        self.context.region_config["sound"] = num_sound
+        self.context.region_config["lesion"] = num_lesion
+        
+        # Update settings panel dropdown to match loaded data and lock it
+        settings_panel = self.context.get_panel("carl_settings")
+        if settings_panel:
+            settings_panel.regionVar.set(num_sound)  # Assuming sound == lesion count
+            settings_panel.lock_region_dropdown(True)
+        
+        # Regenerate headers based on loaded data
         self.headers = self.generate_headers()
         self.sheet.headers(self.headers)
         self._set_column_widths()  # Set column widths after header change
@@ -116,7 +135,7 @@ class resultsPanel:
 
         self.sheet.set_sheet_data(rows)
         self._set_column_widths()  # Set column widths after loading data
-        self.context.status_bar.update(f"Loaded {len(rows)} slice results for '{specimen_id}'.", level="info")
+        self.context.status_bar.update(f"Loaded {len(rows)} slice results for '{specimen_id}' ({num_sound} sound + {num_lesion} lesion regions).", level="info")
 
     @handle_errors("resultsPanel._set_column_widths")
     def _set_column_widths(self) -> None:
@@ -145,5 +164,20 @@ class resultsPanel:
         max_width = 250
 
         return min(max(base_width, len(header) * char_width + padding), max_width)
+
+    @handle_errors("resultsPanel.refresh_display")
+    def refresh_display(self):
+        """
+        Refresh the results display with updated region configuration.
+        Reloads the current specimen if one is selected.
+        """
+        if hasattr(self.context, 'current_specimen_id') and self.context.current_specimen_id:
+            self.load_results_for(self.context.current_specimen_id)
+        else:
+            # No specimen loaded, just update headers
+            self.headers = self.generate_headers()
+            self.sheet.headers(self.headers)
+            self._set_column_widths()
+            self.sheet.set_sheet_data([])  # Clear any existing data
 
 
