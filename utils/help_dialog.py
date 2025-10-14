@@ -13,6 +13,7 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 import os
+import json
 from utils.error_handler import handle_errors
 
 
@@ -32,90 +33,85 @@ class HelpDialog:
         self.style = style
         self.current_tab = current_tab
         
-        # Define help messages for each tab based on instructions.json
-        self.help_messages = {
-            0: {  # Export tab
-                'title': '◆ EXPORT - QUICK GUIDE',
-                'content': (
-                    '1. LOAD IMAGES\n'
-                    '   ▸ Select source folder with Thorlabs OCT files\n'
-                    '   ▸ Preview loaded image stack\n'
-                    '   ▸ Verify image count and format\n\n'
-                    '2. CONFIGURE GLOBAL SETTINGS\n'
-                    '   ▸ Set output resolution\n'
-                    '   ▸ Choose export format (PNG, TIFF, etc.)\n'
-                    '   ▸ Configure compression settings\n\n'
-                    '3. CUSTOMIZE PER-IMAGE\n'
-                    '   ▸ Add text overlays\n'
-                    '   ▸ Set scale bars\n'
-                    '   ▸ Configure annotations\n\n'
-                    '4. EXECUTE EXPORT\n'
-                    '   ▸ Review export settings\n'
-                    '   ▸ Click "Start Export" button\n'
-                    '   ▸ Monitor progress\n\n'
-                    '💡 QUICK TIPS\n'
-                    '   ◄ ► Navigate images  |  ⊕ Preview before export\n'
-                    '   📁 Batch process folders  |  ⚙️ Save settings presets'
-                )
-            },
-            1: {  # Analyze tab
-                'title': '◆ ANALYZE - QUICK GUIDE',
-                'content': (
-                    '1. LOAD DATA\n'
-                    '   ▸ Click "Load Folder" to select data directory\n'
-                    '   ▸ Browse and select image stack\n'
-                    '   ▸ Data loads into image viewer\n\n'
-                    '2. ANNOTATE IMAGES\n'
-                    '   ▸ Click on image to add annotation points\n'
-                    '   ▸ Drag points to adjust position\n'
-                    '   ▸ Use keyboard shortcuts for navigation\n\n'
-                    '3. ADD COLUMNS\n'
-                    '   ▸ Define custom data columns\n'
-                    '   ▸ Set column types (numeric, text, boolean)\n'
-                    '   ▸ Add metadata for analysis\n\n'
-                    '4. EXPORT DATA\n'
-                    '   ▸ Configure export settings\n'
-                    '   ▸ Select output format\n'
-                    '   ▸ Save annotated data\n\n'
-                    '💡 QUICK TIPS\n'
-                    '   ◄ ► Navigate frames  |  ⊕ Ctrl+Wheel: Zoom\n'
-                    '   ✋ Drag points to adjust  |  ⌨ H key: Toggle annotations'
-                )
-            },
-            2: {  # CarlQuant tab
-                'title': '◆ CARL QUANT - QUICK GUIDE',
-                'content': (
-                    '1. LOAD IMAGES\n'
-                    '   ▸ Click "Select Folder" button\n'
-                    '   ▸ Choose directory with OCT image stacks\n'
-                    '   ▸ Each subfolder = one specimen\n\n'
-                    '2. REVIEW SPECIMENS\n'
-                    '   ▸ View loaded specimens in table\n'
-                    '   ▸ Click specimen to select\n'
-                    '   ▸ Check slice count and status\n\n'
-                    '3. DEFINE REGIONS\n'
-                    '   ▸ REGION: Click twice for vertical boundaries\n'
-                    '   ▸ AIR: Click & drag for rectangle\n'
-                    '   ▸ First definition applies to ALL slices\n\n'
-                    '4. CONFIGURE SETTINGS\n'
-                    '   ▸ Set operator name & measurement #\n'
-                    '   ▸ Configure region parameters\n'
-                    '   ▸ Adjust analysis settings\n\n'
-                    '5. START ANALYSIS\n'
-                    '   ▸ Click "Start Analyzing" button\n'
-                    '   ▸ Results saved to Data_[operator]_[measurement]\n'
-                    '   ▸ Configuration auto-saved\n\n'
-                    '💡 QUICK TIPS\n'
-                    '   ◄ ► Navigate slices  |  ⊕ Ctrl+Wheel: Zoom\n'
-                    '   ✋ Ctrl+Drag: Pan  |  ⌨ H key: Toggle overlays'
-                )
+        # Map tab indices to instruction keys
+        self.tab_to_instruction_key = {
+            0: 'export_getting_started',
+            1: 'analyze_getting_started',
+            2: 'carlquant_getting_started'
+        }
+        
+        # Load instructions from JSON file
+        self.instructions = self._load_instructions()
+    
+    @handle_errors("HelpDialog._load_instructions")
+    def _load_instructions(self):
+        """Load instructions from the instructions.json file."""
+        try:
+            app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            json_path = os.path.join(app_dir, 'utils', 'instructions.json')
+            
+            with open(json_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load instructions.json: {e}")
+            # Return empty dict as fallback
+            return {}
+    
+    def _format_help_content(self, instruction_key):
+        """Format the instruction data into help dialog content.
+        
+        Args:
+            instruction_key: Key for the instruction section (e.g., 'carlquant_getting_started')
+            
+        Returns:
+            dict: Dictionary with 'title' and 'content' keys
+        """
+        if not self.instructions or instruction_key not in self.instructions:
+            return {
+                'title': '◆ HELP - QUICK GUIDE',
+                'content': 'Help content not available. Please check instructions.json file.'
             }
+        
+        instruction = self.instructions[instruction_key]
+        title = instruction.get('title', {}).get('text', '◆ QUICK GUIDE')
+        
+        # Build content from workflow steps
+        content_parts = []
+        
+        for step in instruction.get('workflow_steps', []):
+            step_num = step.get('number', '?')
+            step_title = step.get('title', 'Step').upper()
+            content_parts.append(f"{step_num}. {step_title}")
+            
+            for action in step.get('actions', []):
+                content_parts.append(f"   {action}")
+            
+            content_parts.append("")  # Empty line between steps
+        
+        # Add quick tips if available
+        quick_tips = instruction.get('quick_tips', {})
+        if quick_tips:
+            tips_header = quick_tips.get('header', '💡 QUICK TIPS')
+            content_parts.append(tips_header)
+            
+            tips = quick_tips.get('tips', [])
+            # Format tips in two columns if possible
+            for i in range(0, len(tips), 2):
+                if i + 1 < len(tips):
+                    content_parts.append(f"   {tips[i]}  |  {tips[i+1]}")
+                else:
+                    content_parts.append(f"   {tips[i]}")
+        
+        return {
+            'title': title,
+            'content': '\n'.join(content_parts)
         }
     
     @handle_errors("HelpDialog.show")
     def show(self):
         """Show the help dialog for the current tab."""
-        current_help = self.help_messages.get(self.current_tab, self.help_messages[0])
+        instruction_key = self.tab_to_instruction_key.get(self.current_tab, 'export_getting_started')
+        current_help = self._format_help_content(instruction_key)
         self._create_dialog(current_help['title'], current_help['content'])
     
     @handle_errors("HelpDialog.create_dialog")

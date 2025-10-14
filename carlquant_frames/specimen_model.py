@@ -17,19 +17,30 @@ class RegionStats:
     median: float
     sd: float
     se: float
+    region_index: int = 0  # Region number (1, 2, 3, ...)
+    bounds: Tuple = (0, 0, 0, 0)  # Either (left_x, top_y, right_x, bottom_y) or 4 corner points
+    rotation_angle: float = 0.0  # Rotation angle in degrees
 
 @dataclass
 class Surface:
     raw_points: List[Tuple[int, int]]  # (x, y)
-    fitted_curves: Dict[str, List[Tuple[int, int]]]  # e.g. {"polyfit": [...], "spline": [...]}
+    fitted_curves: Dict[str, List[Tuple[int, int]]]  # e.g. {"spline": [...], "reference": [...]}
+    cluster_labels: Optional[List[int]] = None  # Cluster ID for each point (-1 for noise)
+    is_cavitated: bool = False  # True if cavitation detected
+    cavitation_depth: float = 0.0  # Mean vertical distance between primary and reference curves
 
 @dataclass
 class LesionDepth:
-    depth_points: List[Tuple[int, int]]
+    depth_points: List[Tuple[int, int]]  # (x, y) coordinates of lesion bottom (raw knee points)
     mean_depth: float
     median_depth: float
     sd: float
     se: float
+    knee_data: Optional[Dict[int, Dict]] = None  # Per-column knee point data for visualization
+    # knee_data format: {x_column: {'intensity': [...], 'depth_idx': [...], 'knee_idx': int, 'fits': {...}}}
+    smoothed_depth_points: Optional[List[Tuple[int, int]]] = None  # Spline-smoothed depth points for cleaner visualization
+    method_splines: Optional[Dict[str, List[Tuple[int, int]]]] = None  # Pre-computed splines for all methods when compute_all_methods=True
+    # method_splines format: {'knee_point': [(x,y), ...], 'sigmoid_fit': [(x,y), ...], 'sigmoid_shoulder': [(x,y), ...]}
 
 @dataclass
 class RegionConfig:

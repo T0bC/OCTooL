@@ -49,13 +49,16 @@ def addContent(self, frame):
     self.context.register_frame("carl_settings", self.settingsFrame)
 
     # PanedWindow for Specimen and Results
+    # Styled to match dark theme
     self.tablePane = tk.PanedWindow(
         self.carlQuantFrame, 
-        orient=tk.HORIZONTAL, 
-        #sashrelief=tk.RAISED,
-        sashwidth=6,  # Increase sash width from default 3px to 8px
-        sashpad=1,    # Add padding around sash for easier grabbing
-        bd=1          # Border width for better visual definition
+        orient=tk.HORIZONTAL,
+        sashwidth=6,
+        sashpad=2,
+        bd=0,  # Remove border
+        bg="#2b2b2b",  # Dark background to match theme
+        sashrelief=tk.FLAT,  # Flat sash for modern look
+        relief=tk.FLAT  # Flat relief for the pane itself
     )
     self.tablePane.grid(row=0, column=1, columnspan=2, sticky="nsew", padx=5, pady=5)
 

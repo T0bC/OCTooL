@@ -68,6 +68,14 @@ class specimenPanel:
 
         if specimen_data:
             self.context.current_specimen_id = specimen_id
+            
+            # MEMORY OPTIMIZATION: Reload results from disk if they were cleared
+            # Results are cleared after saving to reduce memory usage during batch processing
+            # They are reloaded on-demand when user selects a specimen for viewing
+            if not specimen_data.results and specimen_data.config:
+                from carlquant_frames.data_io import DataLoader
+                # Reload annotations (surface, lesion_depth, extraction_regions) from JSON
+                DataLoader.load_specimen_config(specimen_data)
 
             viewer_panel = self.context.get_panel("carl_image")
             viewer_panel.display_image(0)
@@ -75,8 +83,8 @@ class specimenPanel:
             results_panel = self.context.get_panel("carl_results")
             results_panel.load_results_for(specimen_id)
 
-            specimen_data.status = "displayed"
-            self.sheet.set_cell_data(row_index, 4, "displayed")
+            specimen_data.status = "Displayed"
+            self.sheet.set_cell_data(row_index, 4, "Displayed")
 
             # Clear previous highlight
             if self.last_selected_row is not None:
@@ -105,7 +113,6 @@ class specimenPanel:
 
         r, g, b = adjust(r), adjust(g), adjust(b)
         return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
     def choose_font_color(self, bg_color: str) -> str:
         luminance = self.get_luminance(bg_color)
         return "#FFFFFF" if luminance < 0.5 else "#000000"
@@ -113,23 +120,32 @@ class specimenPanel:
 
     @handle_errors("specimenPanel._set_column_widths")
     def _set_column_widths(self) -> None:
-        """ Set column widths based on header length. """
+        """ Set column widths based on header and cell content. """
         column_names = self.sheet.headers()
-
+        
         for i, header in enumerate(column_names):
-            width = self._calculate_column_width(header)
+            # Get all cell values in this column
+            cell_values = []
+            for row_idx in range(self.sheet.total_rows()):
+                cell_data = self.sheet.get_cell_data(row_idx, i)
+                if cell_data:
+                    cell_values.append(str(cell_data))
+            
+            # Calculate width based on header and content
+            width = self._calculate_column_width(header, cell_values)
             self.sheet.column_width(i, width=width)
 
         self.sheet.refresh()
 
 
     @handle_errors("specimenPanel._calculate_column_width")
-    def _calculate_column_width(self, header: str) -> int:
+    def _calculate_column_width(self, header: str, cell_values: list = None) -> int:
         """
-        Calculate column width based on header length.
+        Calculate column width based on header and cell content (whichever is longer).
 
         Args:
             header (str): Column header text.
+            cell_values (list): List of cell values in this column.
 
         Returns:
             int: Suggested column width.
@@ -138,5 +154,17 @@ class specimenPanel:
         char_width = 7   # Approximate width per character
         padding = 20     # Extra space for clarity
         max_width = 250
-
-        return min(max(base_width, len(header) * char_width + padding), max_width)
+        
+        # Calculate width needed for header
+        header_width = len(header) * char_width + padding
+        
+        # Calculate width needed for longest cell content
+        max_cell_width = base_width
+        if cell_values:
+            max_cell_length = max(len(str(val)) for val in cell_values) if cell_values else 0
+            max_cell_width = max_cell_length * char_width + padding
+        
+        # Use the larger of header or content width
+        calculated_width = max(header_width, max_cell_width, base_width)
+        
+        return min(calculated_width, max_width)

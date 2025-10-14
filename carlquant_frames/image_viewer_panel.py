@@ -20,7 +20,17 @@ from PIL import Image, ImageTk
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
+from utils.metadata_prompt import ensure_metadata_set
 from carlquant_frames.data_io import DataSaver
+from carlquant_frames.annotation_renderer import (
+    CoordinateConverter,
+    SurfaceAnnotationRenderer,
+    LesionDepthAnnotationRenderer,
+    ExtractionRegionAnnotationRenderer,
+    RegionBoundaryAnnotationRenderer,
+    AIRAnnotationRenderer,
+    RegionMarkerAnnotationRenderer
+)
 from base import BaseCanvasPanel
 
 
@@ -135,6 +145,15 @@ class image_viewer_panel(BaseCanvasPanel):
         # Draw region boundaries and AIR regions
         self.draw_region_boundaries(specimen, current_slice)
         self.draw_air_regions(specimen, current_slice)
+        
+        # Draw surface detection results
+        self.draw_surface_results(specimen, current_slice)
+        
+        # Draw lesion depth results
+        self.draw_lesion_depth(specimen, current_slice)
+        
+        # Draw extraction regions
+        self.draw_extraction_regions(specimen, current_slice)
 
     # ============================================================================
     # IMAGE DISPLAY (OVERRIDE FOR SPECIMEN-SPECIFIC LOGIC)
@@ -362,6 +381,25 @@ class image_viewer_panel(BaseCanvasPanel):
             self.draw_region_boundaries(specimen, current_slice)
 
 
+    def _get_coordinate_converter(self):
+        """
+        Get a CoordinateConverter instance for current view state.
+        
+        Returns:
+            CoordinateConverter instance or None if no image loaded
+        """
+        if not hasattr(self, 'rawImage') or self.rawImage is None:
+            return None
+        
+        return CoordinateConverter(
+            self.rawImage,
+            self.zoom_level,
+            self.image_offset_x,
+            self.image_offset_y,
+            getattr(self, 'fitted_width', self.rawImage.width),
+            getattr(self, 'fitted_height', self.rawImage.height)
+        )
+    
     def canvas_to_image_coords(self, canvas_x, canvas_y):
         """
         Convert canvas coordinates to image coordinates.
@@ -376,26 +414,11 @@ class image_viewer_panel(BaseCanvasPanel):
         Returns:
             tuple: (image_x, image_y) as integers, or (None, None) if out of bounds
         """
-        if not hasattr(self, 'rawImage'):
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return None, None
-
-        # Use fitted size if zoom_level == 1.0
-        if self.zoom_level == 1.0:
-            current_width = getattr(self, 'fitted_width', self.rawImage.width)
-            current_height = getattr(self, 'fitted_height', self.rawImage.height)
-            current_zoom = current_width / self.rawImage.width
-        else:
-            current_zoom = self.zoom_level
-
-        # Convert to image-relative coordinates
-        rel_x = (canvas_x - self.image_offset_x) / current_zoom
-        rel_y = (canvas_y - self.image_offset_y) / current_zoom
-
-        # Check if click is within image bounds
-        if rel_x < 0 or rel_x >= self.rawImage.width or rel_y < 0 or rel_y >= self.rawImage.height:
-            return None, None
-
-        return int(rel_x), int(rel_y)
+        
+        return converter.canvas_to_image(canvas_x, canvas_y)
 
 
     def save_region_configuration(self, specimen, current_slice, 
@@ -418,35 +441,41 @@ class image_viewer_panel(BaseCanvasPanel):
             lesion_end: (x, y) tuple for lesion end
             tooth_end: (x, y) tuple for tooth end
         """
-        total_slices = len(specimen.images)
-        
-        # Check if any regions exist
-        has_existing_regions = specimen.config and len(specimen.config.regions) > 0
-        
-        if not has_existing_regions:
-            # First-time initialization: propagate to all slices
-            for slice_idx in range(total_slices):
-                DataSaver.update_specimen_region(
-                    specimen, slice_idx, 
-                    specimen_start, lesion_start, lesion_end, tooth_end
+        def do_save():
+            total_slices = len(specimen.images)
+            
+            # Check if any regions exist
+            has_existing_regions = specimen.config and len(specimen.config.regions) > 0
+            
+            if not has_existing_regions:
+                # First-time initialization: propagate to all slices
+                for slice_idx in range(total_slices):
+                    DataSaver.update_specimen_region(
+                        specimen, slice_idx, 
+                        specimen_start, lesion_start, lesion_end, tooth_end,
+                        context=self.context
+                    )
+                self.context.status_bar.update(
+                    f"Region initialized for all {total_slices} slices (4 boundaries)", 
+                    level="success"
                 )
-            self.context.status_bar.update(
-                f"Region initialized for all {total_slices} slices (4 boundaries)", 
-                level="success"
-            )
-        else:
-            # Regions already exist: only update current slice
-            DataSaver.update_specimen_region(
-                specimen, current_slice,
-                specimen_start, lesion_start, lesion_end, tooth_end
-            )
-            self.context.status_bar.update(
-                f"Region updated for slice {current_slice + 1} (4 boundaries)", 
-                level="success"
-            )
+            else:
+                # Regions already exist: only update current slice
+                DataSaver.update_specimen_region(
+                    specimen, current_slice,
+                    specimen_start, lesion_start, lesion_end, tooth_end,
+                    context=self.context
+                )
+                self.context.status_bar.update(
+                    f"Region updated for slice {current_slice + 1} (4 boundaries)", 
+                    level="success"
+                )
 
-        # Update specimen panel display
-        self.update_specimen_panel_display(specimen)
+            # Update specimen panel display
+            self.update_specimen_panel_display(specimen)
+        
+        # Ensure metadata is set before saving
+        ensure_metadata_set(self.root, self.context, do_save)
 
 
     def update_specimen_panel_display(self, specimen):
@@ -619,26 +648,30 @@ class image_viewer_panel(BaseCanvasPanel):
             point1: (x, y) tuple for top-left corner
             point2: (x, y) tuple for bottom-right corner
         """
-        total_slices = len(specimen.images)
+        def do_save():
+            total_slices = len(specimen.images)
+            
+            # Check if any AIR regions exist
+            has_existing_air = specimen.config and len(specimen.config.air) > 0
+            
+            if not has_existing_air:
+                # First-time initialization: propagate to all slices
+                for slice_idx in range(total_slices):
+                    DataSaver.update_specimen_air(specimen, slice_idx, point1, point2, context=self.context)
+                self.context.status_bar.update(
+                    f"AIR region initialized for all {total_slices} slices: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
+                    level="success"
+                )
+            else:
+                # AIR regions already exist: only update current slice
+                DataSaver.update_specimen_air(specimen, current_slice, point1, point2, context=self.context)
+                self.context.status_bar.update(
+                    f"AIR region updated for slice {current_slice + 1}: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
+                    level="success"
+                )
         
-        # Check if any AIR regions exist
-        has_existing_air = specimen.config and len(specimen.config.air) > 0
-        
-        if not has_existing_air:
-            # First-time initialization: propagate to all slices
-            for slice_idx in range(total_slices):
-                DataSaver.update_specimen_air(specimen, slice_idx, point1, point2)
-            self.context.status_bar.update(
-                f"AIR region initialized for all {total_slices} slices: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
-                level="success"
-            )
-        else:
-            # AIR regions already exist: only update current slice
-            DataSaver.update_specimen_air(specimen, current_slice, point1, point2)
-            self.context.status_bar.update(
-                f"AIR region updated for slice {current_slice + 1}: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
-                level="success"
-            )
+        # Ensure metadata is set before saving
+        ensure_metadata_set(self.root, self.context, do_save)
 
 
     # ============================================================================
@@ -660,24 +693,12 @@ class image_viewer_panel(BaseCanvasPanel):
         if not specimen.config or current_slice not in specimen.config.air:
             return
 
-        air_config = specimen.config.air[current_slice]
-        x1, y1 = air_config.point1
-        x2, y2 = air_config.point2
-
-        # Convert image coordinates to canvas coordinates
-        canvas_coords = self.image_to_canvas_coords(x1, y1, x2, y2)
-        if not canvas_coords:
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return
-
-        canvas_x1, canvas_y1, canvas_x2, canvas_y2 = canvas_coords
-
-        # Draw rectangle for AIR region
-        rect = self.canvas.create_rectangle(
-            canvas_x1, canvas_y1, canvas_x2, canvas_y2,
-            outline="cyan", width=2, tags="air_visual"
-        )
-
-        self.air_visual_elements.append(rect)
+        
+        renderer = AIRAnnotationRenderer(self.canvas, converter)
+        renderer.draw(specimen.config.air[current_slice])
 
 
     def clear_air_visuals(self):
@@ -701,35 +722,12 @@ class image_viewer_panel(BaseCanvasPanel):
         """
         self.clear_region_visuals()
         
-        # Use cyan for temporary markers (will become green/yellow after sorting)
-        color = "cyan"
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
         
-        for i, (image_x, image_y) in enumerate(self.region_points):
-            # Convert image coords to canvas coords for single point
-            if not hasattr(self, 'rawImage'):
-                continue
-                
-            if self.zoom_level == 1.0:
-                current_width = getattr(self, 'fitted_width', self.rawImage.width)
-                current_zoom = current_width / self.rawImage.width
-            else:
-                current_zoom = self.zoom_level
-            
-            canvas_x = image_x * current_zoom + self.image_offset_x
-            canvas_y = image_y * current_zoom + self.image_offset_y
-            
-            # Draw circle
-            marker = self.canvas.create_oval(
-                canvas_x - 6, canvas_y - 6, canvas_x + 6, canvas_y + 6,
-                fill=color, outline="white", width=2, tags="region_visual"
-            )
-            # Draw number label (click order)
-            label = self.canvas.create_text(
-                canvas_x, canvas_y,
-                text=str(i + 1), fill="black", font=("Arial", 10, "bold"),
-                tags="region_visual"
-            )
-            self.region_visual_elements.extend([marker, label])
+        renderer = RegionMarkerAnnotationRenderer(self.canvas, converter)
+        renderer.draw(self.region_points)
 
 
     def draw_region_boundaries(self, specimen, current_slice):
@@ -748,41 +746,12 @@ class image_viewer_panel(BaseCanvasPanel):
         if not specimen.config or current_slice not in specimen.config.regions:
             return
 
-        region = specimen.config.regions[current_slice]
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
         
-        # Get all 4 boundary points with color scheme:
-        # Green for specimen boundaries, Yellow for lesion boundaries
-        points = [
-            (region.specimen_start, "green", "Specimen Start"),
-            (region.lesion_start, "yellow", "Lesion Start"),
-            (region.lesion_end, "yellow", "Lesion End"),
-            (region.tooth_end, "green", "Tooth End")
-        ]
-        
-        canvas_height = self.canvas.winfo_height()
-        
-        for (point, color, label) in points:
-            x, y = point
-            
-            # Convert image coordinates to canvas coordinates
-            if not hasattr(self, 'rawImage'):
-                continue
-                
-            if self.zoom_level == 1.0:
-                current_width = getattr(self, 'fitted_width', self.rawImage.width)
-                current_zoom = current_width / self.rawImage.width
-            else:
-                current_zoom = self.zoom_level
-            
-            canvas_x = x * current_zoom + self.image_offset_x
-            
-            # Draw vertical line
-            line = self.canvas.create_line(
-                canvas_x, 0, canvas_x, canvas_height,
-                fill=color, width=2, tags="region_visual"
-            )
-            
-            self.region_visual_elements.append(line)
+        renderer = RegionBoundaryAnnotationRenderer(self.canvas, converter)
+        renderer.draw(specimen.config.regions[current_slice])
 
 
     def image_to_canvas_coords(self, start_x, start_y, end_x, end_y):
@@ -802,23 +771,11 @@ class image_viewer_panel(BaseCanvasPanel):
             tuple: (canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y)
                    or None if no image is loaded
         """
-        if not hasattr(self, 'rawImage'):
+        converter = self._get_coordinate_converter()
+        if converter is None:
             return None
-
-        # Use fitted size if zoom_level == 1.0
-        if self.zoom_level == 1.0:
-            current_width = getattr(self, 'fitted_width', self.rawImage.width)
-            current_height = getattr(self, 'fitted_height', self.rawImage.height)
-            current_zoom = current_width / self.rawImage.width
-        else:
-            current_zoom = self.zoom_level
-
-        canvas_start_x = start_x * current_zoom + self.image_offset_x
-        canvas_start_y = start_y * current_zoom + self.image_offset_y
-        canvas_end_x = end_x * current_zoom + self.image_offset_x
-        canvas_end_y = end_y * current_zoom + self.image_offset_y
-
-        return canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y
+        
+        return converter.image_to_canvas_rect(start_x, start_y, end_x, end_y)
 
 
     def clear_region_visuals(self):
@@ -869,3 +826,79 @@ class image_viewer_panel(BaseCanvasPanel):
         specimen = specimen_data[specimen_id]
         current_slice = int(self.scale.get()) - 1  # Convert to 0-based index
         self.draw_air_regions(specimen, current_slice)
+    
+    
+    def draw_surface_results(self, specimen, current_slice):
+        """
+        Draw surface detection results (peaks and fitted curve).
+        
+        Args:
+            specimen: Specimen object containing results
+            current_slice: 0-based slice index
+        """
+        # Check if results exist for this slice
+        if not hasattr(specimen, 'results') or current_slice not in specimen.results:
+            return
+        
+        slice_result = specimen.results[current_slice]
+        surface = slice_result.surface
+        
+        if not surface:
+            return
+        
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
+        
+        renderer = SurfaceAnnotationRenderer(self.canvas, converter)
+        renderer.draw(surface)
+    
+    def draw_extraction_regions(self, specimen, current_slice):
+        """
+        Draw extraction regions (rotated rectangles with numbers).
+        
+        Args:
+            specimen: Specimen object containing results
+            current_slice: 0-based slice index
+        """
+        # Check if results exist for this slice
+        if not hasattr(specimen, 'results') or current_slice not in specimen.results:
+            return
+        
+        slice_result = specimen.results[current_slice]
+        region_stats = slice_result.region_stats
+        
+        if not region_stats:
+            return
+        
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
+        
+        renderer = ExtractionRegionAnnotationRenderer(self.canvas, converter)
+        renderer.draw(region_stats)
+    
+    def draw_lesion_depth(self, specimen, current_slice):
+        """
+        Draw lesion depth results (detected bottom of lesion).
+        
+        Args:
+            specimen: Specimen object containing results
+            current_slice: 0-based slice index
+        """
+        # Check if results exist for this slice
+        if not hasattr(specimen, 'results') or current_slice not in specimen.results:
+            return
+        
+        slice_result = specimen.results[current_slice]
+        lesion_depth = slice_result.lesion_depth
+        
+        if not lesion_depth or not lesion_depth.depth_points:
+            return
+        
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
+        
+        renderer = LesionDepthAnnotationRenderer(self.canvas, converter)
+        renderer.draw(lesion_depth)

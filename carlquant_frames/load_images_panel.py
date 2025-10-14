@@ -2,17 +2,15 @@
 """
 Created on Fri Sep 26 14:16:49 2025
 
-@author: meissnerto
 """
 
 import tkinter as tk
 from tkinter import ttk, filedialog
 from pathlib import Path
 from fnmatch import fnmatch
-import os
-import re
-from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
+from utils.metadata_prompt import prompt_for_metadata
+from utils.tool_tip import Tooltip
 from carlquant_frames.data_io import DataLoader
 from carlquant_frames.carl_quant_core import run_carl_quant
 import threading
@@ -38,6 +36,17 @@ class loadImagePanel:
         self.selectFolderBtn.grid(row=0, column=0, sticky="ew", pady=3)
         Tooltip(self.selectFolderBtn, text=self.selectFolderTooltip, wraplength=200)
 
+        # Remove Selected Button
+        self.removeSelectedTooltip = 'Remove the selected specimen from the list to exclude it from processing'
+        self.removeSelectedBtn = ttk.Button(
+            self.frame,
+            text='Remove Selected',
+            command=self.removeSelected,
+            bootstyle="danger"
+        )
+        self.removeSelectedBtn.grid(row=1, column=0, sticky="ew", pady=3)
+        Tooltip(self.removeSelectedBtn, text=self.removeSelectedTooltip, wraplength=200)
+
         # Start Analyzing Button
         self.startAnalyzingTooltip = 'Begin analyzing the selected CarlQuant data folder'
         self.startAnalyzingBtn = ttk.Button(
@@ -46,21 +55,83 @@ class loadImagePanel:
             command=self.startAnalyzing,
             bootstyle="success"
         )
-        self.startAnalyzingBtn.grid(row=1, column=0, sticky="ew", pady=3)
+        self.startAnalyzingBtn.grid(row=2, column=0, sticky="ew", pady=3)
         Tooltip(self.startAnalyzingBtn, text=self.startAnalyzingTooltip, wraplength=200)
 
 
     @handle_errors("loadImagePanel.selectFolder")
     def selectFolder(self):
+        """Select folder and prompt for metadata before loading specimens."""
         folder_path = filedialog.askdirectory(title="Select CarlQuant Data Folder")
         if not folder_path:
             self.context.status_bar.update("No folder selected.", level="warning")
             return
-
-        root = Path(folder_path)
+        
+        # Store folder path temporarily
+        self.pending_folder_path = Path(folder_path)
+        
+        # Prompt for metadata first, then load specimens
+        prompt_for_metadata(
+            self.root, 
+            self.context, 
+            callback=self.load_specimens_with_metadata,
+            title="Enter Metadata for Analysis"
+        )
+    
+    def load_specimens_with_metadata(self):
+        """Load specimens after metadata is set, checking for existing results."""
+        if not hasattr(self, 'pending_folder_path'):
+            return
+        
+        root = self.pending_folder_path
         self.context.path_to_carlquant_data = root
+        
+        # Get metadata
+        metadata = getattr(self.context, "analysis_metadata", {})
+        operator = metadata.get("operator", "OP")
+        measurement = metadata.get("measurement", 1)
+        
+        # Update settings panel entry fields
+        self.update_settings_panel_metadata(operator, measurement)
+        
+        # Load specimens
         self.context.specimen_data = DataLoader.find_image_stacks(root)
-
+        
+        # Check each specimen for matching Data_{operator}_{measurement} folder
+        for specimen_id, specimen in self.context.specimen_data.items():
+            # Store metadata in specimen for saving operations
+            specimen.operator = operator
+            specimen.measurement = measurement
+            
+            # Check if a Data folder exists for this operator/measurement
+            expected_data_folder = specimen.source / f"Data_{operator}_{measurement}"
+            
+            if expected_data_folder.exists() and expected_data_folder.is_dir():
+                # Matching data folder found - reload config and results
+                specimen.config = DataLoader.load_specimen_config(specimen)
+                if specimen.config:
+                    # Update display values
+                    regions_count = len(specimen.config.regions)
+                    specimen.regions = f"{regions_count} regions" if regions_count > 0 else ""
+                    
+                    # Check if results were loaded (annotations)
+                    if specimen.results:
+                        specimen.status = "Analyzed"
+                        self.context.status_bar.update(
+                            f"Loaded existing results for {specimen_id} (Data_{operator}_{measurement})", 
+                            level="success"
+                        )
+                        
+                        # Lock region dropdown when existing results are loaded
+                        settings_panel = self.context.get_panel("carl_settings")
+                        if settings_panel:
+                            # Detect region count from loaded data
+                            first_result = next(iter(specimen.results.values()))
+                            num_regions = sum(1 for r in first_result.region_stats if r.region_type == "sound")
+                            settings_panel.regionVar.set(num_regions)
+                            settings_panel.lock_region_dropdown(True)
+        
+        # Update specimen panel display
         specimen_panel = self.context.get_panel("carl_specimen")
         rows = []
         for specimen_id, specimen in self.context.specimen_data.items():
@@ -78,12 +149,90 @@ class loadImagePanel:
                 specimen.status
             ])
         specimen_panel.sheet.set_sheet_data(rows)
-        specimen_panel._set_column_widths()  # Set column widths after loading data
-        self.context.status_bar.update(f"Found {len(rows)} specimen(s).", level="info")
+        specimen_panel._set_column_widths()
+        
+        self.context.status_bar.update(
+            f"Loaded {len(rows)} specimen(s) for {operator} measurement {measurement}", 
+            level="success"
+        )
+        
+        # Clear pending path
+        delattr(self, 'pending_folder_path')
+    
+    def update_settings_panel_metadata(self, operator, measurement):
+        """Update the settings panel entry fields with metadata."""
+        settings_panel = self.context.get_panel("carl_settings")
+        if settings_panel:
+            settings_panel.operatorVar.set(operator)
+            settings_panel.measurementVar.set(str(measurement))
 
+    @handle_errors("loadImagePanel.removeSelected")
+    def removeSelected(self):
+        """Remove the selected specimen from the table and specimen_data."""
+        # Check if specimen data exists
+        if not hasattr(self.context, "specimen_data") or not self.context.specimen_data:
+            self.context.status_bar.update("No specimens loaded.", level="warning")
+            return
+        
+        # Get specimen panel
+        specimen_panel = self.context.get_panel("carl_specimen")
+        if not specimen_panel:
+            self.context.status_bar.update("Specimen panel not found.", level="error")
+            return
+        
+        # Get currently selected row
+        selected = specimen_panel.sheet.get_currently_selected()
+        if not selected or selected[0] is None:
+            self.context.status_bar.update("No specimen selected. Please select a row first.", level="warning")
+            return
+        
+        row_index = selected[0]
+        
+        # Get specimen ID from the selected row
+        specimen_id = specimen_panel.sheet.get_cell_data(row_index, 0)
+        
+        if not specimen_id:
+            self.context.status_bar.update("Could not identify specimen.", level="error")
+            return
+        
+        # Remove from specimen_data dictionary
+        if specimen_id in self.context.specimen_data:
+            del self.context.specimen_data[specimen_id]
+        
+        # Remove row from table
+        specimen_panel.sheet.delete_row(row_index)
+        
+        # Update column widths after deletion
+        specimen_panel._set_column_widths()
+        
+        # Clear current specimen if it was the one removed
+        if hasattr(self.context, 'current_specimen_id') and self.context.current_specimen_id == specimen_id:
+            self.context.current_specimen_id = None
+            
+            # Clear viewer and results panels if methods exist
+            viewer_panel = self.context.get_panel("carl_image")
+            if viewer_panel and hasattr(viewer_panel, 'clear_display'):
+                viewer_panel.clear_display()
+            
+            results_panel = self.context.get_panel("carl_results")
+            if results_panel and hasattr(results_panel, 'clear_results'):
+                results_panel.clear_results()
+        
+        # Clear highlight tracking if this was the last selected row
+        if specimen_panel.last_selected_row == row_index:
+            specimen_panel.last_selected_row = None
+        elif specimen_panel.last_selected_row is not None and specimen_panel.last_selected_row > row_index:
+            # Adjust tracking if a row above was deleted
+            specimen_panel.last_selected_row -= 1
+        
+        self.context.status_bar.update(
+            f"Removed specimen '{specimen_id}' from processing list.", 
+            level="success"
+        )
 
     @handle_errors("loadImagePanel.startAnalyzing")
     def startAnalyzing(self):
+        """Start analysis - metadata is guaranteed to be set at this point."""
         print("Start Analyzing triggered")
 
         # Ensure region config exists
@@ -99,120 +248,7 @@ class loadImagePanel:
         if not hasattr(self.context, "result_lock"):
             self.context.result_lock = threading.Lock()
 
-        metadata = getattr(self.context, "analysis_metadata", {})
-        operator = metadata.get("operator", "").strip()
-        measurement = metadata.get("measurement", None)
-
-        if not operator or measurement is None:
-            self.prompt_for_metadata()
-            return
-
-        specimens_with_prior_runs = [
-            s for s in self.context.specimen_data.values()
-            if s.previous_runs and not hasattr(s, "analysis_choice")
-        ]
-
-        if specimens_with_prior_runs:
-            self.prompt_overwrite_or_new(specimens_with_prior_runs)
-            return
-
+        # Metadata is guaranteed to be set from selectFolder
+        # No need to check or prompt - just run analysis
         run_carl_quant(self.context)
-
-
-    def prompt_for_metadata(self):
-        popup = tk.Toplevel(self.root)
-        # set position of the popup to the center of the main UI
-        popup.update_idletasks()
-
-        main_x = self.root.winfo_x()
-        main_y = self.root.winfo_y()
-        main_width = self.root.winfo_width()
-        main_height = self.root.winfo_height()
-
-        popup_width = popup.winfo_width()
-        popup_height = popup.winfo_height()
-
-        pos_x = main_x + (main_width // 2) - (popup_width // 2)
-        pos_y = main_y + (main_height // 2) - (popup_height // 2)
-
-        popup.geometry(f"+{pos_x}+{pos_y}")
-
-        popup.title("Enter Analysis Metadata")
-        popup.transient(self.root)
-        popup.grab_set()
-
-        tk.Label(popup, text="Operator Initials:").grid(row=0, column=0, sticky="w", padx=10, pady=5)
-        operator_var = tk.StringVar()
-        tk.Entry(popup, textvariable=operator_var).grid(row=0, column=1, padx=10, pady=5)
-
-        tk.Label(popup, text="Measurement Number:").grid(row=1, column=0, sticky="w", padx=10, pady=5)
-        measurement_var = tk.StringVar()
-        tk.Entry(popup, textvariable=measurement_var).grid(row=1, column=1, padx=10, pady=5)
-
-        def submit():
-            operator = operator_var.get().strip()
-            try:
-                measurement = int(measurement_var.get())
-            except ValueError:
-                self.context.status_bar.update("Measurement must be an integer.", level="warning")
-                return
-
-            self.context.analysis_metadata = {
-                "operator": operator,
-                "measurement": measurement
-            }
-
-            popup.destroy()
-            self.startAnalyzing()  # Retry analysis now that metadata is set
-
-        ttk.Button(popup, text="Submit", command=submit).grid(row=2, column=0, columnspan=2, pady=10)
-
-    def prompt_overwrite_or_new(self, specimens_with_prior_runs):
-        popup = tk.Toplevel(self.root)
-
-        # set position of the popup to the center of the main UI
-        popup.update_idletasks()
-
-        main_x = self.root.winfo_x()
-        main_y = self.root.winfo_y()
-        main_width = self.root.winfo_width()
-        main_height = self.root.winfo_height()
-
-        popup_width = popup.winfo_width()
-        popup_height = popup.winfo_height()
-
-        pos_x = main_x + (main_width // 2) - (popup_width // 2)
-        pos_y = main_y + (main_height // 2) - (popup_height // 2)
-
-        popup.geometry(f"+{pos_x}+{pos_y}")
-
-        popup.title("Existing Results Detected")
-        popup.transient(self.root)
-        popup.grab_set()
-
-        tk.Label(popup, text="Some specimens already have saved results.\nChoose how to proceed:", font=("Arial", 10, "bold")).grid(row=0, column=0, columnspan=3, pady=10)
-
-        self.specimen_choices = {}
-
-        for i, specimen in enumerate(specimens_with_prior_runs, start=1):
-            tk.Label(popup, text=f"{specimen.specimen_id}").grid(row=i, column=0, sticky="w", padx=10)
-
-            existing = ", ".join([f.name for f in specimen.previous_runs])
-            tk.Label(popup, text=f"Existing: {existing}", wraplength=200).grid(row=i, column=1, sticky="w")
-
-            choice_var = tk.StringVar(value="new")
-            self.specimen_choices[specimen.specimen_id] = choice_var
-
-            ttk.Combobox(popup, textvariable=choice_var, state="readonly",
-                         values=["overwrite", "skip"], width=10).grid(row=i, column=2, padx=5)
-
-        def submit():
-            for specimen in specimens_with_prior_runs:
-                choice = self.specimen_choices[specimen.specimen_id].get()
-                specimen.analysis_choice = choice  # Inject into specimen for later use
-
-            popup.destroy()
-            self.startAnalyzing()  # Retry analysis with updated choices
-
-        ttk.Button(popup, text="Confirm", command=submit).grid(row=len(specimens_with_prior_runs)+1, column=0, columnspan=3, pady=10)
 
