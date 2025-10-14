@@ -1016,7 +1016,6 @@ def calculate_lesion_depth(
     search_depth: int = 200,
     use_curve_fitting: bool = True,
     smooth_depth_points: bool = True,
-    surface_offset: int = 0,
     detection_method: str = "knee_point",
     compute_all_methods: bool = False,
     smoothing: float = 5.0,
@@ -1064,13 +1063,9 @@ def calculate_lesion_depth(
         search_depth: Maximum depth to search below surface (default 200 pixels)
         use_curve_fitting: If True, fit exp2 model before knee detection (default True)
         smooth_depth_points: If True, apply spline smoothing to depth points (default True)
-        surface_offset: Pixels to skip below surface before starting profile (default 10)
-                       This avoids saturated surface peak values in curve fitting
         smoothing: Base smoothing factor for depth spline (default 5.0)
         smoothing_multiplier: Multiplier for smoothing (default 5.0)
         spline_degree: Degree of spline for depth smoothing (default 2)
-        surface_offset: Pixels to skip below surface before starting profile (default 10)
-                        This avoids saturated surface peak values in curve fitting
     
     Returns:
         LesionDepth object with depth measurements, or None if no valid surface
@@ -1099,9 +1094,8 @@ def calculate_lesion_depth(
         surface_y = surface_dict[x]
         
         # Extract intensity profile from surface downward
-        # Skip surface_offset pixels to avoid saturated surface peak (typically 255)
         surface_y_int = int(surface_y)
-        start_y = surface_y_int + surface_offset
+        start_y = surface_y_int
         end_y = min(height, start_y + search_depth)
         
         if end_y - start_y < 10:  # Need minimum points for knee detection
@@ -1272,10 +1266,9 @@ def calculate_lesion_depth(
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
             # Convert relative depth to absolute y-coordinate
-            # depth_value is relative to start_y, which already includes surface_offset
             lesion_bottom_y = start_y + depth_value
-            # Actual depth from surface (including the offset we skipped)
-            actual_depth_from_surface = surface_offset + depth_value
+            # Actual depth from surface
+            actual_depth_from_surface = depth_value
             
             depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
             
@@ -1291,8 +1284,7 @@ def calculate_lesion_depth(
                 'depth_idx': depth_indices.tolist(),
                 'knee_idx': depth_idx,  # Name kept for compatibility
                 'surface_y': surface_y_int,  # Original surface position
-                'profile_start_y': start_y,  # Where profile extraction started (surface + offset)
-                'surface_offset': surface_offset,  # Offset applied
+                'profile_start_y': start_y,  # Where profile extraction started
                 'knee_depth': depth_value,  # Depth relative to profile start
                 'actual_depth': actual_depth_from_surface,  # Total depth from surface
                 'fitted_curve': fitted_curve.tolist() if fitted_curve is not None else None,
@@ -1346,6 +1338,7 @@ def calculate_lesion_depth(
             metadata = knee_info.get('detection_metadata', {})
             
             # Knee point
+            # Note: depths in metadata are relative to surface_y (surface_offset is always 0)
             if 'knee_depth' in metadata and not np.isnan(metadata['knee_depth']):
                 abs_y = int(surface_y + metadata['knee_depth'])
                 method_raw_points["knee_point"].append((x, abs_y))
@@ -1395,11 +1388,10 @@ def calculate_lesion_depth(
                 
                 if not np.isnan(combined_depth):
                     surface_y = knee_data[x]['surface_y']
-                    surface_offset_val = knee_data[x]['surface_offset']
                     
                     # Convert to absolute y-coordinate
-                    lesion_bottom_y = surface_y + surface_offset_val + combined_depth
-                    actual_depth_from_surface = surface_offset_val + combined_depth
+                    lesion_bottom_y = surface_y + combined_depth
+                    actual_depth_from_surface = combined_depth
                     
                     depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
                     

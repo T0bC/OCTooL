@@ -77,6 +77,9 @@ def process_slice_parallel(slice_idx, image_path, region_config, air_config, num
         # Calculate lesion depth
         if region_config:
             detection_method = DepthDetectionMethod(detection_method_str)
+            # Extract filename for better debug output
+            from pathlib import Path
+            slice_name = Path(image_path).stem if image_path else f"slice_{slice_idx}"
             lesion_depth = calculate_lesion_depth(
                 surface,
                 region_config,
@@ -85,7 +88,8 @@ def process_slice_parallel(slice_idx, image_path, region_config, air_config, num
                 use_curve_fitting=True,
                 detection_method=detection_method,
                 stability_threshold=20.0,
-                preserve_wobbliness=True
+                preserve_wobbliness=True,
+                slice_id=slice_name
             )
         else:
             lesion_depth = None
@@ -970,9 +974,9 @@ def calculate_lesion_depth(surface: Surface,
                           spline_degree: int = 2,
                           threshold_percent: float = 0.5,
                           gradient_smooth_window: int = 5,
-                          surface_offset: int = 0,
                           stability_threshold: float = 20.0,
-                          preserve_wobbliness: bool = True) -> Optional[LesionDepth]:
+                          preserve_wobbliness: bool = True,
+                          slice_id = None) -> Optional[LesionDepth]:
     """
     Calculate lesion depth using various detection methods.
     
@@ -1002,8 +1006,6 @@ def calculate_lesion_depth(surface: Surface,
         spline_degree: Degree of spline for depth smoothing (default 2)
         threshold_percent: For THRESHOLD method, fraction of surface intensity (default 0.5)
         gradient_smooth_window: For MAX_GRADIENT method, smoothing window size (default 5)
-        surface_offset: Pixels to skip below surface before starting profile (default 0)
-                       This avoids saturated surface peak values in curve fitting
         stability_threshold: SD threshold in pixels for method stability (default 20.0)
                            Methods with SD > threshold are excluded from combining
         preserve_wobbliness: If True, use weighted averaging to preserve lesion texture (default True)
@@ -1044,9 +1046,8 @@ def calculate_lesion_depth(surface: Surface,
         surface_y = surface_dict[x]
         
         # Extract intensity profile from surface downward
-        # Skip surface_offset pixels to avoid saturated surface peak (typically 255)
         surface_y_int = int(surface_y)
-        start_y = surface_y_int + surface_offset
+        start_y = surface_y_int
         end_y = min(height, start_y + search_depth)
         
         if end_y - start_y < 10:  # Need minimum points for detection
@@ -1158,10 +1159,9 @@ def calculate_lesion_depth(surface: Surface,
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
             # Convert relative depth to absolute y-coordinate
-            # depth_value is relative to start_y, which already includes surface_offset
             lesion_bottom_y = start_y + depth_value
-            # Actual depth from surface (including the offset we skipped)
-            actual_depth_from_surface = surface_offset + depth_value
+            # Actual depth from surface
+            actual_depth_from_surface = depth_value
             
             depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
             
@@ -1171,8 +1171,7 @@ def calculate_lesion_depth(surface: Surface,
                 'depth_idx': depth_indices.tolist(),
                 'knee_idx': depth_idx,  # Name kept for compatibility
                 'surface_y': surface_y_int,  # Original surface position
-                'profile_start_y': start_y,  # Where profile extraction started (surface + offset)
-                'surface_offset': surface_offset,  # Offset applied
+                'profile_start_y': start_y,  # Where profile extraction started
                 'knee_depth': depth_value,  # Depth relative to profile start
                 'actual_depth': actual_depth_from_surface,  # Total depth from surface
                 'fitted_curve': fitted_curve.tolist() if fitted_curve is not None else None,
@@ -1199,26 +1198,25 @@ def calculate_lesion_depth(surface: Surface,
             
             metadata = knee_data[x].get('detection_metadata', {})
             surface_y = knee_data[x]['surface_y']
-            surface_offset_val = knee_data[x]['surface_offset']
             
             # Knee point
-            # Note: depths in metadata are relative to profile_start_y (surface_y + surface_offset)
+            # Note: depths in metadata are relative to surface_y
             # For stability analysis, we need absolute y-coordinates
             knee_depth = metadata.get('knee_depth', np.nan)
             if not np.isnan(knee_depth):
-                abs_y = surface_y + surface_offset_val + knee_depth
+                abs_y = surface_y + knee_depth
                 method_raw_points['knee_point'].append((x, abs_y))
             
             # Sigmoid inflection
             inflection_depth = metadata.get('inflection_depth', np.nan)
             if not np.isnan(inflection_depth):
-                abs_y = surface_y + surface_offset_val + inflection_depth
+                abs_y = surface_y + inflection_depth
                 method_raw_points['sigmoid_fit'].append((x, abs_y))
             
             # Sigmoid shoulder
             shoulder_depth = metadata.get('shoulder_depth', np.nan)
             if not np.isnan(shoulder_depth):
-                abs_y = surface_y + surface_offset_val + shoulder_depth
+                abs_y = surface_y + shoulder_depth
                 method_raw_points['sigmoid_shoulder'].append((x, abs_y))
         
         # Compute stability metrics
@@ -1227,6 +1225,31 @@ def calculate_lesion_depth(surface: Surface,
             knee_data,
             stability_threshold=stability_threshold
         )
+        
+        # Debug output: Show stability analysis results
+        slice_label = f"Slice {slice_id}" if slice_id is not None else "Slice"
+        print(f"\n[{slice_label}] === Method Stability Analysis (Combined Mode) ===")
+        for method_name, info in stability_info.items():
+            status = "STABLE" if info['is_stable'] else "UNSTABLE"
+            sd = info.get('std_depth', 0)
+            n_points = info.get('n_points', 0)
+            mean_depth = info.get('mean_depth', 0)
+            print(f"[{slice_label}] {method_name:20s}: SD={sd:.1f}px ({status}), n={n_points}, mean={mean_depth:.1f}px")
+        
+        # Show weighting strategy
+        stable_methods = [m for m, info in stability_info.items() if info.get('is_stable', False)]
+        if preserve_wobbliness and len(stable_methods) > 1:
+            print(f"[{slice_label}] Using WEIGHTED averaging (preserves wobbliness)")
+            print(f"[{slice_label}] Weights based on SD (higher SD = more weight):")
+            for method in stable_methods:
+                sd = stability_info[method].get('std_depth', 0)
+                print(f"[{slice_label}]   {method}: SD={sd:.1f}px")
+        elif len(stable_methods) > 1:
+            print(f"[{slice_label}] Using SIMPLE averaging (equal weights)")
+        elif len(stable_methods) == 1:
+            print(f"[{slice_label}] Using single stable method: {stable_methods[0]}")
+        else:
+            print(f"[{slice_label}] No stable methods - using fallback (most stable method)")
         
         # Recompute depth points using stable weighted combination
         depth_points = []
@@ -1244,13 +1267,10 @@ def calculate_lesion_depth(surface: Surface,
             
             if not np.isnan(combined_depth):
                 surface_y = knee_data[x]['surface_y']
-                surface_offset_val = knee_data[x]['surface_offset']
                 
-                # Convert relative depth to absolute y-coordinate
-                # combined_depth is relative to profile_start_y (surface_y + surface_offset)
-                lesion_bottom_y = surface_y + surface_offset_val + combined_depth
-                # Actual depth from surface (including offset)
-                actual_depth_from_surface = surface_offset_val + combined_depth
+                # Convert to absolute y-coordinate
+                lesion_bottom_y = surface_y + combined_depth
+                actual_depth_from_surface = combined_depth
                 
                 depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
                 
@@ -1535,6 +1555,10 @@ def run_carl_quant(context):
                                 detection_method_str = getattr(context, 'detection_method', 'combined_mean')
                                 detection_method = DepthDetectionMethod(detection_method_str)
                                 
+                                # Extract filename for better debug output
+                                from pathlib import Path
+                                slice_name = Path(image_path).stem if image_path else f"slice_{slice_idx}"
+                                
                                 lesion_depth = calculate_lesion_depth(
                                     surface,
                                     region_config,
@@ -1543,7 +1567,8 @@ def run_carl_quant(context):
                                     use_curve_fitting=True,
                                     detection_method=detection_method,
                                     stability_threshold=20.0,
-                                    preserve_wobbliness=True
+                                    preserve_wobbliness=True,
+                                    slice_id=slice_name
                                 )
                             else:
                                 lesion_depth = None

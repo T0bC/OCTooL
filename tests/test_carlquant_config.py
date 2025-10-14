@@ -25,7 +25,8 @@ class TestConfig:
     # Define your test data paths here
     # Modify these paths to point to your actual test data locations
     TEST_DATA_PATHS = [
-        Path(r"W:/ZM2-MF/01_Labor/07_Software/06_Development_python/OCT_Dev/OCTexVIEW/testData/mixed_carl_quant_test_data")
+        #Path(r"W:/ZM2-MF/01_Labor/07_Software/06_Development_python/OCT_Dev/OCTexVIEW/testData/mixed_carl_quant_test_data")
+        Path(r"/Users/tmc/Documents/03_Arbeit/09_Software_Dev/03_octDev/OCTexVIEW/testData/exported/")
     ]
 
     @staticmethod
