@@ -1108,17 +1108,17 @@ def calculate_lesion_depth(surface: Surface,
                 detection_metadata = {'method': 'sigmoid_shoulder', 'success': False}
         
         elif detection_method == DepthDetectionMethod.COMBINED_MEAN:
-            # Compute all three methods and store in metadata
-            # Method 1: Knee point with exp2 fit
-            profile_for_knee = intensity_profile
-            knee_fitted_curve = None
+            # Compute all three methods and store in metadata for stability analysis
+            # The actual combined depth will be computed AFTER all A-Scans are processed
             
+            # Method 1: Knee point with exp2 fit
             fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
             if fit_result is not None:
                 knee_fitted_curve, fit_params = fit_result
-                profile_for_knee = knee_fitted_curve
-            
-            knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
+                knee_depth, knee_idx = knee_pt(knee_fitted_curve, depth_indices)
+            else:
+                knee_fitted_curve, fit_params = None, None
+                knee_depth, knee_idx = knee_pt(intensity_profile, depth_indices)
             
             # Method 2: Sigmoid fit (inflection and shoulder)
             sigmoid_depth, sigmoid_idx, sigmoid_meta = detect_depth_sigmoid_fit(
@@ -1136,25 +1136,14 @@ def calculate_lesion_depth(surface: Surface,
                 'shoulder_idx': sigmoid_meta.get('shoulder_idx', -1) if sigmoid_meta.get('success') else -1,
             }
             
-            # For now, use simple average as placeholder (will be replaced after stability analysis)
-            # This ensures we have valid depth_points for the first pass
-            valid_depths = []
-            if not np.isnan(knee_depth):
-                valid_depths.append(knee_depth)
-            if not np.isnan(sigmoid_depth):
-                valid_depths.append(sigmoid_depth)
+            # Use knee point as placeholder (will be replaced after stability analysis)
+            # This ensures we have valid data to store in lesion_detection_data
+            depth_value = knee_depth
+            depth_idx = knee_idx
             
-            if len(valid_depths) > 0:
-                depth_value = np.mean(valid_depths)
-                depth_idx = int(np.argmin(np.abs(depth_indices - depth_value)))
-                
-                # Store fitted curve for visualization
-                if knee_fitted_curve is not None:
-                    fitted_curve = knee_fitted_curve
-            else:
-                depth_value = np.nan
-                depth_idx = -1
-                detection_metadata['success'] = False
+            # Store fitted curve for visualization
+            if knee_fitted_curve is not None:
+                fitted_curve = knee_fitted_curve
         
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
