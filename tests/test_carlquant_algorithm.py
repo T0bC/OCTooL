@@ -1085,11 +1085,11 @@ def calculate_lesion_depth(
     lesion_detection_data = {}  # Store per-column lesion detection data for visualization
     
     # Process every column in lesion region
-    for x in range(start_x, end_x):
-        if x not in surface_dict:
+    for ascan_x in range(start_x, end_x):
+        if ascan_x not in surface_dict:
             continue
         
-        surface_y = surface_dict[x]
+        surface_y = surface_dict[ascan_x]
         
         # Extract intensity profile from surface downward
         surface_y_int = int(surface_y)
@@ -1100,7 +1100,7 @@ def calculate_lesion_depth(
             continue
         
         # Get intensity values
-        intensity_profile = image[start_y:end_y, x].astype(float)
+        intensity_profile = image[start_y:end_y, ascan_x].astype(float)
         # Depth indices start from 0 but represent depth from surface (including offset)
         depth_indices = np.arange(len(intensity_profile))
         
@@ -1265,7 +1265,7 @@ def calculate_lesion_depth(
             # Actual depth from surface
             actual_depth_from_surface = depth_value
             
-            depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
+            depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
             
             # Ensure fitted_curve is set for A-Scan visualization
             # In compare mode, use exp2_fitted_curve from metadata if available
@@ -1274,7 +1274,7 @@ def calculate_lesion_depth(
                     fitted_curve = np.array(detection_metadata['exp2_fitted_curve'])
             
             # Store data for visualization (for A-Scan viewer)
-            lesion_detection_data[x] = {
+            lesion_detection_data[ascan_x] = {
                 'intensity': intensity_profile.tolist(),
                 'depth_idx': depth_indices.tolist(),
                 'knee_idx': depth_idx,  # Name kept for compatibility
@@ -1328,7 +1328,7 @@ def calculate_lesion_depth(
             "sigmoid_shoulder": []
         }
         
-        for x, detection_info in lesion_detection_data.items():
+        for ascan_x, detection_info in lesion_detection_data.items():
             surface_y = detection_info['surface_y']
             metadata = detection_info.get('detection_metadata', {})
             
@@ -1336,17 +1336,17 @@ def calculate_lesion_depth(
             # Note: depths in metadata are relative to surface_y (surface_offset is always 0)
             if 'knee_depth' in metadata and not np.isnan(metadata['knee_depth']):
                 abs_y = int(surface_y + metadata['knee_depth'])
-                method_raw_points["knee_point"].append((x, abs_y))
+                method_raw_points["knee_point"].append((ascan_x, abs_y))
             
             # Sigmoid inflection
             if 'inflection_depth' in metadata and not np.isnan(metadata['inflection_depth']):
                 abs_y = int(surface_y + metadata['inflection_depth'])
-                method_raw_points["sigmoid_fit"].append((x, abs_y))
+                method_raw_points["sigmoid_fit"].append((ascan_x, abs_y))
             
             # Sigmoid shoulder
             if 'shoulder_depth' in metadata and not np.isnan(metadata['shoulder_depth']):
                 abs_y = int(surface_y + metadata['shoulder_depth'])
-                method_raw_points["sigmoid_shoulder"].append((x, abs_y))
+                method_raw_points["sigmoid_shoulder"].append((ascan_x, abs_y))
         
         # Compute stability metrics for each method
         stability_info = compute_method_stability(method_raw_points, lesion_detection_data, stability_threshold=stability_threshold)
@@ -1378,22 +1378,22 @@ def calculate_lesion_depth(
             
             depth_points = []  # Reset depth points
             
-            for x in sorted(lesion_detection_data.keys()):
-                combined_depth, method_used = compute_stable_combined_depth(lesion_detection_data, stability_info, x, preserve_wobbliness)
+            for ascan_x in sorted(lesion_detection_data.keys()):
+                combined_depth, method_used = compute_stable_combined_depth(lesion_detection_data, stability_info, ascan_x, preserve_wobbliness)
                 
                 if not np.isnan(combined_depth):
-                    surface_y = lesion_detection_data[x]['surface_y']
+                    surface_y = lesion_detection_data[ascan_x]['surface_y']
                     
                     # Convert to absolute y-coordinate
                     lesion_bottom_y = surface_y + combined_depth
                     actual_depth_from_surface = combined_depth
                     
-                    depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
+                    depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
                     
                     # Update lesion_detection_data with new combined depth
-                    lesion_detection_data[x]['knee_depth'] = combined_depth
-                    lesion_detection_data[x]['actual_depth'] = actual_depth_from_surface
-                    lesion_detection_data[x]['detection_metadata']['combined_method_used'] = method_used
+                    lesion_detection_data[ascan_x]['knee_depth'] = combined_depth
+                    lesion_detection_data[ascan_x]['actual_depth'] = actual_depth_from_surface
+                    lesion_detection_data[ascan_x]['detection_metadata']['combined_method_used'] = method_used
             
             print(f"[Slice {slice_id}] Recomputed {len(depth_points)} depth points using stability-based method selection")
             
