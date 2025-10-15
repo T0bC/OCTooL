@@ -828,7 +828,7 @@ def fit_exp2_to_profile(intensity_profile: np.ndarray, depth_indices: np.ndarray
 
 
 def compute_method_stability(method_raw_points: dict, 
-                            knee_data: dict,
+                            lesion_detection_data: dict,
                             stability_threshold: float = 0.3) -> dict:
     """
     Compute stability metrics for each detection method.
@@ -843,7 +843,7 @@ def compute_method_stability(method_raw_points: dict,
     
     Args:
         method_raw_points: Dict mapping method names to list of (x, y) points
-        knee_data: Dict containing per-column detection metadata
+        lesion_detection_data: Dict containing per-column detection metadata
         stability_threshold: SD threshold (in pixels) above which a method is unstable
                            Recommended: 10-15 pixels for typical OCT images
         
@@ -875,8 +875,8 @@ def compute_method_stability(method_raw_points: dict,
         # Extract depth values (relative to surface) for this method
         depth_values = []
         for x, abs_y in raw_points:
-            if x in knee_data:
-                surface_y = knee_data[x]['surface_y']
+            if x in lesion_detection_data:
+                surface_y = lesion_detection_data[x]['surface_y']
                 relative_depth = abs_y - surface_y
                 depth_values.append(relative_depth)
         
@@ -909,7 +909,7 @@ def compute_method_stability(method_raw_points: dict,
     return stability_info
 
 
-def compute_stable_combined_depth(knee_data: dict, 
+def compute_stable_combined_depth(lesion_detection_data: dict, 
                                   stability_info: dict,
                                   x: int,
                                   preserve_wobbliness: bool = True) -> tuple:
@@ -921,7 +921,7 @@ def compute_stable_combined_depth(knee_data: dict,
     irregular lesions instead of smoothing them out.
     
     Args:
-        knee_data: Dict containing per-column detection metadata
+        lesion_detection_data: Dict containing per-column detection metadata
         stability_info: Dict with stability metrics for each method
         x: Current x-coordinate
         preserve_wobbliness: If True, weight by SD to preserve variation (default True)
@@ -930,10 +930,10 @@ def compute_stable_combined_depth(knee_data: dict,
         (depth_value, method_used) tuple
         method_used is a string indicating which methods were combined
     """
-    if x not in knee_data:
+    if x not in lesion_detection_data:
         return np.nan, "none"
     
-    metadata = knee_data[x].get('detection_metadata', {})
+    metadata = lesion_detection_data[x].get('detection_metadata', {})
     
     # Collect available depth values and their stability
     available_methods = []
@@ -1082,7 +1082,7 @@ def calculate_lesion_depth(
     
     height, width = image.shape
     depth_points = []
-    knee_data = {}  # Store knee point data for visualization
+    lesion_detection_data = {}  # Store per-column lesion detection data for visualization
     
     # Process every column in lesion region
     for x in range(start_x, end_x):
@@ -1274,7 +1274,7 @@ def calculate_lesion_depth(
                     fitted_curve = np.array(detection_metadata['exp2_fitted_curve'])
             
             # Store data for visualization (for A-Scan viewer)
-            knee_data[x] = {
+            lesion_detection_data[x] = {
                 'intensity': intensity_profile.tolist(),
                 'depth_idx': depth_indices.tolist(),
                 'knee_idx': depth_idx,  # Name kept for compatibility
@@ -1318,7 +1318,7 @@ def calculate_lesion_depth(
     
     # If compute_all_methods is True OR using combined_mean, compute smoothed splines for all three methods
     method_splines = None
-    if (compute_all_methods or detection_method == "combined_mean") and knee_data:
+    if (compute_all_methods or detection_method == "combined_mean") and lesion_detection_data:
         method_splines = {}
         
         # Collect raw points for each method from knee_data
@@ -1328,9 +1328,9 @@ def calculate_lesion_depth(
             "sigmoid_shoulder": []
         }
         
-        for x, knee_info in knee_data.items():
-            surface_y = knee_info['surface_y']
-            metadata = knee_info.get('detection_metadata', {})
+        for x, detection_info in lesion_detection_data.items():
+            surface_y = detection_info['surface_y']
+            metadata = detection_info.get('detection_metadata', {})
             
             # Knee point
             # Note: depths in metadata are relative to surface_y (surface_offset is always 0)
@@ -1349,7 +1349,7 @@ def calculate_lesion_depth(
                 method_raw_points["sigmoid_shoulder"].append((x, abs_y))
         
         # Compute stability metrics for each method
-        stability_info = compute_method_stability(method_raw_points, knee_data, stability_threshold=stability_threshold)
+        stability_info = compute_method_stability(method_raw_points, lesion_detection_data, stability_threshold=stability_threshold)
         
         # Log stability results
         print(f"\n[Slice {slice_id}] === Method Stability Analysis ===")
@@ -1378,11 +1378,11 @@ def calculate_lesion_depth(
             
             depth_points = []  # Reset depth points
             
-            for x in sorted(knee_data.keys()):
-                combined_depth, method_used = compute_stable_combined_depth(knee_data, stability_info, x, preserve_wobbliness)
+            for x in sorted(lesion_detection_data.keys()):
+                combined_depth, method_used = compute_stable_combined_depth(lesion_detection_data, stability_info, x, preserve_wobbliness)
                 
                 if not np.isnan(combined_depth):
-                    surface_y = knee_data[x]['surface_y']
+                    surface_y = lesion_detection_data[x]['surface_y']
                     
                     # Convert to absolute y-coordinate
                     lesion_bottom_y = surface_y + combined_depth
@@ -1390,10 +1390,10 @@ def calculate_lesion_depth(
                     
                     depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
                     
-                    # Update knee_data with new combined depth
-                    knee_data[x]['knee_depth'] = combined_depth
-                    knee_data[x]['actual_depth'] = actual_depth_from_surface
-                    knee_data[x]['detection_metadata']['combined_method_used'] = method_used
+                    # Update lesion_detection_data with new combined depth
+                    lesion_detection_data[x]['knee_depth'] = combined_depth
+                    lesion_detection_data[x]['actual_depth'] = actual_depth_from_surface
+                    lesion_detection_data[x]['detection_metadata']['combined_method_used'] = method_used
             
             print(f"[Slice {slice_id}] Recomputed {len(depth_points)} depth points using stability-based method selection")
             
@@ -1439,7 +1439,7 @@ def calculate_lesion_depth(
         median_depth=np.median(depths),
         sd=np.std(depths),
         se=np.std(depths) / np.sqrt(len(depths)),
-        knee_data=knee_data if len(knee_data) > 0 else None,
+        lesion_detection_data=lesion_detection_data if len(lesion_detection_data) > 0 else None,
         smoothed_depth_points=smoothed_depth_points,
         method_splines=method_splines  # Store pre-computed splines for all methods
     )

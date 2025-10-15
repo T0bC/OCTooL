@@ -613,7 +613,7 @@ class CarlQuantTestViewer:
         # Draw method comparison on image if enabled
         if self.compare_methods.get() and cache_key in self.results_cache:
             _, surface, lesion_depth = self.results_cache[cache_key]
-            if lesion_depth and lesion_depth.knee_data and surface.fitted_curves and "actual_surface" in surface.fitted_curves:
+            if lesion_depth and lesion_depth.lesion_detection_data and surface.fitted_curves and "actual_surface" in surface.fitted_curves:
                 # OPTIMIZED: No status update needed - drawing is now fast!
                 self.draw_method_comparison_on_image(display_image, lesion_depth, surface)
                 
@@ -935,7 +935,7 @@ class CarlQuantTestViewer:
                             display_image[y_offset[offset_valid], x_valid[offset_valid]] = color
                     
                     # Draw raw points if toggle is enabled (OPTIMIZED)
-                    if self.show_raw_depth.get() and lesion_depth.knee_data:
+                    if self.show_raw_depth.get() and lesion_depth.lesion_detection_data:
                         # Determine depth key for this method
                         depth_key_map = {
                             "knee_point": 'knee_depth',
@@ -947,11 +947,11 @@ class CarlQuantTestViewer:
                         if depth_key:
                             # Collect all valid raw points for this method
                             raw_points = []
-                            for x, knee_info in lesion_depth.knee_data.items():
+                            for x, detection_info in lesion_depth.lesion_detection_data.items():
                                 if x not in surface_dict:
                                     continue
-                                surface_y = knee_info['surface_y']
-                                metadata = knee_info.get('detection_metadata', {})
+                                surface_y = detection_info['surface_y']
+                                metadata = detection_info.get('detection_metadata', {})
                                 
                                 if depth_key in metadata:
                                     depth = metadata[depth_key]
@@ -981,20 +981,20 @@ class CarlQuantTestViewer:
         }
         
         # Process each column to collect raw depth points
-        for x, knee_info in lesion_depth.knee_data.items():
+        for x, detection_info in lesion_depth.lesion_detection_data.items():
             if x not in surface_dict:
                 continue
             
-            surface_y = knee_info['surface_y']
-            detection_metadata = knee_info.get('detection_metadata', {})
+            surface_y = detection_info['surface_y']
+            detection_metadata = detection_info.get('detection_metadata', {})
             
             # Get intensity profile for computing missing methods
-            intensity_profile = np.array(knee_info['intensity'])
-            depth_idx = np.array(knee_info['depth_idx'])
+            intensity_profile = np.array(detection_info['intensity'])
+            depth_idx = np.array(detection_info['depth_idx'])
             
             # Extract or compute knee point depth
-            if 'knee_depth' in knee_info:
-                knee_depth = knee_info['knee_depth']
+            if 'knee_depth' in detection_info:
+                knee_depth = detection_info['knee_depth']
             else:
                 # Compute knee point if not available
                 try:
@@ -1044,8 +1044,8 @@ class CarlQuantTestViewer:
                     method_raw_depths["sigmoid_shoulder"].append((x, abs_y))
         
         # Get lesion region bounds for spline fitting
-        if hasattr(lesion_depth, 'knee_data') and lesion_depth.knee_data:
-            x_coords = list(lesion_depth.knee_data.keys())
+        if hasattr(lesion_depth, 'lesion_detection_data') and lesion_depth.lesion_detection_data:
+            x_coords = list(lesion_depth.lesion_detection_data.keys())
             start_x = min(x_coords)
             end_x = max(x_coords)
         else:
@@ -1113,11 +1113,11 @@ class CarlQuantTestViewer:
             return
         
         _, _, lesion_depth = self.results_cache[cache_key]
-        if not lesion_depth or not lesion_depth.knee_data or self.current_ascan_x not in lesion_depth.knee_data:
+        if not lesion_depth or not lesion_depth.lesion_detection_data or self.current_ascan_x not in lesion_depth.lesion_detection_data:
             return
         
-        knee_info = lesion_depth.knee_data[self.current_ascan_x]
-        detection_metadata = knee_info.get('detection_metadata', {})
+        detection_info = lesion_depth.lesion_detection_data[self.current_ascan_x]
+        detection_metadata = detection_info.get('detection_metadata', {})
         
         # Define methods and their colors
         methods = [
@@ -1240,13 +1240,13 @@ class CarlQuantTestViewer:
             _, surface, lesion_depth = self.results_cache[cache_key]
             
             # Draw knee point detection visualization if available
-            if lesion_depth and lesion_depth.knee_data and self.current_ascan_x in lesion_depth.knee_data:
-                knee_info = lesion_depth.knee_data[self.current_ascan_x]
-                intensity_profile = np.array(knee_info['intensity'])
-                depth_idx = np.array(knee_info['depth_idx'])
-                knee_idx = knee_info['knee_idx']
-                surface_y = knee_info['surface_y']
-                fitted_curve = knee_info.get('fitted_curve')
+            if lesion_depth and lesion_depth.lesion_detection_data and self.current_ascan_x in lesion_depth.lesion_detection_data:
+                detection_info = lesion_depth.lesion_detection_data[self.current_ascan_x]
+                intensity_profile = np.array(detection_info['intensity'])
+                depth_idx = np.array(detection_info['depth_idx'])
+                knee_idx = detection_info['knee_idx']
+                surface_y = detection_info['surface_y']
+                fitted_curve = detection_info.get('fitted_curve')
                 
                 # Draw the RAW intensity profile from surface downward (in green)
                 profile_points = []
@@ -1503,11 +1503,11 @@ class CarlQuantTestViewer:
         # Add fit curve labels in top right
         if cache_key in self.results_cache:
             _, _, lesion_depth = self.results_cache[cache_key]
-            if lesion_depth and lesion_depth.knee_data and self.current_ascan_x in lesion_depth.knee_data:
-                knee_info = lesion_depth.knee_data[self.current_ascan_x]
-                detection_meta = knee_info.get('detection_metadata', {})
+            if lesion_depth and lesion_depth.lesion_detection_data and self.current_ascan_x in lesion_depth.lesion_detection_data:
+                detection_info = lesion_depth.lesion_detection_data[self.current_ascan_x]
+                detection_meta = detection_info.get('detection_metadata', {})
                 method_used = detection_meta.get('method', 'knee_point')
-                fitted_curve = knee_info.get('fitted_curve')
+                fitted_curve = detection_info.get('fitted_curve')
                 
                 label_y = margin_top + 5
                 
@@ -1588,21 +1588,21 @@ class CarlQuantTestViewer:
             info += f"\nLesion depth: {lesion_depth.mean_depth:.2f} ± {lesion_depth.sd:.2f}\n"
             
             # Detection method used (if available in knee_data)
-            if lesion_depth and lesion_depth.knee_data:
-                first_x = next(iter(lesion_depth.knee_data))
-                if 'detection_metadata' in lesion_depth.knee_data[first_x]:
-                    method = lesion_depth.knee_data[first_x]['detection_metadata'].get('method', 'unknown')
+            if lesion_depth and lesion_depth.lesion_detection_data:
+                first_x = next(iter(lesion_depth.lesion_detection_data))
+                if 'detection_metadata' in lesion_depth.lesion_detection_data[first_x]:
+                    method = lesion_depth.lesion_detection_data[first_x]['detection_metadata'].get('method', 'unknown')
                     info += f"Detection method: {method}\n"
                     
                     # For combined method, show method comparison info
                     if method == 'combined_mean':
-                        detection_meta = lesion_depth.knee_data[first_x]['detection_metadata']
+                        detection_meta = lesion_depth.lesion_detection_data[first_x]['detection_metadata']
                         if 'knee_depth' in detection_meta and 'sigmoid_depth' in detection_meta:
                             # Calculate statistics across all A-Scans
                             differences = []
                             
-                            for x, knee_info in lesion_depth.knee_data.items():
-                                meta = knee_info.get('detection_metadata', {})
+                            for x, detection_info in lesion_depth.lesion_detection_data.items():
+                                meta = detection_info.get('detection_metadata', {})
                                 if 'knee_depth' in meta and 'sigmoid_depth' in meta:
                                     k_depth = meta['knee_depth']
                                     s_depth = meta['sigmoid_depth']
@@ -1664,9 +1664,9 @@ class CarlQuantTestViewer:
                             info += "\n"
                     
                     # Show which methods were used for combined mean
-                    if lesion_depth.knee_data:
-                        first_x = next(iter(lesion_depth.knee_data))
-                        detection_meta = lesion_depth.knee_data[first_x].get('detection_metadata', {})
+                    if lesion_depth.lesion_detection_data:
+                        first_x = next(iter(lesion_depth.lesion_detection_data))
+                        detection_meta = lesion_depth.lesion_detection_data[first_x].get('detection_metadata', {})
                         if 'combined_method_used' in detection_meta:
                             methods_used = detection_meta['combined_method_used']
                             info += f"Combined Mean Uses:\n"

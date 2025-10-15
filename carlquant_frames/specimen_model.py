@@ -31,13 +31,13 @@ class Surface:
 
 @dataclass
 class LesionDepth:
-    depth_points: List[Tuple[int, int]]  # (x, y) coordinates of lesion bottom (raw knee points)
+    depth_points: List[Tuple[int, int]]  # (x, y) coordinates of lesion bottom (raw detection points)
     mean_depth: float
     median_depth: float
     sd: float
     se: float
-    knee_data: Optional[Dict[int, Dict]] = None  # Per-column knee point data for visualization
-    # knee_data format: {x_column: {'intensity': [...], 'depth_idx': [...], 'knee_idx': int, 'fits': {...}}}
+    lesion_detection_data: Optional[Dict[int, Dict]] = None  # Per-column lesion detection data for visualization
+    # lesion_detection_data format: {x_column: {'intensity': [...], 'depth_idx': [...], 'knee_idx': int, 'detection_metadata': {...}}}
     smoothed_depth_points: Optional[List[Tuple[int, int]]] = None  # Spline-smoothed depth points for cleaner visualization
     method_splines: Optional[Dict[str, List[Tuple[int, int]]]] = None  # Pre-computed splines for all methods when compute_all_methods=True
     # method_splines format: {'knee_point': [(x,y), ...], 'sigmoid_fit': [(x,y), ...], 'sigmoid_shoulder': [(x,y), ...]}
