@@ -1041,11 +1041,11 @@ def calculate_lesion_depth(surface: Surface,
     lesion_detection_data = {}  # Store per-column lesion detection data for visualization
     
     # Process every column in lesion region
-    for x in range(start_x, end_x):
-        if x not in surface_dict:
+    for ascan_x in range(start_x, end_x):
+        if ascan_x not in surface_dict:
             continue
         
-        surface_y = surface_dict[x]
+        surface_y = surface_dict[ascan_x]
         
         # Extract intensity profile from surface downward
         surface_y_int = int(surface_y)
@@ -1056,7 +1056,7 @@ def calculate_lesion_depth(surface: Surface,
             continue
         
         # Get intensity values
-        intensity_profile = image[start_y:end_y, x].astype(float)
+        intensity_profile = image[start_y:end_y, ascan_x].astype(float)
         # Depth indices start from 0 but represent depth from surface (including offset)
         depth_indices = np.arange(len(intensity_profile))
         
@@ -1163,17 +1163,17 @@ def calculate_lesion_depth(surface: Surface,
             
             # Calculate actual depth from surface
             # For cavitated lesions, measure from interpolated surface to include cavitation depth
-            if interpolated_dict is not None and x in interpolated_dict:
-                interpolated_y = interpolated_dict[x]
+            if interpolated_dict is not None and ascan_x in interpolated_dict:
+                interpolated_y = interpolated_dict[ascan_x]
                 actual_depth_from_surface = lesion_bottom_y - interpolated_y
             else:
                 # Non-cavitated: depth is just the detected value from actual surface
                 actual_depth_from_surface = depth_value
             
-            depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
+            depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
             
             # Store data for visualization (for A-Scan viewer)
-            lesion_detection_data[x] = {
+            lesion_detection_data[ascan_x] = {
                 'intensity': intensity_profile.tolist(),
                 'depth_idx': depth_indices.tolist(),
                 'knee_idx': depth_idx,  # Name kept for compatibility
@@ -1199,12 +1199,12 @@ def calculate_lesion_depth(surface: Surface,
             'sigmoid_shoulder': []
         }
         
-        for x in range(start_x, end_x):
-            if x not in lesion_detection_data:
+        for ascan_x in range(start_x, end_x):
+            if ascan_x not in lesion_detection_data:
                 continue
             
-            metadata = lesion_detection_data[x].get('detection_metadata', {})
-            surface_y = lesion_detection_data[x]['surface_y']
+            metadata = lesion_detection_data[ascan_x].get('detection_metadata', {})
+            surface_y = lesion_detection_data[ascan_x]['surface_y']
             
             # Knee point
             # Note: depths in metadata are relative to surface_y
@@ -1212,19 +1212,19 @@ def calculate_lesion_depth(surface: Surface,
             knee_depth = metadata.get('knee_depth', np.nan)
             if not np.isnan(knee_depth):
                 abs_y = surface_y + knee_depth
-                method_raw_points['knee_point'].append((x, abs_y))
+                method_raw_points['knee_point'].append((ascan_x, abs_y))
             
             # Sigmoid inflection
             inflection_depth = metadata.get('inflection_depth', np.nan)
             if not np.isnan(inflection_depth):
                 abs_y = surface_y + inflection_depth
-                method_raw_points['sigmoid_fit'].append((x, abs_y))
+                method_raw_points['sigmoid_fit'].append((ascan_x, abs_y))
             
             # Sigmoid shoulder
             shoulder_depth = metadata.get('shoulder_depth', np.nan)
             if not np.isnan(shoulder_depth):
                 abs_y = surface_y + shoulder_depth
-                method_raw_points['sigmoid_shoulder'].append((x, abs_y))
+                method_raw_points['sigmoid_shoulder'].append((ascan_x, abs_y))
         
         # Compute stability metrics
         stability_info = compute_method_stability(
@@ -1260,28 +1260,28 @@ def calculate_lesion_depth(surface: Surface,
         
         # Recompute depth points using stable weighted combination
         depth_points = []
-        for x in sorted(lesion_detection_data.keys()):
+        for ascan_x in sorted(lesion_detection_data.keys()):
             # Get weighted combined depth
             combined_depth, method_used = compute_stable_combined_depth(
                 lesion_detection_data,
                 stability_info,
-                x,
+                ascan_x,
                 preserve_wobbliness=preserve_wobbliness
             )
             
             if not np.isnan(combined_depth):
-                surface_y = lesion_detection_data[x]['surface_y']
+                surface_y = lesion_detection_data[ascan_x]['surface_y']
                 
                 # Convert to absolute y-coordinate
                 lesion_bottom_y = surface_y + combined_depth
                 actual_depth_from_surface = combined_depth
                 
-                depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
+                depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
                 
                 # Update lesion_detection_data with combined result
-                lesion_detection_data[x]['knee_depth'] = combined_depth
-                lesion_detection_data[x]['actual_depth'] = actual_depth_from_surface
-                lesion_detection_data[x]['detection_metadata']['combined_method_used'] = method_used
+                lesion_detection_data[ascan_x]['knee_depth'] = combined_depth
+                lesion_detection_data[ascan_x]['actual_depth'] = actual_depth_from_surface
+                lesion_detection_data[ascan_x]['detection_metadata']['combined_method_used'] = method_used
         
         if len(depth_points) == 0:
             return None
