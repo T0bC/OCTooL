@@ -1040,6 +1040,15 @@ def calculate_lesion_depth(surface: Surface,
     depth_points = []
     lesion_detection_data = {}  # Store per-column lesion detection data for visualization
     
+    # For COMBINED_MEAN: initialize raw points collection
+    method_raw_points = None
+    if detection_method == DepthDetectionMethod.COMBINED_MEAN:
+        method_raw_points = {
+            'knee_point': [],
+            'sigmoid_fit': [],
+            'sigmoid_shoulder': []
+        }
+    
     # Process every column in lesion region
     for ascan_x in range(start_x, end_x):
         if ascan_x not in surface_dict:
@@ -1161,6 +1170,19 @@ def calculate_lesion_depth(surface: Surface,
             
             depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
             
+            # For COMBINED_MEAN: collect raw points for stability analysis
+            if method_raw_points is not None:
+                method_depth_keys = {
+                    'knee_point': 'knee_depth',
+                    'sigmoid_fit': 'inflection_depth',
+                    'sigmoid_shoulder': 'shoulder_depth'
+                }
+                for method_name, depth_key in method_depth_keys.items():
+                    depth = detection_metadata.get(depth_key, np.nan)
+                    if not np.isnan(depth):
+                        abs_y = surface_y_int + depth
+                        method_raw_points[method_name].append((ascan_x, abs_y))
+            
             # Store data for visualization (for A-Scan viewer)
             lesion_detection_data[ascan_x] = {
                 'intensity': intensity_profile.tolist(),
@@ -1181,41 +1203,7 @@ def calculate_lesion_depth(surface: Surface,
     
     # For COMBINED_MEAN method: perform stability analysis and recompute with weighted averaging
     if detection_method == DepthDetectionMethod.COMBINED_MEAN:
-        # Collect raw points for each method
-        method_raw_points = {
-            'knee_point': [],
-            'sigmoid_fit': [],
-            'sigmoid_shoulder': []
-        }
-        
-        for ascan_x in range(start_x, end_x):
-            if ascan_x not in lesion_detection_data:
-                continue
-            
-            metadata = lesion_detection_data[ascan_x].get('detection_metadata', {})
-            surface_y = lesion_detection_data[ascan_x]['surface_y']
-            
-            # Knee point
-            # Note: depths in metadata are relative to surface_y
-            # For stability analysis, we need absolute y-coordinates
-            knee_depth = metadata.get('knee_depth', np.nan)
-            if not np.isnan(knee_depth):
-                abs_y = surface_y + knee_depth
-                method_raw_points['knee_point'].append((ascan_x, abs_y))
-            
-            # Sigmoid inflection
-            inflection_depth = metadata.get('inflection_depth', np.nan)
-            if not np.isnan(inflection_depth):
-                abs_y = surface_y + inflection_depth
-                method_raw_points['sigmoid_fit'].append((ascan_x, abs_y))
-            
-            # Sigmoid shoulder
-            shoulder_depth = metadata.get('shoulder_depth', np.nan)
-            if not np.isnan(shoulder_depth):
-                abs_y = surface_y + shoulder_depth
-                method_raw_points['sigmoid_shoulder'].append((ascan_x, abs_y))
-        
-        # Compute stability metrics
+        # Compute stability metrics (raw points already collected during A-Scan loop)
         stability_info = compute_method_stability(
             method_raw_points,
             lesion_detection_data,

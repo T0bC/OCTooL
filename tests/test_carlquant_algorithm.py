@@ -1084,6 +1084,15 @@ def calculate_lesion_depth(
     depth_points = []
     lesion_detection_data = {}  # Store per-column lesion detection data for visualization
     
+    # For combined_mean: initialize raw points collection
+    method_raw_points = None
+    if compute_all_methods or detection_method == "combined_mean":
+        method_raw_points = {
+            "knee_point": [],
+            "sigmoid_fit": [],
+            "sigmoid_shoulder": []
+        }
+    
     # Process every column in lesion region
     for ascan_x in range(start_x, end_x):
         if ascan_x not in surface_dict:
@@ -1256,6 +1265,18 @@ def calculate_lesion_depth(
                 if 'exp2_fitted_curve' in detection_metadata:
                     fitted_curve = np.array(detection_metadata['exp2_fitted_curve'])
             
+            # For combined_mean/compute_all_methods: collect raw points for stability analysis
+            if method_raw_points is not None:
+                method_depth_keys = {
+                    "knee_point": 'knee_depth',
+                    "sigmoid_fit": 'inflection_depth',
+                    "sigmoid_shoulder": 'shoulder_depth'
+                }
+                for method_name, depth_key in method_depth_keys.items():
+                    if depth_key in detection_metadata and not np.isnan(detection_metadata[depth_key]):
+                        abs_y = int(surface_y_int + detection_metadata[depth_key])
+                        method_raw_points[method_name].append((ascan_x, abs_y))
+            
             # Store data for visualization (for A-Scan viewer)
             lesion_detection_data[ascan_x] = {
                 'intensity': intensity_profile.tolist(),
@@ -1299,39 +1320,12 @@ def calculate_lesion_depth(
             smoothed_depth_points = smoothed_curves["smoothed_depth"]
             print(f"[Slice {slice_id}] Applied spline smoothing to {len(raw_depth_points)} depth points -> {len(smoothed_depth_points)} smoothed points")
     
-    # If compute_all_methods is True OR using combined_mean, compute smoothed splines for all three methods
+    # If compute_all_methods is True OR using combined_mean, perform stability analysis
     method_splines = None
     if (compute_all_methods or detection_method == "combined_mean") and lesion_detection_data:
         method_splines = {}
         
-        # Collect raw points for each method from knee_data
-        method_raw_points = {
-            "knee_point": [],
-            "sigmoid_fit": [],
-            "sigmoid_shoulder": []
-        }
-        
-        for ascan_x, detection_info in lesion_detection_data.items():
-            surface_y = detection_info['surface_y']
-            metadata = detection_info.get('detection_metadata', {})
-            
-            # Knee point
-            # Note: depths in metadata are relative to surface_y (surface_offset is always 0)
-            if 'knee_depth' in metadata and not np.isnan(metadata['knee_depth']):
-                abs_y = int(surface_y + metadata['knee_depth'])
-                method_raw_points["knee_point"].append((ascan_x, abs_y))
-            
-            # Sigmoid inflection
-            if 'inflection_depth' in metadata and not np.isnan(metadata['inflection_depth']):
-                abs_y = int(surface_y + metadata['inflection_depth'])
-                method_raw_points["sigmoid_fit"].append((ascan_x, abs_y))
-            
-            # Sigmoid shoulder
-            if 'shoulder_depth' in metadata and not np.isnan(metadata['shoulder_depth']):
-                abs_y = int(surface_y + metadata['shoulder_depth'])
-                method_raw_points["sigmoid_shoulder"].append((ascan_x, abs_y))
-        
-        # Compute stability metrics for each method
+        # Compute stability metrics (raw points already collected during A-Scan loop)
         stability_info = compute_method_stability(method_raw_points, lesion_detection_data, stability_threshold=stability_threshold)
         
         # Log stability results
