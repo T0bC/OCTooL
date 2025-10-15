@@ -592,6 +592,8 @@ class DataSaver:
         
         Creates an 'annotations' folder inside Data_{operator}_{measurement}
         and saves each slice with surface, lesion depth, regions, and boundaries drawn.
+        Images are saved with their original filenames (e.g., 'tooth_001.png') in the
+        annotations folder, making it easy to identify which original image was processed.
         
         Args:
             specimen: Specimen object with results and config
@@ -673,10 +675,6 @@ class DataSaver:
                         # Draw line
                         for i in range(len(points) - 1):
                             draw.line([points[i], points[i+1]], fill='red', width=2)
-                        
-                        # Draw markers every 20th point
-                        for x, y in points[::20]:
-                            draw.ellipse([x-2, y-2, x+2, y+2], fill='red', outline='darkred')
                 
                 # Draw extraction regions
                 if result.region_stats:
@@ -716,8 +714,9 @@ class DataSaver:
                         text_height = bbox[3] - bbox[1]
                         draw.text((center_x - text_width/2, center_y - text_height/2), text, fill=color, font=font)
                 
-                # Save annotated image
-                output_filename = f"slice_{slice_idx:03d}_annotated.png"
+                # Save annotated image using original filename (without _annotated suffix since folder is named "annotations")
+                original_filename = specimen.images[slice_idx].stem  # Get filename without extension
+                output_filename = f"{original_filename}.png"
                 output_path = save_folder / output_filename
                 img.save(output_path, 'PNG')
                 
