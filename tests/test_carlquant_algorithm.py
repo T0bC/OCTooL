@@ -1089,7 +1089,8 @@ def calculate_lesion_depth(
         if ascan_x not in surface_dict:
             continue
         
-        surface_y = surface_dict[ascan_x]
+        # Surface y-coordinate 
+        surface_y = surface_dict[ascan_x] 
         
         # Extract intensity profile from surface downward
         surface_y_int = int(surface_y)
@@ -1101,7 +1102,7 @@ def calculate_lesion_depth(
         
         # Get intensity values
         intensity_profile = image[start_y:end_y, ascan_x].astype(float)
-        # Depth indices start from 0 but represent depth from surface (including offset)
+        # Depth indices start from 0 but represent depth from surface
         depth_indices = np.arange(len(intensity_profile))
         
         # Apply detection method
@@ -1144,27 +1145,20 @@ def calculate_lesion_depth(
         # Determine which depth value to use for the primary result
         # (this affects depth_points and statistics, but not visualization in compare mode)
         if detection_method == "knee_point":
-            # Original method: optionally fit exp2, then find knee point
-            if not compute_all_methods:
-                # Only compute if not already done in compute_all_methods
-                profile_for_knee = intensity_profile
-                
-                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-                if fit_result is not None:
-                    fitted_curve, fit_params = fit_result
-                    profile_for_knee = fitted_curve
-                
-                depth_value, depth_idx = knee_pt(profile_for_knee, depth_indices)
-                detection_metadata = {
-                    'method': 'knee_point',
-                    'used_fitting': fitted_curve is not None,
-                    'fit_params': fit_params
-                }
+            # Fit exp2 curve, then find knee point
+            fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+            if fit_result is not None:
+                fitted_curve, fit_params = fit_result
+                depth_value, depth_idx = knee_pt(fitted_curve, depth_indices)
             else:
-                # Use already computed values
-                depth_value = detection_metadata.get('knee_depth', np.nan)
-                depth_idx = detection_metadata.get('knee_idx', -1)
-                detection_metadata['method'] = 'knee_point'
+                fitted_curve, fit_params = None, None
+                depth_value, depth_idx = knee_pt(intensity_profile, depth_indices)
+
+            detection_metadata = {
+                'method': 'knee_point',
+                'used_fitting': fitted_curve is not None,
+                'fit_params': fit_params
+            }
             
         elif detection_method == "sigmoid_fit":
             if not compute_all_methods:
