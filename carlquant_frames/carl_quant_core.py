@@ -871,57 +871,161 @@ def compute_method_stability(method_raw_points: dict,
 
 def compute_stable_combined_depth(lesion_detection_data: dict, 
                                   stability_info: dict,
-                                  x: int,
-                                  preserve_wobbliness: bool = True) -> tuple:
+                                  ascan_x: int,
+                                  preserve_wobbliness: bool = True,
+                                  anchor_weight: float = 0.3) -> tuple:
     """
-    Compute combined depth using only stable methods with optional wobbliness preservation.
+    Compute combined depth using offset-based correction with adaptive weighting.
     
-    When preserve_wobbliness=True, uses weighted averaging where methods with higher
-    variability (more wobbly) get MORE weight. This preserves the natural texture of
-    irregular lesions instead of smoothing them out.
+    Strategy:
+    - Inflection point: Provides correction offset (how much to shift toward surface)
+    - Knee/Shoulder: Preserve lesion shape/wobbliness (averaged with SD weighting)
+    - Adaptive weighting: anchor_weight scaled by offset magnitude
+    - Combined: shape_depth + (offset * adaptive_anchor_weight)
+    
+    This approach PRESERVES wobbliness while applying correction. Unlike weighted averaging,
+    which blends methods (flattening variation), offset correction SHIFTS the entire shape
+    toward the inflection point without reducing variation.
+    
+    Adaptive Correction:
+    - Automatically computes global_offset = |inflection_mean - shape_mean| across all A-Scans
+    - For each A-Scan: adaptive_weight = anchor_weight * (local_offset / global_offset)
+    - A-Scans with larger offsets (deeper lesions) get stronger correction
+    - A-Scans with smaller offsets (methods agree) get weaker correction
+    - Fully automatic - no manual tuning needed
+    
+    Example:
+        Global offset: 50px (inflection_mean=100px, shape_mean=150px)
+        anchor_weight: 0.3 (maximum correction strength)
+        
+        A-Scan 1: shape=155px, offset=55px → adaptive=0.3*(55/50)=0.3 (capped) → correction=-16.5px
+        A-Scan 2: shape=148px, offset=48px → adaptive=0.3*(48/50)=0.29 → correction=-13.9px
+        A-Scan 3: shape=110px, offset=10px → adaptive=0.3*(10/50)=0.06 → correction=-0.6px
+        
+        Result: Deepest lesions get strongest correction, shallow ones minimal correction
     
     Args:
         lesion_detection_data: Dict containing per-column detection metadata
-        stability_info: Dict with stability metrics for each method
-        x: Current x-coordinate
-        preserve_wobbliness: If True, weight by SD to preserve variation (default True)
+        stability_info: Dict with stability metrics for each method (includes mean_depth)
+        ascan_x: Current x-coordinate of the A-Scan
+        preserve_wobbliness: If True, weight knee/shoulder by SD to preserve variation (default True)
+        anchor_weight: Maximum correction strength (0.0-1.0, default 0.3)
+                      Applied at full strength only for A-Scans with offset >= global_offset
+                      Scaled down proportionally for smaller offsets
         
     Returns:
         (depth_value, method_used) tuple
         method_used is a string indicating which methods were combined
     """
-    if x not in lesion_detection_data:
+    if ascan_x not in lesion_detection_data:
         return np.nan, "none"
     
-    metadata = lesion_detection_data[x].get('detection_metadata', {})
+    metadata = lesion_detection_data[ascan_x].get('detection_metadata', {})
     
-    # Collect available depth values and their stability
-    available_methods = []
-    
-    # Knee point
+    # Extract depth values
     knee_depth = metadata.get('knee_depth', np.nan)
-    if not np.isnan(knee_depth) and stability_info.get('knee_point', {}).get('is_stable', False):
-        available_methods.append(('knee_point', knee_depth))
-    
-    # Sigmoid inflection
     inflection_depth = metadata.get('inflection_depth', np.nan)
-    if not np.isnan(inflection_depth) and stability_info.get('sigmoid_fit', {}).get('is_stable', False):
-        available_methods.append(('sigmoid_fit', inflection_depth))
-    
-    # Sigmoid shoulder
     shoulder_depth = metadata.get('shoulder_depth', np.nan)
-    if not np.isnan(shoulder_depth) and stability_info.get('sigmoid_shoulder', {}).get('is_stable', False):
-        available_methods.append(('sigmoid_shoulder', shoulder_depth))
     
-    # If no stable methods, use the most stable one (lowest CV)
-    if len(available_methods) == 0:
-        # Find method with lowest CV
+    # Check stability for each method
+    knee_stable = not np.isnan(knee_depth) and stability_info.get('knee_point', {}).get('is_stable', False)
+    inflection_stable = not np.isnan(inflection_depth) and stability_info.get('sigmoid_fit', {}).get('is_stable', False)
+    shoulder_stable = not np.isnan(shoulder_depth) and stability_info.get('sigmoid_shoulder', {}).get('is_stable', False)
+    
+    # Collect shape-preserving methods (knee and shoulder)
+    shape_methods = []
+    if knee_stable:
+        shape_methods.append(('knee_point', knee_depth))
+    if shoulder_stable:
+        shape_methods.append(('sigmoid_shoulder', shoulder_depth))
+    
+    # === Case 1: IDEAL - Have inflection + shape methods ===
+    if inflection_stable and len(shape_methods) > 0:
+        # Compute shape depth (average of knee/shoulder) - preserves wobbliness
+        if preserve_wobbliness and len(shape_methods) > 1:
+            # Weight by SD to preserve wobbliness between knee/shoulder
+            shape_weights = []
+            for method_name, _ in shape_methods:
+                sd = stability_info.get(method_name, {}).get('std_depth', 1.0)
+                shape_weights.append(max(sd, 0.1))
+            total = sum(shape_weights)
+            shape_weights = [w / total for w in shape_weights]
+            shape_depth = sum(d * w for (_, d), w in zip(shape_methods, shape_weights))
+        else:
+            # Simple average
+            shape_depth = np.mean([d for _, d in shape_methods])
+        
+        # Offset-based correction: Shift shape toward inflection while preserving wobbliness
+        # Get mean shape depth from stability info to compute offset
+        shape_method_names = [m for m, _ in shape_methods]
+        if len(shape_method_names) == 2:
+            # Both knee and shoulder - use average of their means
+            mean_shape = np.mean([
+                stability_info.get('knee_point', {}).get('mean_depth', shape_depth),
+                stability_info.get('sigmoid_shoulder', {}).get('mean_depth', shape_depth)
+            ])
+        elif 'knee_point' in shape_method_names:
+            mean_shape = stability_info.get('knee_point', {}).get('mean_depth', shape_depth)
+        else:
+            mean_shape = stability_info.get('sigmoid_shoulder', {}).get('mean_depth', shape_depth)
+        
+        # Compute correction offset (negative = pull toward surface)
+        offset = inflection_depth - mean_shape
+        
+        # Adaptive anchor_weight: larger offset → stronger correction
+        # Compute global offset between inflection and shape methods
+        inflection_mean = stability_info.get('sigmoid_fit', {}).get('mean_depth', inflection_depth)
+        global_offset = abs(inflection_mean - mean_shape)
+        
+        # Compute local offset for this A-Scan
+        local_offset = abs(offset)
+        
+        # Adaptive weighting: proportional to offset magnitude
+        # A-Scans with larger offsets (deeper disagreement) get stronger correction
+        # A-Scans with smaller offsets (methods agree) get weaker correction
+        if global_offset > 0:
+            adaptive_anchor_weight = anchor_weight * min(local_offset / global_offset, 1.0)
+        else:
+            # No global offset - methods agree perfectly, no correction needed
+            adaptive_anchor_weight = 0.0
+        
+        # Apply adaptive correction - shifts the shape without flattening it
+        combined_depth = shape_depth + (offset * adaptive_anchor_weight)
+        
+        method_names = [m for m, _ in shape_methods]
+        method_used = f"inflection_offset+{'+'.join(method_names)}"
+        return combined_depth, method_used
+    
+    # === Case 2: Only inflection (no shape methods) ===
+    elif inflection_stable:
+        return inflection_depth, "inflection_only"
+    
+    # === Case 3: Only shape methods (no inflection) ===
+    elif len(shape_methods) > 0:
+        if preserve_wobbliness and len(shape_methods) > 1:
+            # Weight by SD
+            weights = []
+            for method_name, _ in shape_methods:
+                sd = stability_info.get(method_name, {}).get('std_depth', 1.0)
+                weights.append(max(sd, 0.1))
+            total = sum(weights)
+            weights = [w / total for w in weights]
+            combined_depth = sum(d * w for (_, d), w in zip(shape_methods, weights))
+        else:
+            combined_depth = np.mean([d for _, d in shape_methods])
+        
+        method_names = [m for m, _ in shape_methods]
+        method_used = "+".join(method_names) + ("_weighted" if preserve_wobbliness and len(shape_methods) > 1 else "")
+        return combined_depth, method_used
+    
+    # === Case 4: No stable methods - fallback to most stable ===
+    else:
         min_cv = np.inf
         best_method = None
         best_depth = np.nan
         
         for method_name in ['knee_point', 'sigmoid_fit', 'sigmoid_shoulder']:
-            cv = stability_info.get(method_name, {}).get('cv', np.inf)
+            cv = stability_info.get(method_name, {}).get('std_depth', np.inf)
             if cv < min_cv:
                 if method_name == 'knee_point':
                     depth = metadata.get('knee_depth', np.nan)
@@ -939,34 +1043,6 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
             return best_depth, f"fallback_{best_method}"
         else:
             return np.nan, "none"
-    
-    # Combine stable methods
-    depths = [d for _, d in available_methods]
-    method_names = [m for m, _ in available_methods]
-    
-    if preserve_wobbliness and len(available_methods) > 1:
-        # Weighted average: methods with higher SD get MORE weight
-        # This preserves the natural wobbliness of irregular lesions
-        weights = []
-        for method_name, _ in available_methods:
-            sd = stability_info.get(method_name, {}).get('std_depth', 1.0)
-            # Use SD as weight (higher SD = more weight)
-            # Add small constant to avoid division by zero
-            weights.append(max(sd, 0.1))
-        
-        # Normalize weights
-        total_weight = sum(weights)
-        weights = [w / total_weight for w in weights]
-        
-        # Weighted average
-        combined_depth = sum(d * w for d, w in zip(depths, weights))
-        method_used = "+".join(method_names) + "_weighted"
-    else:
-        # Simple average (original behavior)
-        combined_depth = np.mean(depths)
-        method_used = "+".join(method_names)
-    
-    return combined_depth, method_used
 
 # TODO: Check lesion depth results
 def calculate_lesion_depth(surface: Surface, 
@@ -980,6 +1056,7 @@ def calculate_lesion_depth(surface: Surface,
                           spline_degree: int = 2,
                           stability_threshold: float = 20.0,
                           preserve_wobbliness: bool = True,
+                          anchor_weight: float = 0.4,
                           slice_id = None) -> Optional[LesionDepth]:
     """
     Calculate lesion depth using various detection methods.
@@ -1209,32 +1286,7 @@ def calculate_lesion_depth(surface: Surface,
             lesion_detection_data,
             stability_threshold=stability_threshold
         )
-        
-        # Debug output: Show stability analysis results
-        slice_label = f"Slice {slice_id}" if slice_id is not None else "Slice"
-        print(f"\n[{slice_label}] === Method Stability Analysis (Combined Mode) ===")
-        for method_name, info in stability_info.items():
-            status = "STABLE" if info['is_stable'] else "UNSTABLE"
-            sd = info.get('std_depth', 0)
-            n_points = info.get('n_points', 0)
-            mean_depth = info.get('mean_depth', 0)
-            print(f"[{slice_label}] {method_name:20s}: SD={sd:.1f}px ({status}), n={n_points}, mean={mean_depth:.1f}px")
-        
-        # Show weighting strategy
-        stable_methods = [m for m, info in stability_info.items() if info.get('is_stable', False)]
-        if preserve_wobbliness and len(stable_methods) > 1:
-            print(f"[{slice_label}] Using WEIGHTED averaging (preserves wobbliness)")
-            print(f"[{slice_label}] Weights based on SD (higher SD = more weight):")
-            for method in stable_methods:
-                sd = stability_info[method].get('std_depth', 0)
-                print(f"[{slice_label}]   {method}: SD={sd:.1f}px")
-        elif len(stable_methods) > 1:
-            print(f"[{slice_label}] Using SIMPLE averaging (equal weights)")
-        elif len(stable_methods) == 1:
-            print(f"[{slice_label}] Using single stable method: {stable_methods[0]}")
-        else:
-            print(f"[{slice_label}] No stable methods - using fallback (most stable method)")
-        
+                
         # Recompute depth points using stable weighted combination
         depth_points = []
         for ascan_x in sorted(lesion_detection_data.keys()):
@@ -1243,7 +1295,8 @@ def calculate_lesion_depth(surface: Surface,
                 lesion_detection_data,
                 stability_info,
                 ascan_x,
-                preserve_wobbliness=preserve_wobbliness
+                preserve_wobbliness=preserve_wobbliness,
+                anchor_weight=anchor_weight
             )
             
             if not np.isnan(combined_depth):
