@@ -1069,14 +1069,14 @@ def calculate_lesion_depth(surface: Surface,
         
         if detection_method == DepthDetectionMethod.KNEE_POINT:
             # Fit exp2 curve, then find knee point
-            profile_for_knee = intensity_profile
-            
             fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
             if fit_result is not None:
                 fitted_curve, fit_params = fit_result
-                profile_for_knee = fitted_curve
+                depth_value, depth_idx = knee_pt(fitted_curve, depth_indices)
+            else:
+                fitted_curve, fit_params = None, None
+                depth_value, depth_idx = knee_pt(intensity_profile, depth_indices)
             
-            depth_value, depth_idx = knee_pt(profile_for_knee, depth_indices)
             detection_metadata = {
                 'method': 'knee_point',
                 'used_fitting': fitted_curve is not None,
