@@ -328,14 +328,14 @@ class SurfaceAnnotationRenderer(BaseAnnotationRenderer):
         if not surface:
             return
         
-        # Draw reference curve (cyan, thin line) - bottom layer
-        if surface.fitted_curves and "reference" in surface.fitted_curves:
-            for x, y in surface.fitted_curves["reference"]:
+        # Draw interpolated surface curve (cyan, thin line) - bottom layer
+        if surface.fitted_curves and "interpolated_surface" in surface.fitted_curves:
+            for x, y in surface.fitted_curves["interpolated_surface"]:
                 self.draw_point(x, y, color='cyan', size=1, tags="surface_overlay")
         
-        # Draw fitted curve (orange, thin line) - middle layer
-        if surface.fitted_curves and "spline" in surface.fitted_curves:
-            for x, y in surface.fitted_curves["spline"]:
+        # Draw actual surface curve (orange, thin line) - middle layer
+        if surface.fitted_curves and "actual_surface" in surface.fitted_curves:
+            for x, y in surface.fitted_curves["actual_surface"]:
                 self.draw_point(x, y, color='orange', size=1, tags="surface_overlay")
 
 

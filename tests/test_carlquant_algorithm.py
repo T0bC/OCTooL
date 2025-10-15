@@ -109,18 +109,18 @@ def detect_surface(image: np.ndarray, air_config: Optional[AirConfig] = None, re
     
     if len(filtered_points) > 3:  # Need at least 4 points for spline
         # Primary fit: uses all detected surface points
-        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end, curve_name="spline")
+        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end, curve_name="actual_surface")
         
         # Reference fit: excludes lesion area (for cavitation detection)
         if region_config:
             reference_curves = fit_reference_surface(filtered_points, region_config, x_start, x_end)
             fitted_curves.update(reference_curves)
             
-            # Detect cavitation by comparing primary and reference curves
-            if "spline" in fitted_curves and "reference" in fitted_curves:
+            # Detect cavitation by comparing actual and interpolated surfaces
+            if "actual_surface" in fitted_curves and "interpolated_surface" in fitted_curves:
                 is_cavitated, cavitation_depth = detect_cavitation(
-                    fitted_curves["spline"],
-                    fitted_curves["reference"],
+                    fitted_curves["actual_surface"],
+                    fitted_curves["interpolated_surface"],
                     region_config,
                     cavitation_threshold=5.0,  # Mean depth threshold in pixels
                     min_cavitation_ratio=0.7   # At least 70% of points must be cavitated
@@ -286,7 +286,7 @@ def fit_surface_curve(surface_points: List[Tuple[int, int]],
                      smoothing: float = 0.5,
                      smoothing_multiplier: float = 3.0,
                      spline_degree: int = 5,
-                     curve_name: str = "spline") -> Dict[str, List[Tuple[int, int]]]:
+                     curve_name: str = "actual_surface") -> Dict[str, List[Tuple[int, int]]]:
     """
     Fit a smooth spline curve to surface points to create an intact surface.
     
@@ -391,7 +391,7 @@ def fit_reference_surface(surface_points: List[Tuple[int, int]],
         smoothing=smoothing,
         smoothing_multiplier=smoothing_multiplier,
         spline_degree=spline_degree,
-        curve_name="reference"
+        curve_name="interpolated_surface"
     )
 
 
@@ -511,11 +511,11 @@ def extract_regions(image: np.ndarray,
     x_end = tooth_end_x
     
     # Use primary surface fit for positioning
-    if not surface.fitted_curves or "spline" not in surface.fitted_curves:
+    if not surface.fitted_curves or "actual_surface" not in surface.fitted_curves:
         return []
     
     # Convert surface to dictionary for easy lookup
-    surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    surface_dict = {x: y for x, y in surface.fitted_curves["actual_surface"]}
     
     region_stats = []
     
@@ -1014,7 +1014,6 @@ def calculate_lesion_depth(
     region_config: RegionConfig,
     image: np.ndarray,
     search_depth: int = 200,
-    use_curve_fitting: bool = True,
     smooth_depth_points: bool = True,
     detection_method: str = "knee_point",
     compute_all_methods: bool = False,
@@ -1061,7 +1060,6 @@ def calculate_lesion_depth(
         region_config: Region configuration with lesion boundaries
         image: 2D numpy array (grayscale image)
         search_depth: Maximum depth to search below surface (default 200 pixels)
-        use_curve_fitting: If True, fit exp2 model before knee detection (default True)
         smooth_depth_points: If True, apply spline smoothing to depth points (default True)
         smoothing: Base smoothing factor for depth spline (default 5.0)
         smoothing_multiplier: Multiplier for smoothing (default 5.0)
@@ -1075,12 +1073,12 @@ def calculate_lesion_depth(
     end_x, _ = region_config.lesion_end
     
     # Validate surface exists
-    if not surface.fitted_curves or "spline" not in surface.fitted_curves:
+    if not surface.fitted_curves or "actual_surface" not in surface.fitted_curves:
         print("WARNING: No surface detected - cannot calculate lesion depth")
         return None
     
     # Convert surface to dictionary for lookup
-    surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    surface_dict = {x: y for x, y in surface.fitted_curves["actual_surface"]}
     
     height, width = image.shape
     depth_points = []
@@ -1118,11 +1116,10 @@ def calculate_lesion_depth(
             # Compute knee point with Exp2 fitting
             profile_for_knee = intensity_profile
             knee_fitted_curve = None
-            if use_curve_fitting:
-                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-                if fit_result is not None:
-                    knee_fitted_curve, _ = fit_result
-                    profile_for_knee = knee_fitted_curve
+            fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+            if fit_result is not None:
+                knee_fitted_curve, _ = fit_result
+                profile_for_knee = knee_fitted_curve
             knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
             
             # Compute sigmoid (inflection and shoulder)
@@ -1152,16 +1149,15 @@ def calculate_lesion_depth(
                 # Only compute if not already done in compute_all_methods
                 profile_for_knee = intensity_profile
                 
-                if use_curve_fitting:
-                    fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-                    if fit_result is not None:
-                        fitted_curve, fit_params = fit_result
-                        profile_for_knee = fitted_curve
+                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                if fit_result is not None:
+                    fitted_curve, fit_params = fit_result
+                    profile_for_knee = fitted_curve
                 
                 depth_value, depth_idx = knee_pt(profile_for_knee, depth_indices)
                 detection_metadata = {
                     'method': 'knee_point',
-                    'used_fitting': use_curve_fitting and fitted_curve is not None,
+                    'used_fitting': fitted_curve is not None,
                     'fit_params': fit_params
                 }
             else:
@@ -1211,11 +1207,10 @@ def calculate_lesion_depth(
                 profile_for_knee = intensity_profile
                 knee_fitted_curve = None
                 
-                if use_curve_fitting:
-                    fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-                    if fit_result is not None:
-                        knee_fitted_curve, fit_params = fit_result
-                        profile_for_knee = knee_fitted_curve
+                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                if fit_result is not None:
+                    knee_fitted_curve, fit_params = fit_result
+                    profile_for_knee = knee_fitted_curve
                 
                 knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
                 sigmoid_depth, sigmoid_idx, sigmoid_meta = detect_depth_sigmoid_fit(

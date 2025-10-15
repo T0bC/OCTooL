@@ -648,16 +648,16 @@ class DataSaver:
                 
                 # Draw surface curves
                 if result.surface and result.surface.fitted_curves:
-                    # Reference curve (cyan) - if cavitated
-                    if "reference" in result.surface.fitted_curves:
-                        points = result.surface.fitted_curves["reference"]
+                    # Interpolated surface curve (cyan) - if cavitated
+                    if "interpolated_surface" in result.surface.fitted_curves:
+                        points = result.surface.fitted_curves["interpolated_surface"]
                         if len(points) > 1:
                             for i in range(len(points) - 1):
                                 draw.line([points[i], points[i+1]], fill='cyan', width=1)
                     
-                    # Primary spline curve (orange)
-                    if "spline" in result.surface.fitted_curves:
-                        points = result.surface.fitted_curves["spline"]
+                    # Actual surface curve (orange)
+                    if "actual_surface" in result.surface.fitted_curves:
+                        points = result.surface.fitted_curves["actual_surface"]
                         if len(points) > 1:
                             for i in range(len(points) - 1):
                                 draw.line([points[i], points[i+1]], fill='orange', width=2)

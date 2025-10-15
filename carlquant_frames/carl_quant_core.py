@@ -21,6 +21,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import time
 from enum import Enum
+import gc
 
 
 # =============================================================================
@@ -85,7 +86,6 @@ def process_slice_parallel(slice_idx, image_path, region_config, air_config, num
                 region_config,
                 image_array,
                 search_depth=200,
-                use_curve_fitting=True,
                 detection_method=detection_method,
                 stability_threshold=20.0,
                 preserve_wobbliness=True,
@@ -186,7 +186,7 @@ def fit_surface_curve(surface_points: List[Tuple[int, int]],
                      smoothing: float = 0.5,
                      smoothing_multiplier: float = 3.0,
                      spline_degree: int = 5,
-                     curve_name: str = "spline") -> Dict[str, List[Tuple[int, int]]]:
+                     curve_name: str = "actual_surface") -> Dict[str, List[Tuple[int, int]]]:
     """Fit a smooth spline curve to surface points."""
     if len(surface_points) < 4:
         return {}
@@ -237,7 +237,7 @@ def fit_reference_surface(surface_points: List[Tuple[int, int]],
         smoothing=smoothing,
         smoothing_multiplier=smoothing_multiplier,
         spline_degree=spline_degree,
-        curve_name="reference"
+        curve_name="interpolated_surface"
     )
 
 
@@ -324,11 +324,11 @@ def extract_regions(image: np.ndarray,
     x_end = tooth_end_x
     
     # Use primary surface fit for positioning
-    if not surface.fitted_curves or "spline" not in surface.fitted_curves:
+    if not surface.fitted_curves or "actual_surface" not in surface.fitted_curves:
         return []
     
     # Convert surface to dictionary for easy lookup
-    surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    surface_dict = {x: y for x, y in surface.fitted_curves["actual_surface"]}
     
     region_stats = []
     
@@ -462,6 +462,13 @@ def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Su
     3. Find intensity peak within 250 pixels after threshold
     4. Apply DBSCAN clustering to remove speckles
     5. Fit smooth spline curve to surface points
+
+    Returns:
+        Surface: Object containing detected surface information
+            reference_surface: Object containing detected reference surface information
+                               which is using pixels only in the sound area
+            spline: Object containing detected spline surface information
+                    which is using all pixels above the threshold
     """
     height, width = image.shape
     
@@ -477,7 +484,7 @@ def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Su
         x_end = width
     
     # Step 3: Find surface peaks
-    imageOffset = 25
+    imageOffset = 25 # the image contains usually black or white border
     raw_points = []
     for x in range(x_start, x_end):
         column = image[imageOffset:, x]
@@ -504,18 +511,18 @@ def detect_surface(image: np.ndarray, air_config=None, region_config=None) -> Su
     
     if len(filtered_points) > 3:
         # Primary fit: uses all detected surface points
-        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end, curve_name="spline")
+        fitted_curves = fit_surface_curve(filtered_points, x_start, x_end, curve_name="actual_surface")
         
         # Reference fit: excludes lesion area (for cavitation detection)
         if region_config:
             reference_curves = fit_reference_surface(filtered_points, region_config, x_start, x_end)
             fitted_curves.update(reference_curves)
             
-            # Detect cavitation by comparing primary and reference curves
-            if "spline" in fitted_curves and "reference" in fitted_curves:
+            # Detect cavitation by comparing actual and interpolated surfaces
+            if "actual_surface" in fitted_curves and "interpolated_surface" in fitted_curves:
                 is_cavitated, cavitation_depth = detect_cavitation(
-                    fitted_curves["spline"],
-                    fitted_curves["reference"],
+                    fitted_curves["actual_surface"],
+                    fitted_curves["interpolated_surface"],
                     region_config,
                     cavitation_threshold=5.0,
                     min_cavitation_ratio=0.7
@@ -961,19 +968,16 @@ def compute_stable_combined_depth(knee_data: dict,
     
     return combined_depth, method_used
 
-
+# TODO: Check lesion depth results
 def calculate_lesion_depth(surface: Surface, 
                           region_config,
                           image: np.ndarray,
                           search_depth: int = 200,
                           detection_method: DepthDetectionMethod = None,
-                          use_curve_fitting: bool = True,
                           smooth_depth_points: bool = True,
                           smoothing: float = 5.0,
                           smoothing_multiplier: float = 5.0,
                           spline_degree: int = 2,
-                          threshold_percent: float = 0.5,
-                          gradient_smooth_window: int = 5,
                           stability_threshold: float = 20.0,
                           preserve_wobbliness: bool = True,
                           slice_id = None) -> Optional[LesionDepth]:
@@ -999,13 +1003,10 @@ def calculate_lesion_depth(surface: Surface,
         image: 2D numpy array (grayscale image)
         search_depth: Maximum depth to search below surface (default 200 pixels)
         detection_method: Method to use for depth detection (default KNEE_POINT)
-        use_curve_fitting: If True and method=KNEE_POINT, fit exp2 before detection (default True)
         smooth_depth_points: If True, apply spline smoothing to depth points (default True)
         smoothing: Base smoothing factor for depth spline (default 5.0)
         smoothing_multiplier: Multiplier for smoothing (default 5.0)
         spline_degree: Degree of spline for depth smoothing (default 2)
-        threshold_percent: For THRESHOLD method, fraction of surface intensity (default 0.5)
-        gradient_smooth_window: For MAX_GRADIENT method, smoothing window size (default 5)
         stability_threshold: SD threshold in pixels for method stability (default 20.0)
                            Methods with SD > threshold are excluded from combining
         preserve_wobbliness: If True, use weighted averaging to preserve lesion texture (default True)
@@ -1023,17 +1024,18 @@ def calculate_lesion_depth(surface: Surface,
     end_x, _ = region_config.lesion_end
     
     # Validate surface exists
-    if not surface.fitted_curves or "spline" not in surface.fitted_curves:
+    if not surface.fitted_curves or "actual_surface" not in surface.fitted_curves:
         return None
     
-    # Select surface based on cavitation status
-    # If cavitated, use reference surface (fitted excluding lesion area)
-    # Otherwise, use primary spline surface
-    if surface.is_cavitated and "reference" in surface.fitted_curves:
-        surface_dict = {x: y for x, y in surface.fitted_curves["reference"]}
-    else:
-        surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+    # Always use actual surface for intensity profile extraction
+    # This is the real tooth surface where we detect lesion depth
+    surface_dict = {x: y for x, y in surface.fitted_curves["actual_surface"]}
     
+    # For cavitated lesions, also get interpolated surface to calculate total depth
+    # Interpolated surface spans over cavitation using only sound areas
+    interpolated_dict = None
+    if surface.is_cavitated and "interpolated_surface" in surface.fitted_curves:
+        interpolated_dict = {x: y for x, y in surface.fitted_curves["interpolated_surface"]}
     height, width = image.shape
     depth_points = []
     knee_data = {}  # Store detection data for visualization (name kept for compatibility)
@@ -1066,19 +1068,18 @@ def calculate_lesion_depth(surface: Surface,
         fit_params = None
         
         if detection_method == DepthDetectionMethod.KNEE_POINT:
-            # Original method: optionally fit exp2, then find knee point
+            # Fit exp2 curve, then find knee point
             profile_for_knee = intensity_profile
             
-            if use_curve_fitting:
-                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-                if fit_result is not None:
-                    fitted_curve, fit_params = fit_result
-                    profile_for_knee = fitted_curve
+            fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+            if fit_result is not None:
+                fitted_curve, fit_params = fit_result
+                profile_for_knee = fitted_curve
             
             depth_value, depth_idx = knee_pt(profile_for_knee, depth_indices)
             detection_metadata = {
                 'method': 'knee_point',
-                'used_fitting': use_curve_fitting and fitted_curve is not None,
+                'used_fitting': fitted_curve is not None,
                 'fit_params': fit_params
             }
             
@@ -1112,11 +1113,10 @@ def calculate_lesion_depth(surface: Surface,
             profile_for_knee = intensity_profile
             knee_fitted_curve = None
             
-            if use_curve_fitting:
-                fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
-                if fit_result is not None:
-                    knee_fitted_curve, fit_params = fit_result
-                    profile_for_knee = knee_fitted_curve
+            fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+            if fit_result is not None:
+                knee_fitted_curve, fit_params = fit_result
+                profile_for_knee = knee_fitted_curve
             
             knee_depth, knee_idx = knee_pt(profile_for_knee, depth_indices)
             
@@ -1158,10 +1158,17 @@ def calculate_lesion_depth(surface: Surface,
         
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
-            # Convert relative depth to absolute y-coordinate
+            # Convert relative depth to absolute y-coordinate (using actual surface)
             lesion_bottom_y = start_y + depth_value
-            # Actual depth from surface
-            actual_depth_from_surface = depth_value
+            
+            # Calculate actual depth from surface
+            # For cavitated lesions, measure from interpolated surface to include cavitation depth
+            if interpolated_dict is not None and x in interpolated_dict:
+                interpolated_y = interpolated_dict[x]
+                actual_depth_from_surface = lesion_bottom_y - interpolated_y
+            else:
+                # Non-cavitated: depth is just the detected value from actual surface
+                actual_depth_from_surface = depth_value
             
             depth_points.append((x, lesion_bottom_y, actual_depth_from_surface))
             
@@ -1564,7 +1571,6 @@ def run_carl_quant(context):
                                     region_config,
                                     image_array,
                                     search_depth=200,
-                                    use_curve_fitting=True,
                                     detection_method=detection_method,
                                     stability_threshold=20.0,
                                     preserve_wobbliness=True,
@@ -1626,7 +1632,6 @@ def run_carl_quant(context):
                     # MEMORY CLEANUP: Clear results from memory after saving to disk
                     # Results will be reloaded from JSON when user selects specimen for viewing
                     specimen.results.clear()
-                    import gc
                     gc.collect()
                     
                     # Update specimen status to "Completed"

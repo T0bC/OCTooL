@@ -129,8 +129,8 @@ Your algorithms should return data structures compatible with `specimen_model.py
 Surface(
     raw_points=[(x1, y1), (x2, y2), ...],  # List of (x, y) coordinates
     fitted_curves={
-        "polyfit": [(x1, y1), ...],
-        "spline": [(x1, y1), ...]
+        "actual_surface": [(x1, y1), ...],      # Fitted to all detected points
+        "interpolated_surface": [(x1, y1), ...]  # Fitted from sound areas only (for cavitation)
     }
 )
 ```

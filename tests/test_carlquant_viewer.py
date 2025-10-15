@@ -423,10 +423,10 @@ class CarlQuantTestViewer:
         if cache_key in self.results_cache:
             region_stats, surface, lesion_depth = self.results_cache[cache_key]
             
-            # Draw reference curve first (cyan) - bottom layer
+            # Draw interpolated surface curve first (cyan) - bottom layer
             if self.show_reference_curve.get() and surface:
-                if surface.fitted_curves and "reference" in surface.fitted_curves:
-                    for x, y in surface.fitted_curves["reference"]:
+                if surface.fitted_curves and "interpolated_surface" in surface.fitted_curves:
+                    for x, y in surface.fitted_curves["interpolated_surface"]:
                         if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
                             # Draw thicker line (3 pixels vertical thickness)
                             for dy in range(-1, 2):
@@ -434,10 +434,10 @@ class CarlQuantTestViewer:
                                 if 0 <= ny < display_image.shape[0]:
                                     display_image[ny, x] = [0, 255, 255]  # Cyan
             
-            # Draw fitted spline curve (orange) with thickness - middle layer
+            # Draw actual surface curve (orange) with thickness - middle layer
             if self.show_fitted_curve.get() and surface:
-                if surface.fitted_curves and "spline" in surface.fitted_curves:
-                    for x, y in surface.fitted_curves["spline"]:
+                if surface.fitted_curves and "actual_surface" in surface.fitted_curves:
+                    for x, y in surface.fitted_curves["actual_surface"]:
                         if 0 <= x < display_image.shape[1] and 0 <= y < display_image.shape[0]:
                             # Draw thicker line (3 pixels vertical thickness)
                             for dy in range(-1, 2):
@@ -613,7 +613,7 @@ class CarlQuantTestViewer:
         # Draw method comparison on image if enabled
         if self.compare_methods.get() and cache_key in self.results_cache:
             _, surface, lesion_depth = self.results_cache[cache_key]
-            if lesion_depth and lesion_depth.knee_data and surface.fitted_curves and "spline" in surface.fitted_curves:
+            if lesion_depth and lesion_depth.knee_data and surface.fitted_curves and "actual_surface" in surface.fitted_curves:
                 # OPTIMIZED: No status update needed - drawing is now fast!
                 self.draw_method_comparison_on_image(display_image, lesion_depth, surface)
                 
@@ -885,7 +885,7 @@ class CarlQuantTestViewer:
         from test_carlquant_algorithm import fit_surface_curve
         
         # Get surface dictionary
-        surface_dict = {x: y for x, y in surface.fitted_curves["spline"]}
+        surface_dict = {x: y for x, y in surface.fitted_curves["actual_surface"]}
         
         # Method colors (RGB) - using distinct colors for visibility
         method_colors = {
@@ -1453,9 +1453,9 @@ class CarlQuantTestViewer:
                                                     (i_plot_x + radius, i_plot_y + radius)], 
                                                    fill='purple', outline='darkviolet', width=1)
             
-            # Draw fitted spline point (orange) if enabled
-            if self.show_fitted_curve.get() and surface and surface.fitted_curves and "spline" in surface.fitted_curves:
-                for x, y in surface.fitted_curves["spline"]:
+            # Draw actual surface point (orange) if enabled
+            if self.show_fitted_curve.get() and surface and surface.fitted_curves and "actual_surface" in surface.fitted_curves:
+                for x, y in surface.fitted_curves["actual_surface"]:
                     if x == self.current_ascan_x:
                         if 0 <= y < image_height:
                             spline_intensity = ascan_column[y]
@@ -1564,8 +1564,8 @@ class CarlQuantTestViewer:
             info += f"Surface peaks: {len(surface.raw_points)}\n"
             
             # Fitted curve information
-            if surface.fitted_curves and "spline" in surface.fitted_curves:
-                info += f"Fitted curve: {len(surface.fitted_curves['spline'])} points (spline)\n"
+            if surface.fitted_curves and "actual_surface" in surface.fitted_curves:
+                info += f"Actual surface: {len(surface.fitted_curves['actual_surface'])} points\n"
             
             # Cavitation status
             if hasattr(surface, 'is_cavitated'):
