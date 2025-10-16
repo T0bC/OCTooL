@@ -356,7 +356,7 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
     
     # DEBUG FLAG: Set to True to visualize individual detection methods
     # Useful for algorithm development and debugging
-    DEBUG_SHOW_COMPONENT_METHODS = True
+    DEBUG_SHOW_COMPONENT_METHODS = False
     
     # Method visualization configuration (easily extensible for new methods)
     METHOD_COLORS = {
