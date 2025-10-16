@@ -22,6 +22,32 @@ from PIL import Image, ImageDraw
 import numpy as np
 
 
+def convert_to_json_serializable(obj):
+    """
+    Recursively convert numpy types to native Python types for JSON serialization.
+    
+    Args:
+        obj: Object to convert (can be dict, list, numpy type, or native type)
+    
+    Returns:
+        JSON-serializable version of the object
+    """
+    if isinstance(obj, dict):
+        return {key: convert_to_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_to_json_serializable(item) for item in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    else:
+        return obj
+
+
 
 IMAGE_EXTENSIONS = ['*.jpg', '*.png', '*.tif', '*.tiff']
 
@@ -189,13 +215,22 @@ class DataLoader:
                 if 'smoothed_depth_points' in ld_data:
                     smoothed_points = [tuple(pt) for pt in ld_data['smoothed_depth_points']]
                 
+                # Load lesion_detection_data if available (for debug visualization)
+                lesion_detection_data = None
+                if 'lesion_detection_data' in ld_data:
+                    # Convert string keys back to integers
+                    lesion_detection_data = {
+                        int(x): data for x, data in ld_data['lesion_detection_data'].items()
+                    }
+                
                 lesion_depth = LesionDepth(
                     depth_points=depth_points,
                     mean_depth=ld_data.get('mean_depth', 0.0),
                     median_depth=ld_data.get('median_depth', 0.0),
                     sd=ld_data.get('sd', 0.0),
                     se=ld_data.get('se', 0.0),
-                    smoothed_depth_points=smoothed_points
+                    smoothed_depth_points=smoothed_points,
+                    lesion_detection_data=lesion_detection_data
                 )
             
             # Load extraction region bounds and statistics
@@ -478,6 +513,18 @@ class DataSaver:
                     # Save smoothed depth points if available
                     if hasattr(result.lesion_depth, 'smoothed_depth_points') and result.lesion_depth.smoothed_depth_points:
                         lesion_depth_data["smoothed_depth_points"] = [[int(x), int(y)] for x, y in result.lesion_depth.smoothed_depth_points]
+                    
+                    # Save lesion_detection_data for debug visualization of component methods
+                    if hasattr(result.lesion_depth, 'lesion_detection_data') and result.lesion_depth.lesion_detection_data:
+                        # Convert lesion_detection_data to JSON-serializable format
+                        # Only save essential metadata, not full intensity profiles (too large)
+                        detection_data_serializable = {}
+                        for x, data in result.lesion_depth.lesion_detection_data.items():
+                            detection_data_serializable[str(x)] = {
+                                'surface_y': int(data.get('surface_y', 0)),
+                                'detection_metadata': convert_to_json_serializable(data.get('detection_metadata', {}))
+                            }
+                        lesion_depth_data["lesion_detection_data"] = detection_data_serializable
                     
                     slice_annotations["lesion_depth"] = lesion_depth_data
                 

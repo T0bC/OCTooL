@@ -873,7 +873,7 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
                                   stability_info: dict,
                                   ascan_x: int,
                                   preserve_wobbliness: bool = True,
-                                  anchor_weight: float = 0.3) -> tuple:
+                                  anchor_weight: float = 0.5) -> tuple:
     """
     Compute combined depth using offset-based correction with adaptive weighting.
     
@@ -887,22 +887,23 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
     which blends methods (flattening variation), offset correction SHIFTS the entire shape
     toward the inflection point without reducing variation.
     
-    Adaptive Correction:
-    - Automatically computes global_offset = |inflection_mean - shape_mean| across all A-Scans
-    - For each A-Scan: adaptive_weight = anchor_weight * (local_offset / global_offset)
-    - A-Scans with larger offsets (deeper lesions) get stronger correction
-    - A-Scans with smaller offsets (methods agree) get weaker correction
+    Adaptive Correction (Exponential with Wobbliness Preservation):
+    - Uses LOCAL offset for correction direction: offset = inflection_depth - shape_depth
+    - Uses GLOBAL offset as reference to scale correction strength
+    - Exponential scaling with reduced steepness (k=1.0) + 50% weight multiplier
+    - This preserves wobbliness while correcting systematic bias
+    - A-Scans with larger local offsets get stronger correction (but limited)
+    - A-Scans with smaller local offsets get minimal correction
     - Fully automatic - no manual tuning needed
     
-    Example:
+    Example (with k=1.0, 50% multiplier, anchor_weight=0.3):
         Global offset: 50px (inflection_mean=100px, shape_mean=150px)
-        anchor_weight: 0.3 (maximum correction strength)
         
-        A-Scan 1: shape=155px, offset=55px → adaptive=0.3*(55/50)=0.3 (capped) → correction=-16.5px
-        A-Scan 2: shape=148px, offset=48px → adaptive=0.3*(48/50)=0.29 → correction=-13.9px
-        A-Scan 3: shape=110px, offset=10px → adaptive=0.3*(10/50)=0.06 → correction=-0.6px
+        A-Scan 1: inflection=100px, shape=155px, offset=-55px, ratio=1.1 → weight=0.10 → correction=-5.5px → result=149.5px
+        A-Scan 2: inflection=102px, shape=148px, offset=-46px, ratio=0.92 → weight=0.09 → correction=-4.1px → result=144px
+        A-Scan 3: inflection=105px, shape=110px, offset=-5px, ratio=0.1 → weight=0.01 → correction=-0.05px → result=110px
         
-        Result: Deepest lesions get strongest correction, shallow ones minimal correction
+        Result: Gentle correction preserves wobbliness while reducing systematic bias toward inflection
     
     Args:
         lesion_detection_data: Dict containing per-column detection metadata
@@ -910,8 +911,8 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
         ascan_x: Current x-coordinate of the A-Scan
         preserve_wobbliness: If True, weight knee/shoulder by SD to preserve variation (default True)
         anchor_weight: Maximum correction strength (0.0-1.0, default 0.3)
-                      Applied at full strength only for A-Scans with offset >= global_offset
-                      Scaled down proportionally for smaller offsets
+                      Scaled exponentially based on local_offset/global_offset ratio
+                      Large deviations approach full strength, small deviations get minimal correction
         
     Returns:
         (depth_value, method_used) tuple
@@ -956,7 +957,11 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
             shape_depth = np.mean([d for _, d in shape_methods])
         
         # Offset-based correction: Shift shape toward inflection while preserving wobbliness
-        # Get mean shape depth from stability info to compute offset
+        # IMPORTANT: Use LOCAL shape_depth for this A-scan, not global mean
+        # This ensures correction is based on local disagreement between methods
+        offset = inflection_depth - shape_depth
+        
+        # Get global mean shape depth for adaptive weighting calculation
         shape_method_names = [m for m, _ in shape_methods]
         if len(shape_method_names) == 2:
             # Both knee and shoulder - use average of their means
@@ -969,9 +974,6 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
         else:
             mean_shape = stability_info.get('sigmoid_shoulder', {}).get('mean_depth', shape_depth)
         
-        # Compute correction offset (negative = pull toward surface)
-        offset = inflection_depth - mean_shape
-        
         # Adaptive anchor_weight: larger offset → stronger correction
         # Compute global offset between inflection and shape methods
         inflection_mean = stability_info.get('sigmoid_fit', {}).get('mean_depth', inflection_depth)
@@ -980,11 +982,24 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
         # Compute local offset for this A-Scan
         local_offset = abs(offset)
         
-        # Adaptive weighting: proportional to offset magnitude
-        # A-Scans with larger offsets (deeper disagreement) get stronger correction
-        # A-Scans with smaller offsets (methods agree) get weaker correction
+        # Adaptive weighting: balance local correction with wobbliness preservation
+        # Strategy: Use local offset for direction, but scale by global offset to prevent over-correction
+        # This preserves wobbliness while still correcting systematic bias
         if global_offset > 0:
-            adaptive_anchor_weight = anchor_weight * min(local_offset / global_offset, 1.0)
+            # Ratio of local to global offset
+            ratio = local_offset / global_offset
+            
+            # Exponential scaling with reduced steepness to preserve wobbliness
+            # Lower k = gentler correction = more wobbliness preserved
+            k = 1  # Reduced from 2.0: gives ~63% weight at ratio=1, ~86% at ratio=2
+            
+            # Base adaptive weight from exponential function
+            base_weight = 1.0 - np.exp(-k * ratio)
+            
+            # Further reduce weight to preserve wobbliness
+            # Only apply partial correction even at maximum
+            adaptive_anchor_weight = anchor_weight * base_weight * 0.5  # 50% of calculated weight
+            
         else:
             # No global offset - methods agree perfectly, no correction needed
             adaptive_anchor_weight = 0.0
