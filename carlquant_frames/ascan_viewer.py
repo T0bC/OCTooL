@@ -79,26 +79,8 @@ class AScanViewer:
         main_frame = ttk.Frame(self.dialog, padding=20)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Title label
-        title_text = f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}"
-        title_label = ttk.Label(
-            main_frame,
-            text=title_text,
-            font=('Segoe UI', 12, 'bold'),
-            bootstyle="inverse-dark"
-        )
-        title_label.pack(pady=(0, 10))
-        
-        # Info label
+        # Get image dimensions for slider range
         img_width = self.current_image.shape[1]
-        img_height = self.current_image.shape[0]
-        info_label = ttk.Label(
-            main_frame,
-            text=f"Image size: {img_width} x {img_height} pixels",
-            font=('Segoe UI', 9),
-            bootstyle="secondary"
-        )
-        info_label.pack(pady=(0, 10))
         
         # Slider frame
         slider_frame = ttk.Frame(main_frame)
@@ -134,26 +116,24 @@ class AScanViewer:
         
         # Plot frame
         plot_frame = ttk.Frame(main_frame)
-        plot_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+        plot_frame.pack(fill=tk.BOTH, expand=True)
         
         # Create matplotlib figure
         self._create_plot(plot_frame)
         
-        # Button frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X)
-        
-        # Close button
-        close_btn = ttk.Button(
-            button_frame,
-            text="Close",
-            bootstyle="secondary",
-            command=self.dialog.destroy
-        )
-        close_btn.pack(side=tk.RIGHT)
-        
         # Bind Escape key to close
-        self.dialog.bind('<Escape>', lambda e: self.dialog.destroy())
+        self.dialog.bind('<Escape>', lambda e: self.on_close())
+        
+        # Bind window close event to clear indicator
+        self.dialog.protocol("WM_DELETE_WINDOW", self.on_close)
+        
+        # Register callback with image viewer for slice synchronization
+        image_panel = self.context.get_panel("carl_image")
+        if image_panel:
+            image_panel.register_ascan_viewer_callback(self.on_slice_changed)
+        
+        # Draw initial A-scan indicator in image viewer
+        self._update_image_indicator()
     
     @handle_errors("AScanViewer._navigate_to_image")
     def _navigate_to_image(self):
@@ -169,6 +149,10 @@ class AScanViewer:
         
         # Navigate to the correct slice
         image_panel.display_image(self.slice_index)
+        
+        # Ensure overlays are visible
+        if not image_panel.overlays_visible:
+            image_panel.toggle_overlays()
     
     @handle_errors("AScanViewer._load_image")
     def _load_image(self):
@@ -245,7 +229,7 @@ class AScanViewer:
         self.ax.clear()
         
         # Plot intensity vs depth
-        self.ax.plot(column_data, y_positions, color='#00d4ff', linewidth=1.5)
+        self.ax.plot(column_data, y_positions, color='#00d4ff', linewidth=1.0)
         
         # Set labels and title
         self.ax.set_xlabel('Gray Value (Intensity)', fontsize=11, color='#dcdcdc')
@@ -273,8 +257,66 @@ class AScanViewer:
             self.column_label.config(text=f"Column: {self.current_column}")
         if hasattr(self, 'ax'):
             self._update_plot()
+        # Update indicator line in image viewer
+        self._update_image_indicator()
+    
+    @handle_errors("AScanViewer._update_image_indicator")
+    def _update_image_indicator(self):
+        """Update the A-scan indicator line in the image viewer."""
+        image_panel = self.context.get_panel("carl_image")
+        if image_panel and self.current_column is not None:
+            image_panel.draw_ascan_indicator(self.current_column)
+    
+    def on_close(self):
+        """Handle window close event - clear indicator and destroy window."""
+        # Unregister callback from image viewer
+        image_panel = self.context.get_panel("carl_image")
+        if image_panel:
+            image_panel.unregister_ascan_viewer_callback()
+            image_panel.clear_ascan_indicator()
+        # Destroy the dialog
+        self.dialog.destroy()
+    
+    @handle_errors("AScanViewer.on_slice_changed")
+    def on_slice_changed(self, new_slice_index, img_width, img_height):
+        """Handle slice change from image viewer.
+        
+        Args:
+            new_slice_index: New slice index (0-based)
+            img_width: Width of the new image
+            img_height: Height of the new image
+        """
+        # Update slice index
+        self.slice_index = new_slice_index
+        
+        # Reload the image
+        if not self._load_image():
+            return
+        
+        # Reset column to center
+        self.current_column = img_width // 2
+        
+        # Update slider range and position
+        if hasattr(self, 'slider'):
+            self.slider.configure(to=img_width - 1)
+            self.slider.set(self.current_column)
+        
+        # Update column label
+        if hasattr(self, 'column_label'):
+            self.column_label.config(text=f"Column: {self.current_column}")
+        
+        # Update window title
+        if self.dialog:
+            self.dialog.title(f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}")
+        
+        # Update plot
+        if hasattr(self, 'ax'):
+            self._update_plot()
+        
+        # Update indicator in image viewer
+        self._update_image_indicator()
     
     def destroy(self):
         """Close the dialog window."""
         if self.dialog:
-            self.dialog.destroy()
+            self.on_close()
