@@ -6,11 +6,23 @@ This module provides a structured approach to drawing annotations on the canvas.
 It centralizes coordinate conversion logic and provides reusable drawing functions
 for various annotation types.
 
+DEBUG MODE:
+-----------
+To visualize individual lesion depth detection methods (knee, inflection, shoulder):
+1. Set LesionDepthAnnotationRenderer.DEBUG_SHOW_COMPONENT_METHODS = True (line ~347)
+2. Run your analysis - component methods will be drawn as thin colored lines:
+   - Yellow: Knee point method
+   - Cyan: Inflection point method
+   - Magenta: Shoulder point method
+   - Red (thick): Combined/final result
+3. To add new methods: Update METHOD_COLORS dict and add extraction logic in _draw_component_methods()
+
 Created on Thu Oct 09 2025
 @author: meissnerto
 """
 
 import tkinter as tk
+import numpy as np
 
 
 class CoordinateConverter:
@@ -342,6 +354,20 @@ class SurfaceAnnotationRenderer(BaseAnnotationRenderer):
 class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for lesion depth results."""
     
+    # DEBUG FLAG: Set to True to visualize individual detection methods
+    # Useful for algorithm development and debugging
+    DEBUG_SHOW_COMPONENT_METHODS = True
+    
+    # Method visualization configuration (easily extensible for new methods)
+    METHOD_COLORS = {
+        'knee_point': 'yellow',
+        'inflection_point': 'cyan',
+        'shoulder_point': 'magenta',
+        # Add future methods here, e.g.:
+        # 'gradient_method': 'orange',
+        # 'threshold_method': 'lime',
+    }
+    
     def draw(self, lesion_depth, show_markers=False, marker_step=None):
         """
         Draw lesion depth results.
@@ -371,6 +397,10 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         if not points or len(points) < 2:
             return
         
+        # DEBUG: Draw individual component methods if enabled
+        if self.DEBUG_SHOW_COMPONENT_METHODS:
+            self._draw_component_methods(lesion_depth)
+        
         # Draw smooth line connecting all points
         self.draw_line(points, color='red', width=2, tags="lesion_depth_overlay")
         
@@ -389,6 +419,69 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
                     fill='red', outline='darkred',
                     tags="lesion_depth_overlay"
                 )
+    
+    def _draw_component_methods(self, lesion_depth):
+        """
+        Draw individual detection method results for debugging.
+        
+        Extracts knee, inflection, and shoulder points from lesion_detection_data
+        and renders them as separate lines. Easily extensible for future methods.
+        
+        Args:
+            lesion_depth: Lesion depth result object with lesion_detection_data
+        """
+        if not hasattr(lesion_depth, 'lesion_detection_data') or not lesion_depth.lesion_detection_data:
+            return
+        
+        # Collect points for each method
+        method_points = {
+            'knee_point': [],
+            'inflection_point': [],
+            'shoulder_point': []
+        }
+        
+        for x, data in sorted(lesion_depth.lesion_detection_data.items()):
+            metadata = data.get('detection_metadata', {})
+            surface_y = data.get('surface_y', 0)
+            
+            # Extract knee point
+            knee_depth = metadata.get('knee_depth')
+            if knee_depth is not None and not (hasattr(knee_depth, '__iter__') and len(knee_depth) == 0):
+                try:
+                    if not np.isnan(knee_depth):
+                        method_points['knee_point'].append((x, surface_y + knee_depth))
+                except (TypeError, ValueError):
+                    pass
+            
+            # Extract inflection point
+            inflection_depth = metadata.get('inflection_depth')
+            if inflection_depth is not None and not (hasattr(inflection_depth, '__iter__') and len(inflection_depth) == 0):
+                try:
+                    if not np.isnan(inflection_depth):
+                        method_points['inflection_point'].append((x, surface_y + inflection_depth))
+                except (TypeError, ValueError):
+                    pass
+            
+            # Extract shoulder point
+            shoulder_depth = metadata.get('shoulder_depth')
+            if shoulder_depth is not None and not (hasattr(shoulder_depth, '__iter__') and len(shoulder_depth) == 0):
+                try:
+                    if not np.isnan(shoulder_depth):
+                        method_points['shoulder_point'].append((x, surface_y + shoulder_depth))
+                except (TypeError, ValueError):
+                    pass
+            
+            # EXTENSIBILITY: Add future methods here
+            # Example:
+            # gradient_depth = metadata.get('gradient_depth')
+            # if gradient_depth is not None and not np.isnan(gradient_depth):
+            #     method_points['gradient_method'].append((x, surface_y + gradient_depth))
+        
+        # Draw lines for each method that has data
+        for method_name, points in method_points.items():
+            if len(points) >= 2 and method_name in self.METHOD_COLORS:
+                color = self.METHOD_COLORS[method_name]
+                self.draw_line(points, color=color, width=1, tags="component_methods_debug")
 
 
 class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
