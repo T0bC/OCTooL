@@ -87,6 +87,12 @@ class image_viewer_panel(BaseCanvasPanel):
         self.air_drag_rectangle = None     # Canvas rectangle ID during drag
         self.air_visual_elements = []      # Visual elements for AIR display
         
+        # A-Scan indicator state
+        self.ascan_indicator_line = None   # Canvas line ID for A-scan column indicator
+        
+        # A-Scan viewer callback (for synchronization)
+        self.ascan_viewer_callback = None  # Callback to notify A-Scan viewer of slice changes
+        
         # Initialize base class (sets up canvas, zoom, pan, navigation, etc.)
         super().__init__(context, "carl_image", canvas_bg='#505050')
     
@@ -207,13 +213,26 @@ class image_viewer_panel(BaseCanvasPanel):
             self.zoom_level = 1.0
             self.image_offset_x = 0
             self.image_offset_y = 0
-
-            self.render_zoomed_image()  # Calls base class method
+            
+            # Update slider position BEFORE rendering (so overlays use correct slice)
+            # Temporarily disable callback to prevent recursion
+            self.scale.configure(command=lambda x: None)
+            self.scale.set(index + 1)
+            self.scale.configure(command=self.on_scale_change)
+            
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
+
+            self.render_zoomed_image()  # Calls base class method which calls draw_specialized_overlays()
             
             # Update tracking
             self.last_displayed_slice = index
             self.current_slice_modified = False  # Reset for new slice
+            
+            # Notify A-Scan viewer if registered
+            if self.ascan_viewer_callback is not None:
+                img_width = self.rawImage.width
+                img_height = self.rawImage.height
+                self.ascan_viewer_callback(index, img_width, img_height)
             
             # Give canvas focus so keyboard shortcuts work immediately
             self.canvas.focus_set()
@@ -902,3 +921,58 @@ class image_viewer_panel(BaseCanvasPanel):
         
         renderer = LesionDepthAnnotationRenderer(self.canvas, converter)
         renderer.draw(lesion_depth)
+    
+    def draw_ascan_indicator(self, column_x):
+        """
+        Draw a vertical line to indicate which A-scan column is being viewed.
+        
+        Args:
+            column_x: X-coordinate (column index) in image space
+        """
+        # Clear previous indicator
+        self.clear_ascan_indicator()
+        
+        if not hasattr(self, 'rawImage') or self.rawImage is None:
+            return
+        
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
+        
+        # Convert image coordinates to canvas coordinates
+        # Draw line from top to bottom of image
+        image_height = self.rawImage.height
+        canvas_coords = converter.image_to_canvas_rect(column_x, 0, column_x, image_height)
+        
+        if canvas_coords is None:
+            return
+        
+        canvas_x1, canvas_y1, canvas_x2, canvas_y2 = canvas_coords
+        
+        # Draw vertical line in light purple
+        self.ascan_indicator_line = self.canvas.create_line(
+            canvas_x1, canvas_y1, canvas_x2, canvas_y2,
+            fill="#b19cd9",  # Light purple
+            width=2,
+            tags="ascan_indicator"
+        )
+    
+    def clear_ascan_indicator(self):
+        """Clear the A-scan indicator line from the canvas."""
+        if self.ascan_indicator_line is not None:
+            self.canvas.delete(self.ascan_indicator_line)
+            self.ascan_indicator_line = None
+        self.canvas.delete("ascan_indicator")
+    
+    def register_ascan_viewer_callback(self, callback):
+        """
+        Register a callback to be notified when the slice changes.
+        
+        Args:
+            callback: Function to call with (slice_index, image_width, image_height)
+        """
+        self.ascan_viewer_callback = callback
+    
+    def unregister_ascan_viewer_callback(self):
+        """Unregister the A-Scan viewer callback."""
+        self.ascan_viewer_callback = None
