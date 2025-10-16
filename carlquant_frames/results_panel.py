@@ -29,7 +29,7 @@ class resultsPanel:
         headers = ["SPECIMEN_ID", "SLICE"]
         headers += [f"SOUND_{i+1}" for i in range(num_sound)]
         headers += [f"LESION_{i+1}" for i in range(num_lesion)]
-        headers += ["LESION_DEPTH_MEAN"]
+        headers += ["LESION_DEPTH_MEAN", "IS_CAVITATED"]
         return headers
 
 
@@ -130,6 +130,13 @@ class resultsPanel:
 
             # Lesion depth mean
             row += [f"{result.lesion_depth.mean_depth:.2f}"]
+            
+            # IS_CAVITATED: Use "TRUE"/"FALSE" strings for consistency, blank if no data
+            if result.surface and hasattr(result.surface, 'is_cavitated'):
+                cavitated_value = "TRUE" if result.surface.is_cavitated else "FALSE"
+            else:
+                cavitated_value = ""  # Leave blank if no surface data available
+            row += [cavitated_value]
 
             rows.append(row)
 
