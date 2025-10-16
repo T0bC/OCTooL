@@ -17,6 +17,7 @@ from typing import List, Tuple, Dict, Optional
 from sklearn.cluster import DBSCAN
 from scipy.interpolate import splrep, splev
 from scipy.optimize import curve_fit
+from scipy.signal import medfilt
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import time
@@ -202,6 +203,92 @@ def fit_surface_curve(surface_points: List[Tuple[int, int]],
     try:
         s_param = smoothing * smoothing_multiplier * len(x_sorted)
         tck = splrep(x_sorted, y_sorted, k=spline_degree, s=s_param)
+        x_full = np.arange(x_start, x_end)
+        y_fitted = splev(x_full, tck)
+        fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted)]
+        return {curve_name: fitted_curve}
+    except Exception as e:
+        return {}
+
+
+def fit_lesion_depth_curve_robust(depth_points: List[Tuple[int, int]], 
+                                   x_start: int, 
+                                   x_end: int,
+                                   smoothing: float = 5.0,
+                                   smoothing_multiplier: float = 5.0,
+                                   spline_degree: int = 2,
+                                   median_kernel_size: int = 5,
+                                   outlier_threshold: float = 2.0,
+                                   curve_name: str = "smoothed_depth") -> Dict[str, List[Tuple[int, int]]]:
+    """
+    Fit a smooth spline curve to lesion depth points with robust spike removal.
+    
+    This function handles noisy depth data with spikes (e.g., from dark speckles in OCT images)
+    by applying a two-stage approach:
+    1. Median filtering to remove isolated spikes (3-4 pixel wide speckles)
+    2. Outlier detection and removal before spline fitting
+    3. Spline smoothing on cleaned data
+    
+    Args:
+        depth_points: List of (x, y) tuples representing detected lesion depth points
+        x_start: Start x-coordinate for the fitted curve
+        x_end: End x-coordinate for the fitted curve
+        smoothing: Base smoothing factor for spline (default 5.0)
+        smoothing_multiplier: Multiplier for smoothing parameter (default 5.0)
+        spline_degree: Degree of spline (default 2 for quadratic)
+        median_kernel_size: Size of median filter kernel (default 5, must be odd)
+                           Larger values remove wider spikes but may over-smooth
+        outlier_threshold: Number of standard deviations for outlier detection (default 2.0)
+                          Points beyond this threshold are excluded from spline fitting
+        curve_name: Name for the returned curve dictionary
+    
+    Returns:
+        Dictionary with curve_name as key and list of (x, y) tuples as fitted curve
+    """
+    if len(depth_points) < 4:
+        return {}
+    
+    points_array = np.array(depth_points)
+    x_coords = points_array[:, 0]
+    y_coords = points_array[:, 1]
+    
+    # Sort by x-coordinate
+    sort_idx = np.argsort(x_coords)
+    x_sorted = x_coords[sort_idx]
+    y_sorted = y_coords[sort_idx]
+    
+    # Step 1: Apply median filter to remove isolated spikes
+    # This is effective for 3-4 pixel wide speckles
+    if len(y_sorted) >= median_kernel_size:
+        # Ensure kernel size is odd
+        kernel_size = median_kernel_size if median_kernel_size % 2 == 1 else median_kernel_size + 1
+        y_median_filtered = medfilt(y_sorted, kernel_size=kernel_size)
+    else:
+        y_median_filtered = y_sorted.copy()
+    
+    # Step 2: Detect and remove outliers based on deviation from median-filtered trend
+    # Calculate residuals (difference between original and median-filtered)
+    residuals = y_sorted - y_median_filtered
+    residual_std = np.std(residuals)
+    residual_mean = np.mean(residuals)
+    
+    # Identify inliers (points within threshold standard deviations)
+    inlier_mask = np.abs(residuals - residual_mean) <= (outlier_threshold * residual_std)
+    
+    # Require at least 4 points for spline fitting
+    if np.sum(inlier_mask) < 4:
+        # If too many outliers detected, fall back to median-filtered data
+        x_clean = x_sorted
+        y_clean = y_median_filtered
+    else:
+        # Use only inliers for spline fitting
+        x_clean = x_sorted[inlier_mask]
+        y_clean = y_median_filtered[inlier_mask]
+    
+    # Step 3: Fit spline to cleaned data
+    try:
+        s_param = smoothing * smoothing_multiplier * len(x_clean)
+        tck = splrep(x_clean, y_clean, k=min(spline_degree, len(x_clean) - 1), s=s_param)
         x_full = np.arange(x_start, x_end)
         y_fitted = splev(x_full, tck)
         fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted)]
@@ -1059,7 +1146,7 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
         else:
             return np.nan, "none"
 
-# TODO: Check lesion depth results
+
 def calculate_lesion_depth(surface: Surface, 
                           region_config,
                           image: np.ndarray,
@@ -1068,7 +1155,9 @@ def calculate_lesion_depth(surface: Surface,
                           smooth_depth_points: bool = True,
                           smoothing: float = 5.0,
                           smoothing_multiplier: float = 5.0,
-                          spline_degree: int = 2,
+                          spline_degree: int = 3,
+                          median_kernel_size: int = 7,
+                          outlier_threshold: float = 2,
                           stability_threshold: float = 20.0,
                           preserve_wobbliness: bool = True,
                           anchor_weight: float = 0.4,
@@ -1095,10 +1184,14 @@ def calculate_lesion_depth(surface: Surface,
         image: 2D numpy array (grayscale image)
         search_depth: Maximum depth to search below surface (default 200 pixels)
         detection_method: Method to use for depth detection (default KNEE_POINT)
-        smooth_depth_points: If True, apply spline smoothing to depth points (default True)
+        smooth_depth_points: If True, apply robust spline smoothing to depth points (default True)
         smoothing: Base smoothing factor for depth spline (default 5.0)
         smoothing_multiplier: Multiplier for smoothing (default 5.0)
         spline_degree: Degree of spline for depth smoothing (default 2)
+        median_kernel_size: Size of median filter kernel for spike removal (default 5)
+                           Larger values (e.g., 7) remove wider spikes from speckles
+        outlier_threshold: Number of standard deviations for outlier detection (default 2.0)
+                          Lower values (e.g., 1.5) are more aggressive at removing spikes
         stability_threshold: SD threshold in pixels for method stability (default 20.0)
                            Methods with SD > threshold are excluded from combining
         preserve_wobbliness: If True, use weighted averaging to preserve lesion texture (default True)
@@ -1336,18 +1429,20 @@ def calculate_lesion_depth(surface: Surface,
     # Convert to (x, y) format for compatibility
     raw_depth_points = [(x, y) for x, y, _ in depth_points]
     
-    # Apply spline smoothing to depth points if requested
+    # Apply robust spline smoothing to depth points if requested
     smoothed_depth_points = None
     if smooth_depth_points and len(raw_depth_points) >= 4:
-        # Use fit_surface_curve to smooth the depth points
-        # This reuses the same spline fitting logic used for surface detection
-        smoothed_curves = fit_surface_curve(
+        # Use robust fitting to handle spikes from OCT speckles
+        # This applies median filtering and outlier detection before spline smoothing
+        smoothed_curves = fit_lesion_depth_curve_robust(
             raw_depth_points,
             start_x,
             end_x,
             smoothing=smoothing,
             smoothing_multiplier=smoothing_multiplier,
             spline_degree=spline_degree,
+            median_kernel_size=median_kernel_size,
+            outlier_threshold=outlier_threshold,
             curve_name="smoothed_depth"
         )
         
