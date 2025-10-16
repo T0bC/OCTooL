@@ -44,6 +44,7 @@ class MainGui:
         self.mainWin.iconbitmap("icons/thumb_4.ico")
 
         self.style = Style(theme="darkly")
+        self.context.style = self.style  # Store style in context for access by panels
 
         # Create custom tab styles with different colors
         self._setup_tab_styles()

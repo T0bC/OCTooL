@@ -10,6 +10,7 @@ from tksheet import Sheet
 from utils.error_handler import handle_errors
 from carlquant_frames.specimen_model import RegionStats, Surface, LesionDepth, SliceResult
 from carlquant_frames.data_io import DataLoader
+from carlquant_frames.ascan_viewer import AScanViewer
 
 
 class resultsPanel:
@@ -20,6 +21,7 @@ class resultsPanel:
         self.frame = context.get_frame("carl_results")
 
         self.headers = ['MEASUREMENT', 'VALUE', 'UNIT', 'CONFIDENCE']
+        self.highlighted_row = None  # Track currently highlighted row
         self._setup_sheet()
 
     def generate_headers(self):
@@ -67,6 +69,10 @@ class resultsPanel:
 
 
         self.sheet.enable_bindings("copy", "delete", "single_select")
+        
+        # Bind double-click event
+        self.sheet.bind("<Double-Button-1>", self._on_double_click)
+        
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
@@ -186,5 +192,54 @@ class resultsPanel:
             self.sheet.headers(self.headers)
             self._set_column_widths()
             self.sheet.set_sheet_data([])  # Clear any existing data
+    
+    @handle_errors("resultsPanel._on_double_click")
+    def _on_double_click(self, event):
+        """
+        Handle double-click event on a row.
+        Highlights the row and opens the A-Scan viewer.
+        """
+        # Get the clicked row
+        row = self.sheet.identify_row(event, exclude_index=True)
+        
+        if row is not None:
+            # Clear previous highlighting
+            if self.highlighted_row is not None:
+                self.sheet.dehighlight_rows([self.highlighted_row])
+            
+            # Highlight the clicked row with a nice green shade
+            # Using a dark green that matches the dark theme
+            GREEN_HIGHLIGHT = "#2d5016"  # Dark green shade for dark theme
+            self.sheet.highlight_rows(
+                [row],
+                bg=GREEN_HIGHLIGHT,
+                fg="#ffffff"
+            )
+            self.highlighted_row = row
+            
+            # Get row data
+            row_data = self.sheet.get_row_data(row)
+            
+            # Extract specimen_id and slice_index from row data
+            specimen_id = row_data[0] if len(row_data) > 0 else None
+            slice_index = row_data[1] if len(row_data) > 1 else None
+            
+            if specimen_id is None or slice_index is None:
+                self.context.status_bar.update("Invalid row data", level="error")
+                return
+            
+            # Get the main window and style from context
+            main_window = self.root.winfo_toplevel()
+            
+            # Open A-Scan viewer (non-blocking)
+            viewer = AScanViewer(
+                main_window, 
+                self.context.style, 
+                self.context,
+                specimen_id=specimen_id,
+                slice_index=slice_index,
+                row_data=row_data
+            )
+            viewer.show()
 
 
