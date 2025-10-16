@@ -356,7 +356,14 @@ class DataSaver:
             row += [r.median for r in result.region_stats if r.region_type == "sound"]
             row += [r.median for r in result.region_stats if r.region_type == "lesion"]
             row += [result.lesion_depth.mean_depth if result.lesion_depth else 0]
-            row += [result.surface.is_cavitated if result.surface else False]
+            
+            # IS_CAVITATED: Use "TRUE"/"FALSE" strings for consistency, blank if no data
+            if result.surface and hasattr(result.surface, 'is_cavitated'):
+                cavitated_value = "TRUE" if result.surface.is_cavitated else "FALSE"
+            else:
+                cavitated_value = ""  # Leave blank if no surface data available
+            row += [cavitated_value]
+            
             ws_summary.append(row)
 
         # === Sheet 2: Region Pixels ===
