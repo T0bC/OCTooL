@@ -65,7 +65,8 @@
         "✋ Ctrl+Drag: Pan image",
         "⌨ H key: Toggle overlays",
         "▬ Yellow lines = Regions",
-        "▭ Cyan box = AIR"
+        "▭ Cyan box = AIR",
+        "🖱️ Double-click slice in results → Opens A-scan viewer"
       ]
     }
   },

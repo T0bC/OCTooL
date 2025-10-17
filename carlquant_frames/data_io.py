@@ -61,6 +61,14 @@ class DataLoader:
         specimen_data = {}
         for subdir in root_folder.rglob("*"):
             if subdir.is_dir():
+                # Skip 'annotations' folders - they contain processed images with overlays
+                if subdir.name.lower() == "annotations":
+                    continue
+                
+                # Skip if any parent folder is named 'annotations'
+                if any(parent.name.lower() == "annotations" for parent in subdir.parents):
+                    continue
+                
                 image_files = sorted([
                     f for f in subdir.iterdir()
                     if f.is_file() and any(fnmatch(f.name.lower(), ext) for ext in IMAGE_EXTENSIONS)
@@ -270,12 +278,29 @@ class DataLoader:
 
     @staticmethod
     def load_results(specimen: Specimen, region_config: dict):
+        """Load results from Excel file, respecting operator/measurement metadata.
+        
+        Only loads from Data_{operator}_{measurement} folder matching the specimen's metadata.
+        This ensures results from different analysis sessions don't get mixed up.
+        """
         if not specimen.previous_runs:
             return
 
         try:
-            latest_folder = max(specimen.previous_runs, key=lambda p: p.stat().st_mtime)
-            result_file = latest_folder / f"{specimen.specimen_id}_results.xlsx"
+            # Use metadata-specific folder instead of just picking the latest
+            # This matches the behavior of load_specimen_config()
+            target_folder = None
+            
+            if hasattr(specimen, 'operator') and hasattr(specimen, 'measurement'):
+                # Look for specific Data_{operator}_{measurement} folder
+                target_folder = specimen.source / f"Data_{specimen.operator}_{specimen.measurement}"
+                if not target_folder.exists():
+                    return  # No matching folder for this operator/measurement
+            else:
+                # Fallback: use latest folder (legacy behavior, should rarely happen)
+                target_folder = max(specimen.previous_runs, key=lambda p: p.stat().st_mtime)
+            
+            result_file = target_folder / f"{specimen.specimen_id}_results.xlsx"
             if not result_file.exists():
                 return
 
