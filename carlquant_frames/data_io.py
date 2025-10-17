@@ -529,6 +529,8 @@ class DataSaver:
                         for x, data in result.lesion_depth.lesion_detection_data.items():
                             detection_data_serializable[str(x)] = {
                                 'surface_y': int(data.get('surface_y', 0)),
+                                'actual_depth': float(data.get('actual_depth', np.nan)) if not np.isnan(data.get('actual_depth', np.nan)) else None,
+                                'knee_depth': float(data.get('knee_depth', np.nan)) if not np.isnan(data.get('knee_depth', np.nan)) else None,
                                 'detection_metadata': convert_to_json_serializable(data.get('detection_metadata', {}))
                             }
                         lesion_depth_data["lesion_detection_data"] = detection_data_serializable
