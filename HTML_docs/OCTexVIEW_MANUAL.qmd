@@ -100,6 +100,15 @@ However, each section can also function independently, allowing users to enter t
 
 The Export Section is the primary module for batch processing and converting OCT raw data files into standard image formats (PNG or TIFF). This section provides comprehensive control over image processing parameters, slice selection, and export settings.
 
+## Typical Workflow
+
+1. **Load Files**: Use "Select Folder" or "Select File" to add OCT files to the queue
+2. **Configure Global Settings**: Set export format, averaging method, and scale bar preferences
+3. **Adjust Custom Settings**: Fine-tune slice ranges, dynamic range, and other parameters for specific files
+4. **Preview**: Select a file and click "Show" to preview the export result
+5. **Export**: Click "Export!" to process all files in the queue
+6. **Monitor Progress**: Watch the Status column for processing updates
+
 ## File Selection Panel
 
 The File Selection Panel allows you to load OCT files into the processing queue.
@@ -338,14 +347,6 @@ The queue table displays all loaded OCT files and their export parameters. Each 
 
 **Interaction**: Double-click any cell to edit its value directly. Select multiple rows to apply batch operations.
 
-## Typical Workflow
-
-1. **Load Files**: Use "Select Folder" or "Select File" to add OCT files to the queue
-2. **Configure Global Settings**: Set export format, averaging method, and scale bar preferences
-3. **Adjust Custom Settings**: Fine-tune slice ranges, dynamic range, and other parameters for specific files
-4. **Preview**: Select a file and click "Show" to preview the export result
-5. **Export**: Click "Export!" to process all files in the queue
-6. **Monitor Progress**: Watch the Status column for processing updates
 
 ## Output Structure
 
@@ -366,6 +367,24 @@ Additionally, a video image (overview) is saved as:
 ![OCTexVIEW Analyze Section Main Window](images/02_Analyze_mainWindow.png)
 
 The Analyze Section provides comprehensive tools for interactive image annotation, measurement, and data collection. This module is designed for detailed analysis of individual specimens with manual oversight and quality control, enabling researchers to annotate features, collect measurements, and compile results in a structured format.
+
+## Typical Workflow
+
+1. **Load Images**: Click "Select Folder" to load a folder of images
+2. **Configure Columns**: 
+   - Define custom columns with appropriate data types
+   - Assign keyboard shortcuts
+   - Choose colors for visual organization
+3. **Optional - Load Config**: Load a previously saved configuration to restore column setup
+4. **Annotate and Measure**:
+   - Navigate through images using arrow keys
+   - Draw annotations by clicking to add points
+   - Press F to toggle between line and spline modes
+   - Press assigned key to commit annotation and record measurement
+5. **Enter Additional Data**: Use keyboard shortcuts to enter Boolean, Categorical, or other data types
+6. **Review**: Press H to toggle annotation visibility and review your work
+7. **Undo if Needed**: Use Ctrl+Z for quick undo or Ctrl+U for selective undo
+8. **Save Configuration**: Click "Save Config" to save your column setup for future use
 
 ## Load Images Panel
 
@@ -644,24 +663,6 @@ Each custom column has a unique letter key (a-z, excluding f and h) that trigger
 ### Manual Save
 **Details**: Use the "Save Config" button to manually save the current configuration. Results and annotations are saved automatically.
 
-## Typical Workflow
-
-1. **Load Images**: Click "Select Folder" to load a folder of images
-2. **Configure Columns**: 
-   - Define custom columns with appropriate data types
-   - Assign keyboard shortcuts
-   - Choose colors for visual organization
-3. **Optional - Load Config**: Load a previously saved configuration to restore column setup
-4. **Annotate and Measure**:
-   - Navigate through images using arrow keys
-   - Draw annotations by clicking to add points
-   - Press F to toggle between line and spline modes
-   - Press assigned key to commit annotation and record measurement
-5. **Enter Additional Data**: Use keyboard shortcuts to enter Boolean, Categorical, or other data types
-6. **Review**: Press H to toggle annotation visibility and review your work
-7. **Undo if Needed**: Use Ctrl+Z for quick undo or Ctrl+U for selective undo
-8. **Save Configuration**: Click "Save Config" to save your column setup for future use
-
 ## Output Files
 
 ### results.csv
@@ -715,6 +716,27 @@ Each custom column has a unique letter key (a-z, excluding f and h) that trigger
 The CarlQuant Section implements advanced quantitative analysis algorithms specifically developed for OCT lesion depth analysis. This module offers automated lesion depth detection, region-of-interest extraction, batch processing with consistent parameters, and comprehensive statistical analysis for research studies.
 
 ![OCTexVIEW CarlQuant Section Main Window](images/03_CarlQuant_mainWindow.png)
+
+
+## Typical Workflow
+
+1. **Load Specimens**: Click "Select Folder" and choose a folder containing OCT image stacks
+2. **Enter Metadata**: Provide Operator and Measurement information when prompted
+3. **Configure Settings**:
+   - Select number of regions (must be even number)
+   - Choose detection method (Combined recommended)
+4. **Define Analysis Parameters** (per specimen/slice):
+   - Click four points to define region boundaries
+   - Drag rectangles to define AIR exclusion zones (if needed)
+5. **Start Analysis**: Click "Start Analyzing" to process all specimens
+6. **Review Results**:
+   - Select specimens in the table to view results
+   - Double-click rows to open A-Scan viewer for detailed inspection
+   - Toggle overlays (H key) to visualize detection results
+7. **Export Data**: Results are automatically saved to CSV files
+
+
+**Details**: The "Start Analyzing" button processes all loaded specimens sequentially. Each specimen is analyzed independently with the same settings. Progress is shown in the specimen table's STATE column.
 
 ## Load Images Panel
 
@@ -955,33 +977,6 @@ The A-Scan Viewer provides detailed visualization of intensity profiles for indi
 ### Keyboard Shortcuts
 
 - **Escape**: Close the A-Scan viewer
-
-## Analysis Workflow
-
-### Typical Workflow
-
-1. **Load Specimens**: Click "Select Folder" and choose a folder containing OCT image stacks
-2. **Enter Metadata**: Provide Operator and Measurement information when prompted
-3. **Configure Settings**:
-   - Select number of regions (must be even number)
-   - Choose detection method (Combined recommended)
-4. **Define Analysis Parameters** (per specimen/slice):
-   - Click four points to define region boundaries
-   - Drag rectangles to define AIR exclusion zones (if needed)
-5. **Start Analysis**: Click "Start Analyzing" to process all specimens
-6. **Review Results**:
-   - Select specimens in the table to view results
-   - Double-click rows to open A-Scan viewer for detailed inspection
-   - Toggle overlays (H key) to visualize detection results
-7. **Export Data**: Results are automatically saved to CSV files
-
-### Batch Processing
-
-**Details**: The "Start Analyzing" button processes all loaded specimens sequentially. Each specimen is analyzed independently with the same settings. Progress is shown in the specimen table's STATE column.
-
-**Thread Safety**: Analysis runs in a background thread to keep the UI responsive. You can continue viewing other specimens while processing is ongoing.
-
-**Memory Optimization**: Results are saved to disk after each specimen and cleared from memory to reduce RAM usage during large batch operations. Results are reloaded on-demand when you select a specimen for viewing.
 
 ## Data Persistence
 
