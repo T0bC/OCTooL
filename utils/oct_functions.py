@@ -12,6 +12,7 @@ import lxml
 import numpy as np
 import math
 from scipy import signal
+from scipy.ndimage import median_filter
 from PIL import ImageDraw, ImageFont
 from datetime import datetime
 from utils.error_handler import handle_errors
@@ -454,15 +455,17 @@ def createImageFromRaw(xmlDict: dict, archive: None, dBmin: int, dBmax: int, sel
         return np.clip(img_stack, a_min = 0, a_max = 255)
 
 # %%
-@handle_errors("oct_functions.octToGV")
-def octToGV(cBscan, dBmin: int, dBmax: int, advancedFilter: str):
-
+@handle_errors("oct_functions.octToGV_legacy")
+def octToGV_legacy(cBscan, dBmin: int, dBmax: int, advancedFilter: str):
     '''
+    LEGACY VERSION - Kept as backup. Use octToGV() instead.
+    
     Computes greyvalues from complex number of the spectral data.
     The Matlab implementation of 'uint8' uses saturation arithmetic unlike
     python which uses modular arithmetic. Using numpy.clip() is the equivalent.
 
     Advanced local filtering is used to minimize low local noise outliers.
+    NOTE: This version is very slow due to Python loop over individual pixels.
 
     --------------------------------------------------
     Original Matlab implementation.
@@ -496,6 +499,61 @@ def octToGV(cBscan, dBmin: int, dBmax: int, advancedFilter: str):
         for value in range(len(outlierList[0])):
             temp[outlierList[0][value],outlierList[1][value]] = np.median(temp[outlierList[0][value] -1 : outlierList[0][value] + 2 ,
                                                                                outlierList[1][value] -1 : outlierList[1][value] + 2])
+
+    return np.clip(temp, a_min = 0, a_max = 255)
+
+# %%
+@handle_errors("oct_functions.octToGV")
+def octToGV(cBscan, dBmin: int, dBmax: int, advancedFilter: str):
+    '''
+    Computes greyvalues from complex number of the spectral data.
+    The Matlab implementation of 'uint8' uses saturation arithmetic unlike
+    python which uses modular arithmetic. Using numpy.clip() is the equivalent.
+
+    Advanced local filtering selectively removes dark speckles (values < 50) by
+    replacing them with the median of their 3x3 neighborhood. This preserves
+    the rest of the image while removing troublesome dark outliers.
+
+    --------------------------------------------------
+    Original Matlab implementation.
+    GW = uint8(255*(20*log10(abs(cBScan)) - dBmin)/(dBmax - dBmin));
+
+    (https://en.wikipedia.org/wiki/Saturation_arithmetic,
+     https://en.wikipedia.org/wiki/Modular_arithmetic)
+
+    Parameters
+    ----------
+    cBscan : Array of complex128
+        2D-Array of complex spectral data.
+    dBmin : int
+        Minimum Dezibel.
+    dBmax : int
+        Maximum Dezibel.
+    advancedFilter : str
+        Switch for advanced local Filtering of dark speckles.
+        'selected' = replace only dark pixels (< 50) with local median.
+
+    Returns
+    -------
+    uint8 numpy array
+        2D array with values clipped to 0-255 range.
+
+    '''
+
+    temp = 255*(20 * np.log10(abs(cBscan)) - dBmin) / (dBmax - dBmin)
+    #temp[0:6, 0:np.shape(temp)[1]] = 25 # one could make the first 6 lines black if desired
+
+    if advancedFilter == 'selected':
+        # Vectorized approach: replace dark speckles with VERTICAL median only
+        # This preserves A-scan structure by only using neighbors in depth direction
+        mask = temp < 100
+        
+        # Apply 1D median filter along axis 0 (vertical/depth direction only)
+        # size=(3,1) means 3 pixels vertically, 1 pixel horizontally (no horizontal smoothing)
+        filtered = median_filter(temp, size=(5, 1), mode='reflect')
+        
+        # Only replace pixels where mask is True (dark speckles)
+        temp = np.where(mask, filtered, temp)
 
     return np.clip(temp, a_min = 0, a_max = 255)
 
