@@ -61,7 +61,7 @@ class loadImagePanel:
 
     @handle_errors("loadImagePanel.selectFolder")
     def selectFolder(self):
-        """Select folder and prompt for metadata before loading specimens."""
+        """Select folder and check metadata before loading specimens."""
         folder_path = filedialog.askdirectory(title="Select CarlQuant Data Folder")
         if not folder_path:
             self.context.status_bar.update("No folder selected.", level="warning")
@@ -70,7 +70,27 @@ class loadImagePanel:
         # Store folder path temporarily
         self.pending_folder_path = Path(folder_path)
         
-        # Prompt for metadata first, then load specimens
+        # Check if metadata fields are already filled
+        settings_panel = self.context.get_panel("carl_settings")
+        if settings_panel:
+            operator = settings_panel.operatorVar.get().strip()
+            measurement_str = settings_panel.measurementVar.get().strip()
+            
+            # Only prompt if fields are empty
+            if operator and measurement_str:
+                try:
+                    measurement = int(measurement_str)
+                    # Metadata is valid, store it and proceed
+                    self.context.analysis_metadata = {
+                        "operator": operator,
+                        "measurement": measurement
+                    }
+                    self.load_specimens_with_metadata()
+                    return
+                except ValueError:
+                    pass  # Invalid measurement, will prompt
+        
+        # Prompt for metadata if not set or invalid
         prompt_for_metadata(
             self.root, 
             self.context, 
@@ -79,7 +99,15 @@ class loadImagePanel:
         )
     
     def load_specimens_with_metadata(self):
-        """Load specimens after metadata is set, checking for existing results."""
+        """
+        Load specimens after metadata is set, checking for existing results.
+        
+        Logic:
+        - Uses operator and measurement metadata to identify the target Data_{operator}_{measurement} folder
+        - If a matching folder exists, loads configuration and results from it
+        - If no matching folder exists (different operator/measurement), specimen is marked as "New"
+        - This allows re-analysis with different metadata without overwriting previous results
+        """
         if not hasattr(self, 'pending_folder_path'):
             return
         
@@ -94,7 +122,7 @@ class loadImagePanel:
         # Update settings panel entry fields
         self.update_settings_panel_metadata(operator, measurement)
         
-        # Load specimens
+        # Load specimens (excludes 'annotations' folders automatically)
         self.context.specimen_data = DataLoader.find_image_stacks(root)
         
         # Check each specimen for matching Data_{operator}_{measurement} folder
@@ -103,7 +131,7 @@ class loadImagePanel:
             specimen.operator = operator
             specimen.measurement = measurement
             
-            # Check if a Data folder exists for this operator/measurement
+            # Check if a Data folder exists for this specific operator/measurement combination
             expected_data_folder = specimen.source / f"Data_{operator}_{measurement}"
             
             if expected_data_folder.exists() and expected_data_folder.is_dir():
@@ -130,6 +158,10 @@ class loadImagePanel:
                             num_regions = sum(1 for r in first_result.region_stats if r.region_type == "sound")
                             settings_panel.regionVar.set(num_regions)
                             settings_panel.lock_region_dropdown(True)
+            else:
+                # No matching Data folder - specimen will be analyzed fresh with current metadata
+                # Other Data folders (different operator/measurement) are preserved and ignored
+                pass
         
         # Update specimen panel display
         specimen_panel = self.context.get_panel("carl_specimen")
