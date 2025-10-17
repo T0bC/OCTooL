@@ -16,6 +16,7 @@ import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.error_handler import handle_errors
+from carlquant_frames.carl_quant_core import fit_exp2_to_profile, detect_depth_sigmoid_fit
 
 
 class AScanViewer:
@@ -48,16 +49,21 @@ class AScanViewer:
         
         # Visualization toggles
         self.show_surface = tk.BooleanVar(value=True)
-        self.show_knee_point = tk.BooleanVar(value=True)
-        self.show_sigmoid_inflection = tk.BooleanVar(value=True)
-        self.show_sigmoid_shoulder = tk.BooleanVar(value=True)
+        self.show_knee_point = tk.BooleanVar(value=False)
+        self.show_sigmoid_inflection = tk.BooleanVar(value=False)
+        self.show_sigmoid_shoulder = tk.BooleanVar(value=False)
         self.show_combined_depth = tk.BooleanVar(value=True)
         self.show_exp2_fit = tk.BooleanVar(value=False)
         self.show_sigmoid_fit = tk.BooleanVar(value=False)
+        self.zoom_to_analysis = tk.BooleanVar(value=False)  # Zoom to analysis region
         
         # Cached specimen data
         self.specimen = None
         self.slice_result = None
+        
+        # Hover annotation data
+        self.annotation_points = []  # List of (x, y, label, artist) tuples
+        self.hover_annotation = None  # Matplotlib annotation object
     
     @handle_errors("AScanViewer.show")
     def show(self):
@@ -75,11 +81,11 @@ class AScanViewer:
         self.dialog.transient(self.parent)
         # NOTE: No grab_set() to keep it non-blocking
         
-        # Set size and position
-        dialog_width = 900
-        dialog_height = 700
+        # Set size and position (narrower but taller, responsive to screen height)
         screen_width = self.dialog.winfo_screenwidth()
         screen_height = self.dialog.winfo_screenheight()
+        dialog_width = 400  # Narrower than before (was 900)
+        dialog_height = int(screen_height * 0.75)  # 75% of screen height
         x = (screen_width - dialog_width) // 2
         y = (screen_height - dialog_height) // 2
         self.dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
@@ -98,44 +104,50 @@ class AScanViewer:
         # Load specimen data for annotations
         self._load_specimen_data()
         
-        # Toggles frame
+        # Toggles frame with grid layout for neat 2-column alignment
         toggles_frame = ttk.LabelFrame(main_frame, text="Display Options", padding=10)
         toggles_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Create two rows of checkboxes
-        row1 = ttk.Frame(toggles_frame)
-        row1.pack(fill=tk.X, pady=(0, 5))
-        row2 = ttk.Frame(toggles_frame)
-        row2.pack(fill=tk.X)
+        # Configure grid columns to distribute evenly
+        toggles_frame.columnconfigure(0, weight=1)
+        toggles_frame.columnconfigure(1, weight=1)
         
-        # Row 1: Surface and depth markers
-        ttk.Checkbutton(row1, text="Surface Points", variable=self.show_surface, 
-                       command=self._update_plot).pack(side=tk.LEFT, padx=5)
-        ttk.Checkbutton(row1, text="Knee Point", variable=self.show_knee_point, 
-                       command=self._update_plot).pack(side=tk.LEFT, padx=5)
-        ttk.Checkbutton(row1, text="Sigmoid Inflection", variable=self.show_sigmoid_inflection, 
-                       command=self._update_plot).pack(side=tk.LEFT, padx=5)
-        ttk.Checkbutton(row1, text="Sigmoid Shoulder", variable=self.show_sigmoid_shoulder, 
-                       command=self._update_plot).pack(side=tk.LEFT, padx=5)
+        # Checkboxes in 2 columns using grid
+        ttk.Checkbutton(toggles_frame, text="Surface Points", variable=self.show_surface, 
+                       command=self._update_plot).grid(row=0, column=0, sticky='w', padx=5, pady=2)
+        ttk.Checkbutton(toggles_frame, text="Knee Point", variable=self.show_knee_point, 
+                       command=self._update_plot).grid(row=0, column=1, sticky='w', padx=5, pady=2)
         
-        # Row 2: Combined depth and fit curves
-        ttk.Checkbutton(row2, text="Combined Depth", variable=self.show_combined_depth, 
-                       command=self._update_plot).pack(side=tk.LEFT, padx=5)
-        ttk.Checkbutton(row2, text="Exp2 Fit Curve", variable=self.show_exp2_fit, 
-                       command=self._update_plot).pack(side=tk.LEFT, padx=5)
-        ttk.Checkbutton(row2, text="Sigmoid Fit Curve", variable=self.show_sigmoid_fit, 
-                       command=self._update_plot).pack(side=tk.LEFT, padx=5)
+        ttk.Checkbutton(toggles_frame, text="Sigmoid Inflection", variable=self.show_sigmoid_inflection, 
+                       command=self._update_plot).grid(row=1, column=0, sticky='w', padx=5, pady=2)
+        ttk.Checkbutton(toggles_frame, text="Sigmoid Shoulder", variable=self.show_sigmoid_shoulder, 
+                       command=self._update_plot).grid(row=1, column=1, sticky='w', padx=5, pady=2)
         
-        # Slider frame
-        slider_frame = ttk.Frame(main_frame)
-        slider_frame.pack(fill=tk.X, pady=(0, 15))
+        ttk.Checkbutton(toggles_frame, text="Combined Depth", variable=self.show_combined_depth, 
+                       command=self._update_plot).grid(row=2, column=0, sticky='w', padx=5, pady=2)
+        ttk.Checkbutton(toggles_frame, text="Exp2 Fit Curve", variable=self.show_exp2_fit, 
+                       command=self._update_plot).grid(row=2, column=1, sticky='w', padx=5, pady=2)
         
+        ttk.Checkbutton(toggles_frame, text="Sigmoid Fit Curve", variable=self.show_sigmoid_fit, 
+                       command=self._update_plot).grid(row=3, column=0, sticky='w', padx=5, pady=2)
+        ttk.Checkbutton(toggles_frame, text="Zoom to Analysis", variable=self.zoom_to_analysis, 
+                       command=self._update_plot).grid(row=3, column=1, sticky='w', padx=5, pady=2)
+        
+        # Slider frame with label above
+        slider_container = ttk.Frame(main_frame)
+        slider_container.pack(fill=tk.X, pady=(0, 15))
+        
+        # Label above slider
         slider_label = ttk.Label(
-            slider_frame,
-            text="A-Scan Column (X position):",
-            font=('Segoe UI', 10)
+            slider_container,
+            text="A-Scan",
+            font=('Segoe UI', 10, 'bold')
         )
-        slider_label.pack(side=tk.LEFT, padx=(0, 10))
+        slider_label.pack(side=tk.TOP, anchor='w', pady=(0, 5))
+        
+        # Slider and column number in horizontal layout
+        slider_frame = ttk.Frame(slider_container)
+        slider_frame.pack(fill=tk.X)
         
         # Initialize to middle column
         self.current_column = img_width // 2
@@ -150,17 +162,22 @@ class AScanViewer:
         self.slider.set(self.current_column)
         self.slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
+        # Column number (no "Column:" prefix)
         self.column_label = ttk.Label(
             slider_frame,
-            text=f"Column: {self.current_column}",
+            text=f"{self.current_column}",
             font=('Segoe UI', 10),
-            width=15
+            width=6
         )
         self.column_label.pack(side=tk.LEFT)
         
         # Plot frame
         plot_frame = ttk.Frame(main_frame)
         plot_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Force window to update geometry before creating plot
+        # This ensures the plot knows the correct size on initialization
+        self.dialog.update_idletasks()
         
         # Create matplotlib figure
         self._create_plot(plot_frame)
@@ -251,8 +268,8 @@ class AScanViewer:
     @handle_errors("AScanViewer._create_plot")
     def _create_plot(self, parent_frame):
         """Create the matplotlib plot for A-Scan visualization."""
-        # Create figure with dark background
-        self.figure = Figure(figsize=(8, 5), facecolor='#2b2b2b')
+        # Create figure with dark background (smaller width for narrow window)
+        self.figure = Figure(figsize=(5, 6), facecolor='#2b2b2b')
         self.ax = self.figure.add_subplot(111)
         
         # Set dark theme for plot
@@ -261,7 +278,7 @@ class AScanViewer:
         self.ax.spines['top'].set_color('#dcdcdc')
         self.ax.spines['left'].set_color('#dcdcdc')
         self.ax.spines['right'].set_color('#dcdcdc')
-        self.ax.tick_params(colors='#dcdcdc', which='both')
+        self.ax.tick_params(colors='#dcdcdc', which='both', labelsize=8)
         self.ax.xaxis.label.set_color('#dcdcdc')
         self.ax.yaxis.label.set_color('#dcdcdc')
         self.ax.title.set_color('#dcdcdc')
@@ -270,8 +287,46 @@ class AScanViewer:
         self.canvas = FigureCanvasTkAgg(self.figure, parent_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # Initial plot
+        # Create hover annotation (initially invisible)
+        self.hover_annotation = self.ax.annotate(
+            '', xy=(0, 0), xytext=(10, 10),
+            textcoords='offset points',
+            bbox=dict(boxstyle='round,pad=0.5', fc='#3a3a3a', ec='#dcdcdc', alpha=0.95),
+            color='#dcdcdc',
+            fontsize=8,
+            visible=False,
+            zorder=100
+        )
+        
+        # Connect mouse motion event for hover functionality
+        self.canvas.mpl_connect('motion_notify_event', self._on_hover)
+        
+        # Initial plot - force draw to ensure proper rendering
         self._update_plot()
+        self.canvas.draw_idle()
+        self.figure.tight_layout()
+        self.canvas.draw()
+    
+    def _plot_point_with_hover(self, x, y, hover_label, legend_label, marker='o', color='white', markersize=8, zorder=5):
+        """Plot a point and store it for hover functionality.
+        
+        Args:
+            x: X coordinate (intensity)
+            y: Y coordinate (depth)
+            hover_label: Label for hover tooltip (with coordinates)
+            legend_label: Label for legend (without coordinates)
+            marker: Matplotlib marker style
+            color: Marker color
+            markersize: Size of marker
+            zorder: Z-order for layering
+        
+        Returns:
+            The artist object from the plot
+        """
+        artist = self.ax.plot(x, y, marker, color=color, markersize=markersize, 
+                             label=legend_label, zorder=zorder, picker=5)[0]
+        self.annotation_points.append((x, y, hover_label, artist))
+        return artist
     
     @handle_errors("AScanViewer._update_plot")
     def _update_plot(self):
@@ -285,13 +340,23 @@ class AScanViewer:
         # Y-axis is depth (0 at top, increasing downward)
         y_positions = np.arange(len(column_data))
         
-        # Clear previous plot
+        # Clear previous plot and annotation points
         self.ax.clear()
+        self.annotation_points = []  # Reset annotation points for new plot
         
-        # Plot intensity vs depth (main A-scan line)
-        self.ax.plot(column_data, y_positions, color='#00d4ff', linewidth=1.0, label='A-Scan', zorder=1)
+        # Recreate hover annotation after clearing (ax.clear() removes all artists)
+        if self.hover_annotation is not None:
+            self.hover_annotation = self.ax.annotate(
+                '', xy=(0, 0), xytext=(10, 10),
+                textcoords='offset points',
+                bbox=dict(boxstyle='round,pad=0.5', fc='#3a3a3a', ec='#dcdcdc', alpha=0.95),
+                color='#dcdcdc',
+                fontsize=8,
+                visible=False,
+                zorder=100
+            )
         
-        # Get surface and lesion depth data for this column
+        # Get surface and lesion depth data for this column FIRST
         surface_y = None
         interpolated_surface_y = None
         lesion_detection_data = None
@@ -321,87 +386,175 @@ class AScanViewer:
                 if lesion_depth.lesion_detection_data and self.current_column in lesion_depth.lesion_detection_data:
                     lesion_detection_data = lesion_depth.lesion_detection_data[self.current_column]
         
+        # Plot intensity vs depth (main A-scan line)
+        # Split into parts: before surface (cyan) and after surface (orange for fitting region)
+        if surface_y is not None:
+            # Part before surface
+            before_surface = y_positions <= surface_y
+            if np.any(before_surface):
+                self.ax.plot(column_data[before_surface], y_positions[before_surface], 
+                            color='#00d4ff', linewidth=1.0, label='A-Scan (above surface)', zorder=1)
+            
+            # Part after surface (fitting region, typically 200px)
+            fitting_region = (y_positions > surface_y) & (y_positions <= surface_y + 200)
+            remaining_region = y_positions > surface_y + 200
+            
+            # Fitting region in dark green (better contrast for sigmoid fit)
+            if np.any(fitting_region):
+                self.ax.plot(column_data[fitting_region], y_positions[fitting_region], 
+                            color='#1c6b46', linewidth=1.0, label='A-Scan (fitting region)', zorder=1)
+            
+            # Remaining region in darker cyan
+            if np.any(remaining_region):
+                self.ax.plot(column_data[remaining_region], y_positions[remaining_region], 
+                            color='#0088aa', linewidth=1.0, label='A-Scan (below fitting)', zorder=1)
+        else:
+            # No surface detected, plot entire A-scan in cyan
+            self.ax.plot(column_data, y_positions, color='#00d4ff', linewidth=1.0, label='A-Scan', zorder=1)
+        
         # Plot surface points
         if self.show_surface.get():
             if surface_y is not None:
                 intensity = column_data[int(surface_y)] if int(surface_y) < len(column_data) else 128
-                self.ax.plot(intensity, surface_y, 'o', color='#00ff00', markersize=8, 
-                           label='Actual Surface', zorder=5)
+                self._plot_point_with_hover(
+                    intensity, surface_y, 
+                    f'Actual Surface\nX: {intensity:.1f}\nY: {surface_y:.1f}',
+                    'Actual Surface',
+                    'o', '#00ff00', 8, 5)
             
             if interpolated_surface_y is not None:
                 intensity = column_data[int(interpolated_surface_y)] if int(interpolated_surface_y) < len(column_data) else 128
-                self.ax.plot(intensity, interpolated_surface_y, 's', color='#00ff88', markersize=8, 
-                           label='Interpolated Surface', zorder=5)
+                self._plot_point_with_hover(
+                    intensity, interpolated_surface_y,
+                    f'Interpolated Surface\nX: {intensity:.1f}\nY: {interpolated_surface_y:.1f}',
+                    'Interpolated Surface',
+                    's', '#00ff88', 8, 5)
         
         # Plot detection method results if available
-        if lesion_detection_data:
+        if lesion_detection_data and surface_y is not None:
             metadata = lesion_detection_data.get('detection_metadata', {})
             
-            # Knee point
+            # Knee point (relative to surface)
             if self.show_knee_point.get() and 'knee_depth' in metadata:
                 knee_depth = metadata['knee_depth']
                 if not np.isnan(knee_depth):
-                    intensity = column_data[int(knee_depth)] if int(knee_depth) < len(column_data) else 128
-                    self.ax.plot(intensity, knee_depth, '^', color='#ff6b6b', markersize=10, 
-                               label='Knee Point', zorder=4)
+                    absolute_depth = surface_y + knee_depth
+                    if int(absolute_depth) < len(column_data):
+                        intensity = column_data[int(absolute_depth)]
+                        self._plot_point_with_hover(
+                            intensity, absolute_depth,
+                            f'Knee Point\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {knee_depth:.1f}px',
+                            'Knee Point',
+                            '^', '#ff6b6b', 10, 4)
             
-            # Sigmoid inflection point
+            # Sigmoid inflection point (relative to surface)
             if self.show_sigmoid_inflection.get() and 'inflection_depth' in metadata:
                 inflection_depth = metadata['inflection_depth']
                 if not np.isnan(inflection_depth):
-                    intensity = column_data[int(inflection_depth)] if int(inflection_depth) < len(column_data) else 128
-                    self.ax.plot(intensity, inflection_depth, 'v', color='#ffd93d', markersize=10, 
-                               label='Sigmoid Inflection', zorder=4)
+                    absolute_depth = surface_y + inflection_depth
+                    if int(absolute_depth) < len(column_data):
+                        intensity = column_data[int(absolute_depth)]
+                        self._plot_point_with_hover(
+                            intensity, absolute_depth,
+                            f'Sigmoid Inflection\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {inflection_depth:.1f}px',
+                            'Sigmoid Inflection',
+                            'v', '#ffd93d', 10, 4)
             
-            # Sigmoid shoulder point
+            # Sigmoid shoulder point (relative to surface)
             if self.show_sigmoid_shoulder.get() and 'shoulder_depth' in metadata:
                 shoulder_depth = metadata['shoulder_depth']
                 if not np.isnan(shoulder_depth):
-                    intensity = column_data[int(shoulder_depth)] if int(shoulder_depth) < len(column_data) else 128
-                    self.ax.plot(intensity, shoulder_depth, 'd', color='#ff9ff3', markersize=10, 
-                               label='Sigmoid Shoulder', zorder=4)
+                    absolute_depth = surface_y + shoulder_depth
+                    if int(absolute_depth) < len(column_data):
+                        intensity = column_data[int(absolute_depth)]
+                        self._plot_point_with_hover(
+                            intensity, absolute_depth,
+                            f'Sigmoid Shoulder\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {shoulder_depth:.1f}px',
+                            'Sigmoid Shoulder',
+                            'd', '#ff9ff3', 10, 4)
             
-            # Combined depth (final result)
-            if self.show_combined_depth.get() and 'depth_idx' in lesion_detection_data:
-                depth_idx = lesion_detection_data['depth_idx']
-                if len(depth_idx) > 0 and not np.isnan(depth_idx[0]):
-                    combined_depth = depth_idx[0]
-                    intensity = column_data[int(combined_depth)] if int(combined_depth) < len(column_data) else 128
-                    self.ax.plot(intensity, combined_depth, '*', color='#ff4757', markersize=15, 
-                               label='Combined Depth', zorder=6)
+            # Combined depth (final result, relative to surface)
+            if self.show_combined_depth.get():
+                # Try to get the actual detected depth
+                combined_depth = None
+                if 'actual_depth' in lesion_detection_data:
+                    combined_depth = lesion_detection_data['actual_depth']
+                elif 'knee_depth' in lesion_detection_data:
+                    combined_depth = lesion_detection_data['knee_depth']
+                
+                if combined_depth is not None and not np.isnan(combined_depth):
+                    absolute_depth = surface_y + combined_depth
+                    if int(absolute_depth) < len(column_data):
+                        intensity = column_data[int(absolute_depth)]
+                        self._plot_point_with_hover(
+                            intensity, absolute_depth,
+                            f'Combined Depth\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {combined_depth:.1f}px',
+                            'Combined Depth',
+                            '*', '#ff4757', 15, 6)
             
-            # Plot fit curves
-            if 'intensity' in lesion_detection_data:
-                intensity_values = lesion_detection_data['intensity']
+            # Plot fit curves (computed on-demand from image data)
+            # Get the profile start position
+            profile_start_y = lesion_detection_data.get('profile_start_y', surface_y)
+            
+            # Extract intensity profile from image (search_depth=200 as in algorithm)
+            search_depth = 200
+            if surface_y is not None and int(surface_y) < len(column_data):
+                start_y = int(surface_y)
+                end_y = min(start_y + search_depth, len(column_data))
+                intensity_profile = column_data[start_y:end_y]
+                depth_indices = np.arange(len(intensity_profile))
                 
-                # Exp2 fit curve
-                if self.show_exp2_fit.get() and 'exp2_fit' in metadata:
-                    exp2_fit = metadata['exp2_fit']
-                    if exp2_fit is not None and len(exp2_fit) == len(intensity_values):
-                        y_fit = np.arange(len(exp2_fit))
-                        if surface_y is not None:
-                            y_fit = y_fit + surface_y
-                        self.ax.plot(exp2_fit, y_fit, '--', color='#48dbfb', linewidth=2, 
-                                   label='Exp2 Fit', alpha=0.7, zorder=2)
+                # Exp2 fit curve (compute on-demand)
+                if self.show_exp2_fit.get() and len(intensity_profile) > 10:
+                    try:
+                        fit_result = fit_exp2_to_profile(intensity_profile, depth_indices)
+                        if fit_result is not None:
+                            exp2_fit, _ = fit_result
+                            # Create y positions starting from profile start
+                            y_fit = np.arange(len(exp2_fit)) + profile_start_y
+                            # Only plot points within image bounds
+                            valid_indices = y_fit < len(column_data)
+                            if np.any(valid_indices):
+                                self.ax.plot(exp2_fit[valid_indices], y_fit[valid_indices], '--', 
+                                           color='#48dbfb', linewidth=2.5, 
+                                           label='Exp2 Fit', alpha=0.9, zorder=3)
+                    except Exception:
+                        pass  # Silently skip if fitting fails
                 
-                # Sigmoid fit curve
-                if self.show_sigmoid_fit.get() and 'sigmoid_fit' in metadata:
-                    sigmoid_fit = metadata['sigmoid_fit']
-                    if sigmoid_fit is not None and len(sigmoid_fit) == len(intensity_values):
-                        y_fit = np.arange(len(sigmoid_fit))
-                        if surface_y is not None:
-                            y_fit = y_fit + surface_y
-                        self.ax.plot(sigmoid_fit, y_fit, '--', color='#feca57', linewidth=2, 
-                                   label='Sigmoid Fit', alpha=0.7, zorder=2)
+                # Sigmoid fit curve (compute on-demand)
+                if self.show_sigmoid_fit.get() and len(intensity_profile) > 10:
+                    try:
+                        _, _, sigmoid_meta = detect_depth_sigmoid_fit(intensity_profile, depth_indices)
+                        if sigmoid_meta.get('success') and 'fitted_curve' in sigmoid_meta:
+                            sigmoid_fit = np.array(sigmoid_meta['fitted_curve'])
+                            # Create y positions starting from profile start
+                            y_fit = np.arange(len(sigmoid_fit)) + profile_start_y
+                            # Only plot points within image bounds
+                            valid_indices = y_fit < len(column_data)
+                            if np.any(valid_indices):
+                                self.ax.plot(sigmoid_fit[valid_indices], y_fit[valid_indices], '--', 
+                                           color='#feca57', linewidth=2.5, 
+                                           label='Sigmoid Fit', alpha=0.9, zorder=3)
+                    except Exception:
+                        pass  # Silently skip if fitting fails
         
-        # Set labels and title
-        self.ax.set_xlabel('Gray Value (Intensity)', fontsize=11, color='#dcdcdc')
-        self.ax.set_ylabel('Depth (Y Position)', fontsize=11, color='#dcdcdc')
-        self.ax.set_title(f'A-Scan at Column {self.current_column}', fontsize=12, color='#dcdcdc', pad=10)
+        # Set labels and title (smaller fonts for narrow window)
+        self.ax.set_xlabel('Gray Value', fontsize=9, color='#dcdcdc')
+        self.ax.set_ylabel('Depth (px)', fontsize=9, color='#dcdcdc')
+        self.ax.set_title(f'A-Scan at Column {self.current_column}', fontsize=10, color='#dcdcdc', pad=8)
         
         # Set limits
         self.ax.set_xlim(0, 255)
-        self.ax.set_ylim(len(column_data), 0)  # Invert Y-axis (0 at top)
+        
+        # Y-axis limits: zoom to analysis region if enabled
+        if self.zoom_to_analysis.get() and surface_y is not None:
+            # Show from surface to ~250px below (analysis region + some margin)
+            y_min = max(0, int(surface_y) - 20)  # Small margin above surface
+            y_max = min(len(column_data), int(surface_y) + 250)  # Analysis region + margin
+            self.ax.set_ylim(y_max, y_min)  # Invert Y-axis (0 at top)
+        else:
+            # Show full A-scan
+            self.ax.set_ylim(len(column_data), 0)  # Invert Y-axis (0 at top)
         
         # Grid
         self.ax.grid(True, alpha=0.2, color='#dcdcdc')
@@ -409,7 +562,7 @@ class AScanViewer:
         # Legend (only if there are annotations to show)
         handles, labels = self.ax.get_legend_handles_labels()
         if len(handles) > 1:  # More than just the A-Scan line
-            self.ax.legend(loc='upper right', fontsize=9, framealpha=0.9, 
+            self.ax.legend(loc='lower right', fontsize=7, framealpha=0.9, 
                           facecolor='#2b2b2b', edgecolor='#dcdcdc', labelcolor='#dcdcdc')
         
         # Tight layout
@@ -423,7 +576,7 @@ class AScanViewer:
         """Handle slider value change."""
         self.current_column = int(float(value))
         if hasattr(self, 'column_label'):
-            self.column_label.config(text=f"Column: {self.current_column}")
+            self.column_label.config(text=f"{self.current_column}")
         if hasattr(self, 'ax'):
             self._update_plot()
         # Update indicator line in image viewer
@@ -475,7 +628,7 @@ class AScanViewer:
         
         # Update column label
         if hasattr(self, 'column_label'):
-            self.column_label.config(text=f"Column: {self.current_column}")
+            self.column_label.config(text=f"{self.current_column}")
         
         # Update window title
         if self.dialog:
@@ -487,6 +640,44 @@ class AScanViewer:
         
         # Update indicator in image viewer
         self._update_image_indicator()
+    
+    def _on_hover(self, event):
+        """Handle mouse hover events to show annotation tooltips.
+        
+        Args:
+            event: Matplotlib mouse motion event
+        """
+        if event.inaxes != self.ax or not self.hover_annotation:
+            if self.hover_annotation and self.hover_annotation.get_visible():
+                self.hover_annotation.set_visible(False)
+                self.figure.canvas.draw_idle()
+            return
+        
+        # Check if mouse is near any annotation point
+        hover_threshold = 15  # pixels
+        found_point = False
+        
+        for x, y, label, artist in self.annotation_points:
+            # Transform data coordinates to display coordinates
+            display_coords = self.ax.transData.transform([[x, y]])[0]
+            mouse_coords = np.array([event.x, event.y])
+            
+            # Calculate distance
+            distance = np.sqrt(np.sum((display_coords - mouse_coords) ** 2))
+            
+            if distance < hover_threshold:
+                # Show annotation
+                self.hover_annotation.xy = (x, y)
+                self.hover_annotation.set_text(label)
+                self.hover_annotation.set_visible(True)
+                found_point = True
+                break
+        
+        if not found_point and self.hover_annotation.get_visible():
+            self.hover_annotation.set_visible(False)
+        
+        # Force canvas update to ensure annotation visibility changes are rendered
+        self.figure.canvas.draw_idle()
     
     def destroy(self):
         """Close the dialog window."""
