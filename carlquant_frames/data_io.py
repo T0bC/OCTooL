@@ -294,7 +294,9 @@ class DataLoader:
                     continue
 
                 try:
-                    slice_index = row[0] if isinstance(row[0], int) else i
+                    # Excel now uses 1-based slice numbers, convert back to 0-based for internal storage
+                    slice_index_from_excel = row[0] if isinstance(row[0], int) else (i + 1)
+                    slice_index = slice_index_from_excel - 1  # Convert to 0-based
                     sound_medians = row[1 : 1 + sound_count]
                     lesion_medians = row[1 + sound_count : 1 + sound_count + lesion_count]
                     lesion_depth_mean = row[1 + sound_count + lesion_count]
@@ -351,8 +353,9 @@ class DataSaver:
         headers += ["LESION_DEPTH_MEAN", "IS_CAVITATED"]
         ws_summary.append(headers)
 
-        for slice_index, result in specimen.results.items():
-            row = [slice_index]
+        # Sort by slice_index (ascending) and use 1-based numbering for humans
+        for slice_index, result in sorted(specimen.results.items(), key=lambda x: x[0]):
+            row = [slice_index + 1]
             row += [r.median for r in result.region_stats if r.region_type == "sound"]
             row += [r.median for r in result.region_stats if r.region_type == "lesion"]
             row += [result.lesion_depth.mean_depth if result.lesion_depth else 0]
@@ -376,7 +379,8 @@ class DataSaver:
         ws_pixels.append(pixel_headers)
         
         # Transpose data: one row per pixel instead of one row per region
-        for slice_index, result in specimen.results.items():
+        # Sort by slice_index (ascending) and use 1-based numbering
+        for slice_index, result in sorted(specimen.results.items(), key=lambda x: x[0]):
             # Get all regions for this slice
             sound_regions = [r for r in result.region_stats if r.region_type == "sound"]
             lesion_regions = [r for r in result.region_stats if r.region_type == "lesion"]
@@ -389,7 +393,7 @@ class DataSaver:
             
             # Write one row per pixel
             for pixel_idx in range(max_pixels):
-                row = [slice_index, pixel_idx + 1]
+                row = [slice_index + 1, pixel_idx + 1]
                 
                 # Add sound region values for this pixel
                 for sound_region in sound_regions:
@@ -418,15 +422,16 @@ class DataSaver:
         ws_surface = wb.create_sheet("Surface & Depth")
         ws_surface.append(["SLICE", "TYPE", "X", "Y"])
 
-        for slice_index, result in specimen.results.items():
+        # Sort by slice_index (ascending) and use 1-based numbering
+        for slice_index, result in sorted(specimen.results.items(), key=lambda x: x[0]):
             for x, y in result.surface.raw_points:
-                ws_surface.append([slice_index, "raw_surface", x, y])
+                ws_surface.append([slice_index + 1, "raw_surface", x, y])
             for curve_name, points in result.surface.fitted_curves.items():
                 for x, y in points:
-                    ws_surface.append([slice_index, f"curve_{curve_name}", x, y])
+                    ws_surface.append([slice_index + 1, f"curve_{curve_name}", x, y])
             if result.lesion_depth and result.lesion_depth.depth_points:
                 for x, y in result.lesion_depth.depth_points:
-                    ws_surface.append([slice_index, "lesion_depth", x, y])
+                    ws_surface.append([slice_index + 1, "lesion_depth", x, y])
 
         # === Save to disk ===
         operator = getattr(specimen, "operator", "OP")
