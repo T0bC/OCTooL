@@ -123,8 +123,10 @@ class resultsPanel:
 
         # Populate results table with summary
         rows = []
-        for slice_index, result in specimen.results.items():
-            row = [specimen.specimen_id, slice_index]
+        # Sort by slice_index (ascending) for consistent display
+        for slice_index, result in sorted(specimen.results.items(), key=lambda x: x[0]):
+            # Display slice as 1-based for humans (slice 0 becomes 1, etc.)
+            row = [specimen.specimen_id, slice_index + 1]
 
             # Sound region medians
             sound_regions = [r for r in result.region_stats if r.region_type == "sound"]
