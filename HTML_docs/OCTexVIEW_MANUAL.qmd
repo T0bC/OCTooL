@@ -1154,5 +1154,3 @@ Located in each specimen folder, this directory contains:
 **Cause**: Results not loaded or slice index out of range
 
 **Solution**: Ensure the specimen has been analyzed and results are saved
-
-
