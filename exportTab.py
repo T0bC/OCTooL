@@ -23,12 +23,15 @@ def addContent(self, frame):
     self.attach_status_bar(self.context)
 
 
+    # Column configuration: col 0 (settings) fixed, col 1 (tree/image) expands
     self.exportTabFrame.columnconfigure(0, weight=0)
     self.exportTabFrame.columnconfigure(1, weight=1)
-    self.exportTabFrame.rowconfigure(0, weight=1)
-    self.exportTabFrame.rowconfigure(1, weight=1)
-    self.exportTabFrame.rowconfigure(4, weight=1)
-    self.exportTabFrame.rowconfigure(5, weight=1)
+    # Row configuration: only row 5 (image viewer) expands vertically
+    self.exportTabFrame.rowconfigure(0, weight=0)  # pickFrame - fixed height
+    self.exportTabFrame.rowconfigure(1, weight=0)  # glblSttngsFrame - fixed height
+    self.exportTabFrame.rowconfigure(4, weight=0)  # cstmSttngsFrame - fixed height
+    self.exportTabFrame.rowconfigure(5, weight=1)  # imgFrame - expands vertically
+    self.exportTabFrame.rowconfigure(9, weight=0)  # excFrame - fixed height
 
     # Create and register frames
     self.treeFrame = ttk.LabelFrame(self.exportTabFrame, text='Queue', relief=tk.RIDGE)
