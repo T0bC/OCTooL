@@ -10,6 +10,58 @@ format:
 editor: visual
 ---
 
+# Version 1.2.1 (2025-10-16)
+
+## Carl Quant Module - A-Scan Viewer
+
+### Interactive Visualization
+-   Implemented dedicated A-Scan viewer with double-click activation from results panel
+-   Added intensity profile visualization with interactive column selection
+-   Implemented synchronized A-scan column indicator with slice navigation
+-   Redesigned viewer with hover annotations and responsive layout
+-   Added toggleable annotations and curve fits to A-scan visualization
+
+## Carl Quant Module - Algorithm Improvements
+
+### Lesion Depth Detection
+-   Implemented offset-based depth correction with adaptive weighting
+-   Added robust lesion depth curve fitting with spike removal and outlier detection
+-   Improved lesion depth averaging with debug visualization of individual detection methods
+-   Simplified depth detection logic to use knee point as initial placeholder
+-   Optimized stability analysis by collecting raw points during A-scan processing
+
+### Cavitation Detection
+-   Implemented cavitation-aware lesion depth measurement
+-   Standardized cavitation status output to TRUE/FALSE strings with blank fallback
+
+## Carl Quant Module - Data Management
+
+### Results & Export
+-   Fixed slice indices conversion from 0-based internal to 1-based Excel representation
+-   Implemented metadata-based result loading with improved folder skipping for annotations
+-   Simplified annotation output by using original filenames
+-   Added table update when region number changes
+-   Implemented lock feature to avoid conflicts when results table exists
+
+### Image Export
+-   Implemented image saving routines with annotation overlays
+
+## Code Refactoring & Cleanup
+
+### Naming & Clarity
+-   Renamed `knee_data` to `lesion_detection_data` for consistency
+-   Renamed surface curve types from spline/reference to actual/interpolated
+-   Renamed x variable to `ascan_x` for clarity in lesion depth calculation
+-   Simplified knee point detection logic by removing redundant profile handling
+
+### Performance & Maintenance
+-   Optimized memory usage in lesion depth calculations
+-   Removed unused `surface_offset` parameter
+-   Removed profile logger and debug printouts
+-   Removed obsolete files
+
+------------------------------------------------------------------------
+
 # Version 1.2.0 (2025-10-10)
 
 ## Carl Quant Module - Core Algorithm Enhancements
