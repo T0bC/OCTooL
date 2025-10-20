@@ -40,7 +40,7 @@ class ProgressDialog:
         # Create dialog window
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("CarlQuant Analysis Progress")
-        self.dialog.geometry("500x250")
+        self.dialog.geometry("500x280")
         self.dialog.resizable(False, False)
         
         # Make dialog modal
@@ -106,6 +106,18 @@ class ProgressDialog:
             maximum=self.total_specimens
         )
         self.overall_progress.pack(fill=tk.X, pady=(5, 0))
+        
+        # Processing mode section
+        mode_frame = ttk.Frame(main_frame)
+        mode_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Label(mode_frame, text="Processing Mode:", font=("TkDefaultFont", 9, "bold")).pack(side=tk.LEFT)
+        self.mode_label = ttk.Label(
+            mode_frame,
+            text="Initializing...",
+            foreground="blue"
+        )
+        self.mode_label.pack(side=tk.LEFT, padx=(5, 0))
         
         # Current specimen section
         specimen_frame = ttk.LabelFrame(main_frame, text="Current Specimen", padding=10)
@@ -212,6 +224,26 @@ class ProgressDialog:
         """
         def _update():
             self.status_label.config(text=message, foreground=color)
+        
+        # Schedule update on main thread
+        self.dialog.after(0, _update)
+    
+    def set_processing_mode(self, mode, num_workers=None):
+        """
+        Set the processing mode display.
+        
+        Args:
+            mode: "parallel" or "sequential"
+            num_workers: Number of workers (for parallel mode)
+        """
+        def _update():
+            if mode == "parallel":
+                text = f"Parallel ({num_workers} workers)" if num_workers else "Parallel"
+                color = "green"
+            else:
+                text = "Sequential"
+                color = "blue"
+            self.mode_label.config(text=text, foreground=color)
         
         # Schedule update on main thread
         self.dialog.after(0, _update)
