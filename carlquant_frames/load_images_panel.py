@@ -54,7 +54,7 @@ class loadImagePanel:
         Tooltip(self.removeSelectedBtn, text=self.removeSelectedTooltip, wraplength=200)
 
         # Clear Coordinates Button
-        self.clearCoordsTooltip = 'Clear all REGION boundaries and AIR coordinates for the selected specimen, resetting it to a fresh state'
+        self.clearCoordsTooltip = 'Clear all REGION boundaries and AIR reference coordinates (air/empty space area) for the selected specimen, resetting it to a fresh state'
         self.clearCoordsBtn = ttk.Button(
             button_frame,
             text='Clear Coords',
@@ -274,7 +274,11 @@ class loadImagePanel:
 
     @handle_errors("loadImagePanel.clear_specimen_coordinates")
     def clear_specimen_coordinates(self):
-        """Clear all REGION and AIR coordinates for the selected specimen."""
+        """Clear all REGION and AIR reference coordinates for the selected specimen.
+        
+        AIR (Air Reference) defines areas containing actual air (empty space) used
+        for normalization in OCT analysis.
+        """
         # Check if specimen data exists
         if not hasattr(self.context, "specimen_data") or not self.context.specimen_data:
             self.context.status_bar.update("No specimens loaded.", level="warning")

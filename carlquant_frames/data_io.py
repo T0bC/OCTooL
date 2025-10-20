@@ -474,7 +474,7 @@ class DataSaver:
 
     @staticmethod
     def save_specimen_config(specimen: Specimen, include_annotations: bool = False):
-        """Save specimen configuration (REGIONS, AIR, and optionally computed annotations) to JSON file.
+        """Save specimen configuration (REGIONS, AIR reference, and optionally computed annotations) to JSON file.
         
         Args:
             specimen: Specimen object to save
@@ -650,7 +650,10 @@ class DataSaver:
 
     @staticmethod
     def update_specimen_air(specimen: Specimen, slice_index: int, point1: tuple, point2: tuple = None, context=None, auto_save=True, is_keyframe=False):
-        """Update AIR configuration for a specific slice.
+        """Update AIR reference configuration for a specific slice.
+        
+        AIR (Air Reference) defines a rectangular area containing actual air (empty space)
+        used for normalization and threshold calculations.
         
         Args:
             specimen: Specimen to update
@@ -720,7 +723,7 @@ class DataSaver:
                 region_config = specimen.config.regions.get(slice_idx) if specimen.config else None
                 air_config = specimen.config.air.get(slice_idx) if specimen.config else None
                 
-                # Draw AIR region (cyan rectangle)
+                # Draw AIR reference area (cyan rectangle)
                 if air_config and air_config.point2:
                     x1, y1 = air_config.point1
                     x2, y2 = air_config.point2

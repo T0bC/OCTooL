@@ -6,9 +6,9 @@ This module provides an interactive image viewer for OCT image stacks with suppo
 - Image navigation (arrow keys, mouse wheel, slider)
 - Zoom and pan functionality
 - Region boundary definition (two-click mode)
-- AIR (Area of Interest Rectangle) selection (drag mode)
+- AIR (Air Reference) selection (drag mode) - defines area containing actual air/empty space
 - Automatic mode detection: click = region boundary, drag = AIR selection
-- Visual overlays for configured regions and AIR areas
+- Visual overlays for configured regions and AIR reference areas
 
 Created on Mon Sep 29 15:46:17 2025
 @author: Tobias Meissner
@@ -43,9 +43,9 @@ class image_viewer_panel(BaseCanvasPanel):
     - Display OCT image stacks with navigation controls
     - Zoom (Ctrl+MouseWheel) and pan (Ctrl+Drag) functionality
     - Define region boundaries via two-click selection
-    - Define AIR regions via drag selection
+    - Define AIR reference area via drag selection (area containing actual air/empty space)
     - Automatic mode detection based on user interaction
-    - Visual feedback for all configured regions and AIR areas
+    - Visual feedback for all configured regions and AIR reference areas
     
     Attributes:
         context: Application context providing access to shared state
@@ -60,7 +60,7 @@ class image_viewer_panel(BaseCanvasPanel):
         # Store reference to load frame before calling super()
         self.loadFrame = context.get_frame("carl_load")
         
-        # Initialize region/AIR-specific state BEFORE calling super().__init__()
+        # Initialize region/AIR reference-specific state BEFORE calling super().__init__()
         # because setup_specialized_bindings() is called at the end of super().__init__()
         
         # Annotation state (for compatibility, though not heavily used in this panel)
@@ -83,10 +83,10 @@ class image_viewer_panel(BaseCanvasPanel):
         self.is_dragging = False           # True if user is dragging (AIR mode)
         self.drag_threshold = 5            # Pixels to move before considering it a drag
         
-        # AIR selection state
-        self.air_drag_start = None         # Starting point for AIR drag
+        # AIR reference selection state
+        self.air_drag_start = None         # Starting point for AIR reference drag
         self.air_drag_rectangle = None     # Canvas rectangle ID during drag
-        self.air_visual_elements = []      # Visual elements for AIR display
+        self.air_visual_elements = []      # Visual elements for AIR reference display
         
         # A-Scan indicator state
         self.ascan_indicator_line = None   # Canvas line ID for A-scan column indicator
@@ -102,12 +102,12 @@ class image_viewer_panel(BaseCanvasPanel):
     # ============================================================================
     
     def setup_specialized_bindings(self):
-        """Setup region/AIR-specific mouse and keyboard bindings."""
+        """Setup region/AIR reference-specific mouse and keyboard bindings."""
         # Overlay toggle (use base class method) - just 'h' key
         # Only bind to canvas (gets focus on mouse enter via base class)
         self.canvas.bind("<h>", self.toggle_overlays)
         
-        # Mouse bindings for region and AIR selection
+        # Mouse bindings for region and AIR reference selection
         # Use add=True to preserve base class focus management
         self.canvas.bind("<ButtonPress-1>", self.on_canvas_mouse_down, add=True)
         self.canvas.bind("<B1-Motion>", self.on_canvas_mouse_drag)
@@ -134,7 +134,7 @@ class image_viewer_panel(BaseCanvasPanel):
         return None
     
     def draw_specialized_overlays(self):
-        """Draw region boundaries and AIR regions after image rendering."""
+        """Draw region boundaries and AIR reference areas after image rendering."""
         if not self.overlays_visible:
             return
         
@@ -149,7 +149,7 @@ class image_viewer_panel(BaseCanvasPanel):
         specimen = specimen_data[specimen_id]
         current_slice = int(self.scale.get()) - 1
         
-        # Draw region boundaries and AIR regions
+        # Draw region boundaries and AIR reference areas
         self.draw_region_boundaries(specimen, current_slice)
         self.draw_air_regions(specimen, current_slice)
         
@@ -248,7 +248,7 @@ class image_viewer_panel(BaseCanvasPanel):
 
 
     # ============================================================================
-    # MOUSE INTERACTION: AUTOMATIC MODE DETECTION (Click = Region, Drag = AIR)
+    # MOUSE INTERACTION: AUTOMATIC MODE DETECTION (Click = Region, Drag = AIR Reference)
     # ============================================================================
     
     @handle_errors("imageViewerPanel.on_canvas_mouse_down")
@@ -258,7 +258,7 @@ class image_viewer_panel(BaseCanvasPanel):
         
         This is the entry point for the automatic mode detection system.
         The system determines whether the user is clicking (region selection)
-        or dragging (AIR selection) based on mouse movement distance.
+        or dragging (AIR reference selection) based on mouse movement distance.
         
         Args:
             event: Mouse button press event
@@ -556,13 +556,13 @@ class image_viewer_panel(BaseCanvasPanel):
 
 
     # ============================================================================
-    # AIR (Area of Interest Rectangle) SELECTION (Drag Mode)
+    # AIR (Air Reference) SELECTION (Drag Mode)
     # ============================================================================
     
     @handle_errors("imageViewerPanel.start_air_drag")
     def start_air_drag(self, event):
         """
-        Start AIR rectangular selection when drag is detected.
+        Start AIR reference rectangular selection when drag is detected.
         
         Stores both canvas and image coordinates of the drag start point.
         
@@ -591,7 +591,7 @@ class image_viewer_panel(BaseCanvasPanel):
             'canvas': (start_x, start_y),
             'image': (image_x, image_y)
         }
-        self.context.status_bar.update("Drawing AIR region...", level="info")
+        self.context.status_bar.update("Drawing AIR reference area...", level="info")
 
 
     @handle_errors("imageViewerPanel.update_air_drag")
@@ -625,7 +625,7 @@ class image_viewer_panel(BaseCanvasPanel):
     @handle_errors("imageViewerPanel.finish_air_selection")
     def finish_air_selection(self, event):
         """
-        Finalize AIR selection on mouse release.
+        Finalize AIR reference selection on mouse release.
         
         Converts canvas coordinates to image coordinates, normalizes the
         rectangle (ensures top-left and bottom-right), and saves the
@@ -669,7 +669,7 @@ class image_viewer_panel(BaseCanvasPanel):
         x2 = max(start_image_x, end_image_x)
         y2 = max(start_image_y, end_image_y)
 
-        # Save AIR configuration with propagation logic
+        # Save AIR reference configuration with propagation logic
         point1 = (x1, y1)
         point2 = (x2, y2)
         self.save_air_configuration(specimen, current_slice, point1, point2)
@@ -680,13 +680,13 @@ class image_viewer_panel(BaseCanvasPanel):
             self.canvas.delete(self.air_drag_rectangle)
             self.air_drag_rectangle = None
 
-        # Redraw AIR regions
+        # Redraw AIR reference areas
         self.draw_air_regions(specimen, current_slice)
 
 
     def save_air_configuration(self, specimen, current_slice, point1, point2):
         """
-        Save AIR configuration with intelligent keyframe-based interpolation.
+        Save AIR reference configuration with intelligent keyframe-based interpolation.
         
         Interpolation Logic:
         - First definition: propagate to all slices (initial setup)
@@ -721,12 +721,12 @@ class image_viewer_panel(BaseCanvasPanel):
             num_keyframes = sum(1 for a in specimen.config.air.values() if a.is_keyframe)
             if num_keyframes == 1:
                 self.context.status_bar.update(
-                    f"AIR region initialized for all {total_slices} slices", 
+                    f"AIR reference area initialized for all {total_slices} slices", 
                     level="success"
                 )
             else:
                 self.context.status_bar.update(
-                    f"AIR keyframe set at slice {current_slice + 1}, interpolation applied", 
+                    f"AIR reference keyframe set at slice {current_slice + 1}, interpolation applied", 
                     level="success"
                 )
         

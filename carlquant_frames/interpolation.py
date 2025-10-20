@@ -53,7 +53,7 @@ REGION_DESCRIPTOR = CoordinateDescriptor(
 
 AIR_DESCRIPTOR = CoordinateDescriptor(
     field_names=["point1", "point2"],
-    config_type_name="AIR"
+    config_type_name="AIR Reference"  # Air reference area (actual air/empty space)
 )
 
 
@@ -271,5 +271,9 @@ def interpolate_air_coordinates(
     total_slices: int,
     update_func: Callable[[int, Any, bool], None]
 ) -> None:
-    """Convenience function for interpolating AIR coordinates (2 points)."""
+    """Convenience function for interpolating AIR reference coordinates (2 points).
+    
+    AIR (Air Reference) defines rectangular areas containing actual air (empty space)
+    used for normalization and threshold calculations in OCT analysis.
+    """
     interpolate_coordinates(config_dict, total_slices, AIR_DESCRIPTOR, update_func)
