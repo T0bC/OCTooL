@@ -1521,7 +1521,7 @@ def run_carl_quant(context):
                     if specimen_panel:
                         for row_idx in range(specimen_panel.sheet.total_rows()):
                             if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
-                                specimen_panel.sheet.set_cell_data(row_idx, 4, "Skipped")
+                                specimen_panel.sheet.set_cell_data(row_idx, 2, "Skipped")
                                 specimen_panel._set_column_widths()
                                 break
                     
@@ -1782,7 +1782,7 @@ def run_carl_quant(context):
                         # Find the row for this specimen
                         for row_idx in range(specimen_panel.sheet.total_rows()):
                             if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
-                                specimen_panel.sheet.set_cell_data(row_idx, 4, "Completed")
+                                specimen_panel.sheet.set_cell_data(row_idx, 2, "Completed")
                                 # Refresh column widths to accommodate new status
                                 specimen_panel._set_column_widths()
                                 # Highlight the completed row with green color

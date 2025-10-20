@@ -155,10 +155,6 @@ class loadImagePanel:
                 # Matching data folder found - reload config and results
                 specimen.config = DataLoader.load_specimen_config(specimen)
                 if specimen.config:
-                    # Update display values
-                    regions_count = len(specimen.config.regions)
-                    specimen.regions = f"{regions_count} regions" if regions_count > 0 else ""
-                    
                     # Check if results were loaded (annotations)
                     if specimen.results:
                         specimen.status = "Analyzed"
@@ -184,17 +180,9 @@ class loadImagePanel:
         specimen_panel = self.context.get_panel("carl_specimen")
         rows = []
         for specimen_id, specimen in self.context.specimen_data.items():
-            # Get AIR configuration summary
-            air_summary = ""
-            if specimen.config and specimen.config.air:
-                air_count = len(specimen.config.air)
-                air_summary = f"{air_count} points" if air_count > 0 else ""
-            
             rows.append([
                 specimen.specimen_id,
                 specimen.slices,
-                specimen.regions,
-                air_summary,
                 specimen.status
             ])
         specimen_panel.sheet.set_sheet_data(rows)
@@ -202,7 +190,7 @@ class loadImagePanel:
         
         # Highlight completed rows with green color
         for row_idx, row_data in enumerate(rows):
-            if row_data[4] == "Completed":  # STATUS column is at index 4
+            if row_data[2] == "Completed":  # STATUS column is at index 2
                 specimen_panel.highlight_completed_row(row_idx)
         
         self.context.status_bar.update(
@@ -334,13 +322,6 @@ class loadImagePanel:
         
         # Save cleared configuration to JSON
         DataSaver.save_specimen_config(specimen)
-        
-        # Update specimen display values
-        specimen.regions = ""
-        
-        # Update specimen panel display
-        specimen_panel.sheet.set_cell_data(row_index, 2, "")  # REGIONS column
-        specimen_panel.sheet.set_cell_data(row_index, 3, "")  # AIR column
         
         # Refresh image viewer if this specimen is currently displayed
         if hasattr(self.context, 'current_specimen_id') and self.context.current_specimen_id == specimen_id:
