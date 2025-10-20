@@ -11,7 +11,7 @@ from fnmatch import fnmatch
 from utils.error_handler import handle_errors
 from utils.metadata_prompt import prompt_for_metadata
 from utils.tool_tip import Tooltip
-from carlquant_frames.data_io import DataLoader
+from carlquant_frames.data_io import DataLoader, DataSaver
 from carlquant_frames.carl_quant_core import run_carl_quant
 import threading
 
@@ -36,16 +36,33 @@ class loadImagePanel:
         self.selectFolderBtn.grid(row=0, column=0, sticky="ew", pady=3)
         Tooltip(self.selectFolderBtn, text=self.selectFolderTooltip, wraplength=200)
 
+        # Button Frame for Remove and Clear Coords (side-by-side)
+        button_frame = ttk.Frame(self.frame)
+        button_frame.grid(row=1, column=0, sticky="ew", pady=3)
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=1)
+
         # Remove Selected Button
         self.removeSelectedTooltip = 'Remove the selected specimen from the list to exclude it from processing'
         self.removeSelectedBtn = ttk.Button(
-            self.frame,
-            text='Remove Selected',
+            button_frame,
+            text='Remove',
             command=self.removeSelected,
             bootstyle="danger"
         )
-        self.removeSelectedBtn.grid(row=1, column=0, sticky="ew", pady=3)
+        self.removeSelectedBtn.grid(row=0, column=0, sticky="ew", padx=(0, 2))
         Tooltip(self.removeSelectedBtn, text=self.removeSelectedTooltip, wraplength=200)
+
+        # Clear Coordinates Button
+        self.clearCoordsTooltip = 'Clear all REGION boundaries and AIR coordinates for the selected specimen, resetting it to a fresh state'
+        self.clearCoordsBtn = ttk.Button(
+            button_frame,
+            text='Clear Coords',
+            command=self.clear_specimen_coordinates,
+            bootstyle="warning"
+        )
+        self.clearCoordsBtn.grid(row=0, column=1, sticky="ew", padx=(2, 0))
+        Tooltip(self.clearCoordsBtn, text=self.clearCoordsTooltip, wraplength=200)
 
         # Start Analyzing Button
         self.startAnalyzingTooltip = 'Begin analyzing the selected CarlQuant data folder'
@@ -264,6 +281,75 @@ class loadImagePanel:
         
         self.context.status_bar.update(
             f"Removed specimen '{specimen_id}' from processing list.", 
+            level="success"
+        )
+
+    @handle_errors("loadImagePanel.clear_specimen_coordinates")
+    def clear_specimen_coordinates(self):
+        """Clear all REGION and AIR coordinates for the selected specimen."""
+        # Check if specimen data exists
+        if not hasattr(self.context, "specimen_data") or not self.context.specimen_data:
+            self.context.status_bar.update("No specimens loaded.", level="warning")
+            return
+        
+        # Get specimen panel
+        specimen_panel = self.context.get_panel("carl_specimen")
+        if not specimen_panel:
+            self.context.status_bar.update("Specimen panel not found.", level="error")
+            return
+        
+        # Get currently selected row
+        selected = specimen_panel.sheet.get_currently_selected()
+        if not selected or selected[0] is None:
+            self.context.status_bar.update("No specimen selected. Please select a row first.", level="warning")
+            return
+        
+        row_index = selected[0]
+        
+        # Get specimen ID from the selected row
+        specimen_id = specimen_panel.sheet.get_cell_data(row_index, 0)
+        
+        if not specimen_id or specimen_id not in self.context.specimen_data:
+            self.context.status_bar.update("Could not identify specimen.", level="error")
+            return
+        
+        specimen = self.context.specimen_data[specimen_id]
+        
+        # Check if specimen has config
+        if not specimen.config:
+            self.context.status_bar.update(f"Specimen '{specimen_id}' has no configuration to clear.", level="warning")
+            return
+        
+        # Check if there are any coordinates to clear
+        has_regions = bool(specimen.config.regions)
+        has_air = bool(specimen.config.air)
+        
+        if not has_regions and not has_air:
+            self.context.status_bar.update(f"Specimen '{specimen_id}' has no coordinates to clear.", level="warning")
+            return
+        
+        # Clear all coordinates
+        specimen.config.regions.clear()
+        specimen.config.air.clear()
+        
+        # Save cleared configuration to JSON
+        DataSaver.save_specimen_config(specimen)
+        
+        # Update specimen display values
+        specimen.regions = ""
+        
+        # Update specimen panel display
+        specimen_panel.sheet.set_cell_data(row_index, 2, "")  # REGIONS column
+        specimen_panel.sheet.set_cell_data(row_index, 3, "")  # AIR column
+        
+        # Refresh image viewer if this specimen is currently displayed
+        if hasattr(self.context, 'current_specimen_id') and self.context.current_specimen_id == specimen_id:
+            viewer_panel = self.context.get_panel("carl_image")
+            if viewer_panel and hasattr(viewer_panel, 'refresh_display'):
+                viewer_panel.refresh_display()
+        
+        self.context.status_bar.update(
+            f"Cleared all coordinates for specimen '{specimen_id}'.", 
             level="success"
         )
 
