@@ -151,7 +151,8 @@ class DataLoader:
                         specimen_start=tuple(region_data['specimen_start']),
                         lesion_start=tuple(region_data['lesion_start']),
                         lesion_end=tuple(region_data['lesion_end']),
-                        tooth_end=tuple(region_data['tooth_end'])
+                        tooth_end=tuple(region_data['tooth_end']),
+                        is_keyframe=region_data.get('is_keyframe', False)  # Default False for backward compatibility
                     )
                 else:
                     # Old 2-point format - convert to 4-point
@@ -164,7 +165,8 @@ class DataLoader:
                         specimen_start=start_pt,
                         lesion_start=start_pt,
                         lesion_end=end_pt,
-                        tooth_end=end_pt
+                        tooth_end=end_pt,
+                        is_keyframe=False  # Old format, mark as not keyframe
                     )
         
         # Load air configurations
@@ -175,6 +177,7 @@ class DataLoader:
                 config.air[slice_idx] = AirConfig(
                     slice_index=slice_idx,
                     point1=tuple(air_data['point1']),
+                    is_keyframe=air_data.get('is_keyframe', False),  # Default False for backward compatibility
                     point2=point2
                 )
         
@@ -501,14 +504,16 @@ class DataSaver:
                 "specimen_start": list(region_config.specimen_start),
                 "lesion_start": list(region_config.lesion_start),
                 "lesion_end": list(region_config.lesion_end),
-                "tooth_end": list(region_config.tooth_end)
+                "tooth_end": list(region_config.tooth_end),
+                "is_keyframe": region_config.is_keyframe
             }
         
         # Convert air configurations to JSON-serializable format
         for slice_idx, air_config in specimen.config.air.items():
             air_data = {
                 "slice_index": air_config.slice_index,
-                "point1": list(air_config.point1)
+                "point1": list(air_config.point1),
+                "is_keyframe": air_config.is_keyframe
             }
             if air_config.point2:
                 air_data["point2"] = list(air_config.point2)
@@ -606,7 +611,7 @@ class DataSaver:
     def update_specimen_region(specimen: Specimen, slice_index: int, 
                               specimen_start: tuple, lesion_start: tuple,
                               lesion_end: tuple, tooth_end: tuple,
-                              context=None):
+                              context=None, auto_save=True, is_keyframe=False):
         """Update region configuration for a specific slice (4 points).
         
         Args:
@@ -617,6 +622,8 @@ class DataSaver:
             lesion_end: Lesion end point
             tooth_end: Tooth end point
             context: Application context (for metadata)
+            auto_save: If True, automatically save config to JSON after update
+            is_keyframe: If True, marks this as a user-defined keyframe (not interpolated)
         """
         if not specimen.config:
             specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
@@ -626,7 +633,8 @@ class DataSaver:
             specimen_start=specimen_start,
             lesion_start=lesion_start,
             lesion_end=lesion_end,
-            tooth_end=tooth_end
+            tooth_end=tooth_end,
+            is_keyframe=is_keyframe
         )
         
         # Store metadata in specimen if available from context
@@ -637,11 +645,12 @@ class DataSaver:
             specimen.operator = operator
             specimen.measurement = measurement
         
-        # Auto-save configuration
-        DataSaver.save_specimen_config(specimen)
+        # Auto-save configuration if requested
+        if auto_save:
+            DataSaver.save_specimen_config(specimen)
 
     @staticmethod
-    def update_specimen_air(specimen: Specimen, slice_index: int, point1: tuple, point2: tuple = None, context=None):
+    def update_specimen_air(specimen: Specimen, slice_index: int, point1: tuple, point2: tuple = None, context=None, auto_save=True, is_keyframe=False):
         """Update AIR configuration for a specific slice.
         
         Args:
@@ -650,6 +659,8 @@ class DataSaver:
             point1: First point
             point2: Second point
             context: Application context (for metadata)
+            is_keyframe: If True, marks this as a user-defined keyframe (not interpolated)
+            auto_save: If True, automatically save config to JSON after update
         """
         if not specimen.config:
             specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
@@ -657,7 +668,8 @@ class DataSaver:
         specimen.config.air[slice_index] = AirConfig(
             slice_index=slice_index,
             point1=point1,
-            point2=point2
+            point2=point2,
+            is_keyframe=is_keyframe
         )
         
         # Store metadata in specimen if available from context
@@ -668,8 +680,9 @@ class DataSaver:
             specimen.operator = operator
             specimen.measurement = measurement
         
-        # Auto-save configuration
-        DataSaver.save_specimen_config(specimen)
+        # Auto-save configuration if requested
+        if auto_save:
+            DataSaver.save_specimen_config(specimen)
 
     @staticmethod
     def save_annotated_images(specimen: Specimen):

@@ -22,6 +22,7 @@ from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
 from utils.metadata_prompt import ensure_metadata_set
 from carlquant_frames.data_io import DataSaver
+from carlquant_frames.interpolation import interpolate_region_coordinates, interpolate_air_coordinates
 from carlquant_frames.annotation_renderer import (
     CoordinateConverter,
     SurfaceAnnotationRenderer,
@@ -335,7 +336,7 @@ class image_viewer_panel(BaseCanvasPanel):
 
 
     # ============================================================================
-    # REGION BOUNDARY SELECTION (Two-Click Mode)
+    # REGION BOUNDARY SELECTION (Four-Click Mode)
     # ============================================================================
     
     @handle_errors("imageViewerPanel.handle_region_click")
@@ -443,14 +444,18 @@ class image_viewer_panel(BaseCanvasPanel):
     def save_region_configuration(self, specimen, current_slice, 
                                  specimen_start, lesion_start, lesion_end, tooth_end):
         """
-        Save region configuration with intelligent propagation logic.
+        Save region configuration with intelligent keyframe-based interpolation.
         
-        Propagation Logic:
-        - If NO regions exist yet (first-time setup): propagate to all slices
-        - If regions already exist: only update the current slice
+        Interpolation Logic:
+        - First definition: propagate to all slices (initial setup)
+        - Subsequent definitions: create keyframes and interpolate between them
+        - Between keyframes: linear interpolation of all 4 boundary coordinates
+        - Beyond last keyframe: use last keyframe value (constant extrapolation)
         
-        This allows users to set a global configuration initially, then
-        fine-tune individual slices as needed.
+        Examples:
+        1. Define slice 0 → all slices get same coordinates
+        2. Define slice 0, then slice 9 → interpolate slices 1-8
+        3. Define slice 0, 5, 9 → interpolate 1-4 and 6-8 independently
         
         Args:
             specimen: Specimen object to update
@@ -463,30 +468,34 @@ class image_viewer_panel(BaseCanvasPanel):
         def do_save():
             total_slices = len(specimen.images)
             
-            # Check if any regions exist
-            has_existing_regions = specimen.config and len(specimen.config.regions) > 0
+            # Initialize config if needed
+            if not specimen.config:
+                from carlquant_frames.specimen_model import SpecimenConfig
+                specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
             
-            if not has_existing_regions:
-                # First-time initialization: propagate to all slices
-                for slice_idx in range(total_slices):
-                    DataSaver.update_specimen_region(
-                        specimen, slice_idx, 
-                        specimen_start, lesion_start, lesion_end, tooth_end,
-                        context=self.context
-                    )
+            # Update current slice as keyframe (don't save yet - interpolation will save)
+            DataSaver.update_specimen_region(
+                specimen, current_slice,
+                specimen_start, lesion_start, lesion_end, tooth_end,
+                context=self.context,
+                auto_save=False,  # Don't save yet - interpolation will save everything
+                is_keyframe=True  # Mark as user-defined keyframe
+            )
+            
+            # Perform interpolation between keyframes (saves at end)
+            # This handles both first-time setup (1 keyframe → propagate) and multi-keyframe interpolation
+            self._interpolate_region_coordinates(specimen, total_slices)
+            
+            # Determine status message based on number of user-defined keyframes
+            num_keyframes = sum(1 for r in specimen.config.regions.values() if r.is_keyframe)
+            if num_keyframes == 1:
                 self.context.status_bar.update(
                     f"Region initialized for all {total_slices} slices (4 boundaries)", 
                     level="success"
                 )
             else:
-                # Regions already exist: only update current slice
-                DataSaver.update_specimen_region(
-                    specimen, current_slice,
-                    specimen_start, lesion_start, lesion_end, tooth_end,
-                    context=self.context
-                )
                 self.context.status_bar.update(
-                    f"Region updated for slice {current_slice + 1} (4 boundaries)", 
+                    f"Region keyframe set at slice {current_slice + 1}, interpolation applied", 
                     level="success"
                 )
 
@@ -495,6 +504,41 @@ class image_viewer_panel(BaseCanvasPanel):
         
         # Ensure metadata is set before saving
         ensure_metadata_set(self.root, self.context, do_save)
+
+
+    def _interpolate_region_coordinates(self, specimen, total_slices):
+        """
+        Interpolate region coordinates between keyframes using generic framework.
+        
+        Args:
+            specimen: Specimen object with config.regions
+            total_slices: Total number of slices in the stack
+        """
+        if not specimen.config or len(specimen.config.regions) == 0:
+            return
+        
+        # Define update function for region configs
+        def update_region(slice_idx, config, is_keyframe):
+            DataSaver.update_specimen_region(
+                specimen, slice_idx,
+                config.specimen_start,
+                config.lesion_start,
+                config.lesion_end,
+                config.tooth_end,
+                context=self.context,
+                auto_save=False,
+                is_keyframe=is_keyframe
+            )
+        
+        # Use generic interpolation framework
+        interpolate_region_coordinates(
+            specimen.config.regions,
+            total_slices,
+            update_region
+        )
+        
+        # Save once after all interpolation is complete
+        DataSaver.save_specimen_config(specimen)
 
 
     def update_specimen_panel_display(self, specimen):
@@ -653,11 +697,13 @@ class image_viewer_panel(BaseCanvasPanel):
 
     def save_air_configuration(self, specimen, current_slice, point1, point2):
         """
-        Save AIR configuration with intelligent propagation logic.
+        Save AIR configuration with intelligent keyframe-based interpolation.
         
-        Propagation Logic:
-        - If NO AIR regions exist yet (first-time setup): propagate to all slices
-        - If AIR regions already exist: only update the current slice
+        Interpolation Logic:
+        - First definition: propagate to all slices (initial setup)
+        - Subsequent definitions: create keyframes and interpolate between them
+        - Between keyframes: linear interpolation of both corner points
+        - Beyond last keyframe: use last keyframe value (constant extrapolation)
         
         This mirrors the region configuration logic for consistency.
         
@@ -670,27 +716,66 @@ class image_viewer_panel(BaseCanvasPanel):
         def do_save():
             total_slices = len(specimen.images)
             
-            # Check if any AIR regions exist
-            has_existing_air = specimen.config and len(specimen.config.air) > 0
+            # Initialize config if needed
+            if not specimen.config:
+                from carlquant_frames.specimen_model import SpecimenConfig
+                specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
             
-            if not has_existing_air:
-                # First-time initialization: propagate to all slices
-                for slice_idx in range(total_slices):
-                    DataSaver.update_specimen_air(specimen, slice_idx, point1, point2, context=self.context)
+            # Update current slice as keyframe (don't save yet - interpolation will save)
+            DataSaver.update_specimen_air(specimen, current_slice, point1, point2, context=self.context, auto_save=False, is_keyframe=True)
+            
+            # Perform interpolation between keyframes (saves at end)
+            # This handles both first-time setup (1 keyframe → propagate) and multi-keyframe interpolation
+            self._interpolate_air_coordinates(specimen, total_slices)
+            
+            # Determine status message based on number of user-defined keyframes
+            num_keyframes = sum(1 for a in specimen.config.air.values() if a.is_keyframe)
+            if num_keyframes == 1:
                 self.context.status_bar.update(
-                    f"AIR region initialized for all {total_slices} slices: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
+                    f"AIR region initialized for all {total_slices} slices", 
                     level="success"
                 )
             else:
-                # AIR regions already exist: only update current slice
-                DataSaver.update_specimen_air(specimen, current_slice, point1, point2, context=self.context)
                 self.context.status_bar.update(
-                    f"AIR region updated for slice {current_slice + 1}: ({point1[0]}, {point1[1]}) to ({point2[0]}, {point2[1]})", 
+                    f"AIR keyframe set at slice {current_slice + 1}, interpolation applied", 
                     level="success"
                 )
         
         # Ensure metadata is set before saving
         ensure_metadata_set(self.root, self.context, do_save)
+
+
+    def _interpolate_air_coordinates(self, specimen, total_slices):
+        """
+        Interpolate AIR coordinates between keyframes using generic framework.
+        
+        Args:
+            specimen: Specimen object with config.air
+            total_slices: Total number of slices in the stack
+        """
+        if not specimen.config or len(specimen.config.air) == 0:
+            return
+        
+        # Define update function for AIR configs
+        def update_air(slice_idx, config, is_keyframe):
+            DataSaver.update_specimen_air(
+                specimen, slice_idx,
+                config.point1,
+                config.point2,
+                context=self.context,
+                auto_save=False,
+                is_keyframe=is_keyframe
+            )
+        
+        # Use generic interpolation framework
+        interpolate_air_coordinates(
+            specimen.config.air,
+            total_slices,
+            update_air
+        )
+        
+        # Save once after all interpolation is complete
+        DataSaver.save_specimen_config(specimen)
 
 
     # ============================================================================
