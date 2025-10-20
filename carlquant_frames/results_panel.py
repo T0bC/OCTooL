@@ -22,6 +22,7 @@ class resultsPanel:
 
         self.headers = ['MEASUREMENT', 'VALUE', 'UNIT', 'CONFIDENCE']
         self.highlighted_row = None  # Track currently highlighted row
+        self.active_ascan_viewer = None  # Track active A-Scan viewer for checkbox synchronization
         self._setup_sheet()
 
     def generate_headers(self):
@@ -70,8 +71,9 @@ class resultsPanel:
 
         self.sheet.enable_bindings("copy", "delete", "single_select")
         
-        # Bind double-click event
-        self.sheet.bind("<Double-Button-1>", self._on_double_click)
+        # Bind click events
+        self.sheet.bind("<Button-1>", self._on_single_click)  # Single-click for navigation
+        self.sheet.bind("<Double-Button-1>", self._on_double_click)  # Double-click for A-Scan viewer
         
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
@@ -195,11 +197,65 @@ class resultsPanel:
             self._set_column_widths()
             self.sheet.set_sheet_data([])  # Clear any existing data
     
+    @handle_errors("resultsPanel._on_single_click")
+    def _on_single_click(self, event):
+        """
+        Handle single-click event on a row.
+        Navigates both image viewer and A-Scan viewer (if open) to the selected slice.
+        """
+        # Get the clicked row
+        row = self.sheet.identify_row(event, exclude_index=True)
+        
+        if row is not None:
+            # Get row data
+            row_data = self.sheet.get_row_data(row)
+            
+            # Extract specimen_id and slice_index from row data
+            specimen_id = row_data[0] if len(row_data) > 0 else None
+            slice_index = row_data[1] if len(row_data) > 1 else None
+            
+            if specimen_id is None or slice_index is None:
+                return
+            
+            # Navigate image viewer to the selected slice
+            self._navigate_to_slice(specimen_id, slice_index)
+            
+            # If A-Scan viewer is open, update it to the new slice
+            if self.active_ascan_viewer and self.active_ascan_viewer.dialog and self.active_ascan_viewer.dialog.winfo_exists():
+                self.active_ascan_viewer.update_to_slice(specimen_id, slice_index)
+    
+    def _navigate_to_slice(self, specimen_id, slice_index):
+        """
+        Navigate the image viewer to a specific specimen and slice.
+        
+        Args:
+            specimen_id: ID of the specimen
+            slice_index: Slice index (1-based from table)
+        """
+        # Get the image viewer panel
+        image_panel = self.context.get_panel("carl_image")
+        if not image_panel:
+            return
+        
+        # Set the current specimen if different
+        if self.context.current_specimen_id != specimen_id:
+            self.context.current_specimen_id = specimen_id
+        
+        # Navigate to the correct slice (convert from 1-based to 0-based)
+        image_panel.display_image(slice_index - 1)
+        
+        # Ensure overlays are visible
+        if not image_panel.overlays_visible:
+            image_panel.toggle_overlays()
+    
     @handle_errors("resultsPanel._on_double_click")
     def _on_double_click(self, event):
         """
         Handle double-click event on a row.
-        Highlights the row and opens the A-Scan viewer.
+        Highlights the row and opens/updates the A-Scan viewer.
+        
+        If an A-Scan viewer is already open, it will be updated to show the new slice
+        instead of creating a new instance.
         """
         # Get the clicked row
         row = self.sheet.identify_row(event, exclude_index=True)
@@ -230,18 +286,25 @@ class resultsPanel:
                 self.context.status_bar.update("Invalid row data", level="error")
                 return
             
-            # Get the main window and style from context
-            main_window = self.root.winfo_toplevel()
-            
-            # Open A-Scan viewer (non-blocking)
-            viewer = AScanViewer(
-                main_window, 
-                self.context.style, 
-                self.context,
-                specimen_id=specimen_id,
-                slice_index=slice_index,
-                row_data=row_data
-            )
-            viewer.show()
+            # Check if A-Scan viewer is already open
+            if self.active_ascan_viewer and self.active_ascan_viewer.dialog and self.active_ascan_viewer.dialog.winfo_exists():
+                # Update existing viewer to new slice
+                self.active_ascan_viewer.update_to_slice(specimen_id, slice_index)
+            else:
+                # Create new A-Scan viewer
+                main_window = self.root.winfo_toplevel()
+                
+                viewer = AScanViewer(
+                    main_window, 
+                    self.context.style, 
+                    self.context,
+                    specimen_id=specimen_id,
+                    slice_index=slice_index,
+                    row_data=row_data
+                )
+                viewer.show()
+                
+                # Track active A-Scan viewer for checkbox synchronization with image viewer
+                self.active_ascan_viewer = viewer
 
 

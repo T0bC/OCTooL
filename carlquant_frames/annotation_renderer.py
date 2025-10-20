@@ -6,23 +6,44 @@ This module provides a structured approach to drawing annotations on the canvas.
 It centralizes coordinate conversion logic and provides reusable drawing functions
 for various annotation types.
 
-DEBUG MODE:
------------
-To visualize individual lesion depth detection methods (knee, inflection, shoulder):
-1. Set LesionDepthAnnotationRenderer.DEBUG_SHOW_COMPONENT_METHODS = True (line ~347)
-2. Run your analysis - component methods will be drawn as thin colored lines:
-   - Yellow: Knee point method
-   - Cyan: Inflection point method
-   - Magenta: Shoulder point method
-   - Red (thick): Combined/final result
-3. To add new methods: Update METHOD_COLORS dict and add extraction logic in _draw_component_methods()
-
 Created on Thu Oct 09 2025
 @author: Tobias Meissner
 """
 
 import tkinter as tk
 import numpy as np
+
+
+# ============================================================================
+# ANNOTATION COLOR SCHEME - Centralized color definitions
+# ============================================================================
+# Modify these colors to change the appearance of all annotations
+
+# Surface Detection Colors
+INTERPOLATED_SURFACE_COLOR = 'cyan'          # Interpolated surface curve
+ACTUAL_SURFACE_COLOR = '#4169E1'             # Actual surface curve (royal blue)
+
+# Lesion Depth Detection Colors
+LESION_DEPTH_PRIMARY_COLOR = 'red'           # Main lesion depth result (thick line)
+LESION_DEPTH_MARKER_COLOR = 'red'            # Markers along lesion depth line
+LESION_DEPTH_MARKER_OUTLINE = 'darkred'      # Marker outline color
+
+# Component Detection Method Colors (shown when enabled in A-Scan viewer)
+KNEE_POINT_COLOR = 'yellow'                  # Knee point detection method
+INFLECTION_POINT_COLOR = 'cyan'              # Sigmoid inflection point method
+SHOULDER_POINT_COLOR = 'magenta'             # Sigmoid shoulder point method
+
+# Extraction Region Colors
+EXTRACTION_REGION_COLOR = '#00FF66'          # Bright green for region boundaries
+EXTRACTION_REGION_TEXT_COLOR = '#00FF66'     # Text color for region numbers
+
+# Region Boundary Colors (vertical lines for region definition)
+REGION_BOUNDARY_COLORS = ['red', 'green', 'blue', 'yellow']  # Cycle through these
+
+# AIR Region Color
+AIR_REGION_COLOR = 'yellow'                  # AIR (Artifact/Invalid Region) selection
+
+# ============================================================================
 
 
 class CoordinateConverter:
@@ -343,32 +364,29 @@ class SurfaceAnnotationRenderer(BaseAnnotationRenderer):
         # Draw interpolated surface curve (cyan, thin line) - bottom layer
         if surface.fitted_curves and "interpolated_surface" in surface.fitted_curves:
             for x, y in surface.fitted_curves["interpolated_surface"]:
-                self.draw_point(x, y, color='cyan', size=1, tags="surface_overlay")
+                self.draw_point(x, y, color=INTERPOLATED_SURFACE_COLOR, size=1, tags="surface_overlay")
         
-        # Draw actual surface curve (orange, thin line) - middle layer
+        # Draw actual surface curve (blue, thin line) - middle layer
         if surface.fitted_curves and "actual_surface" in surface.fitted_curves:
             for x, y in surface.fitted_curves["actual_surface"]:
-                self.draw_point(x, y, color='orange', size=1, tags="surface_overlay")
+                self.draw_point(x, y, color=ACTUAL_SURFACE_COLOR, size=1, tags="surface_overlay")
 
 
 class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for lesion depth results."""
     
-    # DEBUG FLAG: Set to True to visualize individual detection methods
-    # Useful for algorithm development and debugging
-    DEBUG_SHOW_COMPONENT_METHODS = False
-    
     # Method visualization configuration (easily extensible for new methods)
     METHOD_COLORS = {
-        'knee_point': 'yellow',
-        'inflection_point': 'cyan',
-        'shoulder_point': 'magenta',
+        'knee_point': KNEE_POINT_COLOR,
+        'inflection_point': INFLECTION_POINT_COLOR,
+        'shoulder_point': SHOULDER_POINT_COLOR,
         # Add future methods here, e.g.:
         # 'gradient_method': 'orange',
         # 'threshold_method': 'lime',
     }
     
-    def draw(self, lesion_depth, show_markers=False, marker_step=None):
+    def draw(self, lesion_depth, show_markers=False, marker_step=None, 
+             show_component_methods=False, show_knee=False, show_inflection=False, show_shoulder=False):
         """
         Draw lesion depth results.
         
@@ -383,6 +401,10 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
             lesion_depth: Lesion depth result object
             show_markers: If True, draw circular markers along the line (default: True)
             marker_step: Spacing between markers. If None, uses 20 for smoothed, 10 for raw
+            show_component_methods: If True, draw all component methods (knee, inflection, shoulder)
+            show_knee: If True, draw only knee point method line
+            show_inflection: If True, draw only inflection point method line
+            show_shoulder: If True, draw only shoulder point method line
         """
         if not lesion_depth:
             return
@@ -397,12 +419,12 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         if not points or len(points) < 2:
             return
         
-        # DEBUG: Draw individual component methods if enabled
-        if self.DEBUG_SHOW_COMPONENT_METHODS:
-            self._draw_component_methods(lesion_depth)
+        # Draw individual component methods if any are enabled
+        if show_component_methods or show_knee or show_inflection or show_shoulder:
+            self._draw_component_methods(lesion_depth, show_knee, show_inflection, show_shoulder)
         
         # Draw smooth line connecting all points
-        self.draw_line(points, color='red', width=2, tags="lesion_depth_overlay")
+        self.draw_line(points, color=LESION_DEPTH_PRIMARY_COLOR, width=2, tags="lesion_depth_overlay")
         
         # Draw small circles at intervals for better visibility
         if show_markers:
@@ -416,19 +438,22 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
                 self.canvas.create_oval(
                     canvas_x - 2, canvas_y - 2,
                     canvas_x + 2, canvas_y + 2,
-                    fill='red', outline='darkred',
+                    fill=LESION_DEPTH_MARKER_COLOR, outline=LESION_DEPTH_MARKER_OUTLINE,
                     tags="lesion_depth_overlay"
                 )
     
-    def _draw_component_methods(self, lesion_depth):
+    def _draw_component_methods(self, lesion_depth, show_knee=True, show_inflection=True, show_shoulder=True):
         """
-        Draw individual detection method results for debugging.
+        Draw individual detection method results based on user selection.
         
         Extracts knee, inflection, and shoulder points from lesion_detection_data
         and renders them as separate lines. Easily extensible for future methods.
         
         Args:
             lesion_depth: Lesion depth result object with lesion_detection_data
+            show_knee: If True, draw knee point method line
+            show_inflection: If True, draw inflection point method line
+            show_shoulder: If True, draw shoulder point method line
         """
         if not hasattr(lesion_depth, 'lesion_detection_data') or not lesion_depth.lesion_detection_data:
             return
@@ -445,50 +470,51 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
             surface_y = data.get('surface_y', 0)
             
             # Extract knee point
-            knee_depth = metadata.get('knee_depth')
-            if knee_depth is not None and not (hasattr(knee_depth, '__iter__') and len(knee_depth) == 0):
-                try:
-                    if not np.isnan(knee_depth):
-                        method_points['knee_point'].append((x, surface_y + knee_depth))
-                except (TypeError, ValueError):
-                    pass
+            if show_knee:
+                knee_depth = metadata.get('knee_depth')
+                if knee_depth is not None and not (hasattr(knee_depth, '__iter__') and len(knee_depth) == 0):
+                    try:
+                        if not np.isnan(knee_depth):
+                            method_points['knee_point'].append((x, surface_y + knee_depth))
+                    except (TypeError, ValueError):
+                        pass
             
             # Extract inflection point
-            inflection_depth = metadata.get('inflection_depth')
-            if inflection_depth is not None and not (hasattr(inflection_depth, '__iter__') and len(inflection_depth) == 0):
-                try:
-                    if not np.isnan(inflection_depth):
-                        method_points['inflection_point'].append((x, surface_y + inflection_depth))
-                except (TypeError, ValueError):
-                    pass
+            if show_inflection:
+                inflection_depth = metadata.get('inflection_depth')
+                if inflection_depth is not None and not (hasattr(inflection_depth, '__iter__') and len(inflection_depth) == 0):
+                    try:
+                        if not np.isnan(inflection_depth):
+                            method_points['inflection_point'].append((x, surface_y + inflection_depth))
+                    except (TypeError, ValueError):
+                        pass
             
             # Extract shoulder point
-            shoulder_depth = metadata.get('shoulder_depth')
-            if shoulder_depth is not None and not (hasattr(shoulder_depth, '__iter__') and len(shoulder_depth) == 0):
-                try:
-                    if not np.isnan(shoulder_depth):
-                        method_points['shoulder_point'].append((x, surface_y + shoulder_depth))
-                except (TypeError, ValueError):
-                    pass
+            if show_shoulder:
+                shoulder_depth = metadata.get('shoulder_depth')
+                if shoulder_depth is not None and not (hasattr(shoulder_depth, '__iter__') and len(shoulder_depth) == 0):
+                    try:
+                        if not np.isnan(shoulder_depth):
+                            method_points['shoulder_point'].append((x, surface_y + shoulder_depth))
+                    except (TypeError, ValueError):
+                        pass
             
             # EXTENSIBILITY: Add future methods here
             # Example:
-            # gradient_depth = metadata.get('gradient_depth')
-            # if gradient_depth is not None and not np.isnan(gradient_depth):
-            #     method_points['gradient_method'].append((x, surface_y + gradient_depth))
+            # if show_gradient:
+            #     gradient_depth = metadata.get('gradient_depth')
+            #     if gradient_depth is not None and not np.isnan(gradient_depth):
+            #         method_points['gradient_method'].append((x, surface_y + gradient_depth))
         
         # Draw lines for each method that has data
         for method_name, points in method_points.items():
             if len(points) >= 2 and method_name in self.METHOD_COLORS:
                 color = self.METHOD_COLORS[method_name]
-                self.draw_line(points, color=color, width=1, tags="component_methods_debug")
+                self.draw_line(points, color=color, width=1, tags="component_methods")
 
 
 class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for extraction regions (rotated rectangles with numbers)."""
-    
-    # Custom bright green for better visibility on grayscale images
-    BRIGHT_GREEN = '#00FF66'
     
     def draw(self, region_stats):
         """
@@ -505,8 +531,8 @@ class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
                 continue
             
             # Choose color based on region type
-            # Use bright green (#00FF66) for sound regions for better visibility on grayscale
-            color = self.BRIGHT_GREEN if stats.region_type == "sound" else 'red'
+            # Use bright green for sound regions for better visibility on grayscale
+            color = EXTRACTION_REGION_COLOR if stats.region_type == "sound" else 'red'
             
             # Check if we have rotated corners (4 points) or simple bbox (4 values)
             if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
@@ -542,9 +568,6 @@ class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
 class RegionBoundaryAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for region boundaries (4 vertical lines)."""
     
-    # Custom bright green for better visibility on grayscale images
-    BRIGHT_GREEN = '#00FF66'
-    
     def draw(self, region):
         """
         Draw region boundaries.
@@ -556,12 +579,12 @@ class RegionBoundaryAnnotationRenderer(BaseAnnotationRenderer):
             return
         
         # Define boundaries with color scheme:
-        # Bright green (#00FF66) for specimen boundaries, Yellow for lesion boundaries
+        # Bright green for specimen boundaries, Yellow for lesion boundaries
         boundaries = [
-            (region.specimen_start, self.BRIGHT_GREEN, "Specimen Start"),
-            (region.lesion_start, "yellow", "Lesion Start"),
-            (region.lesion_end, "yellow", "Lesion End"),
-            (region.tooth_end, self.BRIGHT_GREEN, "Tooth End")
+            (region.specimen_start, REGION_BOUNDARY_COLORS[1], "Specimen Start"),  # Green
+            (region.lesion_start, REGION_BOUNDARY_COLORS[3], "Lesion Start"),      # Yellow
+            (region.lesion_end, REGION_BOUNDARY_COLORS[3], "Lesion End"),          # Yellow
+            (region.tooth_end, REGION_BOUNDARY_COLORS[1], "Tooth End")             # Green
         ]
         
         for (point, color, label) in boundaries:
@@ -585,6 +608,8 @@ class AIRAnnotationRenderer(BaseAnnotationRenderer):
         x1, y1 = air_config.point1
         x2, y2 = air_config.point2
         
+        # Note: Using cyan for AIR regions (not AIR_REGION_COLOR which is yellow)
+        # This provides better contrast with region boundaries
         self.draw_rectangle(x1, y1, x2, y2, outline="cyan", width=2, tags="air_visual")
 
 

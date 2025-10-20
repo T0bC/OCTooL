@@ -64,6 +64,9 @@ class AScanViewer:
         # Hover annotation data
         self.annotation_points = []  # List of (x, y, label, artist) tuples
         self.hover_annotation = None  # Matplotlib annotation object
+        
+        # Image viewer synchronization callback
+        self.image_viewer_redraw_callback = None  # Callback to trigger image viewer redraw
     
     @handle_errors("AScanViewer.show")
     def show(self):
@@ -192,6 +195,8 @@ class AScanViewer:
         image_panel = self.context.get_panel("carl_image")
         if image_panel:
             image_panel.register_ascan_viewer_callback(self.on_slice_changed)
+            # Store reference for triggering redraws when checkboxes change
+            self.image_viewer_redraw_callback = image_panel.render_zoomed_image
         
         # Draw initial A-scan indicator in image viewer
         self._update_image_indicator()
@@ -330,9 +335,19 @@ class AScanViewer:
     
     @handle_errors("AScanViewer._update_plot")
     def _update_plot(self):
-        """Update the plot with current column data and annotations."""
+        """Update the plot with current column data and annotations.
+        
+        Also triggers image viewer redraw to synchronize component method visualization.
+        """
         if self.current_image is None or self.current_column is None:
             return
+        
+        # Trigger image viewer redraw to synchronize component method visibility
+        if self.image_viewer_redraw_callback is not None:
+            try:
+                self.image_viewer_redraw_callback()
+            except Exception:
+                pass  # Silently ignore if image viewer is not available
         
         # Extract column (A-scan)
         column_data = self.current_image[:, self.current_column]
@@ -596,8 +611,76 @@ class AScanViewer:
         if image_panel:
             image_panel.unregister_ascan_viewer_callback()
             image_panel.clear_ascan_indicator()
+            # Trigger redraw to hide component methods
+            try:
+                image_panel.render_zoomed_image()
+            except Exception:
+                pass  # Silently ignore if redraw fails
+        
+        # Clear active viewer reference in results panel
+        results_panel = self.context.get_panel("carl_results")
+        if results_panel and hasattr(results_panel, 'active_ascan_viewer'):
+            results_panel.active_ascan_viewer = None
+        
         # Destroy the dialog
         self.dialog.destroy()
+    
+    @handle_errors("AScanViewer.update_to_slice")
+    def update_to_slice(self, specimen_id, slice_index):
+        """Update the viewer to display a different specimen/slice.
+        
+        This method allows reusing an existing A-Scan viewer window instead of
+        creating new instances when the user navigates to different slices.
+        
+        Args:
+            specimen_id: ID of the specimen
+            slice_index: Slice index (1-based from table)
+        """
+        # Update specimen and slice
+        self.specimen_id = specimen_id
+        self.slice_index = slice_index - 1  # Convert to 0-based
+        
+        # Navigate image viewer to the new slice
+        self._navigate_to_image()
+        
+        # Reload the image
+        if not self._load_image():
+            return
+        
+        # Reload specimen data for new slice
+        self._load_specimen_data()
+        
+        # Get image dimensions
+        img_width = self.current_image.shape[1]
+        img_height = self.current_image.shape[0]
+        
+        # Reset column to center
+        self.current_column = img_width // 2
+        
+        # Update slider range and position
+        if hasattr(self, 'slider'):
+            self.slider.configure(to=img_width - 1)
+            self.slider.set(self.current_column)
+        
+        # Update column label
+        if hasattr(self, 'column_label'):
+            self.column_label.config(text=f"{self.current_column}")
+        
+        # Update window title
+        if self.dialog:
+            self.dialog.title(f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}")
+        
+        # Update plot
+        if hasattr(self, 'ax'):
+            self._update_plot()
+        
+        # Update indicator in image viewer
+        self._update_image_indicator()
+        
+        # Bring window to front
+        if self.dialog:
+            self.dialog.lift()
+            self.dialog.focus_force()
     
     @handle_errors("AScanViewer.on_slice_changed")
     def on_slice_changed(self, new_slice_index, img_width, img_height):

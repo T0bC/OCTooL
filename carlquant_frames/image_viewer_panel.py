@@ -901,6 +901,9 @@ class image_viewer_panel(BaseCanvasPanel):
         """
         Draw lesion depth results (detected bottom of lesion).
         
+        Synchronizes with A-Scan viewer checkboxes to show/hide component methods
+        (knee point, inflection point, shoulder point) when the A-Scan viewer is open.
+        
         Args:
             specimen: Specimen object containing results
             current_slice: 0-based slice index
@@ -919,8 +922,26 @@ class image_viewer_panel(BaseCanvasPanel):
         if converter is None:
             return
         
+        # Get checkbox states from A-Scan viewer if it's open
+        show_knee = False
+        show_inflection = False
+        show_shoulder = False
+        
+        # Check if there's an active A-Scan viewer with checkbox states
+        results_panel = self.context.get_panel("carl_results")
+        if results_panel and hasattr(results_panel, 'active_ascan_viewer'):
+            ascan_viewer = results_panel.active_ascan_viewer
+            if ascan_viewer and ascan_viewer.dialog and ascan_viewer.dialog.winfo_exists():
+                # Get checkbox states from A-Scan viewer
+                show_knee = ascan_viewer.show_knee_point.get()
+                show_inflection = ascan_viewer.show_sigmoid_inflection.get()
+                show_shoulder = ascan_viewer.show_sigmoid_shoulder.get()
+        
         renderer = LesionDepthAnnotationRenderer(self.canvas, converter)
-        renderer.draw(lesion_depth)
+        renderer.draw(lesion_depth, 
+                     show_knee=show_knee, 
+                     show_inflection=show_inflection, 
+                     show_shoulder=show_shoulder)
     
     def draw_ascan_indicator(self, column_x):
         """
