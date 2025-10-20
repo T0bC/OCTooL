@@ -40,8 +40,8 @@ EXTRACTION_REGION_TEXT_COLOR = '#00FF66'     # Text color for region numbers
 # Region Boundary Colors (vertical lines for region definition)
 REGION_BOUNDARY_COLORS = ['red', 'green', 'blue', '#eb3496']  # Cycle through these
 
-# AIR Region Color
-AIR_REGION_COLOR = 'yellow'                  # AIR selection
+# AIR Reference Color
+AIR_REGION_COLOR = 'yellow'                  # AIR reference area (actual air/empty space)
 
 # ============================================================================
 
@@ -593,11 +593,15 @@ class RegionBoundaryAnnotationRenderer(BaseAnnotationRenderer):
 
 
 class AIRAnnotationRenderer(BaseAnnotationRenderer):
-    """Renderer for AIR (Area of Interest Rectangle) regions."""
+    """Renderer for AIR (Air Reference) regions.
+    
+    AIR defines a rectangular area containing actual air (empty space) used as
+    a reference for normalization and threshold calculations in OCT analysis.
+    """
     
     def draw(self, air_config):
         """
-        Draw AIR region.
+        Draw AIR reference area.
         
         Args:
             air_config: AIR configuration object with point1 and point2
@@ -608,7 +612,7 @@ class AIRAnnotationRenderer(BaseAnnotationRenderer):
         x1, y1 = air_config.point1
         x2, y2 = air_config.point2
         
-        # Note: Using cyan for AIR regions (not AIR_REGION_COLOR which is yellow)
+        # Note: Using cyan for AIR reference areas (not AIR_REGION_COLOR which is yellow)
         # This provides better contrast with region boundaries
         self.draw_rectangle(x1, y1, x2, y2, outline="cyan", width=2, tags="air_visual")
 

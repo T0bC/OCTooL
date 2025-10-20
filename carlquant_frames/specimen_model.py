@@ -57,7 +57,10 @@ class RegionConfig:
 
 @dataclass
 class AirConfig:
-    """Configuration for AIR threshold area for a specific slice.
+    """Configuration for AIR reference area for a specific slice.
+    
+    AIR (Air Reference) defines a rectangular region containing actual air (empty space)
+    used as a reference for normalization and threshold calculations in OCT analysis.
     
     Implements InterpolatableConfig protocol for keyframe-based interpolation.
     """
