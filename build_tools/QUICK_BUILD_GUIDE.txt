@@ -1,0 +1,122 @@
+================================================================================
+QUICK BUILD GUIDE - OCTexVIEW PyInstaller Optimization
+================================================================================
+
+PREREQUISITES:
+  pip install pyinstaller
+
+================================================================================
+STEP-BY-STEP PROCESS:
+================================================================================
+
+1. TRACK MODULE USAGE (5-10 minutes)
+   ────────────────────────────────────────────────────────────────────────
+   Command:  python build_tools/track_module_usage.py
+   
+   What to do:
+   - App will start automatically
+   - Click EVERY button in all 3 tabs (Export, Analyze, CarlQuant)
+   - Toggle all checkboxes and dropdowns
+   - Load sample data if available
+   - Open Help and About dialogs
+   - Press Ctrl+C when done
+   
+   Output:   module_usage.json
+
+
+2. GENERATE SPEC FILE (< 1 minute)
+   ────────────────────────────────────────────────────────────────────────
+   Command:  python build_tools/generate_pyinstaller_spec.py
+   
+   Options:
+   --onefile    Single executable (slower startup)
+   --debug      Enable console window for debugging
+   
+   Output:   OCTexVIEW.spec
+
+
+3. BUILD EXECUTABLE (2-10 minutes)
+   ────────────────────────────────────────────────────────────────────────
+   Command:  pyinstaller OCTexVIEW.spec
+   
+   Output:   dist/OCTexVIEW/OCTexVIEW.exe
+
+
+4. ANALYZE BUILD SIZE (< 1 minute)
+   ────────────────────────────────────────────────────────────────────────
+   Command:  python build_tools/analyze_build_size.py
+   
+   Shows:
+   - Total size
+   - Largest files
+   - Optimization suggestions
+
+
+5. TEST EXECUTABLE
+   ────────────────────────────────────────────────────────────────────────
+   Command:  cd dist\OCTexVIEW
+             OCTexVIEW.exe
+   
+   Test:
+   - All tabs open
+   - All features work
+   - No missing module errors
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+ERROR: "ModuleNotFoundError: No module named 'xyz'"
+  → Edit OCTexVIEW.spec, add to hiddenimports=['xyz']
+  → Rebuild: pyinstaller OCTexVIEW.spec
+
+ERROR: "DLL load failed"
+  → Find DLL in Python installation
+  → Add to binaries=[('path/to/dll', '.')] in spec
+  → Rebuild
+
+ERROR: Icons/fonts missing
+  → Check datas=[('icons', 'icons')] in spec
+  → Rebuild
+
+BUILD TOO LARGE:
+  → Re-run step 1 with more thorough testing
+  → Add more excludes in OCTexVIEW.spec
+  → Remove HTML_docs from datas if not needed
+
+================================================================================
+EXPECTED RESULTS:
+================================================================================
+
+Before optimization:  200-500 MB
+After optimization:   75-150 MB (50-75% reduction)
+With --onefile:       100-200 MB (single file)
+
+================================================================================
+FILES CREATED:
+================================================================================
+
+build_tools/track_module_usage.py           - Module tracking script
+build_tools/generate_pyinstaller_spec.py    - Spec file generator
+build_tools/automated_ui_test.py            - Automated UI testing
+build_tools/analyze_build_size.py           - Build size analyzer
+build_tools/BUILD_OPTIMIZATION_README.md    - Complete documentation
+build_tools/QUICK_BUILD_GUIDE.txt           - This file
+
+module_usage.json               - Tracked modules (generated)
+OCTexVIEW.spec                  - PyInstaller config (generated)
+dist/OCTexVIEW/                 - Final distribution (generated)
+
+================================================================================
+TIPS:
+================================================================================
+
+✓ The more thorough your testing in step 1, the better the optimization
+✓ Don't skip any features during module tracking
+✓ Test the built executable thoroughly before distribution
+✓ Keep module_usage.json for future builds
+✓ Use --debug flag if executable crashes silently
+
+================================================================================
+For detailed documentation, see: build_tools/BUILD_OPTIMIZATION_README.md
+================================================================================
