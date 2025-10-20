@@ -44,19 +44,27 @@ class LesionDepth:
 
 @dataclass
 class RegionConfig:
-    """Configuration for region boundaries (4 points) for a specific slice."""
+    """Configuration for region boundaries (4 points) for a specific slice.
+    
+    Implements InterpolatableConfig protocol for keyframe-based interpolation.
+    """
     slice_index: int
     specimen_start: Tuple[int, int]  # (x, y) - Left boundary of specimen
     lesion_start: Tuple[int, int]    # (x, y) - Left boundary of lesion
     lesion_end: Tuple[int, int]      # (x, y) - Right boundary of lesion
     tooth_end: Tuple[int, int]       # (x, y) - Right boundary of tooth/specimen
+    is_keyframe: bool = False        # True if manually set by user, False if interpolated/propagated
 
 @dataclass
 class AirConfig:
-    """Configuration for AIR threshold area for a specific slice."""
+    """Configuration for AIR threshold area for a specific slice.
+    
+    Implements InterpolatableConfig protocol for keyframe-based interpolation.
+    """
     slice_index: int
     point1: Tuple[int, int]       # First diagonal point (x, y)
     point2: Optional[Tuple[int, int]] = None  # Second diagonal point (x, y) for rectangular selection
+    is_keyframe: bool = False     # True if manually set by user, False if interpolated/propagated
 
 @dataclass
 class SpecimenConfig:
