@@ -21,7 +21,7 @@ import numpy as np
 
 # Surface Detection Colors
 INTERPOLATED_SURFACE_COLOR = 'cyan'          # Interpolated surface curve
-ACTUAL_SURFACE_COLOR = '#4169E1'             # Actual surface curve (royal blue)
+ACTUAL_SURFACE_COLOR = '#ffee00'             # Actual surface curve
 
 # Lesion Depth Detection Colors
 LESION_DEPTH_PRIMARY_COLOR = 'red'           # Main lesion depth result (thick line)
@@ -38,10 +38,10 @@ EXTRACTION_REGION_COLOR = '#00FF66'          # Bright green for region boundarie
 EXTRACTION_REGION_TEXT_COLOR = '#00FF66'     # Text color for region numbers
 
 # Region Boundary Colors (vertical lines for region definition)
-REGION_BOUNDARY_COLORS = ['red', 'green', 'blue', 'yellow']  # Cycle through these
+REGION_BOUNDARY_COLORS = ['red', 'green', 'blue', '#eb3496']  # Cycle through these
 
 # AIR Region Color
-AIR_REGION_COLOR = 'yellow'                  # AIR (Artifact/Invalid Region) selection
+AIR_REGION_COLOR = 'yellow'                  # AIR selection
 
 # ============================================================================
 
