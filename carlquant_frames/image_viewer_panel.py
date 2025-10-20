@@ -545,25 +545,14 @@ class image_viewer_panel(BaseCanvasPanel):
         """
         Update the specimen panel to reflect new region configuration.
         
-        Updates the regions column in the specimen list to show the count
-        of configured regions.
+        This method is kept for compatibility but no longer updates display
+        since REGIONS and AIR columns have been removed from the specimen panel.
         
         Args:
             specimen: Specimen object that was updated
         """
-        specimen_panel = self.context.get_panel("carl_specimen")
-        if not specimen_panel:
-            return
-
-        # Find the row for this specimen
-        for row_idx in range(specimen_panel.sheet.get_total_rows()):
-            if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen.specimen_id:
-                # Update regions column
-                regions_count = len(specimen.config.regions) if specimen.config else 0
-                regions_text = f"{regions_count} regions" if regions_count > 0 else ""
-                specimen_panel.sheet.set_cell_data(row_idx, 2, regions_text)
-                specimen.regions = regions_text
-                break
+        # No-op: REGIONS and AIR columns removed from UI
+        pass
 
 
     # ============================================================================

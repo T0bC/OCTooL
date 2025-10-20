@@ -24,7 +24,7 @@ class specimenPanel:
         self.frame = context.get_frame("carl_specimen")
         self.last_selected_row = None
 
-        self.headers = ['SPECIMEN_ID', 'SLICES', 'REGIONS', 'AIR', 'STATE']
+        self.headers = ['SPECIMEN_ID', 'SLICES', 'STATE']
         self._setup_sheet()
 
     def _setup_sheet(self):
@@ -86,12 +86,12 @@ class specimenPanel:
             results_panel.load_results_for(specimen_id)
 
             specimen_data.status = "Displayed"
-            self.sheet.set_cell_data(row_index, 4, "Displayed")
+            self.sheet.set_cell_data(row_index, 2, "Displayed")
 
             # Clear previous highlight
             if self.last_selected_row is not None:
                 # Check if the previous row was completed to restore its green color
-                prev_status = self.sheet.get_cell_data(self.last_selected_row, 4)
+                prev_status = self.sheet.get_cell_data(self.last_selected_row, 2)
                 if prev_status == "Completed":
                     self.sheet.highlight_rows(
                         rows=[self.last_selected_row],

@@ -86,7 +86,6 @@ class Specimen:
     source: Path
     images: List[Path]
     slices: int
-    regions: str
     status: str
     date: float
     results: Dict[int, SliceResult] = field(default_factory=dict)
