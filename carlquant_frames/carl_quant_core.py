@@ -1560,8 +1560,12 @@ def run_carl_quant(context):
                     # PARALLEL PROCESSING WITH ON-DEMAND LOADING
                     effective_workers = min(num_workers, len(slice_tasks))
                     
+                    # Set processing mode
+                    progress_dialog.set_processing_mode("parallel", effective_workers)
+                    
+                    # Show preparing workers message
                     progress_dialog.update_status(
-                        f"Processing {len(slice_tasks)} slices with {effective_workers} workers...",
+                        f"Preparing {effective_workers} workers for parallel processing...",
                         color="blue"
                     )
                     
@@ -1569,6 +1573,11 @@ def run_carl_quant(context):
                     detection_method_str = getattr(context, 'detection_method', 'combined_mean')
                     
                     with ProcessPoolExecutor(max_workers=effective_workers) as executor:
+                        # Workers are now ready
+                        progress_dialog.update_status(
+                            f"Processing {len(slice_tasks)} slices with {effective_workers} workers...",
+                            color="green"
+                        )
                         # Submit tasks - each worker loads its own image on-demand
                         future_to_slice = {}
                         for slice_idx, image_path, region_config, air_config in slice_tasks:
@@ -1628,6 +1637,9 @@ def run_carl_quant(context):
                 
                 else:
                     # SEQUENTIAL PROCESSING
+                    # Set processing mode
+                    progress_dialog.set_processing_mode("sequential")
+                    
                     progress_dialog.update_status(
                         f"Processing {len(slice_tasks)} slices sequentially...",
                         color="blue"
@@ -1742,20 +1754,17 @@ def run_carl_quant(context):
 
                 # Save results after all slices are processed (or if cancelled mid-specimen)
                 try:
-                    DataSaver.save_results(specimen)
+                    # Show saving message
                     progress_dialog.update_status(
-                        f"Saved results for {specimen_id}",
-                        color="green"
-                    )
-                    
-                    # Save annotated images
-                    progress_dialog.update_status(
-                        f"Saving annotated images for {specimen_id}...",
+                        "Saving results and images to disc...",
                         color="blue"
                     )
+                    
+                    DataSaver.save_results(specimen)
                     DataSaver.save_annotated_images(specimen)
+                    
                     progress_dialog.update_status(
-                        f"Saved annotated images for {specimen_id}",
+                        f"Successfully saved results and images for {specimen_id}",
                         color="green"
                     )
                     
@@ -1776,6 +1785,8 @@ def run_carl_quant(context):
                                 specimen_panel.sheet.set_cell_data(row_idx, 4, "Completed")
                                 # Refresh column widths to accommodate new status
                                 specimen_panel._set_column_widths()
+                                # Highlight the completed row with green color
+                                specimen_panel.highlight_completed_row(row_idx)
                                 break
                     
                     # Lock region dropdown after analysis completes

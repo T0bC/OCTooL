@@ -13,6 +13,8 @@ STATIC_FG_COLOR = "#dcdcdc"
 HEADER_BG_COLOR = "#3c3c3c"
 HEADER_FG_COLOR = "#ffffff"
 GRID_COLOR = "#444444"
+COMPLETED_BG_COLOR = "#16472a"
+COMPLETED_FG_COLOR = "#dcdcdc"
 
 class specimenPanel:
     @handle_errors("specimenPanel.__init__")
@@ -88,12 +90,22 @@ class specimenPanel:
 
             # Clear previous highlight
             if self.last_selected_row is not None:
-                self.sheet.highlight_rows(
-                    rows=[self.last_selected_row],
-                    bg="#2b2b2b",
-                    fg="#dcdcdc",
-                    redraw=False
-                )
+                # Check if the previous row was completed to restore its green color
+                prev_status = self.sheet.get_cell_data(self.last_selected_row, 4)
+                if prev_status == "Completed":
+                    self.sheet.highlight_rows(
+                        rows=[self.last_selected_row],
+                        bg=COMPLETED_BG_COLOR,
+                        fg=COMPLETED_FG_COLOR,
+                        redraw=False
+                    )
+                else:
+                    self.sheet.highlight_rows(
+                        rows=[self.last_selected_row],
+                        bg="#2b2b2b",
+                        fg="#dcdcdc",
+                        redraw=False
+                    )
 
             # Apply new highlight
             highlight_bg = "#ffd966"
@@ -168,3 +180,21 @@ class specimenPanel:
         calculated_width = max(header_width, max_cell_width, base_width)
         
         return min(calculated_width, max_width)
+
+
+    @handle_errors("specimenPanel.highlight_completed_row")
+    def highlight_completed_row(self, row_index: int) -> None:
+        """
+        Highlight a row with green color to indicate it has been completed.
+        
+        Args:
+            row_index (int): The row index to highlight.
+        """
+        # Only highlight if this is not the currently selected row
+        if row_index != self.last_selected_row:
+            self.sheet.highlight_rows(
+                rows=[row_index],
+                bg=COMPLETED_BG_COLOR,
+                fg=COMPLETED_FG_COLOR,
+                redraw=True
+            )

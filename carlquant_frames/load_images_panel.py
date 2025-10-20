@@ -183,6 +183,11 @@ class loadImagePanel:
         specimen_panel.sheet.set_sheet_data(rows)
         specimen_panel._set_column_widths()
         
+        # Highlight completed rows with green color
+        for row_idx, row_data in enumerate(rows):
+            if row_data[4] == "Completed":  # STATUS column is at index 4
+                specimen_panel.highlight_completed_row(row_idx)
+        
         self.context.status_bar.update(
             f"Loaded {len(rows)} specimen(s) for {operator} measurement {measurement}", 
             level="success"
