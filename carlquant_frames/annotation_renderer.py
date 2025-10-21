@@ -13,38 +13,21 @@ Created on Thu Oct 09 2025
 import tkinter as tk
 import numpy as np
 
-
-# ============================================================================
-# ANNOTATION COLOR SCHEME - Centralized color definitions
-# ============================================================================
-# Modify these colors to change the appearance of all annotations
-
-# Surface Detection Colors
-# High contrast colors that work on both bright (white) and dark (gray) backgrounds
-INTERPOLATED_SURFACE_COLOR = '#e600e6'       # Bright magenta - visible on light and dark areas
-ACTUAL_SURFACE_COLOR = '#00b0e6'             # Bright cyan/blue - distinct from red lesion depth, visible on gray
-
-# Lesion Depth Detection Colors
-LESION_DEPTH_PRIMARY_COLOR = '#f71134'       # Bright red - main lesion depth result (thick line)
-
-# Component Detection Method Colors (shown when enabled in A-Scan viewer)
-KNEE_POINT_COLOR = 'yellow'                  # Knee point detection method
-INFLECTION_POINT_COLOR = 'cyan'              # Sigmoid inflection point method
-SHOULDER_POINT_COLOR = 'magenta'             # Sigmoid shoulder point method
-
-# Extraction Region Colors
-EXTRACTION_REGION_COLOR = '#00FF88'          # Bright mint green for sound region boundaries
-EXTRACTION_REGION_LESION_COLOR = '#f71134'   # Color for lesion (non-sound) region boundaries
-
-# Region Boundary Colors (vertical lines for region definition)
-# Named constants for clarity - specimen boundaries vs lesion boundaries
-SPECIMEN_BOUNDARY_COLOR = '#4CAF50'          # Bootstrap success green - specimen start/end
-LESION_BOUNDARY_COLOR = '#FFD700'            # Gold/yellow - lesion start/end (distinct from red)
-
-# AIR Reference Color
-AIR_REGION_COLOR = '#37bfe9'                 # Bright cyan - AIR reference area
-
-# ============================================================================
+# Import centralized color definitions
+from carlquant_frames.annotation_colors import (
+    INTERPOLATED_SURFACE_COLOR,
+    ACTUAL_SURFACE_COLOR,
+    LESION_DEPTH_PRIMARY_COLOR,
+    KNEE_POINT_COLOR,
+    INFLECTION_POINT_COLOR,
+    SHOULDER_POINT_COLOR,
+    EXTRACTION_REGION_COLOR,
+    EXTRACTION_REGION_LESION_COLOR,
+    EXTRACTION_REGION_TEXT_COLOR,
+    SPECIMEN_BOUNDARY_COLOR,
+    LESION_BOUNDARY_COLOR,
+    AIR_REGION_COLOR
+)
 
 
 class CoordinateConverter:
