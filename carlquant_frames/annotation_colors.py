@@ -42,6 +42,10 @@ LESION_BOUNDARY_COLOR = '#FFD700'            # Gold/yellow - lesion start/end (d
 # AIR Reference Color
 AIR_REGION_COLOR = '#37bfe9'                 # Bright cyan - AIR reference area
 
+# Results Panel Row Highlighting Colors
+ROW_HIGHLIGHT_NAVIGATION_COLOR = '#2d5016'   # Dark green - normal navigation highlighting
+ROW_HIGHLIGHT_ASCAN_COLOR = '#6a4c93'        # Purple/lavender - A-Scan viewer active highlighting
+
 # ============================================================================
 # Color Conversion Utilities (if needed for different rendering contexts)
 # ============================================================================

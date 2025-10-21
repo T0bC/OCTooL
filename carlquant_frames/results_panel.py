@@ -11,6 +11,7 @@ from utils.error_handler import handle_errors
 from carlquant_frames.specimen_model import RegionStats, Surface, LesionDepth, SliceResult
 from carlquant_frames.data_io import DataLoader
 from carlquant_frames.ascan_viewer import AScanViewer
+from carlquant_frames.annotation_colors import ROW_HIGHLIGHT_NAVIGATION_COLOR, ROW_HIGHLIGHT_ASCAN_COLOR
 
 
 class resultsPanel:
@@ -22,6 +23,7 @@ class resultsPanel:
 
         self.headers = ['MEASUREMENT', 'VALUE', 'UNIT', 'CONFIDENCE']
         self.highlighted_row = None  # Track currently highlighted row
+        self.highlight_color = ROW_HIGHLIGHT_NAVIGATION_COLOR  # Current highlight color (green or purple)
         self.active_ascan_viewer = None  # Track active A-Scan viewer for checkbox synchronization
         self._setup_sheet()
 
@@ -152,6 +154,9 @@ class resultsPanel:
         self.sheet.set_sheet_data(rows)
         self._set_column_widths()  # Set column widths after loading data
         self.context.status_bar.update(f"Loaded {len(rows)} slice results for '{specimen_id}' ({num_sound} sound + {num_lesion} lesion regions).", level="info")
+        
+        # Highlight current slice if image viewer is active
+        self.sync_highlight_to_current_slice()
 
     @handle_errors("resultsPanel._set_column_widths")
     def _set_column_widths(self) -> None:
@@ -196,6 +201,88 @@ class resultsPanel:
             self._set_column_widths()
             self.sheet.set_sheet_data([])  # Clear any existing data
     
+    # ============================================================================
+    # ROW HIGHLIGHTING - Centralized Methods
+    # ============================================================================
+    
+    @handle_errors("resultsPanel.highlight_row")
+    def highlight_row(self, row, color=None):
+        """
+        Highlight a specific row with the given color.
+        
+        Args:
+            row: Row index to highlight (0-based)
+            color: Hex color string. If None, uses self.highlight_color
+        """
+        if row is None:
+            return
+        
+        # Clear previous highlighting
+        if self.highlighted_row is not None:
+            self.sheet.dehighlight_rows([self.highlighted_row])
+        
+        # Use provided color or current highlight color
+        highlight_color = color if color is not None else self.highlight_color
+        
+        # Highlight the row
+        self.sheet.highlight_rows(
+            [row],
+            bg=highlight_color,
+            fg="#ffffff"
+        )
+        self.highlighted_row = row
+    
+    @handle_errors("resultsPanel.set_highlight_color")
+    def set_highlight_color(self, color):
+        """
+        Set the highlight color and re-highlight the current row if any.
+        
+        Args:
+            color: Hex color string (e.g., ROW_HIGHLIGHT_NAVIGATION_COLOR or ROW_HIGHLIGHT_ASCAN_COLOR)
+        """
+        self.highlight_color = color
+        
+        # Re-highlight current row with new color
+        if self.highlighted_row is not None:
+            self.highlight_row(self.highlighted_row, color)
+    
+    @handle_errors("resultsPanel.sync_highlight_to_current_slice")
+    def sync_highlight_to_current_slice(self):
+        """
+        Synchronize row highlighting with the currently displayed slice in the image viewer.
+        Called when navigating slices via slider, arrow keys, or mouse wheel.
+        """
+        # Get current specimen and slice from image viewer
+        image_panel = self.context.get_panel("carl_image")
+        if not image_panel:
+            return
+        
+        specimen_id = getattr(self.context, "current_specimen_id", None)
+        if not specimen_id:
+            return
+        
+        # Get current slice index (0-based) from image viewer
+        try:
+            current_slice_index = int(image_panel.scale.get() - 1)  # Convert from 1-based to 0-based
+        except (ValueError, AttributeError):
+            return
+        
+        # Find the row that matches this slice
+        # Row data format: [SPECIMEN_ID, SLICE, ...]
+        # SLICE is 1-based in the table
+        target_slice_display = current_slice_index + 1  # Convert to 1-based for comparison
+        
+        for row_idx in range(self.sheet.total_rows()):
+            row_data = self.sheet.get_row_data(row_idx)
+            if len(row_data) >= 2:
+                row_specimen_id = row_data[0]
+                row_slice = row_data[1]
+                
+                if row_specimen_id == specimen_id and row_slice == target_slice_display:
+                    # Found matching row - highlight it
+                    self.highlight_row(row_idx)
+                    return
+    
     @handle_errors("resultsPanel._on_single_click")
     def _on_single_click(self, event):
         """
@@ -206,19 +293,8 @@ class resultsPanel:
         row = self.sheet.identify_row(event, exclude_index=True)
         
         if row is not None:
-            # Clear previous highlighting
-            if self.highlighted_row is not None:
-                self.sheet.dehighlight_rows([self.highlighted_row])
-            
-            # Highlight the clicked row with a nice green shade
-            # Using a dark green that matches the dark theme
-            GREEN_HIGHLIGHT = "#2d5016"  # Dark green shade for dark theme
-            self.sheet.highlight_rows(
-                [row],
-                bg=GREEN_HIGHLIGHT,
-                fg="#ffffff"
-            )
-            self.highlighted_row = row
+            # Highlight the clicked row
+            self.highlight_row(row)
             
             # Get row data
             row_data = self.sheet.get_row_data(row)
@@ -274,19 +350,8 @@ class resultsPanel:
         row = self.sheet.identify_row(event, exclude_index=True)
         
         if row is not None:
-            # Clear previous highlighting
-            if self.highlighted_row is not None:
-                self.sheet.dehighlight_rows([self.highlighted_row])
-            
-            # Highlight the clicked row with a nice green shade
-            # Using a dark green that matches the dark theme
-            GREEN_HIGHLIGHT = "#2d5016"  # Dark green shade for dark theme
-            self.sheet.highlight_rows(
-                [row],
-                bg=GREEN_HIGHLIGHT,
-                fg="#ffffff"
-            )
-            self.highlighted_row = row
+            # Highlight the clicked row (will use purple if A-Scan viewer is open, green otherwise)
+            self.highlight_row(row)
             
             # Get row data
             row_data = self.sheet.get_row_data(row)
@@ -319,5 +384,8 @@ class resultsPanel:
                 
                 # Track active A-Scan viewer for checkbox synchronization with image viewer
                 self.active_ascan_viewer = viewer
+                
+                # Switch to purple highlighting when A-Scan viewer opens
+                self.set_highlight_color(ROW_HIGHLIGHT_ASCAN_COLOR)
 
 

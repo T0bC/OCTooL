@@ -235,6 +235,11 @@ class image_viewer_panel(BaseCanvasPanel):
                 img_height = self.rawImage.height
                 self.ascan_viewer_callback(index, img_width, img_height)
             
+            # Synchronize results panel row highlighting with current slice
+            results_panel = self.context.get_panel("carl_results")
+            if results_panel and hasattr(results_panel, 'sync_highlight_to_current_slice'):
+                results_panel.sync_highlight_to_current_slice()
+            
             # Give canvas focus so keyboard shortcuts work immediately
             self.canvas.focus_set()
 
