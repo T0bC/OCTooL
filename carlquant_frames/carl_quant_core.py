@@ -304,12 +304,18 @@ def fit_reference_surface(surface_points: List[Tuple[int, int]],
                           smoothing: float = 2.0,
                           smoothing_multiplier: float = 5.0,
                           spline_degree: int = 3) -> Dict[str, List[Tuple[int, int]]]:
-    """Fit reference surface curve excluding lesion area for cavitation detection."""
+    """Fit reference surface curve excluding lesion area for cavitation detection.
+    
+    Uses buffered lesion boundaries to avoid fitting artifacts in transition zones
+    between sound and lesion areas. The buffer excludes ~10 pixels on each side of
+    the lesion boundaries from the interpolated surface fit.
+    """
     if not region_config or len(surface_points) < 4:
         return {}
     
-    lesion_start_x = region_config.lesion_start[0]
-    lesion_end_x = region_config.lesion_end[0]
+    # Use buffered coordinates to exclude transition zones from interpolated surface fit
+    lesion_start_x = region_config.get_buffered_lesion_start_x()
+    lesion_end_x = region_config.get_buffered_lesion_end_x()
     
     sound_points = [(x, y) for x, y in surface_points 
                     if x < lesion_start_x or x > lesion_end_x]
@@ -333,12 +339,17 @@ def detect_cavitation(primary_curve: List[Tuple[int, int]],
                      region_config,
                      cavitation_threshold: float = 10.0,
                      min_cavitation_ratio: float = 0.3) -> Tuple[bool, float]:
-    """Detect surface cavitation by comparing primary and reference curves."""
+    """Detect surface cavitation by comparing primary and reference curves.
+    
+    Uses buffered lesion boundaries to match the transition zone logic used in
+    sound region extraction and lesion depth detection.
+    """
     if not primary_curve or not reference_curve or not region_config:
         return False, 0.0
     
-    lesion_start_x = region_config.lesion_start[0]
-    lesion_end_x = region_config.lesion_end[0]
+    # Use buffered coordinates for consistency with other analysis functions
+    lesion_start_x = region_config.get_buffered_lesion_start_x()
+    lesion_end_x = region_config.get_buffered_lesion_end_x()
     
     primary_dict = {x: y for x, y in primary_curve}
     reference_dict = {x: y for x, y in reference_curve}
@@ -386,6 +397,12 @@ def extract_regions(image: np.ndarray,
     3. For each region, place 25x25 pixel rectangle 10px below surface
     4. Extract pixel values and calculate statistics
     
+    Buffer Zone System:
+    - Sound regions use BUFFERED boundaries (±10px from lesion boundaries) to avoid
+      extracting from transition zones between sound and lesion areas
+    - Lesion regions use ORIGINAL user-defined boundaries for accurate lesion measurement
+    - This prevents contamination of sound region statistics with transition artifacts
+    
     Args:
         image: 2D numpy array (grayscale image)
         surface: Detected surface with fitted curve
@@ -402,9 +419,15 @@ def extract_regions(image: np.ndarray,
     
     # Extract boundary x-coordinates from 4-point configuration
     specimen_start_x, _ = region_config.specimen_start
+    tooth_end_x, _ = region_config.tooth_end
+    
+    # Use ORIGINAL coordinates for lesion regions (user-defined boundaries)
     lesion_start_x, _ = region_config.lesion_start
     lesion_end_x, _ = region_config.lesion_end
-    tooth_end_x, _ = region_config.tooth_end
+    
+    # Use BUFFERED coordinates for sound regions to avoid transition zones
+    sound_left_end_x = region_config.get_buffered_sound_left_end_x()
+    sound_right_start_x = region_config.get_buffered_sound_right_start_x()
     
     # Define overall boundaries for surface lookup
     x_start = specimen_start_x
@@ -506,8 +529,9 @@ def extract_regions(image: np.ndarray,
     # Split sound regions between left and right sides
     num_sound_per_side = num_sound_regions // 2
     
-    # Calculate positions for sound regions (left side: specimen_start to lesion_start)
-    sound_left_width = lesion_start_x - specimen_start_x
+    # Calculate positions for sound regions (left side: specimen_start to buffered lesion_start)
+    # Uses buffered boundary to avoid transition zone between sound and lesion
+    sound_left_width = sound_left_end_x - specimen_start_x
     sound_left_spacing = sound_left_width / (num_sound_per_side + 1)
     
     for i in range(num_sound_per_side):
@@ -526,12 +550,13 @@ def extract_regions(image: np.ndarray,
         if stats:
             region_stats.append(stats)
     
-    # Calculate positions for sound regions (right side: lesion_end to tooth_end)
-    sound_right_width = tooth_end_x - lesion_end_x
+    # Calculate positions for sound regions (right side: buffered lesion_end to tooth_end)
+    # Uses buffered boundary to avoid transition zone between lesion and sound
+    sound_right_width = tooth_end_x - sound_right_start_x
     sound_right_spacing = sound_right_width / (num_sound_per_side + 1)
     
     for i in range(num_sound_per_side):
-        center_x = int(lesion_end_x + sound_right_spacing * (i + 1))
+        center_x = int(sound_right_start_x + sound_right_spacing * (i + 1))
         stats = extract_region_at(center_x, "sound", num_sound_per_side + i + 1)
         if stats:
             region_stats.append(stats)
@@ -1204,9 +1229,12 @@ def calculate_lesion_depth(surface: Surface,
     if detection_method is None:
         detection_method = DepthDetectionMethod.get_default()
     
-    # Extract lesion boundaries from region config
-    start_x, _ = region_config.lesion_start
-    end_x, _ = region_config.lesion_end
+    # Extract BUFFERED lesion boundaries from region config
+    # Use buffered coordinates to match the transition zone logic:
+    # - Sound regions are extracted with 10px buffer from lesion boundaries
+    # - Lesion depth should be detected in the same buffered area for consistency
+    start_x = region_config.get_buffered_lesion_start_x()
+    end_x = region_config.get_buffered_lesion_end_x()
     
     # Validate surface exists
     if not surface.fitted_curves or "actual_surface" not in surface.fitted_curves:

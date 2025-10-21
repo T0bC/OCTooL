@@ -161,7 +161,8 @@ class DataLoader:
                         lesion_start=tuple(region_data['lesion_start']),
                         lesion_end=tuple(region_data['lesion_end']),
                         tooth_end=tuple(region_data['tooth_end']),
-                        is_keyframe=region_data.get('is_keyframe', False)  # Default False for backward compatibility
+                        is_keyframe=region_data.get('is_keyframe', False),  # Default False for backward compatibility
+                        buffer_pixels=region_data.get('buffer_pixels', 10)  # Default 10px buffer for backward compatibility
                     )
                 else:
                     # Old 2-point format - convert to 4-point
@@ -514,7 +515,8 @@ class DataSaver:
                 "lesion_start": list(region_config.lesion_start),
                 "lesion_end": list(region_config.lesion_end),
                 "tooth_end": list(region_config.tooth_end),
-                "is_keyframe": region_config.is_keyframe
+                "is_keyframe": region_config.is_keyframe,
+                "buffer_pixels": region_config.buffer_pixels
             }
         
         # Convert air configurations to JSON-serializable format

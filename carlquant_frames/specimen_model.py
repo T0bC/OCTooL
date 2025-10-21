@@ -54,6 +54,37 @@ class RegionConfig:
     lesion_end: Tuple[int, int]      # (x, y) - Right boundary of lesion
     tooth_end: Tuple[int, int]       # (x, y) - Right boundary of tooth/specimen
     is_keyframe: bool = False        # True if manually set by user, False if interpolated/propagated
+    buffer_pixels: int = 10          # Buffer zone in pixels to avoid transition artifacts
+    
+    def get_buffered_lesion_start_x(self) -> int:
+        """Get lesion start x-coordinate with buffer applied (moved right).
+        
+        Used for interpolated surface fitting and sound region extraction to avoid
+        transition zone artifacts between sound and lesion areas.
+        """
+        return self.lesion_start[0] + self.buffer_pixels
+    
+    def get_buffered_lesion_end_x(self) -> int:
+        """Get lesion end x-coordinate with buffer applied (moved left).
+        
+        Used for interpolated surface fitting and sound region extraction to avoid
+        transition zone artifacts between sound and lesion areas.
+        """
+        return self.lesion_end[0] - self.buffer_pixels
+    
+    def get_buffered_sound_left_end_x(self) -> int:
+        """Get end of left sound region with buffer applied (moved left from lesion_start).
+        
+        Sound area 1 spans from specimen_start to this buffered coordinate.
+        """
+        return self.lesion_start[0] - self.buffer_pixels
+    
+    def get_buffered_sound_right_start_x(self) -> int:
+        """Get start of right sound region with buffer applied (moved right from lesion_end).
+        
+        Sound area 2 spans from this buffered coordinate to tooth_end.
+        """
+        return self.lesion_end[0] + self.buffer_pixels
 
 @dataclass
 class AirConfig:
