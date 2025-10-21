@@ -22,7 +22,8 @@ class specimenPanel:
         self.context = context
         self.root = context.root
         self.frame = context.get_frame("carl_specimen")
-        self.last_selected_row = None
+        self.last_selected_row = None  # Anchor for range selection
+        self.selected_rows = set()  # Tracks all currently selected rows
 
         self.headers = ['SPECIMEN_ID', 'SLICES', 'STATE']
         self._setup_sheet()
@@ -52,9 +53,10 @@ class specimenPanel:
             selected_rows_fg="#ffffff"
         )
 
-        self.sheet.enable_bindings("copy", "delete", "single_select")
-        self.sheet.enable_bindings("single_select", "cell_select")
-        self.sheet.extra_bindings("cell_select", func=self.on_row_selected)
+        self.sheet.enable_bindings("copy", "delete", "single_select", "row_select", "drag_select")
+        # Register select callback - uses selection_boxes for Shift+Click range detection
+        self.sheet.extra_bindings("select", func=self.on_cell_selected)
+        
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
@@ -62,9 +64,51 @@ class specimenPanel:
         # Set initial column widths
         self._set_column_widths()
 
-    @handle_errors("specimenPanel.on_row_selected")
-    def on_row_selected(self, event):
-        row_index = self.sheet.get_currently_selected()[0]
+    
+    @handle_errors("specimenPanel.on_cell_selected")
+    def on_cell_selected(self, event):
+        """
+        Handle row selection with Shift+Click range support.
+        
+        Flow:
+        1. Parse selection_boxes for range detection (Shift+Click)
+        2. If range: populate selected_rows set, keep first row displayed
+        3. If single: populate selected_rows set, display specimen
+        4. Apply visual highlighting to all selected rows
+        """
+        if not isinstance(event, dict):
+            return
+        
+        # Try to extract row range from selection_boxes (indicates Shift+Click)
+        selection_boxes = event.get('selection_boxes', {})
+        if selection_boxes:
+            box = next(iter(selection_boxes.keys()))  # Get first (and only) box
+            start_row = box.from_r
+            end_row = box.upto_r - 1  # upto_r is exclusive
+            
+            # Populate selected_rows set with range
+            self.selected_rows = set(range(start_row, end_row + 1))
+            
+            # For range selection: keep first row displayed, don't reload specimen
+            if start_row != end_row:
+                self.last_selected_row = min(self.selected_rows)
+                self._highlight_selected_rows()
+                return
+        
+        # Single selection: extract row from 'selected' field
+        selected_info = event.get('selected')
+        if not selected_info or not hasattr(selected_info, 'row') or selected_info.row is None:
+            return
+        
+        current_row = int(selected_info.row)
+        self.selected_rows = {current_row}
+        
+        # Display specimen and update highlighting
+        self._display_specimen(current_row)
+    
+    
+    def _display_specimen(self, row_index):
+        """Display a specimen in the viewer and results panels."""
         specimen_id = self.sheet.get_cell_data(row_index, 0)
         specimen_data = self.context.specimen_data.get(specimen_id)
 
@@ -88,32 +132,40 @@ class specimenPanel:
             specimen_data.status = "Displayed"
             self.sheet.set_cell_data(row_index, 2, "Displayed")
 
-            # Clear previous highlight
-            if self.last_selected_row is not None:
-                # Check if the previous row was completed to restore its green color
-                prev_status = self.sheet.get_cell_data(self.last_selected_row, 2)
-                if prev_status == "Completed":
-                    self.sheet.highlight_rows(
-                        rows=[self.last_selected_row],
-                        bg=COMPLETED_BG_COLOR,
-                        fg=COMPLETED_FG_COLOR,
-                        redraw=False
-                    )
-                else:
-                    self.sheet.highlight_rows(
-                        rows=[self.last_selected_row],
-                        bg="#2b2b2b",
-                        fg="#dcdcdc",
-                        redraw=False
-                    )
+            # Highlight the current selection
+            self._highlight_selected_rows()
 
-            # Apply new highlight
-            highlight_bg = "#ffd966"
-            highlight_fg = self.choose_font_color(highlight_bg)
-            self.sheet.highlight_rows(rows=[row_index], bg=highlight_bg, fg=highlight_fg, redraw=True)
-
-            # Update tracker
+            # Update anchor point for range selection
             self.last_selected_row = row_index
+    
+    def _highlight_selected_rows(self):
+        """Apply highlighting to all selected rows."""
+        # First, restore all rows to their default colors
+        for row_idx in range(self.sheet.total_rows()):
+            status = self.sheet.get_cell_data(row_idx, 2)
+            if row_idx in self.selected_rows:
+                # Highlight selected rows
+                highlight_bg = "#ffd966"
+                highlight_fg = self.choose_font_color(highlight_bg)
+                self.sheet.highlight_rows(rows=[row_idx], bg=highlight_bg, fg=highlight_fg, redraw=False)
+            elif status == "Completed":
+                # Restore completed color
+                self.sheet.highlight_rows(
+                    rows=[row_idx],
+                    bg=COMPLETED_BG_COLOR,
+                    fg=COMPLETED_FG_COLOR,
+                    redraw=False
+                )
+            else:
+                # Restore default color
+                self.sheet.highlight_rows(
+                    rows=[row_idx],
+                    bg="#2b2b2b",
+                    fg="#dcdcdc",
+                    redraw=False
+                )
+        
+        self.sheet.refresh()
 
 
     def get_luminance(self, hex_color: str) -> float:
