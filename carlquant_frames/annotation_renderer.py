@@ -20,13 +20,12 @@ import numpy as np
 # Modify these colors to change the appearance of all annotations
 
 # Surface Detection Colors
-INTERPOLATED_SURFACE_COLOR = 'cyan'          # Interpolated surface curve
-ACTUAL_SURFACE_COLOR = '#ffee00'             # Actual surface curve
+# High contrast colors that work on both bright (white) and dark (gray) backgrounds
+INTERPOLATED_SURFACE_COLOR = '#e600e6'       # Bright magenta - visible on light and dark areas
+ACTUAL_SURFACE_COLOR = '#00b0e6'             # Bright cyan/blue - distinct from red lesion depth, visible on gray
 
 # Lesion Depth Detection Colors
-LESION_DEPTH_PRIMARY_COLOR = 'red'           # Main lesion depth result (thick line)
-LESION_DEPTH_MARKER_COLOR = 'red'            # Markers along lesion depth line
-LESION_DEPTH_MARKER_OUTLINE = 'darkred'      # Marker outline color
+LESION_DEPTH_PRIMARY_COLOR = '#f71134'       # Bright red - main lesion depth result (thick line)
 
 # Component Detection Method Colors (shown when enabled in A-Scan viewer)
 KNEE_POINT_COLOR = 'yellow'                  # Knee point detection method
@@ -34,14 +33,16 @@ INFLECTION_POINT_COLOR = 'cyan'              # Sigmoid inflection point method
 SHOULDER_POINT_COLOR = 'magenta'             # Sigmoid shoulder point method
 
 # Extraction Region Colors
-EXTRACTION_REGION_COLOR = '#00FF66'          # Bright green for region boundaries
-EXTRACTION_REGION_TEXT_COLOR = '#00FF66'     # Text color for region numbers
+EXTRACTION_REGION_COLOR = '#00FF88'          # Bright mint green for sound region boundaries
+EXTRACTION_REGION_LESION_COLOR = '#f71134'   # Color for lesion (non-sound) region boundaries
 
 # Region Boundary Colors (vertical lines for region definition)
-REGION_BOUNDARY_COLORS = ['red', 'green', 'blue', '#eb3496']  # Cycle through these
+# Named constants for clarity - specimen boundaries vs lesion boundaries
+SPECIMEN_BOUNDARY_COLOR = '#4CAF50'          # Bootstrap success green - specimen start/end
+LESION_BOUNDARY_COLOR = '#FFD700'            # Gold/yellow - lesion start/end (distinct from red)
 
 # AIR Reference Color
-AIR_REGION_COLOR = 'yellow'                  # AIR reference area (actual air/empty space)
+AIR_REGION_COLOR = '#37bfe9'                 # Bright cyan - AIR reference area
 
 # ============================================================================
 
@@ -385,22 +386,14 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         # 'threshold_method': 'lime',
     }
     
-    def draw(self, lesion_depth, show_markers=False, marker_step=None, 
-             show_component_methods=False, show_knee=False, show_inflection=False, show_shoulder=False):
+    def draw(self, lesion_depth, show_component_methods=False, show_knee=False, show_inflection=False, show_shoulder=False):
         """
         Draw lesion depth results.
         
-        Uses smoothed depth points if available for cleaner visualization,
-        otherwise falls back to raw depth points.
-        
-        Note: The lesion depth is calculated for EVERY A-Scan in the lesion region
-        (see carl_quant_core.py line 807). The marker points are added only for
-        visualization purposes to make the curve more visible on the image.
+        Draws a smooth line connecting all depth points.
         
         Args:
             lesion_depth: Lesion depth result object
-            show_markers: If True, draw circular markers along the line (default: True)
-            marker_step: Spacing between markers. If None, uses 20 for smoothed, 10 for raw
             show_component_methods: If True, draw all component methods (knee, inflection, shoulder)
             show_knee: If True, draw only knee point method line
             show_inflection: If True, draw only inflection point method line
@@ -425,22 +418,6 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         
         # Draw smooth line connecting all points
         self.draw_line(points, color=LESION_DEPTH_PRIMARY_COLOR, width=2, tags="lesion_depth_overlay")
-        
-        # Draw small circles at intervals for better visibility
-        if show_markers:
-            if marker_step is None:
-                # Default: less frequent markers for smoothed curves (every 20th point)
-                # More frequent for raw points (every 10th point)
-                marker_step = 20 if hasattr(lesion_depth, 'smoothed_depth_points') and lesion_depth.smoothed_depth_points else 10
-            
-            for x, y in points[::marker_step]:
-                canvas_x, canvas_y = self.converter.image_to_canvas(x, y)
-                self.canvas.create_oval(
-                    canvas_x - 2, canvas_y - 2,
-                    canvas_x + 2, canvas_y + 2,
-                    fill=LESION_DEPTH_MARKER_COLOR, outline=LESION_DEPTH_MARKER_OUTLINE,
-                    tags="lesion_depth_overlay"
-                )
     
     def _draw_component_methods(self, lesion_depth, show_knee=True, show_inflection=True, show_shoulder=True):
         """
@@ -531,8 +508,8 @@ class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
                 continue
             
             # Choose color based on region type
-            # Use bright green for sound regions for better visibility on grayscale
-            color = EXTRACTION_REGION_COLOR if stats.region_type == "sound" else 'red'
+            # Use bright mint green for sound regions, lesion color for non-sound regions
+            color = EXTRACTION_REGION_COLOR if stats.region_type == "sound" else EXTRACTION_REGION_LESION_COLOR
             
             # Check if we have rotated corners (4 points) or simple bbox (4 values)
             if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
@@ -579,12 +556,12 @@ class RegionBoundaryAnnotationRenderer(BaseAnnotationRenderer):
             return
         
         # Define boundaries with color scheme:
-        # Bright green for specimen boundaries, Yellow for lesion boundaries
+        # Bright mint green for specimen boundaries, Gold for lesion boundaries
         boundaries = [
-            (region.specimen_start, REGION_BOUNDARY_COLORS[1], "Specimen Start"),  # Green
-            (region.lesion_start, REGION_BOUNDARY_COLORS[3], "Lesion Start"),      # Yellow
-            (region.lesion_end, REGION_BOUNDARY_COLORS[3], "Lesion End"),          # Yellow
-            (region.tooth_end, REGION_BOUNDARY_COLORS[1], "Tooth End")             # Green
+            (region.specimen_start, SPECIMEN_BOUNDARY_COLOR, "Specimen Start"),
+            (region.lesion_start, LESION_BOUNDARY_COLOR, "Lesion Start"),
+            (region.lesion_end, LESION_BOUNDARY_COLOR, "Lesion End"),
+            (region.tooth_end, SPECIMEN_BOUNDARY_COLOR, "Tooth End")
         ]
         
         for (point, color, label) in boundaries:
@@ -612,9 +589,8 @@ class AIRAnnotationRenderer(BaseAnnotationRenderer):
         x1, y1 = air_config.point1
         x2, y2 = air_config.point2
         
-        # Note: Using cyan for AIR reference areas (not AIR_REGION_COLOR which is yellow)
-        # This provides better contrast with region boundaries
-        self.draw_rectangle(x1, y1, x2, y2, outline="cyan", width=2, tags="air_visual")
+        # Draw AIR reference area using centralized color constant
+        self.draw_rectangle(x1, y1, x2, y2, outline=AIR_REGION_COLOR, width=2, tags="air_visual")
 
 
 class RegionMarkerAnnotationRenderer(BaseAnnotationRenderer):
