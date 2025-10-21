@@ -18,6 +18,16 @@ from carlquant_frames.specimen_model import (
     Specimen, SliceResult, RegionStats, LesionDepth, Surface,
     SpecimenConfig, RegionConfig, AirConfig
 )
+from carlquant_frames.annotation_colors import (
+    INTERPOLATED_SURFACE_COLOR,
+    ACTUAL_SURFACE_COLOR,
+    LESION_DEPTH_PRIMARY_COLOR,
+    EXTRACTION_REGION_COLOR,
+    EXTRACTION_REGION_LESION_COLOR,
+    SPECIMEN_BOUNDARY_COLOR,
+    LESION_BOUNDARY_COLOR,
+    AIR_REGION_COLOR
+)
 from PIL import Image, ImageDraw
 import numpy as np
 
@@ -723,45 +733,45 @@ class DataSaver:
                 region_config = specimen.config.regions.get(slice_idx) if specimen.config else None
                 air_config = specimen.config.air.get(slice_idx) if specimen.config else None
                 
-                # Draw AIR reference area (cyan rectangle)
+                # Draw AIR reference area
                 if air_config and air_config.point2:
                     x1, y1 = air_config.point1
                     x2, y2 = air_config.point2
-                    draw.rectangle([x1, y1, x2, y2], outline='cyan', width=2)
+                    draw.rectangle([x1, y1, x2, y2], outline=AIR_REGION_COLOR, width=2)
                 
                 # Draw region boundaries (vertical lines)
                 if region_config:
-                    # Specimen start (green)
+                    # Specimen start
                     x = region_config.specimen_start[0]
-                    draw.line([(x, 0), (x, img.height)], fill='#00FF66', width=2)
+                    draw.line([(x, 0), (x, img.height)], fill=SPECIMEN_BOUNDARY_COLOR, width=2)
                     
-                    # Lesion start (yellow)
+                    # Lesion start
                     x = region_config.lesion_start[0]
-                    draw.line([(x, 0), (x, img.height)], fill='yellow', width=2)
+                    draw.line([(x, 0), (x, img.height)], fill=LESION_BOUNDARY_COLOR, width=2)
                     
-                    # Lesion end (yellow)
+                    # Lesion end
                     x = region_config.lesion_end[0]
-                    draw.line([(x, 0), (x, img.height)], fill='yellow', width=2)
+                    draw.line([(x, 0), (x, img.height)], fill=LESION_BOUNDARY_COLOR, width=2)
                     
-                    # Tooth end (green)
+                    # Tooth end
                     x = region_config.tooth_end[0]
-                    draw.line([(x, 0), (x, img.height)], fill='#00FF66', width=2)
+                    draw.line([(x, 0), (x, img.height)], fill=SPECIMEN_BOUNDARY_COLOR, width=2)
                 
                 # Draw surface curves
                 if result.surface and result.surface.fitted_curves:
-                    # Interpolated surface curve (cyan) - if cavitated
+                    # Interpolated surface curve - if cavitated
                     if "interpolated_surface" in result.surface.fitted_curves:
                         points = result.surface.fitted_curves["interpolated_surface"]
                         if len(points) > 1:
                             for i in range(len(points) - 1):
-                                draw.line([points[i], points[i+1]], fill='cyan', width=1)
+                                draw.line([points[i], points[i+1]], fill=INTERPOLATED_SURFACE_COLOR, width=1)
                     
-                    # Actual surface curve (orange)
+                    # Actual surface curve
                     if "actual_surface" in result.surface.fitted_curves:
                         points = result.surface.fitted_curves["actual_surface"]
                         if len(points) > 1:
                             for i in range(len(points) - 1):
-                                draw.line([points[i], points[i+1]], fill='orange', width=2)
+                                draw.line([points[i], points[i+1]], fill=ACTUAL_SURFACE_COLOR, width=2)
                 
                 # Draw lesion depth
                 if result.lesion_depth:
@@ -775,7 +785,7 @@ class DataSaver:
                     if points and len(points) > 1:
                         # Draw line
                         for i in range(len(points) - 1):
-                            draw.line([points[i], points[i+1]], fill='red', width=2)
+                            draw.line([points[i], points[i+1]], fill=LESION_DEPTH_PRIMARY_COLOR, width=2)
                 
                 # Draw extraction regions
                 if result.region_stats:
@@ -789,7 +799,7 @@ class DataSaver:
                         if not stats.bounds or len(stats.bounds) == 0:
                             continue
                         
-                        color = '#00FF66' if stats.region_type == "sound" else 'red'
+                        color = EXTRACTION_REGION_COLOR if stats.region_type == "sound" else EXTRACTION_REGION_LESION_COLOR
                         
                         # Check if rotated corners or simple bbox
                         if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
