@@ -241,8 +241,6 @@ class image_viewer_panel(BaseCanvasPanel):
         except Exception as e:
             if hasattr(self.context, 'status_bar') and self.context.status_bar:
                 self.context.status_bar.update(f"Error displaying image {img_path}: {e}", level="error")
-            else:
-                print(f"Error displaying image {img_path}: {e}")
 
 
 

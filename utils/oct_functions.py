@@ -368,8 +368,8 @@ def createImageFromRaw(xmlDict: dict, archive: None, dBmin: int, dBmax: int, sel
                 spectral = 0
             else:
                 pass
-        except Exception as e:
-            print(f"Error: {e}")
+        except Exception:
+            pass  # Continue with default spectral value
         # Raw Spectral Data - handle single slice or multiple slices
         spectral_list = [spectral] if np.isscalar(spectral) else spectral
 

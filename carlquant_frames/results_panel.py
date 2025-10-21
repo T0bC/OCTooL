@@ -85,7 +85,6 @@ class resultsPanel:
 
     @handle_errors("resultsPanel.load_results_for")
     def load_results_for(self, specimen_id: str):
-        print(f"Loading results for {specimen_id}")
         specimen = self.context.specimen_data.get(specimen_id)
         if not specimen:
             self.context.status_bar.update(f"Specimen '{specimen_id}' not found.", level="error")

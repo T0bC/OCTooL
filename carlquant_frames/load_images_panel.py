@@ -341,8 +341,6 @@ class loadImagePanel:
     @handle_errors("loadImagePanel.startAnalyzing")
     def startAnalyzing(self):
         """Start analysis - metadata is guaranteed to be set at this point."""
-        print("Start Analyzing triggered")
-
         # Ensure region config exists
         if not hasattr(self.context, "region_config"):
             self.context.region_config = {"sound": 3, "lesion": 3}

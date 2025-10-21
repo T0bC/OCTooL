@@ -191,7 +191,7 @@ class executionPanel:
                     self.treeView.setValueFromRow(item[1], 'Status', f"exp: {image[0]+1}")
                     gc.collect()
                 except Exception:
-                    print(traceback.format_exc())
+                    pass  # Continue processing other images
 
             # export video image
             try:
@@ -206,7 +206,7 @@ class executionPanel:
                 export_path_vid = Path(self.file).parent / self.exportPath.parent / export_name
                 self.videoImage.save(export_path_vid, format='JPEG', resolution_unit=3)
             except Exception:
-                    print(traceback.format_exc())
+                    pass  # Continue processing
 
             # Final cleanup per item
             self.treeView.setValueFromRow(item[1], 'Status', 'Done')
