@@ -17,6 +17,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.error_handler import handle_errors
 from carlquant_frames.carl_quant_core import fit_exp2_to_profile, detect_depth_sigmoid_fit
+from carlquant_frames.annotation_colors import ROW_HIGHLIGHT_NAVIGATION_COLOR
 
 
 class AScanViewer:
@@ -656,10 +657,13 @@ class AScanViewer:
             except Exception:
                 pass  # Silently ignore if redraw fails
         
-        # Clear active viewer reference in results panel
+        # Clear active viewer reference in results panel and switch back to green highlighting
         results_panel = self.context.get_panel("carl_results")
         if results_panel and hasattr(results_panel, 'active_ascan_viewer'):
             results_panel.active_ascan_viewer = None
+            # Switch back to green highlighting when A-Scan viewer closes
+            if hasattr(results_panel, 'set_highlight_color'):
+                results_panel.set_highlight_color(ROW_HIGHLIGHT_NAVIGATION_COLOR)
         
         # Destroy the dialog
         self.dialog.destroy()
