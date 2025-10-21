@@ -833,7 +833,6 @@ class DataSaver:
                 
             except Exception as e:
                 # Log error but continue with other slices
-                print(f"Error saving annotated image for slice {slice_idx}: {e}")
                 continue
 
 

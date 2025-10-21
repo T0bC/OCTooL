@@ -118,8 +118,6 @@ def handle_errors(custom_message=None):
                     f"Traceback:\n{tb}"
                 )
 
-                print(popup_message)
-
                 show_error_popup("Error", popup_message)
                 log_error_to_file(function_name, args, kwargs, custom_message, tb)
         return wrapper

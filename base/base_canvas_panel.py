@@ -422,8 +422,6 @@ class BaseCanvasPanel:
             if hasattr(self.context, 'status_bar') and self.context.status_bar:
                 self.context.status_bar.update(f"Error displaying image: {e}", 
                                               level="error")
-            else:
-                print(f"Error displaying image: {e}")
     
     @handle_errors("BaseCanvasPanel.instructionText")
     def instructionText(self):
