@@ -12,6 +12,25 @@ editor: visual
 
 # Version 1.2.2 (2025-10-21)
 
+## Carl Quant Module - Algorithm Improvements
+
+### Buffer Zone System for Transition Areas
+
+-   Implemented 10-pixel buffer zone around lesion boundaries to avoid transition artifacts
+-   Added `buffer_pixels` field (default 10) to `RegionConfig` data model
+-   Created helper methods for buffered coordinate calculations:
+    -   `get_buffered_lesion_start_x()`: Moves lesion start 10px right
+    -   `get_buffered_lesion_end_x()`: Moves lesion end 10px left
+    -   `get_buffered_sound_left_end_x()`: Ends sound area 1 at 10px before lesion
+    -   `get_buffered_sound_right_start_x()`: Starts sound area 2 at 10px after lesion
+-   Updated analysis functions to use buffered coordinates:
+    -   Interpolated surface fitting excludes transition zones
+    -   Sound region extraction avoids transition zone contamination
+    -   Lesion depth detection uses buffered boundaries (10px shorter on each side)
+    -   Cavitation detection uses buffered boundaries for consistency
+-   Visual boundaries remain at user-defined positions for clear feedback
+-   Backward compatible with existing configurations (defaults to 10px buffer)
+
 ## Carl Quant Module - UI/UX Enhancements
 
 ### Visualization & Color Scheme
