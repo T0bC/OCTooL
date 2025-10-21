@@ -1621,15 +1621,30 @@ def run_carl_quant(context):
                             future_to_slice[future] = slice_idx
                         
                         if cancelled:
+                            # Cancel all pending futures
+                            for future in future_to_slice.keys():
+                                future.cancel()
                             break
                         
                         for future in as_completed(future_to_slice):
-                            # Check for cancellation (wait for current futures to complete)
-                            if progress_dialog.is_cancelled():
+                            # Check for cancellation
+                            if progress_dialog.is_cancelled() and not cancelled:
                                 cancelled = True
-                                # Don't break immediately - let submitted tasks finish
+                                # Cancel all remaining pending futures
+                                for f in future_to_slice.keys():
+                                    if not f.done():
+                                        f.cancel()
+                                progress_dialog.update_status(
+                                    "Cancelling... waiting for active slices to finish",
+                                    color="orange"
+                                )
                             
                             slice_idx = future_to_slice[future]
+                            
+                            # Skip cancelled futures
+                            if future.cancelled():
+                                continue
+                            
                             try:
                                 result_idx, region_stats, surface, lesion_depth, error = future.result()
                                 
@@ -1647,10 +1662,12 @@ def run_carl_quant(context):
                                     
                                     # Update progress dialog
                                     progress_dialog.update_slice(processed_count - 1, len(slice_tasks))
-                                    progress_dialog.update_status(
-                                        f"Completed slice {result_idx + 1}",
-                                        color="blue"
-                                    )
+                                    
+                                    if not cancelled:
+                                        progress_dialog.update_status(
+                                            f"Completed slice {result_idx + 1}",
+                                            color="blue"
+                                        )
                                     
                             except Exception as e:
                                 context.status_bar.update(f"Exception on slice {slice_idx + 1}: {e}", level="error")
@@ -1780,50 +1797,56 @@ def run_carl_quant(context):
                     if cancelled:
                         break
 
-                # Save results after all slices are processed (or if cancelled mid-specimen)
-                try:
-                    # Show saving message
-                    progress_dialog.update_status(
-                        "Saving results and images to disc...",
-                        color="blue"
-                    )
-                    
-                    DataSaver.save_results(specimen)
-                    DataSaver.save_annotated_images(specimen)
-                    
-                    progress_dialog.update_status(
-                        f"Successfully saved results and images for {specimen_id}",
-                        color="green"
-                    )
-                    
-                    # MEMORY CLEANUP: Clear results from memory after saving to disk
-                    # Results will be reloaded from JSON when user selects specimen for viewing
-                    specimen.results.clear()
-                    gc.collect()
-                    
-                    # Update specimen status to "Completed"
-                    specimen.status = "Completed"
-                    
-                    # Update the specimen panel table
-                    specimen_panel = context.get_panel("carl_specimen")
-                    if specimen_panel:
-                        # Find the row for this specimen
-                        for row_idx in range(specimen_panel.sheet.total_rows()):
-                            if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
-                                specimen_panel.sheet.set_cell_data(row_idx, 2, "Completed")
-                                # Refresh column widths to accommodate new status
-                                specimen_panel._set_column_widths()
-                                # Highlight the completed row with green color
-                                specimen_panel.highlight_completed_row(row_idx)
-                                break
-                    
-                    # Lock region dropdown after analysis completes
-                    settings_panel = context.get_panel("carl_settings")
-                    if settings_panel:
-                        context.root.after(0, lambda: settings_panel.lock_region_dropdown(True))
-                    
-                except Exception as e:
-                    context.status_bar.update(f"Error saving results for {specimen_id}: {e}", level="error")
+                # Save results after all slices are processed (skip if cancelled mid-specimen)
+                if not cancelled or processed_count > 0:
+                    try:
+                        # Show saving message
+                        progress_dialog.update_status(
+                            "Saving results and images to disc...",
+                            color="blue"
+                        )
+                        
+                        DataSaver.save_results(specimen)
+                        DataSaver.save_annotated_images(specimen)
+                        
+                        progress_dialog.update_status(
+                            f"Successfully saved results and images for {specimen_id}",
+                            color="green"
+                        )
+                        
+                        # MEMORY CLEANUP: Clear results from memory after saving to disk
+                        # Results will be reloaded from JSON when user selects specimen for viewing
+                        specimen.results.clear()
+                        gc.collect()
+                        
+                        # Update specimen status based on completion
+                        if cancelled and processed_count < len(slice_tasks):
+                            specimen.status = "Partial"
+                        else:
+                            specimen.status = "Completed"
+                        
+                        # Update the specimen panel table
+                        specimen_panel = context.get_panel("carl_specimen")
+                        if specimen_panel:
+                            # Find the row for this specimen
+                            for row_idx in range(specimen_panel.sheet.total_rows()):
+                                if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
+                                    specimen_panel.sheet.set_cell_data(row_idx, 2, specimen.status)
+                                    # Refresh column widths to accommodate new status
+                                    specimen_panel._set_column_widths()
+                                    # Highlight the completed row with green color (only if fully completed)
+                                    if specimen.status == "Completed":
+                                        specimen_panel.highlight_completed_row(row_idx)
+                                    break
+                        
+                        # Lock region dropdown after analysis completes (only if not cancelled)
+                        if not cancelled:
+                            settings_panel = context.get_panel("carl_settings")
+                            if settings_panel:
+                                context.root.after(0, lambda: settings_panel.lock_region_dropdown(True))
+                        
+                    except Exception as e:
+                        context.status_bar.update(f"Error saving results for {specimen_id}: {e}", level="error")
                 
                 # Mark specimen as complete
                 progress_dialog.complete_specimen(specimen_idx)
