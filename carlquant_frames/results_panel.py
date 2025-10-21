@@ -201,12 +201,26 @@ class resultsPanel:
     def _on_single_click(self, event):
         """
         Handle single-click event on a row.
-        Navigates both image viewer and A-Scan viewer (if open) to the selected slice.
+        Highlights the row and navigates both image viewer and A-Scan viewer (if open) to the selected slice.
         """
         # Get the clicked row
         row = self.sheet.identify_row(event, exclude_index=True)
         
         if row is not None:
+            # Clear previous highlighting
+            if self.highlighted_row is not None:
+                self.sheet.dehighlight_rows([self.highlighted_row])
+            
+            # Highlight the clicked row with a nice green shade
+            # Using a dark green that matches the dark theme
+            GREEN_HIGHLIGHT = "#2d5016"  # Dark green shade for dark theme
+            self.sheet.highlight_rows(
+                [row],
+                bg=GREEN_HIGHLIGHT,
+                fg="#ffffff"
+            )
+            self.highlighted_row = row
+            
             # Get row data
             row_data = self.sheet.get_row_data(row)
             

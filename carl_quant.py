@@ -73,7 +73,7 @@ def addContent(self, frame):
     self.tablePane.add(self.resultsFrame)
     
     # Set initial pane proportions (30% specimen, 70% results)
-    self.tablePane.after(100, lambda: self.tablePane.sash_place(0, 500, 0))
+    self.tablePane.after(100, lambda: self.tablePane.sash_place(0, 400, 0))
 
     # Viewer Frame
     self.viewerFrame = ttk.LabelFrame(self.carlQuantFrame, text='Image Viewer', relief=tk.RIDGE)
