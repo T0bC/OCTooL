@@ -67,6 +67,9 @@ class AScanViewer:
         
         # Image viewer synchronization callback
         self.image_viewer_redraw_callback = None  # Callback to trigger image viewer redraw
+        
+        # Slider interaction state
+        self.slider_dragging = False  # True when user is actively dragging the slider
     
     @handle_errors("AScanViewer.show")
     def show(self):
@@ -116,25 +119,26 @@ class AScanViewer:
         toggles_frame.columnconfigure(1, weight=1)
         
         # Checkboxes in 2 columns using grid
+        # Use lambda to ensure slider_dragging is False when checkboxes change
         ttk.Checkbutton(toggles_frame, text="Surface Points", variable=self.show_surface, 
-                       command=self._update_plot).grid(row=0, column=0, sticky='w', padx=5, pady=2)
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=0, column=0, sticky='w', padx=5, pady=2)
         ttk.Checkbutton(toggles_frame, text="Knee Point", variable=self.show_knee_point, 
-                       command=self._update_plot).grid(row=0, column=1, sticky='w', padx=5, pady=2)
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=0, column=1, sticky='w', padx=5, pady=2)
         
         ttk.Checkbutton(toggles_frame, text="Sigmoid Inflection", variable=self.show_sigmoid_inflection, 
-                       command=self._update_plot).grid(row=1, column=0, sticky='w', padx=5, pady=2)
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=1, column=0, sticky='w', padx=5, pady=2)
         ttk.Checkbutton(toggles_frame, text="Sigmoid Shoulder", variable=self.show_sigmoid_shoulder, 
-                       command=self._update_plot).grid(row=1, column=1, sticky='w', padx=5, pady=2)
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=1, column=1, sticky='w', padx=5, pady=2)
         
         ttk.Checkbutton(toggles_frame, text="Combined Depth", variable=self.show_combined_depth, 
-                       command=self._update_plot).grid(row=2, column=0, sticky='w', padx=5, pady=2)
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=2, column=0, sticky='w', padx=5, pady=2)
         ttk.Checkbutton(toggles_frame, text="Exp2 Fit Curve", variable=self.show_exp2_fit, 
-                       command=self._update_plot).grid(row=2, column=1, sticky='w', padx=5, pady=2)
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=2, column=1, sticky='w', padx=5, pady=2)
         
         ttk.Checkbutton(toggles_frame, text="Sigmoid Fit Curve", variable=self.show_sigmoid_fit, 
-                       command=self._update_plot).grid(row=3, column=0, sticky='w', padx=5, pady=2)
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=3, column=0, sticky='w', padx=5, pady=2)
         ttk.Checkbutton(toggles_frame, text="Zoom to Analysis", variable=self.zoom_to_analysis, 
-                       command=self._update_plot).grid(row=3, column=1, sticky='w', padx=5, pady=2)
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=3, column=1, sticky='w', padx=5, pady=2)
         
         # Slider frame with label above
         slider_container = ttk.Frame(main_frame)
@@ -162,6 +166,10 @@ class AScanViewer:
             orient=tk.HORIZONTAL,
             command=self._on_slider_change
         )
+        
+        # Bind mouse events to track slider dragging state
+        self.slider.bind('<ButtonPress-1>', self._on_slider_press)
+        self.slider.bind('<ButtonRelease-1>', self._on_slider_release)
         self.slider.set(self.current_column)
         self.slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
@@ -334,20 +342,30 @@ class AScanViewer:
         return artist
     
     @handle_errors("AScanViewer._update_plot")
-    def _update_plot(self):
+    def _update_plot(self, force_image_sync=False):
         """Update the plot with current column data and annotations.
         
-        Also triggers image viewer redraw to synchronize component method visualization.
+        Args:
+            force_image_sync: If True, always trigger image viewer redraw.
+                            If False, skip redraw during slider dragging for performance.
+        
+        The image viewer redraw synchronizes component method visibility (knee/inflection/shoulder)
+        with the checkbox states. This is needed when checkboxes change, but not during
+        slider movements where only the column position changes.
         """
         if self.current_image is None or self.current_column is None:
             return
         
-        # Trigger image viewer redraw to synchronize component method visibility
-        if self.image_viewer_redraw_callback is not None:
-            try:
-                self.image_viewer_redraw_callback()
-            except Exception:
-                pass  # Silently ignore if image viewer is not available
+        # Trigger image viewer redraw only if:
+        # 1. Explicitly requested (checkbox change), OR
+        # 2. Not currently dragging the slider
+        # This prevents expensive full canvas redraws during slider movement
+        if force_image_sync or not self.slider_dragging:
+            if self.image_viewer_redraw_callback is not None:
+                try:
+                    self.image_viewer_redraw_callback()
+                except Exception:
+                    pass  # Silently ignore if image viewer is not available
         
         # Extract column (A-scan)
         column_data = self.current_image[:, self.current_column]
@@ -586,15 +604,36 @@ class AScanViewer:
         # Redraw
         self.canvas.draw()
     
+    @handle_errors("AScanViewer._on_slider_press")
+    def _on_slider_press(self, event):
+        """Handle slider mouse press - start dragging state."""
+        self.slider_dragging = True
+    
+    @handle_errors("AScanViewer._on_slider_release")
+    def _on_slider_release(self, event):
+        """Handle slider mouse release - end dragging state and sync with image viewer."""
+        self.slider_dragging = False
+        # Trigger final sync with image viewer after drag completes
+        if self.image_viewer_redraw_callback is not None:
+            try:
+                self.image_viewer_redraw_callback()
+            except Exception:
+                pass  # Silently ignore if image viewer is not available
+    
     @handle_errors("AScanViewer._on_slider_change")
     def _on_slider_change(self, value):
-        """Handle slider value change."""
+        """Handle slider value change.
+        
+        During slider dragging, only updates the A-scan indicator line without
+        triggering expensive full canvas redraws. The full sync happens when
+        the slider is released.
+        """
         self.current_column = int(float(value))
         if hasattr(self, 'column_label'):
             self.column_label.config(text=f"{self.current_column}")
         if hasattr(self, 'ax'):
-            self._update_plot()
-        # Update indicator line in image viewer
+            self._update_plot()  # Will skip image sync during dragging
+        # Update indicator line in image viewer (lightweight operation)
         self._update_image_indicator()
     
     @handle_errors("AScanViewer._update_image_indicator")
@@ -670,9 +709,9 @@ class AScanViewer:
         if self.dialog:
             self.dialog.title(f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}")
         
-        # Update plot
+        # Update plot (force sync since this is programmatic, not slider drag)
         if hasattr(self, 'ax'):
-            self._update_plot()
+            self._update_plot(force_image_sync=True)
         
         # Update indicator in image viewer
         self._update_image_indicator()
@@ -717,9 +756,9 @@ class AScanViewer:
         if self.dialog:
             self.dialog.title(f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}")
         
-        # Update plot
+        # Update plot (force sync since this is programmatic, not slider drag)
         if hasattr(self, 'ax'):
-            self._update_plot()
+            self._update_plot(force_image_sync=True)
         
         # Update indicator in image viewer
         self._update_image_indicator()
