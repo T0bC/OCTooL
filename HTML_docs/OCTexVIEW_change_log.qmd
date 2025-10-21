@@ -10,6 +10,64 @@ format:
 editor: visual
 ---
 
+# Version 1.2.2 (2025-10-21)
+
+## Carl Quant Module - UI/UX Enhancements
+
+### Visualization & Color Scheme
+
+-   Centralized color scheme with individual component method visualization controls
+-   Updated color scheme for improved surface and region boundary visualization
+-   Moved color definitions to centralized `annotation_colors` module for consistency
+-   Updated annotation colors for better contrast and consistency across backgrounds
+
+### Interactive Features
+
+-   Added synchronized row highlighting with distinct colors for navigation and A-Scan modes
+-   Implemented row highlighting and adjusted pane proportions in results panel
+-   Added clear coordinates button to remove specimen boundaries and air coordinates
+
+### Coordinate Management
+
+-   Implemented keyframe-based coordinate interpolation for region and AIR boundaries
+-   Linear interpolation between user-defined keyframes across image stacks
+-   Intelligent propagation with distinction between keyframes and interpolated values
+
+## Performance Optimizations
+
+### Image Viewer
+
+-   Optimized image viewer synchronization by skipping redraws during slider drag
+-   Improved responsiveness during navigation
+
+## Carl Quant Module - Progress Tracking
+
+### Progress Dialog
+
+-   Enhanced progress UI with processing mode indicator
+-   Added completed row highlighting for better visual feedback
+
+## Bug Fixes
+
+### Specimen Panel
+
+-   Fixed specimen panel column indices after removing REGIONS and AIR columns
+
+## Documentation
+
+### Clarifications
+
+-   Clarified AIR as Air Reference region for empty space normalization
+
+## Code Quality
+
+### Refactoring
+
+-   Removed print statements in favor of status bar and error handling
+-   Improved code maintainability and debugging capabilities
+
+------------------------------------------------------------------------
+
 # Version 1.2.1 (2025-10-16)
 
 ## Documentation
