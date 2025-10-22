@@ -504,6 +504,11 @@ class image_viewer_panel(BaseCanvasPanel):
 
             # Update specimen panel display
             self.update_specimen_panel_display(specimen)
+            
+            # Refresh validation status to clear red highlighting if coordinates are now valid
+            load_panel = self.context.get_panel("carl_load")
+            if load_panel and hasattr(load_panel, 'refresh_validation_status'):
+                load_panel.refresh_validation_status()
         
         # Ensure metadata is set before saving
         ensure_metadata_set(self.root, self.context, do_save)
@@ -732,6 +737,11 @@ class image_viewer_panel(BaseCanvasPanel):
                     f"AIR reference keyframe set at slice {current_slice + 1}, interpolation applied", 
                     level="success"
                 )
+            
+            # Refresh validation status to clear red highlighting if coordinates are now valid
+            load_panel = self.context.get_panel("carl_load")
+            if load_panel and hasattr(load_panel, 'refresh_validation_status'):
+                load_panel.refresh_validation_status()
         
         # Ensure metadata is set before saving
         ensure_metadata_set(self.root, self.context, do_save)
