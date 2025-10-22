@@ -15,6 +15,8 @@ HEADER_FG_COLOR = "#ffffff"
 GRID_COLOR = "#444444"
 COMPLETED_BG_COLOR = "#16472a"
 COMPLETED_FG_COLOR = "#dcdcdc"
+INVALID_BG_COLOR = "#8B0000"  # Dark red for specimens with missing coordinates
+INVALID_FG_COLOR = "#FFFFFF"
 
 class specimenPanel:
     @handle_errors("specimenPanel.__init__")
@@ -24,6 +26,7 @@ class specimenPanel:
         self.frame = context.get_frame("carl_specimen")
         self.last_selected_row = None  # Anchor for range selection
         self.selected_rows = set()  # Tracks all currently selected rows
+        self.invalid_specimen_rows = set()  # Tracks rows with missing coordinates (persistent red highlight)
 
         self.headers = ['SPECIMEN_ID', 'SLICES', 'STATE']
         self._setup_sheet()
@@ -121,7 +124,8 @@ class specimenPanel:
             if not specimen_data.results and specimen_data.config:
                 from carlquant_frames.data_io import DataLoader
                 # Reload annotations (surface, lesion_depth, extraction_regions) from JSON
-                DataLoader.load_specimen_config(specimen_data)
+                # Use load_annotations=True to load the full data now that user wants to view it
+                DataLoader.load_specimen_config(specimen_data, load_annotations=True)
 
             viewer_panel = self.context.get_panel("carl_image")
             viewer_panel.display_image(0)
@@ -139,29 +143,38 @@ class specimenPanel:
             self.last_selected_row = row_index
     
     def _highlight_selected_rows(self):
-        """Apply highlighting to all selected rows."""
+        """Apply highlighting to all selected rows with proper priority."""
         # First, restore all rows to their default colors
         for row_idx in range(self.sheet.total_rows()):
             status = self.sheet.get_cell_data(row_idx, 2)
-            if row_idx in self.selected_rows:
-                # Highlight selected rows
-                highlight_bg = "#ffd966"
-                highlight_fg = self.choose_font_color(highlight_bg)
-                self.sheet.highlight_rows(rows=[row_idx], bg=highlight_bg, fg=highlight_fg, redraw=False)
-            elif status == "Completed":
-                # Restore completed color
+            
+            # Priority 1: Invalid specimens (missing coordinates) - always red
+            if row_idx in self.invalid_specimen_rows:
+                self.sheet.highlight_rows(
+                    rows=[row_idx],
+                    bg=INVALID_BG_COLOR,
+                    fg=INVALID_FG_COLOR,
+                    redraw=False
+                )
+            # Priority 2: Analyzed/Completed rows (green) - persistent even when selected
+            elif status in ["Analyzed", "Completed"]:
                 self.sheet.highlight_rows(
                     rows=[row_idx],
                     bg=COMPLETED_BG_COLOR,
                     fg=COMPLETED_FG_COLOR,
                     redraw=False
                 )
+            # Priority 3: Selected rows (golden highlight)
+            elif row_idx in self.selected_rows:
+                highlight_bg = "#ffd966"
+                highlight_fg = self.choose_font_color(highlight_bg)
+                self.sheet.highlight_rows(rows=[row_idx], bg=highlight_bg, fg=highlight_fg, redraw=False)
+            # Priority 4: Default color
             else:
-                # Restore default color
                 self.sheet.highlight_rows(
                     rows=[row_idx],
-                    bg="#2b2b2b",
-                    fg="#dcdcdc",
+                    bg=STATIC_BG_COLOR,
+                    fg=STATIC_FG_COLOR,
                     redraw=False
                 )
         
@@ -250,3 +263,57 @@ class specimenPanel:
                 fg=COMPLETED_FG_COLOR,
                 redraw=True
             )
+    
+    @handle_errors("specimenPanel.highlight_invalid_row")
+    def highlight_invalid_row(self, row_index: int) -> None:
+        """
+        Highlight a row with red color to indicate missing coordinates.
+        Adds row to persistent invalid tracking set.
+        
+        Args:
+            row_index (int): The row index to highlight.
+        """
+        self.invalid_specimen_rows.add(row_index)
+        self.sheet.highlight_rows(
+            rows=[row_index],
+            bg=INVALID_BG_COLOR,
+            fg=INVALID_FG_COLOR,
+            redraw=False
+        )
+    
+    @handle_errors("specimenPanel.clear_all_highlights")
+    def clear_all_highlights(self) -> None:
+        """
+        Clear all validation error highlighting and restore default colors for all rows.
+        Preserves analyzed/completed row highlighting and current selection.
+        Clears the invalid specimen tracking set.
+        """
+        # Clear invalid specimen tracking
+        self.invalid_specimen_rows.clear()
+        
+        for row_idx in range(self.sheet.total_rows()):
+            status = self.sheet.get_cell_data(row_idx, 2)
+            
+            # Priority 1: Analyzed/Completed rows (green) - always preserve
+            if status in ["Analyzed", "Completed"]:
+                self.sheet.highlight_rows(
+                    rows=[row_idx],
+                    bg=COMPLETED_BG_COLOR,
+                    fg=COMPLETED_FG_COLOR,
+                    redraw=False
+                )
+            # Priority 2: Selected rows (golden)
+            elif row_idx in self.selected_rows:
+                highlight_bg = "#ffd966"
+                highlight_fg = self.choose_font_color(highlight_bg)
+                self.sheet.highlight_rows(rows=[row_idx], bg=highlight_bg, fg=highlight_fg, redraw=False)
+            # Priority 3: Default color
+            else:
+                self.sheet.highlight_rows(
+                    rows=[row_idx],
+                    bg=STATIC_BG_COLOR,
+                    fg=STATIC_FG_COLOR,
+                    redraw=False
+                )
+        
+        self.sheet.refresh()

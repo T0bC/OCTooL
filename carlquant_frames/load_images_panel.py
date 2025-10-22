@@ -14,6 +14,7 @@ from utils.tool_tip import Tooltip
 from carlquant_frames.data_io import DataLoader, DataSaver
 from carlquant_frames.carl_quant_core import run_carl_quant
 import threading
+from tkinter import messagebox
 
 
 class loadImagePanel:
@@ -152,25 +153,15 @@ class loadImagePanel:
             expected_data_folder = specimen.source / f"Data_{operator}_{measurement}"
             
             if expected_data_folder.exists() and expected_data_folder.is_dir():
-                # Matching data folder found - reload config and results
-                specimen.config = DataLoader.load_specimen_config(specimen)
+                # Matching data folder found - reload config (lightweight, no annotations yet)
+                # This loads only regions/air coordinates, not the heavy 20MB annotation data
+                specimen.config = DataLoader.load_specimen_config(specimen, load_annotations=False)
                 if specimen.config:
-                    # Check if results were loaded (annotations)
-                    if specimen.results:
+                    # Check if annotations exist (without loading them)
+                    if hasattr(specimen, '_has_annotations') and specimen._has_annotations:
                         specimen.status = "Analyzed"
-                        self.context.status_bar.update(
-                            f"Loaded existing results for {specimen_id} (Data_{operator}_{measurement})", 
-                            level="success"
-                        )
-                        
-                        # Lock region dropdown when existing results are loaded
-                        settings_panel = self.context.get_panel("carl_settings")
-                        if settings_panel:
-                            # Detect region count from loaded data
-                            first_result = next(iter(specimen.results.values()))
-                            num_regions = sum(1 for r in first_result.region_stats if r.region_type == "sound")
-                            settings_panel.regionVar.set(num_regions)
-                            settings_panel.lock_region_dropdown(True)
+                        # Note: Annotations will be loaded on-demand when user clicks the specimen
+                        # This significantly speeds up initial folder loading
             else:
                 # No matching Data folder - specimen will be analyzed fresh with current metadata
                 # Other Data folders (different operator/measurement) are preserved and ignored
@@ -188,14 +179,36 @@ class loadImagePanel:
         specimen_panel.sheet.set_sheet_data(rows)
         specimen_panel._set_column_widths()
         
-        # Highlight completed rows with green color
+        # Run validation check to identify specimens with missing coordinates
+        is_valid, invalid_specimens = self.validate_specimen_coordinates()
+        
+        # Apply highlighting based on status
         for row_idx, row_data in enumerate(rows):
-            if row_data[2] == "Completed":  # STATUS column is at index 2
+            specimen_id = row_data[0]
+            status = row_data[2]
+            
+            # Priority 1: Highlight analyzed/completed specimens in green
+            if status in ["Analyzed", "Completed"]:
                 specimen_panel.highlight_completed_row(row_idx)
+            # Priority 2: Highlight specimens with missing coordinates in red
+            elif specimen_id in invalid_specimens:
+                specimen_panel.highlight_invalid_row(row_idx)
+        
+        specimen_panel.sheet.refresh()
+        
+        # Update status bar with summary
+        num_analyzed = sum(1 for row in rows if row[2] in ["Analyzed", "Completed"])
+        num_invalid = len(invalid_specimens)
+        
+        status_parts = [f"Loaded {len(rows)} specimen(s)"]
+        if num_analyzed > 0:
+            status_parts.append(f"{num_analyzed} analyzed")
+        if num_invalid > 0:
+            status_parts.append(f"{num_invalid} missing coordinates")
         
         self.context.status_bar.update(
-            f"Loaded {len(rows)} specimen(s) for {operator} measurement {measurement}", 
-            level="success"
+            f"{' | '.join(status_parts)} for {operator} measurement {measurement}", 
+            level="success" if num_invalid == 0 else "warning"
         )
         
         # Clear pending path
@@ -344,6 +357,139 @@ class loadImagePanel:
             level="success"
         )
 
+    @handle_errors("loadImagePanel.validate_specimen_coordinates")
+    def validate_specimen_coordinates(self):
+        """
+        Validate that all specimens have required coordinates set.
+        
+        Returns:
+            tuple: (is_valid, invalid_specimens)
+                - is_valid (bool): True if all specimens are valid
+                - invalid_specimens (dict): {specimen_id: [missing_items]}
+        """
+        if not hasattr(self.context, "specimen_data") or not self.context.specimen_data:
+            return True, {}
+        
+        invalid_specimens = {}
+        
+        for specimen_id, specimen in self.context.specimen_data.items():
+            missing_items = []
+            
+            # Check if specimen has any configuration
+            if not specimen.config:
+                missing_items.extend(["Region boundaries", "AIR coordinates"])
+            else:
+                # Check if regions are defined for at least one slice
+                if not specimen.config.regions:
+                    missing_items.append("Region boundaries")
+                else:
+                    # Validate that region boundaries have all 4 points
+                    for slice_idx, region_config in specimen.config.regions.items():
+                        if not all([
+                            region_config.specimen_start,
+                            region_config.lesion_start,
+                            region_config.lesion_end,
+                            region_config.tooth_end
+                        ]):
+                            missing_items.append("Region boundaries (incomplete)")
+                            break
+                
+                # Check if AIR coordinates are defined for at least one slice
+                if not specimen.config.air:
+                    missing_items.append("AIR coordinates")
+                else:
+                    # Validate that AIR coordinates have both points
+                    for slice_idx, air_config in specimen.config.air.items():
+                        if not air_config.point1 or not air_config.point2:
+                            missing_items.append("AIR coordinates (incomplete)")
+                            break
+            
+            if missing_items:
+                invalid_specimens[specimen_id] = missing_items
+        
+        is_valid = len(invalid_specimens) == 0
+        return is_valid, invalid_specimens
+    
+    @handle_errors("loadImagePanel.highlight_invalid_specimens")
+    def highlight_invalid_specimens(self, invalid_specimens):
+        """
+        Highlight rows in the specimen panel that have missing coordinates.
+        
+        Args:
+            invalid_specimens (dict): {specimen_id: [missing_items]}
+        """
+        specimen_panel = self.context.get_panel("carl_specimen")
+        if not specimen_panel:
+            return
+        
+        # First clear all previous validation highlights
+        specimen_panel.clear_all_highlights()
+        
+        # Highlight invalid specimens with red color
+        for row_idx in range(specimen_panel.sheet.total_rows()):
+            specimen_id = specimen_panel.sheet.get_cell_data(row_idx, 0)
+            
+            if specimen_id in invalid_specimens:
+                specimen_panel.highlight_invalid_row(row_idx)
+        
+        specimen_panel.sheet.refresh()
+    
+    @handle_errors("loadImagePanel.show_validation_error_dialog")
+    def show_validation_error_dialog(self, invalid_specimens):
+        """
+        Show a concise dialog about missing coordinates.
+        
+        Args:
+            invalid_specimens (dict): {specimen_id: [missing_items]}
+        """
+        num_invalid = len(invalid_specimens)
+        
+        # Build concise error message
+        if num_invalid == 1:
+            error_message = (
+                "1 specimen has missing coordinates and cannot be analyzed.\n\n"
+                "Please define the missing Region boundaries and/or AIR coordinates.\n\n"
+                "Invalid specimens are highlighted in RED in the table."
+            )
+        else:
+            error_message = (
+                f"{num_invalid} specimens have missing coordinates and cannot be analyzed.\n\n"
+                "Please define the missing Region boundaries and/or AIR coordinates.\n\n"
+                "Invalid specimens are highlighted in RED in the table."
+            )
+        
+        # Show error dialog
+        messagebox.showerror(
+            title="Missing Coordinates",
+            message=error_message
+        )
+    
+    @handle_errors("loadImagePanel.refresh_validation_status")
+    def refresh_validation_status(self):
+        """
+        Refresh validation status and clear red highlighting for specimens
+        that now have valid coordinates. This is called after coordinates are saved.
+        """
+        # Re-validate all specimens
+        is_valid, invalid_specimens = self.validate_specimen_coordinates()
+        
+        specimen_panel = self.context.get_panel("carl_specimen")
+        if not specimen_panel:
+            return
+        
+        # Clear all highlights first
+        specimen_panel.clear_all_highlights()
+        
+        # Re-apply red highlighting only to specimens that are still invalid
+        if invalid_specimens:
+            for row_idx in range(specimen_panel.sheet.total_rows()):
+                specimen_id = specimen_panel.sheet.get_cell_data(row_idx, 0)
+                
+                if specimen_id in invalid_specimens:
+                    specimen_panel.highlight_invalid_row(row_idx)
+        
+        specimen_panel.sheet.refresh()
+    
     @handle_errors("loadImagePanel.startAnalyzing")
     def startAnalyzing(self):
         """Start analysis - metadata is guaranteed to be set at this point."""
@@ -354,6 +500,23 @@ class loadImagePanel:
         # Ensure specimen data exists and is non-empty
         if not hasattr(self.context, "specimen_data") or not self.context.specimen_data:
             self.context.status_bar.update("No specimens loaded. Please select a folder first.", level="warning")
+            return
+        
+        # Validate that all specimens have required coordinates
+        is_valid, invalid_specimens = self.validate_specimen_coordinates()
+        
+        if not is_valid:
+            # Highlight invalid specimens in the table
+            self.highlight_invalid_specimens(invalid_specimens)
+            
+            # Show error dialog with details
+            self.show_validation_error_dialog(invalid_specimens)
+            
+            # Update status bar
+            self.context.status_bar.update(
+                f"{len(invalid_specimens)} specimen(s) have missing coordinates. Analysis cannot start.",
+                level="error"
+            )
             return
 
         # Add lock for thread safety

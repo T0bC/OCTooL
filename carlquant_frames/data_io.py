@@ -105,11 +105,16 @@ class DataLoader:
         return specimen_data
 
     @staticmethod
-    def load_specimen_config(specimen: Specimen) -> SpecimenConfig:
+    def load_specimen_config(specimen: Specimen, load_annotations: bool = True) -> SpecimenConfig:
         """Load specimen configuration from JSON file if it exists.
         
         Also loads computed annotations (surface, lesion_depth, extraction_regions) if available.
         Prioritizes loading from Data_{operator}_{measurement} folder if specimen has metadata.
+        
+        Args:
+            specimen: Specimen object
+            load_annotations: If True, loads full annotation data. If False, only loads coordinates.
+                             Set to False during initial folder load for performance.
         """
         try:
             # If specimen has operator/measurement metadata, look for specific folder first
@@ -120,7 +125,7 @@ class DataLoader:
                     if config_file.exists():
                         with open(config_file, 'r') as f:
                             config_data = json.load(f)
-                        return DataLoader._parse_config_data(specimen, config_data)
+                        return DataLoader._parse_config_data(specimen, config_data, load_annotations=load_annotations)
             
             # Fallback: Look for config file in any Data_ folder (legacy behavior)
             for data_folder in specimen.previous_runs:
@@ -128,19 +133,20 @@ class DataLoader:
                 if config_file.exists():
                     with open(config_file, 'r') as f:
                         config_data = json.load(f)
-                    return DataLoader._parse_config_data(specimen, config_data)
+                    return DataLoader._parse_config_data(specimen, config_data, load_annotations=load_annotations)
             
             return None
         except Exception:
             return None
     
     @staticmethod
-    def _parse_config_data(specimen: Specimen, config_data: dict) -> SpecimenConfig:
+    def _parse_config_data(specimen: Specimen, config_data: dict, load_annotations: bool = True) -> SpecimenConfig:
         """Parse config data from JSON into SpecimenConfig object.
         
         Args:
             specimen: Specimen object
             config_data: Dictionary loaded from JSON
+            load_annotations: If True, loads full annotation data. If False, only loads coordinates.
         
         Returns:
             SpecimenConfig object
@@ -191,9 +197,13 @@ class DataLoader:
                     point2=point2
                 )
         
-        # Load computed annotations if available
-        if 'annotations' in config_data:
+        # Load computed annotations if available (only if requested)
+        if load_annotations and 'annotations' in config_data:
             DataLoader._load_annotations_into_results(specimen, config_data['annotations'])
+        elif not load_annotations and 'annotations' in config_data:
+            # Don't load annotations, but mark that they exist
+            # This allows us to show "Analyzed" status without loading 20MB of data
+            specimen._has_annotations = True
         
         return config
     
