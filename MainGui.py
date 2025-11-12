@@ -26,9 +26,9 @@ class MainGui:
         # DISTRIBUTION CONFIGURATION
         # Set to True to enable each section, False to hide
         # ========================================
-        ENABLE_EXPORT = False
-        ENABLE_ANALYZE = False
-        ENABLE_CARLQUANT = True
+        self.ENABLE_EXPORT = False
+        self.ENABLE_ANALYZE = False
+        self.ENABLE_CARLQUANT = True
         # ========================================
 
         self.mainWin = tk.Tk()
@@ -92,7 +92,7 @@ class MainGui:
 
         # %% EXPORT TAB
         # create a frame holding the contents for the tab
-        if ENABLE_EXPORT:
+        if self.ENABLE_EXPORT:
             self.exportTabFrame = ttk.Frame(self.tabParent)
             self.tabParent.add(self.exportTabFrame, text = 'Export')
             # Fill the tab with content defined in exportTab.py
@@ -100,13 +100,13 @@ class MainGui:
 
 
         # %% Anylyzing Tab
-        if ENABLE_ANALYZE:
+        if self.ENABLE_ANALYZE:
             self.analyzingFrame = ttk.Frame(self.tabParent)
             self.tabParent.add(self.analyzingFrame, text = 'Analyze')
             analyzingTab.addContent(self, self.analyzingFrame)
 
         # %% Carl Quant
-        if ENABLE_CARLQUANT:
+        if self.ENABLE_CARLQUANT:
             self.carlQuantFrame = ttk.Frame(self.tabParent)
             self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
             carl_quant.addContent(self, self.carlQuantFrame)
@@ -180,11 +180,6 @@ class MainGui:
     @handle_errors("MainGui.create_colored_tab_buttons")
     def create_colored_tab_buttons(self):
         """Create colored buttons that act as tabs, plus Help and About buttons."""
-        # Get configuration from __init__
-        ENABLE_EXPORT = False
-        ENABLE_ANALYZE = False
-        ENABLE_CARLQUANT = True
-        
         self.tab_buttons = []
         self.current_tab = 0
         
@@ -201,38 +196,38 @@ class MainGui:
         col_index = 0
         
         # Export button
-        if ENABLE_EXPORT:
+        if self.ENABLE_EXPORT:
             export_btn = ttk.Button(
                 tab_button_container,
                 text="Export", #📊
                 style="Export.TButton",
-                command=lambda: self.switch_tab(len([b for b in self.tab_buttons if b.winfo_exists()])),
+                command=lambda idx=col_index: self.switch_tab(idx),
                 takefocus=False  # Prevent button from taking focus
             )
-            export_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if ENABLE_ANALYZE or ENABLE_CARLQUANT else 0))
+            export_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_ANALYZE or self.ENABLE_CARLQUANT else 0))
             self.tab_buttons.append(export_btn)
             col_index += 1
 
         # Analyze button
-        if ENABLE_ANALYZE:
+        if self.ENABLE_ANALYZE:
             analyze_btn = ttk.Button(
                 tab_button_container,
                 text="Analyze", #🔬
                 style="Analyze.TButton",
-                command=lambda: self.switch_tab(len([b for b in self.tab_buttons if b.winfo_exists()])),
+                command=lambda idx=col_index: self.switch_tab(idx),
                 takefocus=False  # Prevent button from taking focus
             )
-            analyze_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if ENABLE_CARLQUANT else 0))
+            analyze_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_CARLQUANT else 0))
             self.tab_buttons.append(analyze_btn)
             col_index += 1
 
         # CarlQuant button
-        if ENABLE_CARLQUANT:
+        if self.ENABLE_CARLQUANT:
             carlquant_btn = ttk.Button(
                 tab_button_container,
                 text="CarlQuant", #⚡
                 style="CarlQuant.TButton",
-                command=lambda: self.switch_tab(len([b for b in self.tab_buttons if b.winfo_exists()])),
+                command=lambda idx=col_index: self.switch_tab(idx),
                 takefocus=False  # Prevent button from taking focus
             )
             carlquant_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 0))
@@ -266,6 +261,16 @@ class MainGui:
     @handle_errors("MainGui.switch_tab")
     def switch_tab(self, tab_index):
         """Switch to the specified tab."""
+        # Safeguard: Check if tab_index is valid
+        num_tabs = self.tabParent.index("end")
+        if num_tabs == 0:
+            # No tabs available, do nothing
+            return
+        
+        if tab_index >= num_tabs:
+            # Tab index out of bounds, do nothing
+            return
+        
         # Force the button to lose focus immediately
         self.mainWin.focus_set()
 
@@ -307,7 +312,23 @@ class MainGui:
     @handle_errors("MainGui.onHelp")
     def onHelp(self):
         """Show context-aware help based on the currently active tab."""
-        help_dialog = HelpDialog(self.mainWin, self.style, self.current_tab)
+        # Build mapping of tab indices to tab types based on enabled tabs
+        tab_type_map = []
+        if self.ENABLE_EXPORT:
+            tab_type_map.append(0)  # Export
+        if self.ENABLE_ANALYZE:
+            tab_type_map.append(1)  # Analyze
+        if self.ENABLE_CARLQUANT:
+            tab_type_map.append(2)  # CarlQuant
+        
+        # Get the actual tab type for the current tab index
+        if self.current_tab < len(tab_type_map):
+            actual_tab_type = tab_type_map[self.current_tab]
+        else:
+            # Fallback to first available tab type
+            actual_tab_type = tab_type_map[0] if tab_type_map else 0
+        
+        help_dialog = HelpDialog(self.mainWin, self.style, actual_tab_type)
         help_dialog.show()
 
     @handle_errors("MainGui.onAbout")
