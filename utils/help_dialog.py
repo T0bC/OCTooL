@@ -15,6 +15,7 @@ import webbrowser
 import os
 import json
 from utils.error_handler import handle_errors
+from utils.app_context import resource_path
 
 
 class HelpDialog:
@@ -47,13 +48,12 @@ class HelpDialog:
     def _load_instructions(self):
         """Load instructions from the instructions.json file."""
         try:
-            app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            json_path = os.path.join(app_dir, 'utils', 'instructions.json')
+            json_path = resource_path('utils/instructions.json')
             
             with open(json_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Warning: Could not load instructions.json: {e}")
+            print(f"Instructions file not found: {json_path}")
             # Return empty dict as fallback
             return {}
     

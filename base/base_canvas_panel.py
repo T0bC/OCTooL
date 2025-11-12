@@ -129,8 +129,9 @@ class BaseCanvasPanel:
         self._setup_common_bindings()
         
         # Initialize instruction renderer
+        from utils.app_context import resource_path
         self.instruction_renderer = InstructionRenderer(self.canvas)
-        self.instruction_renderer.set_logo("icons/WBM_UL_RGB_digital_Path.png")
+        self.instruction_renderer.set_logo(resource_path("icons/WBM_UL_RGB_digital_Path.png"))
         
         # Create slider
         self.scaleValue = tk.StringVar()
