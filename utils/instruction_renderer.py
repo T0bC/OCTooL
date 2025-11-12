@@ -17,6 +17,7 @@ Created on Wed Oct 01 11:48:00 2025
 import tkinter as tk
 import json
 from PIL import Image, ImageTk
+from utils.app_context import resource_path
 
 
 class InstructionRenderer:
@@ -67,10 +68,11 @@ class InstructionRenderer:
     def _load_instructions(self):
         """Load instruction data from JSON file with UTF-8 encoding."""
         try:
-            with open(self.instructions_file, 'r', encoding='utf-8') as f:
+            instructions_path = resource_path(self.instructions_file)
+            with open(instructions_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"Instructions file not found: {self.instructions_file}")
+            print(f"Instructions file not found: {instructions_path}")
             return {}
         except json.JSONDecodeError as e:
             print(f"Invalid JSON in instructions file: {e}")

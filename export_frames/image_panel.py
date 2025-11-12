@@ -50,8 +50,9 @@ class imagePanel:
         self.canvas.bind("<Configure>", self.onResize)
 
         # Initialize instruction renderer for this canvas
+        from utils.app_context import resource_path
         self.instruction_renderer = InstructionRenderer(self.canvas)
-        self.instruction_renderer.set_logo("icons/WBM_UL_RGB_digital_Path.png")
+        self.instruction_renderer.set_logo(resource_path("icons/WBM_UL_RGB_digital_Path.png"))
         
         # Show initial instructions
         self.instructionText()
