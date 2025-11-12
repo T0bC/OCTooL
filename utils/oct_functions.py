@@ -16,6 +16,7 @@ from scipy.ndimage import median_filter
 from PIL import ImageDraw, ImageFont
 from datetime import datetime
 from utils.error_handler import handle_errors
+from utils.app_context import resource_path
 
 # %% Insert Scale
 @handle_errors("oct_functions.insertScale")
@@ -57,7 +58,8 @@ def insertScale(img, scaleSize, xmlDict, fontSize, imgSliceDir):
     y = img.size[1] - margin
 
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("fonts/LSANS.TTF", fontSize)
+    font_path = resource_path("utils/fonts/LSANS.TTF")
+    font = ImageFont.truetype(font_path, fontSize)
     draw.text((x, y), str(scaleSize) + ' \u00B5m', (255), font = font)
     draw.line((x, y + -10, x + lengthOfLine, y + -10), fill = 255, width=3)    # x1, y1, x2, y2
 
