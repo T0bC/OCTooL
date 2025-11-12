@@ -1,26 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-# Collect ttkbootstrap themes and assets
-datas = collect_data_files('ttkbootstrap')
-
-# Collect all ttkbootstrap submodules
-hiddenimports = collect_submodules('ttkbootstrap')
 
 a = Analysis(
     ['OCTexVIEW.py'],
     pathex=[],
     binaries=[],
-    datas=datas + [('fonts', 'fonts'), ('icons', 'icons')],
-    hiddenimports=hiddenimports + [
-        'PIL._tkinter_finder',
-        'tksheet',
-        'openpyxl',
-        'scipy',
-        'sklearn',
-        'matplotlib',
-        'numpy',
-    ],
+    datas=[],
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
