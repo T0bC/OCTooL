@@ -7,7 +7,7 @@ Created on Mon Sep 22 09:45:35 2025
 
 import tkinter as tk
 from tkinter import filedialog
-from ttkbootstrap import ttk
+import ttkbootstrap as ttk
 from datetime import datetime
 import csv
 import textwrap
