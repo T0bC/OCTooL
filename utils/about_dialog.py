@@ -13,6 +13,7 @@ from tkinter import ttk
 import webbrowser
 import os
 from utils.error_handler import handle_errors
+from utils.app_context import resource_path
 
 
 class AboutDialog:
@@ -141,29 +142,31 @@ class AboutDialog:
     @handle_errors("AboutDialog.open_changelog")
     def open_changelog(self):
         """Open the changelog HTML file in the default browser."""
-        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
-        # Look for changelog file
+        # Try to find the changelog file using resource_path
         changelog_alternatives = [
-            os.path.join('HTML_docs', 'OCTexVIEW_change_log.html'),  # Primary location
+            'HTML_docs/OCTexVIEW_change_log.html',  # Primary location
             'OCTexVIEW_change_log.html',
             'CHANGELOG.html',
-            'changelog.html'
         ]
         
         # Try to find the changelog file
         found_changelog = None
         for changelog_path in changelog_alternatives:
-            test_path = os.path.join(app_dir, changelog_path)
-            if os.path.exists(test_path):
-                found_changelog = test_path
-                break
+            try:
+                test_path = resource_path(changelog_path)
+                if os.path.exists(test_path):
+                    found_changelog = test_path
+                    break
+            except Exception:
+                continue
         
         if found_changelog:
-            webbrowser.open('file://' + found_changelog)
+            # Convert to absolute path and use file:// protocol
+            abs_path = os.path.abspath(found_changelog)
+            webbrowser.open('file://' + abs_path)
         else:
             tk.messagebox.showwarning(
                 title='Changelog Not Found',
-                message=f'Could not find changelog file in:\n{app_dir}\n\n'
-                        f'Expected one of: {", ".join(changelog_alternatives)}'
+                message='Could not find OCTexVIEW_change_log.html\n\n'
+                        'Please ensure the HTML_docs folder is included in the distribution.'
             )

@@ -205,33 +205,31 @@ class HelpDialog:
     @handle_errors("HelpDialog.open_documentation")
     def open_documentation(self):
         """Open the full HTML documentation in the default browser."""
-        # Look for documentation file in the application directory
-        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
-        # Alternative common documentation filenames and locations
+        # Try to find the documentation file using resource_path
         doc_alternatives = [
-            os.path.join('HTML_docs', 'OCTexVIEW_MANUAL.html'),  # Primary location
+            'HTML_docs/OCTexVIEW_MANUAL.html',  # Primary location
             'OCTexVIEW_MANUAL.html',
             'documentation.html',
-            'docs.html',
-            'help.html',
-            'index.html',
-            'README.html'
         ]
         
         # Try to find the documentation file
         found_doc = None
         for doc_path in doc_alternatives:
-            test_path = os.path.join(app_dir, doc_path)
-            if os.path.exists(test_path):
-                found_doc = test_path
-                break
+            try:
+                test_path = resource_path(doc_path)
+                if os.path.exists(test_path):
+                    found_doc = test_path
+                    break
+            except Exception:
+                continue
         
         if found_doc:
-            webbrowser.open('file://' + found_doc)
+            # Convert to absolute path and use file:// protocol
+            abs_path = os.path.abspath(found_doc)
+            webbrowser.open('file://' + abs_path)
         else:
             tk.messagebox.showwarning(
                 title='Documentation Not Found',
-                message=f'Could not find documentation file in:\n{app_dir}\n\n'
-                        f'Expected one of: {", ".join(doc_alternatives)}'
+                message='Could not find OCTexVIEW_MANUAL.html\n\n'
+                        'Please ensure the HTML_docs folder is included in the distribution.'
             )

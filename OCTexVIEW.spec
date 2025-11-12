@@ -10,6 +10,8 @@ a = Analysis(
         ('fonts', 'fonts'),
         ('export_frames/fonts', 'export_frames/fonts'),
         ('utils/instructions.json', 'utils'),
+        ('HTML_docs/*.html', 'HTML_docs'),
+        ('HTML_docs/images', 'HTML_docs/images'),
     ],
     hiddenimports=[],
     hookspath=[],
