@@ -12,7 +12,7 @@ from ttkbootstrap import Style
 import exportTab
 import analyzingTab
 import carl_quant
-from utils.app_context import AppContext
+from utils.app_context import AppContext, resource_path
 from utils.status_bar import StatusBar
 from utils.error_handler import handle_errors
 from utils.help_dialog import HelpDialog
@@ -49,7 +49,11 @@ class MainGui:
         self.mainWin.rowconfigure(1, weight = 0)  # Status bar row
 
         # set a custom icon
-        self.mainWin.iconbitmap("icons/thumb_4.ico")
+        try:
+            icon_path = resource_path("icons/thumb_4.ico")
+            self.mainWin.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"Warning: Could not set icon: {e}")
 
         self.style = Style(theme="darkly")
         self.context.style = self.style  # Store style in context for access by panels
