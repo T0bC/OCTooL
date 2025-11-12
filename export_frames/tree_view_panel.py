@@ -17,21 +17,23 @@ class treeViewPanel:
         self.root = self.context.root
         self.frame = self.context.get_frame("tree")
 
+        # Configure frame to expand
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.rowconfigure(0, weight=1)
+
         # canvas Frame and its contens
         self.cols = ('Nr.', 'Name', 'First', 'Last', 'dB min', 'dB max', 'NumSlices', 'Refr. Ind.' , 'Disp. Coeff', 'Img. Slice Dir.' ,'Data Type', 'Status', 'Path')
         self.treeView = ttk.Treeview(self.frame, columns=self.cols, show='headings')
-        self.treeView.grid(row=1, column = 1, sticky = tk.E + tk.W + tk.N + tk.S)
-        self.treeView.columnconfigure(1, weight = 1)
+        self.treeView.grid(row=0, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
 
         self.scrollbar = ttk.Scrollbar(self.frame, orient="vertical", command=self.treeView.yview)
-        self.scrollbar.grid(row=0, column = 3, sticky = 'ns')
+        self.scrollbar.grid(row=0, column=1, sticky='ns')
         self.treeView.configure(yscrollcommand=self.scrollbar.set)
 
         for col in self.cols:
             self.treeView.heading(col, text = col)
 
         # define col sizes
-        self.treeView.grid(row=0, column = 1, columnspan = 2, rowspan=2)
         self.treeView.column('Nr.', width = 25)
         self.treeView.column('Name', width = 200)
         self.treeView.column('First', width = 50)

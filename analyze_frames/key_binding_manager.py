@@ -83,8 +83,6 @@ class KeybindingManager:
         handler = self.handlers.get(data_type)
         if handler:
                 handler(slice_index, col_index, color, data_type, value, annotation_id)
-        else:
-            print(f"No handler found for data type: {data_type}")
 
      # %% Save Measurements, Annotations and Config
     def _save_all(self):
@@ -149,13 +147,11 @@ class KeybindingManager:
 
         # Parse new measured value
         if value is None:
-            print("No measurement value provided.")
             return
 
         try:
             measured_value = float(value)
         except (ValueError, TypeError):
-            print(f"Invalid measurement value: {value}")
             return
 
         # Add new measurement to existing value
@@ -343,7 +339,6 @@ class KeybindingManager:
 
     def undo_last(self):
         if not self.undo_stack:
-            print("Undo stack is empty.")
             return
 
         last_action = self.undo_stack.pop()
@@ -391,7 +386,6 @@ class KeybindingManager:
                     parsed_value = raw_input
 
                 else:
-                    print(f"Unsupported data type: {data_type}")
                     return
 
                 # Get current value for undo tracking

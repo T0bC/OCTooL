@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Tobias Meißner">
+
+<title>OCTexVIEW Change Log</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="OCTexVIEW_change_log_files/libs/clipboard/clipboard.min.js"></script>
+<script src="OCTexVIEW_change_log_files/libs/quarto-html/quarto.js"></script>
+<script src="OCTexVIEW_change_log_files/libs/quarto-html/popper.min.js"></script>
+<script src="OCTexVIEW_change_log_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="OCTexVIEW_change_log_files/libs/quarto-html/anchor.min.js"></script>
+<link href="OCTexVIEW_change_log_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="OCTexVIEW_change_log_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="OCTexVIEW_change_log_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="OCTexVIEW_change_log_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="OCTexVIEW_change_log_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#version-1.2.3-2025-11-12" id="toc-version-1.2.3-2025-11-12" class="nav-link active" data-scroll-target="#version-1.2.3-2025-11-12"><span class="header-section-number">1</span> Version 1.2.3 (2025-11-12)</a>
+  <ul class="collapse">
+  <li><a href="#distribution-deployment" id="toc-distribution-deployment" class="nav-link" data-scroll-target="#distribution-deployment"><span class="header-section-number">1.1</span> Distribution &amp; Deployment</a>
+  <ul class="collapse">
+  <li><a href="#pyinstaller-executable-build" id="toc-pyinstaller-executable-build" class="nav-link" data-scroll-target="#pyinstaller-executable-build"><span class="header-section-number">1.1.1</span> PyInstaller Executable Build</a></li>
+  <li><a href="#build-optimization" id="toc-build-optimization" class="nav-link" data-scroll-target="#build-optimization"><span class="header-section-number">1.1.2</span> Build Optimization</a></li>
+  </ul></li>
+  <li><a href="#user-interface-enhancements" id="toc-user-interface-enhancements" class="nav-link" data-scroll-target="#user-interface-enhancements"><span class="header-section-number">1.2</span> User Interface Enhancements</a>
+  <ul class="collapse">
+  <li><a href="#tab-configuration-system" id="toc-tab-configuration-system" class="nav-link" data-scroll-target="#tab-configuration-system"><span class="header-section-number">1.2.1</span> Tab Configuration System</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---algorithm-improvements" id="toc-carl-quant-module---algorithm-improvements" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements"><span class="header-section-number">1.3</span> Carl Quant Module - Algorithm Improvements</a>
+  <ul class="collapse">
+  <li><a href="#lesion-depth-detection" id="toc-lesion-depth-detection" class="nav-link" data-scroll-target="#lesion-depth-detection"><span class="header-section-number">1.3.1</span> Lesion Depth Detection</a></li>
+  <li><a href="#coordinate-management" id="toc-coordinate-management" class="nav-link" data-scroll-target="#coordinate-management"><span class="header-section-number">1.3.2</span> Coordinate Management</a></li>
+  </ul></li>
+  <li><a href="#dependencies-environment" id="toc-dependencies-environment" class="nav-link" data-scroll-target="#dependencies-environment"><span class="header-section-number">1.4</span> Dependencies &amp; Environment</a>
+  <ul class="collapse">
+  <li><a href="#package-management" id="toc-package-management" class="nav-link" data-scroll-target="#package-management"><span class="header-section-number">1.4.1</span> Package Management</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#version-1.2.2-2025-10-21" id="toc-version-1.2.2-2025-10-21" class="nav-link" data-scroll-target="#version-1.2.2-2025-10-21"><span class="header-section-number">2</span> Version 1.2.2 (2025-10-21)</a>
+  <ul class="collapse">
+  <li><a href="#carl-quant-module---algorithm-improvements-1" id="toc-carl-quant-module---algorithm-improvements-1" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements-1"><span class="header-section-number">2.1</span> Carl Quant Module - Algorithm Improvements</a>
+  <ul class="collapse">
+  <li><a href="#buffer-zone-system-for-transition-areas" id="toc-buffer-zone-system-for-transition-areas" class="nav-link" data-scroll-target="#buffer-zone-system-for-transition-areas"><span class="header-section-number">2.1.1</span> Buffer Zone System for Transition Areas</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---uiux-enhancements" id="toc-carl-quant-module---uiux-enhancements" class="nav-link" data-scroll-target="#carl-quant-module---uiux-enhancements"><span class="header-section-number">2.2</span> Carl Quant Module - UI/UX Enhancements</a>
+  <ul class="collapse">
+  <li><a href="#visualization-color-scheme" id="toc-visualization-color-scheme" class="nav-link" data-scroll-target="#visualization-color-scheme"><span class="header-section-number">2.2.1</span> Visualization &amp; Color Scheme</a></li>
+  <li><a href="#interactive-features" id="toc-interactive-features" class="nav-link" data-scroll-target="#interactive-features"><span class="header-section-number">2.2.2</span> Interactive Features</a></li>
+  <li><a href="#coordinate-management-1" id="toc-coordinate-management-1" class="nav-link" data-scroll-target="#coordinate-management-1"><span class="header-section-number">2.2.3</span> Coordinate Management</a></li>
+  </ul></li>
+  <li><a href="#performance-optimizations" id="toc-performance-optimizations" class="nav-link" data-scroll-target="#performance-optimizations"><span class="header-section-number">2.3</span> Performance Optimizations</a>
+  <ul class="collapse">
+  <li><a href="#image-viewer" id="toc-image-viewer" class="nav-link" data-scroll-target="#image-viewer"><span class="header-section-number">2.3.1</span> Image Viewer</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---progress-tracking" id="toc-carl-quant-module---progress-tracking" class="nav-link" data-scroll-target="#carl-quant-module---progress-tracking"><span class="header-section-number">2.4</span> Carl Quant Module - Progress Tracking</a>
+  <ul class="collapse">
+  <li><a href="#progress-dialog" id="toc-progress-dialog" class="nav-link" data-scroll-target="#progress-dialog"><span class="header-section-number">2.4.1</span> Progress Dialog</a></li>
+  </ul></li>
+  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes"><span class="header-section-number">2.5</span> Bug Fixes</a>
+  <ul class="collapse">
+  <li><a href="#specimen-panel" id="toc-specimen-panel" class="nav-link" data-scroll-target="#specimen-panel"><span class="header-section-number">2.5.1</span> Specimen Panel</a></li>
+  </ul></li>
+  <li><a href="#documentation" id="toc-documentation" class="nav-link" data-scroll-target="#documentation"><span class="header-section-number">2.6</span> Documentation</a>
+  <ul class="collapse">
+  <li><a href="#clarifications" id="toc-clarifications" class="nav-link" data-scroll-target="#clarifications"><span class="header-section-number">2.6.1</span> Clarifications</a></li>
+  </ul></li>
+  <li><a href="#code-quality" id="toc-code-quality" class="nav-link" data-scroll-target="#code-quality"><span class="header-section-number">2.7</span> Code Quality</a>
+  <ul class="collapse">
+  <li><a href="#refactoring" id="toc-refactoring" class="nav-link" data-scroll-target="#refactoring"><span class="header-section-number">2.7.1</span> Refactoring</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#version-1.2.1-2025-10-16" id="toc-version-1.2.1-2025-10-16" class="nav-link" data-scroll-target="#version-1.2.1-2025-10-16"><span class="header-section-number">3</span> Version 1.2.1 (2025-10-16)</a>
+  <ul class="collapse">
+  <li><a href="#documentation-1" id="toc-documentation-1" class="nav-link" data-scroll-target="#documentation-1"><span class="header-section-number">3.1</span> Documentation</a>
+  <ul class="collapse">
+  <li><a href="#manual-updates" id="toc-manual-updates" class="nav-link" data-scroll-target="#manual-updates"><span class="header-section-number">3.1.1</span> Manual Updates</a></li>
+  </ul></li>
+  <li><a href="#performance-optimizations-1" id="toc-performance-optimizations-1" class="nav-link" data-scroll-target="#performance-optimizations-1"><span class="header-section-number">3.2</span> Performance Optimizations</a>
+  <ul class="collapse">
+  <li><a href="#oct-image-processing" id="toc-oct-image-processing" class="nav-link" data-scroll-target="#oct-image-processing"><span class="header-section-number">3.2.1</span> OCT Image Processing</a></li>
+  </ul></li>
+  <li><a href="#code-refactoring" id="toc-code-refactoring" class="nav-link" data-scroll-target="#code-refactoring"><span class="header-section-number">3.3</span> Code Refactoring</a>
+  <ul class="collapse">
+  <li><a href="#export-module" id="toc-export-module" class="nav-link" data-scroll-target="#export-module"><span class="header-section-number">3.3.1</span> Export Module</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---a-scan-viewer" id="toc-carl-quant-module---a-scan-viewer" class="nav-link" data-scroll-target="#carl-quant-module---a-scan-viewer"><span class="header-section-number">3.4</span> Carl Quant Module - A-Scan Viewer</a>
+  <ul class="collapse">
+  <li><a href="#interactive-visualization" id="toc-interactive-visualization" class="nav-link" data-scroll-target="#interactive-visualization"><span class="header-section-number">3.4.1</span> Interactive Visualization</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---algorithm-improvements-2" id="toc-carl-quant-module---algorithm-improvements-2" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements-2"><span class="header-section-number">3.5</span> Carl Quant Module - Algorithm Improvements</a>
+  <ul class="collapse">
+  <li><a href="#lesion-depth-detection-1" id="toc-lesion-depth-detection-1" class="nav-link" data-scroll-target="#lesion-depth-detection-1"><span class="header-section-number">3.5.1</span> Lesion Depth Detection</a></li>
+  <li><a href="#cavitation-detection" id="toc-cavitation-detection" class="nav-link" data-scroll-target="#cavitation-detection"><span class="header-section-number">3.5.2</span> Cavitation Detection</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---data-management" id="toc-carl-quant-module---data-management" class="nav-link" data-scroll-target="#carl-quant-module---data-management"><span class="header-section-number">3.6</span> Carl Quant Module - Data Management</a>
+  <ul class="collapse">
+  <li><a href="#results-export" id="toc-results-export" class="nav-link" data-scroll-target="#results-export"><span class="header-section-number">3.6.1</span> Results &amp; Export</a></li>
+  <li><a href="#image-export" id="toc-image-export" class="nav-link" data-scroll-target="#image-export"><span class="header-section-number">3.6.2</span> Image Export</a></li>
+  </ul></li>
+  <li><a href="#code-refactoring-cleanup" id="toc-code-refactoring-cleanup" class="nav-link" data-scroll-target="#code-refactoring-cleanup"><span class="header-section-number">3.7</span> Code Refactoring &amp; Cleanup</a>
+  <ul class="collapse">
+  <li><a href="#naming-clarity" id="toc-naming-clarity" class="nav-link" data-scroll-target="#naming-clarity"><span class="header-section-number">3.7.1</span> Naming &amp; Clarity</a></li>
+  <li><a href="#performance-maintenance" id="toc-performance-maintenance" class="nav-link" data-scroll-target="#performance-maintenance"><span class="header-section-number">3.7.2</span> Performance &amp; Maintenance</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#version-1.2.0-2025-10-10" id="toc-version-1.2.0-2025-10-10" class="nav-link" data-scroll-target="#version-1.2.0-2025-10-10"><span class="header-section-number">4</span> Version 1.2.0 (2025-10-10)</a>
+  <ul class="collapse">
+  <li><a href="#carl-quant-module---core-algorithm-enhancements" id="toc-carl-quant-module---core-algorithm-enhancements" class="nav-link" data-scroll-target="#carl-quant-module---core-algorithm-enhancements"><span class="header-section-number">4.1</span> Carl Quant Module - Core Algorithm Enhancements</a>
+  <ul class="collapse">
+  <li><a href="#lesion-depth-detection-methods" id="toc-lesion-depth-detection-methods" class="nav-link" data-scroll-target="#lesion-depth-detection-methods"><span class="header-section-number">4.1.1</span> Lesion Depth Detection Methods</a></li>
+  <li><a href="#surface-detection-analysis" id="toc-surface-detection-analysis" class="nav-link" data-scroll-target="#surface-detection-analysis"><span class="header-section-number">4.1.2</span> Surface Detection &amp; Analysis</a></li>
+  <li><a href="#region-analysis-data-extraction" id="toc-region-analysis-data-extraction" class="nav-link" data-scroll-target="#region-analysis-data-extraction"><span class="header-section-number">4.1.3</span> Region Analysis &amp; Data Extraction</a></li>
+  <li><a href="#performance-optimizations-2" id="toc-performance-optimizations-2" class="nav-link" data-scroll-target="#performance-optimizations-2"><span class="header-section-number">4.1.4</span> Performance Optimizations</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---user-interface-workflow" id="toc-carl-quant-module---user-interface-workflow" class="nav-link" data-scroll-target="#carl-quant-module---user-interface-workflow"><span class="header-section-number">4.2</span> Carl Quant Module - User Interface &amp; Workflow</a>
+  <ul class="collapse">
+  <li><a href="#image-viewer-visualization" id="toc-image-viewer-visualization" class="nav-link" data-scroll-target="#image-viewer-visualization"><span class="header-section-number">4.2.1</span> Image Viewer &amp; Visualization</a></li>
+  <li><a href="#settings-configuration" id="toc-settings-configuration" class="nav-link" data-scroll-target="#settings-configuration"><span class="header-section-number">4.2.2</span> Settings &amp; Configuration</a></li>
+  <li><a href="#data-management" id="toc-data-management" class="nav-link" data-scroll-target="#data-management"><span class="header-section-number">4.2.3</span> Data Management</a></li>
+  <li><a href="#results-reporting" id="toc-results-reporting" class="nav-link" data-scroll-target="#results-reporting"><span class="header-section-number">4.2.4</span> Results &amp; Reporting</a></li>
+  </ul></li>
+  <li><a href="#application-wide-improvements" id="toc-application-wide-improvements" class="nav-link" data-scroll-target="#application-wide-improvements"><span class="header-section-number">4.3</span> Application-Wide Improvements</a>
+  <ul class="collapse">
+  <li><a href="#status-bar-error-handling" id="toc-status-bar-error-handling" class="nav-link" data-scroll-target="#status-bar-error-handling"><span class="header-section-number">4.3.1</span> Status Bar &amp; Error Handling</a></li>
+  <li><a href="#architecture-code-quality" id="toc-architecture-code-quality" class="nav-link" data-scroll-target="#architecture-code-quality"><span class="header-section-number">4.3.2</span> Architecture &amp; Code Quality</a></li>
+  <li><a href="#uiux-enhancements" id="toc-uiux-enhancements" class="nav-link" data-scroll-target="#uiux-enhancements"><span class="header-section-number">4.3.3</span> UI/UX Enhancements</a></li>
+  <li><a href="#documentation-help-system" id="toc-documentation-help-system" class="nav-link" data-scroll-target="#documentation-help-system"><span class="header-section-number">4.3.4</span> Documentation &amp; Help System</a></li>
+  </ul></li>
+  <li><a href="#analysis-tab-enhancements" id="toc-analysis-tab-enhancements" class="nav-link" data-scroll-target="#analysis-tab-enhancements"><span class="header-section-number">4.4</span> Analysis Tab Enhancements</a>
+  <ul class="collapse">
+  <li><a href="#configuration-management" id="toc-configuration-management" class="nav-link" data-scroll-target="#configuration-management"><span class="header-section-number">4.4.1</span> Configuration Management</a></li>
+  <li><a href="#data-handling" id="toc-data-handling" class="nav-link" data-scroll-target="#data-handling"><span class="header-section-number">4.4.2</span> Data Handling</a></li>
+  <li><a href="#column-management" id="toc-column-management" class="nav-link" data-scroll-target="#column-management"><span class="header-section-number">4.4.3</span> Column Management</a></li>
+  </ul></li>
+  <li><a href="#export-tab" id="toc-export-tab" class="nav-link" data-scroll-target="#export-tab"><span class="header-section-number">4.5</span> Export Tab</a>
+  <ul class="collapse">
+  <li><a href="#bug-fixes-stability" id="toc-bug-fixes-stability" class="nav-link" data-scroll-target="#bug-fixes-stability"><span class="header-section-number">4.5.1</span> Bug Fixes &amp; Stability</a></li>
+  </ul></li>
+  <li><a href="#general-maintenance" id="toc-general-maintenance" class="nav-link" data-scroll-target="#general-maintenance"><span class="header-section-number">4.6</span> General Maintenance</a>
+  <ul class="collapse">
+  <li><a href="#code-cleanup" id="toc-code-cleanup" class="nav-link" data-scroll-target="#code-cleanup"><span class="header-section-number">4.6.1</span> Code Cleanup</a></li>
+  <li><a href="#development-infrastructure" id="toc-development-infrastructure" class="nav-link" data-scroll-target="#development-infrastructure"><span class="header-section-number">4.6.2</span> Development Infrastructure</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#version-1.0.0-2025-09-22" id="toc-version-1.0.0-2025-09-22" class="nav-link" data-scroll-target="#version-1.0.0-2025-09-22"><span class="header-section-number">5</span> Version 1.0.0 (2025-09-22)</a>
+  <ul class="collapse">
+  <li><a href="#initial-release" id="toc-initial-release" class="nav-link" data-scroll-target="#initial-release"><span class="header-section-number">5.1</span> Initial Release</a>
+  <ul class="collapse">
+  <li><a href="#core-features" id="toc-core-features" class="nav-link" data-scroll-target="#core-features"><span class="header-section-number">5.1.1</span> Core Features</a></li>
+  <li><a href="#user-interface" id="toc-user-interface" class="nav-link" data-scroll-target="#user-interface"><span class="header-section-number">5.1.2</span> User Interface</a></li>
+  <li><a href="#foundation" id="toc-foundation" class="nav-link" data-scroll-target="#foundation"><span class="header-section-number">5.1.3</span> Foundation</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#development-notes" id="toc-development-notes" class="nav-link" data-scroll-target="#development-notes"><span class="header-section-number">6</span> Development Notes</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">OCTexVIEW Change Log</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Tobias Meißner </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="version-1.2.3-2025-11-12" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Version 1.2.3 (2025-11-12)</h1>
+<section id="distribution-deployment" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="distribution-deployment"><span class="header-section-number">1.1</span> Distribution &amp; Deployment</h2>
+<section id="pyinstaller-executable-build" class="level3" data-number="1.1.1">
+<h3 data-number="1.1.1" class="anchored" data-anchor-id="pyinstaller-executable-build"><span class="header-section-number">1.1.1</span> PyInstaller Executable Build</h3>
+<ul>
+<li>Implemented PyInstaller support for Windows executable distribution</li>
+<li>Added <code>resource_path()</code> utility to resolve file paths for both development and frozen executables</li>
+<li>Configured resource bundling for icons, fonts, and configuration files in spec file</li>
+<li>Added <code>multiprocessing.freeze_support()</code> to prevent worker processes from re-launching GUI on Windows</li>
+<li>Updated logo and instruction file loading to use resource_path for proper bundled app support</li>
+<li>Created comprehensive setup documentation for building OCTexVIEW with PyInstaller</li>
+<li>Added requirements.txt with all production dependencies and version constraints</li>
+<li>Simplified PyInstaller spec file by removing unused dependencies and explicit hiddenimports</li>
+</ul>
+</section>
+<section id="build-optimization" class="level3" data-number="1.1.2">
+<h3 data-number="1.1.2" class="anchored" data-anchor-id="build-optimization"><span class="header-section-number">1.1.2</span> Build Optimization</h3>
+<ul>
+<li>Removed ttkbootstrap data files and submodules collection to reduce executable size</li>
+<li>Documented rationale for pip-only installation to minimize bundle size</li>
+<li>Configured onedir mode for compatibility with NumPy/SciPy/scikit-learn</li>
+</ul>
+</section>
+</section>
+<section id="user-interface-enhancements" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="user-interface-enhancements"><span class="header-section-number">1.2</span> User Interface Enhancements</h2>
+<section id="tab-configuration-system" class="level3" data-number="1.2.1">
+<h3 data-number="1.2.1" class="anchored" data-anchor-id="tab-configuration-system"><span class="header-section-number">1.2.1</span> Tab Configuration System</h3>
+<ul>
+<li>Introduced configurable tab visibility system with distribution flags</li>
+<li>Added ENABLE_EXPORT, ENABLE_ANALYZE, and ENABLE_CARLQUANT instance variables for selective tab control</li>
+<li>Updated tab button creation to dynamically position buttons based on enabled tabs</li>
+<li>Added automatic selection of first available tab on startup</li>
+<li>Fixed tab button command callbacks to use captured indices instead of dynamic length calculation</li>
+<li>Added bounds checking in switch_tab to prevent index errors</li>
+<li>Corrected help dialog mapping to actual tab types based on enabled tabs</li>
+</ul>
+</section>
+</section>
+<section id="carl-quant-module---algorithm-improvements" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements"><span class="header-section-number">1.3</span> Carl Quant Module - Algorithm Improvements</h2>
+<section id="lesion-depth-detection" class="level3" data-number="1.3.1">
+<h3 data-number="1.3.1" class="anchored" data-anchor-id="lesion-depth-detection"><span class="header-section-number">1.3.1</span> Lesion Depth Detection</h3>
+<ul>
+<li>Improved depth calculation stability when shape methods are unstable</li>
+<li>Changed from inflection-only fallback to computing mean of all available methods (knee, shoulder, inflection)</li>
+<li>Prevents over-reliance on inflection as standalone measurement when designed as correction anchor</li>
+<li>Smooths out wobbliness by averaging all depth information rather than discarding unstable measurements</li>
+</ul>
+</section>
+<section id="coordinate-management" class="level3" data-number="1.3.2">
+<h3 data-number="1.3.2" class="anchored" data-anchor-id="coordinate-management"><span class="header-section-number">1.3.2</span> Coordinate Management</h3>
+<ul>
+<li>Added coordinate validation for specimen annotations</li>
+<li>Implemented lazy loading of specimen annotations for better performance</li>
+<li>Added multi-select support for removing specimens from processing list</li>
+<li>Improved cancellation handling with partial completion state for specimens</li>
+</ul>
+</section>
+</section>
+<section id="dependencies-environment" class="level2" data-number="1.4">
+<h2 data-number="1.4" class="anchored" data-anchor-id="dependencies-environment"><span class="header-section-number">1.4</span> Dependencies &amp; Environment</h2>
+<section id="package-management" class="level3" data-number="1.4.1">
+<h3 data-number="1.4.1" class="anchored" data-anchor-id="package-management"><span class="header-section-number">1.4.1</span> Package Management</h3>
+<ul>
+<li>Relaxed version constraints on core dependencies to allow more flexible updates</li>
+<li>Added customtkinter and CTkColorPicker for enhanced UI capabilities</li>
+<li>Fixed ttkbootstrap import statement</li>
+</ul>
+<hr>
+</section>
+</section>
+</section>
+<section id="version-1.2.2-2025-10-21" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Version 1.2.2 (2025-10-21)</h1>
+<section id="carl-quant-module---algorithm-improvements-1" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements-1"><span class="header-section-number">2.1</span> Carl Quant Module - Algorithm Improvements</h2>
+<section id="buffer-zone-system-for-transition-areas" class="level3" data-number="2.1.1">
+<h3 data-number="2.1.1" class="anchored" data-anchor-id="buffer-zone-system-for-transition-areas"><span class="header-section-number">2.1.1</span> Buffer Zone System for Transition Areas</h3>
+<ul>
+<li>Implemented 10-pixel buffer zone around lesion boundaries to avoid transition artifacts</li>
+<li>Added <code>buffer_pixels</code> field (default 10) to <code>RegionConfig</code> data model</li>
+<li>Created helper methods for buffered coordinate calculations:
+<ul>
+<li><code>get_buffered_lesion_start_x()</code>: Moves lesion start 10px right</li>
+<li><code>get_buffered_lesion_end_x()</code>: Moves lesion end 10px left</li>
+<li><code>get_buffered_sound_left_end_x()</code>: Ends sound area 1 at 10px before lesion</li>
+<li><code>get_buffered_sound_right_start_x()</code>: Starts sound area 2 at 10px after lesion</li>
+</ul></li>
+<li>Updated analysis functions to use buffered coordinates:
+<ul>
+<li>Interpolated surface fitting excludes transition zones</li>
+<li>Sound region extraction avoids transition zone contamination</li>
+<li>Lesion depth detection uses buffered boundaries (10px shorter on each side)</li>
+<li>Cavitation detection uses buffered boundaries for consistency</li>
+</ul></li>
+<li>Visual boundaries remain at user-defined positions for clear feedback</li>
+<li>Backward compatible with existing configurations (defaults to 10px buffer)</li>
+</ul>
+</section>
+</section>
+<section id="carl-quant-module---uiux-enhancements" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="carl-quant-module---uiux-enhancements"><span class="header-section-number">2.2</span> Carl Quant Module - UI/UX Enhancements</h2>
+<section id="visualization-color-scheme" class="level3" data-number="2.2.1">
+<h3 data-number="2.2.1" class="anchored" data-anchor-id="visualization-color-scheme"><span class="header-section-number">2.2.1</span> Visualization &amp; Color Scheme</h3>
+<ul>
+<li>Centralized color scheme with individual component method visualization controls</li>
+<li>Updated color scheme for improved surface and region boundary visualization</li>
+<li>Moved color definitions to centralized <code>annotation_colors</code> module for consistency</li>
+<li>Updated annotation colors for better contrast and consistency across backgrounds</li>
+</ul>
+</section>
+<section id="interactive-features" class="level3" data-number="2.2.2">
+<h3 data-number="2.2.2" class="anchored" data-anchor-id="interactive-features"><span class="header-section-number">2.2.2</span> Interactive Features</h3>
+<ul>
+<li>Added synchronized row highlighting with distinct colors for navigation and A-Scan modes</li>
+<li>Implemented row highlighting and adjusted pane proportions in results panel</li>
+<li>Added clear coordinates button to remove specimen boundaries and air coordinates</li>
+</ul>
+</section>
+<section id="coordinate-management-1" class="level3" data-number="2.2.3">
+<h3 data-number="2.2.3" class="anchored" data-anchor-id="coordinate-management-1"><span class="header-section-number">2.2.3</span> Coordinate Management</h3>
+<ul>
+<li>Implemented keyframe-based coordinate interpolation for region and AIR boundaries</li>
+<li>Linear interpolation between user-defined keyframes across image stacks</li>
+<li>Intelligent propagation with distinction between keyframes and interpolated values</li>
+</ul>
+</section>
+</section>
+<section id="performance-optimizations" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="performance-optimizations"><span class="header-section-number">2.3</span> Performance Optimizations</h2>
+<section id="image-viewer" class="level3" data-number="2.3.1">
+<h3 data-number="2.3.1" class="anchored" data-anchor-id="image-viewer"><span class="header-section-number">2.3.1</span> Image Viewer</h3>
+<ul>
+<li>Optimized image viewer synchronization by skipping redraws during slider drag</li>
+<li>Improved responsiveness during navigation</li>
+</ul>
+</section>
+</section>
+<section id="carl-quant-module---progress-tracking" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="carl-quant-module---progress-tracking"><span class="header-section-number">2.4</span> Carl Quant Module - Progress Tracking</h2>
+<section id="progress-dialog" class="level3" data-number="2.4.1">
+<h3 data-number="2.4.1" class="anchored" data-anchor-id="progress-dialog"><span class="header-section-number">2.4.1</span> Progress Dialog</h3>
+<ul>
+<li>Enhanced progress UI with processing mode indicator</li>
+<li>Added completed row highlighting for better visual feedback</li>
+</ul>
+</section>
+</section>
+<section id="bug-fixes" class="level2" data-number="2.5">
+<h2 data-number="2.5" class="anchored" data-anchor-id="bug-fixes"><span class="header-section-number">2.5</span> Bug Fixes</h2>
+<section id="specimen-panel" class="level3" data-number="2.5.1">
+<h3 data-number="2.5.1" class="anchored" data-anchor-id="specimen-panel"><span class="header-section-number">2.5.1</span> Specimen Panel</h3>
+<ul>
+<li>Fixed specimen panel column indices after removing REGIONS and AIR columns</li>
+</ul>
+</section>
+</section>
+<section id="documentation" class="level2" data-number="2.6">
+<h2 data-number="2.6" class="anchored" data-anchor-id="documentation"><span class="header-section-number">2.6</span> Documentation</h2>
+<section id="clarifications" class="level3" data-number="2.6.1">
+<h3 data-number="2.6.1" class="anchored" data-anchor-id="clarifications"><span class="header-section-number">2.6.1</span> Clarifications</h3>
+<ul>
+<li>Clarified AIR as Air Reference region for empty space normalization</li>
+</ul>
+</section>
+</section>
+<section id="code-quality" class="level2" data-number="2.7">
+<h2 data-number="2.7" class="anchored" data-anchor-id="code-quality"><span class="header-section-number">2.7</span> Code Quality</h2>
+<section id="refactoring" class="level3" data-number="2.7.1">
+<h3 data-number="2.7.1" class="anchored" data-anchor-id="refactoring"><span class="header-section-number">2.7.1</span> Refactoring</h3>
+<ul>
+<li>Removed print statements in favor of status bar and error handling</li>
+<li>Improved code maintainability and debugging capabilities</li>
+</ul>
+<hr>
+</section>
+</section>
+</section>
+<section id="version-1.2.1-2025-10-16" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Version 1.2.1 (2025-10-16)</h1>
+<section id="documentation-1" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="documentation-1"><span class="header-section-number">3.1</span> Documentation</h2>
+<section id="manual-updates" class="level3" data-number="3.1.1">
+<h3 data-number="3.1.1" class="anchored" data-anchor-id="manual-updates"><span class="header-section-number">3.1.1</span> Manual Updates</h3>
+<ul>
+<li>Added PyInstaller build optimization guide and quick reference</li>
+<li>Moved typical workflow sections to beginning of each chapter for better accessibility</li>
+<li>Added comprehensive Analyze section documentation with detailed UI components and workflows</li>
+<li>Added comprehensive Carl Quant section documentation with detailed UI components and workflows</li>
+<li>Added comprehensive Export section documentation with detailed parameters and workflows</li>
+<li>Improved manual layout and content organization with enhanced table of contents</li>
+</ul>
+</section>
+</section>
+<section id="performance-optimizations-1" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="performance-optimizations-1"><span class="header-section-number">3.2</span> Performance Optimizations</h2>
+<section id="oct-image-processing" class="level3" data-number="3.2.1">
+<h3 data-number="3.2.1" class="anchored" data-anchor-id="oct-image-processing"><span class="header-section-number">3.2.1</span> OCT Image Processing</h3>
+<ul>
+<li>Optimized OCT image processing with noise floor subtraction for improved image quality</li>
+<li>Implemented vectorized median filter for faster image filtering</li>
+<li>Improved memory management in image processing pipeline</li>
+</ul>
+</section>
+</section>
+<section id="code-refactoring" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="code-refactoring"><span class="header-section-number">3.3</span> Code Refactoring</h2>
+<section id="export-module" class="level3" data-number="3.3.1">
+<h3 data-number="3.3.1" class="anchored" data-anchor-id="export-module"><span class="header-section-number">3.3.1</span> Export Module</h3>
+<ul>
+<li>Optimized grid layout in export panel for better UI responsiveness</li>
+</ul>
+</section>
+</section>
+<section id="carl-quant-module---a-scan-viewer" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="carl-quant-module---a-scan-viewer"><span class="header-section-number">3.4</span> Carl Quant Module - A-Scan Viewer</h2>
+<section id="interactive-visualization" class="level3" data-number="3.4.1">
+<h3 data-number="3.4.1" class="anchored" data-anchor-id="interactive-visualization"><span class="header-section-number">3.4.1</span> Interactive Visualization</h3>
+<ul>
+<li>Implemented dedicated A-Scan viewer with double-click activation from results panel</li>
+<li>Added intensity profile visualization with interactive column selection</li>
+<li>Implemented synchronized A-scan column indicator with slice navigation</li>
+<li>Redesigned viewer with hover annotations and responsive layout</li>
+<li>Added toggleable annotations and curve fits to A-scan visualization</li>
+</ul>
+</section>
+</section>
+<section id="carl-quant-module---algorithm-improvements-2" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements-2"><span class="header-section-number">3.5</span> Carl Quant Module - Algorithm Improvements</h2>
+<section id="lesion-depth-detection-1" class="level3" data-number="3.5.1">
+<h3 data-number="3.5.1" class="anchored" data-anchor-id="lesion-depth-detection-1"><span class="header-section-number">3.5.1</span> Lesion Depth Detection</h3>
+<ul>
+<li>Implemented offset-based depth correction with adaptive weighting</li>
+<li>Added robust lesion depth curve fitting with spike removal and outlier detection</li>
+<li>Improved lesion depth averaging with debug visualization of individual detection methods</li>
+<li>Simplified depth detection logic to use knee point as initial placeholder</li>
+<li>Optimized stability analysis by collecting raw points during A-scan processing</li>
+</ul>
+</section>
+<section id="cavitation-detection" class="level3" data-number="3.5.2">
+<h3 data-number="3.5.2" class="anchored" data-anchor-id="cavitation-detection"><span class="header-section-number">3.5.2</span> Cavitation Detection</h3>
+<ul>
+<li>Implemented cavitation-aware lesion depth measurement</li>
+<li>Standardized cavitation status output to TRUE/FALSE strings with blank fallback</li>
+</ul>
+</section>
+</section>
+<section id="carl-quant-module---data-management" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="carl-quant-module---data-management"><span class="header-section-number">3.6</span> Carl Quant Module - Data Management</h2>
+<section id="results-export" class="level3" data-number="3.6.1">
+<h3 data-number="3.6.1" class="anchored" data-anchor-id="results-export"><span class="header-section-number">3.6.1</span> Results &amp; Export</h3>
+<ul>
+<li>Fixed slice indices conversion from 0-based internal to 1-based Excel representation</li>
+<li>Implemented metadata-based result loading with improved folder skipping for annotations</li>
+<li>Simplified annotation output by using original filenames</li>
+<li>Added table update when region number changes</li>
+<li>Implemented lock feature to avoid conflicts when results table exists</li>
+</ul>
+</section>
+<section id="image-export" class="level3" data-number="3.6.2">
+<h3 data-number="3.6.2" class="anchored" data-anchor-id="image-export"><span class="header-section-number">3.6.2</span> Image Export</h3>
+<ul>
+<li>Implemented image saving routines with annotation overlays</li>
+</ul>
+</section>
+</section>
+<section id="code-refactoring-cleanup" class="level2" data-number="3.7">
+<h2 data-number="3.7" class="anchored" data-anchor-id="code-refactoring-cleanup"><span class="header-section-number">3.7</span> Code Refactoring &amp; Cleanup</h2>
+<section id="naming-clarity" class="level3" data-number="3.7.1">
+<h3 data-number="3.7.1" class="anchored" data-anchor-id="naming-clarity"><span class="header-section-number">3.7.1</span> Naming &amp; Clarity</h3>
+<ul>
+<li>Renamed <code>knee_data</code> to <code>lesion_detection_data</code> for consistency</li>
+<li>Renamed surface curve types from spline/reference to actual/interpolated</li>
+<li>Renamed x variable to <code>ascan_x</code> for clarity in lesion depth calculation</li>
+<li>Simplified knee point detection logic by removing redundant profile handling</li>
+</ul>
+</section>
+<section id="performance-maintenance" class="level3" data-number="3.7.2">
+<h3 data-number="3.7.2" class="anchored" data-anchor-id="performance-maintenance"><span class="header-section-number">3.7.2</span> Performance &amp; Maintenance</h3>
+<ul>
+<li>Optimized memory usage in lesion depth calculations</li>
+<li>Removed unused <code>surface_offset</code> parameter</li>
+<li>Removed profile logger and debug printouts</li>
+<li>Removed obsolete files</li>
+</ul>
+<hr>
+</section>
+</section>
+</section>
+<section id="version-1.2.0-2025-10-10" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Version 1.2.0 (2025-10-10)</h1>
+<section id="carl-quant-module---core-algorithm-enhancements" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="carl-quant-module---core-algorithm-enhancements"><span class="header-section-number">4.1</span> Carl Quant Module - Core Algorithm Enhancements</h2>
+<section id="lesion-depth-detection-methods" class="level3" data-number="4.1.1">
+<h3 data-number="4.1.1" class="anchored" data-anchor-id="lesion-depth-detection-methods"><span class="header-section-number">4.1.1</span> Lesion Depth Detection Methods</h3>
+<ul>
+<li>Implemented multiple lesion depth detection algorithms:
+<ul>
+<li>Sigmoidal shoulder fit for smooth lesion boundary detection</li>
+<li>Kneepoint detection algorithm for sharp transitions</li>
+<li>Entropy-based measurement for lesion raw depth analysis</li>
+</ul></li>
+<li>Introduced weighted averaging method combining multiple detection approaches</li>
+<li>Implemented weighted mean calculation using standard deviation across methods</li>
+<li>Added method coefficient of variation (CV) display in information panel</li>
+<li>Integrated spline smoothing for raw lesion depth data refinement</li>
+</ul>
+</section>
+<section id="surface-detection-analysis" class="level3" data-number="4.1.2">
+<h3 data-number="4.1.2" class="anchored" data-anchor-id="surface-detection-analysis"><span class="header-section-number">4.1.2</span> Surface Detection &amp; Analysis</h3>
+<ul>
+<li>Enhanced surface detection using spline fitting techniques</li>
+<li>Implemented 95th percentile-based surface peak detection</li>
+<li>Added surface peak offset adjustment capability</li>
+<li>Developed cavitation detection algorithm</li>
+<li>Implemented cavitated surface detection for damaged enamel analysis</li>
+</ul>
+</section>
+<section id="region-analysis-data-extraction" class="level3" data-number="4.1.3">
+<h3 data-number="4.1.3" class="anchored" data-anchor-id="region-analysis-data-extraction"><span class="header-section-number">4.1.3</span> Region Analysis &amp; Data Extraction</h3>
+<ul>
+<li>Implemented region gray value extraction from OCT images</li>
+<li>Added rotation matrix support for region orientation</li>
+<li>Developed sound vs.&nbsp;lesion area reflectivity comparison</li>
+<li>Transformed REGION PIXEL worksheet layout to long format for better data management</li>
+<li>Implemented text annotations inside region markers</li>
+</ul>
+</section>
+<section id="performance-optimizations-2" class="level3" data-number="4.1.4">
+<h3 data-number="4.1.4" class="anchored" data-anchor-id="performance-optimizations-2"><span class="header-section-number">4.1.4</span> Performance Optimizations</h3>
+<ul>
+<li>Implemented parallel processing for slice-by-slice lesion depth calculation</li>
+<li>Automatic selection of parallel mode based on slice count</li>
+<li>Significantly improved processing speed for large datasets</li>
+<li>Enhanced DBSCAN clustering algorithm for better region detection</li>
+</ul>
+</section>
+</section>
+<section id="carl-quant-module---user-interface-workflow" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="carl-quant-module---user-interface-workflow"><span class="header-section-number">4.2</span> Carl Quant Module - User Interface &amp; Workflow</h2>
+<section id="image-viewer-visualization" class="level3" data-number="4.2.1">
+<h3 data-number="4.2.1" class="anchored" data-anchor-id="image-viewer-visualization"><span class="header-section-number">4.2.1</span> Image Viewer &amp; Visualization</h3>
+<ul>
+<li>Developed dedicated image viewer panel with zoom and pan capabilities</li>
+<li>Improved visibility for specimen start/end and lesion region markers</li>
+<li>Removed redundant depth markers for cleaner visualization</li>
+<li>Enhanced annotation rendering with dedicated annotation renderer module</li>
+<li>Implemented hot reloading for development workflow</li>
+<li>Fixed image skipping issue on mouse wheel navigation</li>
+</ul>
+</section>
+<section id="settings-configuration" class="level3" data-number="4.2.2">
+<h3 data-number="4.2.2" class="anchored" data-anchor-id="settings-configuration"><span class="header-section-number">4.2.2</span> Settings &amp; Configuration</h3>
+<ul>
+<li>Comprehensive UI improvements for Settings panel adapted to dark theme</li>
+<li>Removed unused checkboxes and streamlined settings interface</li>
+<li>Implemented specimen start/end user input controls</li>
+<li>Updated default lesion number from 3 to 6</li>
+<li>Enhanced feedback mechanisms in specimen panel</li>
+</ul>
+</section>
+<section id="data-management" class="level3" data-number="4.2.3">
+<h3 data-number="4.2.3" class="anchored" data-anchor-id="data-management"><span class="header-section-number">4.2.3</span> Data Management</h3>
+<ul>
+<li>Implemented annotation saving to JSON (surface, regions, lesion depth)</li>
+<li>Enhanced logic for reloading annotations and results</li>
+<li>Developed progress dialog to track Carl Quant processing visually</li>
+<li>Improved data structure with nested dataclasses for intensity and lesion data</li>
+<li>Added operator and measurement metadata fields</li>
+</ul>
+</section>
+<section id="results-reporting" class="level3" data-number="4.2.4">
+<h3 data-number="4.2.4" class="anchored" data-anchor-id="results-reporting"><span class="header-section-number">4.2.4</span> Results &amp; Reporting</h3>
+<ul>
+<li>Implemented “Compare All Methods” visualization for lesion depth algorithms</li>
+<li>Improved plotting behavior when comparing detection methods</li>
+<li>Enhanced results table with dynamic data structure reflection</li>
+<li>Added automatic column width adjustment for specimen and results tables</li>
+</ul>
+</section>
+</section>
+<section id="application-wide-improvements" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="application-wide-improvements"><span class="header-section-number">4.3</span> Application-Wide Improvements</h2>
+<section id="status-bar-error-handling" class="level3" data-number="4.3.1">
+<h3 data-number="4.3.1" class="anchored" data-anchor-id="status-bar-error-handling"><span class="header-section-number">4.3.1</span> Status Bar &amp; Error Handling</h3>
+<ul>
+<li>Replaced console prints with centralized status bar messaging system</li>
+<li>Implemented thread-safe status bar updates</li>
+<li>Enhanced status bar colors and behavior for better user feedback</li>
+<li>Added message truncation for long status messages</li>
+<li>Implemented file save dialog for status bar logs</li>
+<li>Integrated comprehensive error handler across all modules</li>
+</ul>
+</section>
+<section id="architecture-code-quality" class="level3" data-number="4.3.2">
+<h3 data-number="4.3.2" class="anchored" data-anchor-id="architecture-code-quality"><span class="header-section-number">4.3.2</span> Architecture &amp; Code Quality</h3>
+<ul>
+<li>Moved App context to top-level for centralized inter-app communication</li>
+<li>Implemented context manager for better resource management</li>
+<li>Refactored canvas panel to use base class (BaseCanvasPanel) reducing code redundancy</li>
+<li>Separated instruction renderer to improve separation of concerns</li>
+<li>Harmonized file naming conventions across the project</li>
+<li>Reorganized utility functions into dedicated utils directory</li>
+</ul>
+</section>
+<section id="uiux-enhancements" class="level3" data-number="4.3.3">
+<h3 data-number="4.3.3" class="anchored" data-anchor-id="uiux-enhancements"><span class="header-section-number">4.3.3</span> UI/UX Enhancements</h3>
+<ul>
+<li>Adapted entire UI for dark theme compatibility</li>
+<li>Improved tab styling throughout the application</li>
+<li>Enhanced sash behavior for specimen and results table UI</li>
+<li>Implemented row highlighting on click in results table</li>
+<li>Fixed grid layout for scale and image canvas</li>
+<li>Improved row and column configuration for better responsiveness</li>
+</ul>
+</section>
+<section id="documentation-help-system" class="level3" data-number="4.3.4">
+<h3 data-number="4.3.4" class="anchored" data-anchor-id="documentation-help-system"><span class="header-section-number">4.3.4</span> Documentation &amp; Help System</h3>
+<ul>
+<li>Updated help dialog and instructions for every application section</li>
+<li>Improved help and about dialog boxes with app-aware content</li>
+<li>Added pointer to official documentation</li>
+<li>Updated Carl Quant quick instructions</li>
+<li>Enhanced instruction text throughout the application</li>
+</ul>
+</section>
+</section>
+<section id="analysis-tab-enhancements" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="analysis-tab-enhancements"><span class="header-section-number">4.4</span> Analysis Tab Enhancements</h2>
+<section id="configuration-management" class="level3" data-number="4.4.1">
+<h3 data-number="4.4.1" class="anchored" data-anchor-id="configuration-management"><span class="header-section-number">4.4.1</span> Configuration Management</h3>
+<ul>
+<li>Implemented layout viewer showing selected key bindings</li>
+<li>Added configuration display button</li>
+<li>Implemented duplicate key binding validation</li>
+<li>Dynamic dropdown list for key bindings (excluding reserved keys F and H)</li>
+<li>Enhanced config loading with proper validation</li>
+<li>Improved dropdown menu updates when config is loaded</li>
+</ul>
+</section>
+<section id="data-handling" class="level3" data-number="4.4.2">
+<h3 data-number="4.4.2" class="anchored" data-anchor-id="data-handling"><span class="header-section-number">4.4.2</span> Data Handling</h3>
+<ul>
+<li>Implemented save-all functionality for annotations, configs, and results</li>
+<li>Refactored loading/saving logic into dedicated data_io module</li>
+<li>Added automatic table reset when new dataset is loaded</li>
+<li>Enhanced annotation loading and display logic</li>
+<li>Fixed annotation toggling issues</li>
+</ul>
+</section>
+<section id="column-management" class="level3" data-number="4.4.3">
+<h3 data-number="4.4.3" class="anchored" data-anchor-id="column-management"><span class="header-section-number">4.4.3</span> Column Management</h3>
+<ul>
+<li>Implemented dynamic column addition with key binding support</li>
+<li>Added remove last dynamic column functionality</li>
+<li>Automatic layout viewer updates reflecting column changes</li>
+<li>Improved data type selection (removed ratio from options)</li>
+</ul>
+</section>
+</section>
+<section id="export-tab" class="level2" data-number="4.5">
+<h2 data-number="4.5" class="anchored" data-anchor-id="export-tab"><span class="header-section-number">4.5</span> Export Tab</h2>
+<section id="bug-fixes-stability" class="level3" data-number="4.5.1">
+<h3 data-number="4.5.1" class="anchored" data-anchor-id="bug-fixes-stability"><span class="header-section-number">4.5.1</span> Bug Fixes &amp; Stability</h3>
+<ul>
+<li>Fixed critical bugs in export functionality</li>
+<li>Resolved error handler issues in oct_functions module</li>
+<li>Improved export workflow reliability</li>
+</ul>
+</section>
+</section>
+<section id="general-maintenance" class="level2" data-number="4.6">
+<h2 data-number="4.6" class="anchored" data-anchor-id="general-maintenance"><span class="header-section-number">4.6</span> General Maintenance</h2>
+<section id="code-cleanup" class="level3" data-number="4.6.1">
+<h3 data-number="4.6.1" class="anchored" data-anchor-id="code-cleanup"><span class="header-section-number">4.6.1</span> Code Cleanup</h3>
+<ul>
+<li>Removed commented-out code blocks</li>
+<li>Cleaned up unused imports throughout codebase</li>
+<li>Removed whitespace and corrected indentation</li>
+<li>Removed old test data and deprecated functions</li>
+<li>Updated .gitignore to exclude test data, logs, and cache files</li>
+</ul>
+</section>
+<section id="development-infrastructure" class="level3" data-number="4.6.2">
+<h3 data-number="4.6.2" class="anchored" data-anchor-id="development-infrastructure"><span class="header-section-number">4.6.2</span> Development Infrastructure</h3>
+<ul>
+<li>Included .gitignore for pycache and .pyc files</li>
+<li>Added error logging system</li>
+<li>Implemented development-friendly hot reloading</li>
+</ul>
+<hr>
+</section>
+</section>
+</section>
+<section id="version-1.0.0-2025-09-22" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Version 1.0.0 (2025-09-22)</h1>
+<section id="initial-release" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="initial-release"><span class="header-section-number">5.1</span> Initial Release</h2>
+<section id="core-features" class="level3" data-number="5.1.1">
+<h3 data-number="5.1.1" class="anchored" data-anchor-id="core-features"><span class="header-section-number">5.1.1</span> Core Features</h3>
+<ul>
+<li><strong>Analysis Tab</strong>: Complete implementation for OCT image analysis</li>
+<li><strong>Export Tab</strong>: Basic export functionality for processed data</li>
+<li><strong>Status Bar</strong>: Thread-safe status messaging system</li>
+<li><strong>Configuration System</strong>: JSON-based configuration management</li>
+<li><strong>Key Binding System</strong>: Customizable keyboard shortcuts for data entry</li>
+</ul>
+</section>
+<section id="user-interface" class="level3" data-number="5.1.2">
+<h3 data-number="5.1.2" class="anchored" data-anchor-id="user-interface"><span class="header-section-number">5.1.2</span> User Interface</h3>
+<ul>
+<li>Modern tkinter-based GUI with ttkbootstrap styling</li>
+<li>Multi-tab interface (Analysis, Carl Quant, Export)</li>
+<li>Responsive layout with grid-based design</li>
+</ul>
+</section>
+<section id="foundation" class="level3" data-number="5.1.3">
+<h3 data-number="5.1.3" class="anchored" data-anchor-id="foundation"><span class="header-section-number">5.1.3</span> Foundation</h3>
+<ul>
+<li>Initial project structure and architecture</li>
+<li>Error handling framework</li>
+<li>Basic documentation and README</li>
+</ul>
+<hr>
+</section>
+</section>
+</section>
+<section id="development-notes" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Development Notes</h1>
+<p>This change log summarizes major feature additions, improvements, and bug fixes. Minor commits such as whitespace cleanup, typo fixes, and internal refactoring are consolidated into broader categories. Test script updates are excluded as they are development-internal and do not affect the main application functionality.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

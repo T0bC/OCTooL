@@ -8,16 +8,28 @@ Created on Sat Oct 10 18:54:40 2020
 
 import tkinter as tk
 from tkinter import ttk
-#from ttkthemes import ThemedStyle
 from ttkbootstrap import Style
 import exportTab
 import analyzingTab
-from utils.app_context import AppContext
+import carl_quant
+from utils.app_context import AppContext, resource_path
 from utils.status_bar import StatusBar
+from utils.error_handler import handle_errors
+from utils.help_dialog import HelpDialog
+from utils.about_dialog import AboutDialog
 
 
 class MainGui:
+    @handle_errors("MainGui.init")
     def __init__(self):
+        # ========================================
+        # DISTRIBUTION CONFIGURATION
+        # Set to True to enable each section, False to hide
+        # ========================================
+        self.ENABLE_EXPORT = True
+        self.ENABLE_ANALYZE = True
+        self.ENABLE_CARLQUANT = True
+        # ========================================
 
         self.mainWin = tk.Tk()
         self.mainWin.withdraw()
@@ -25,36 +37,51 @@ class MainGui:
         self.context = AppContext()
         self.context.root = self.mainWin
 
-        self.version = ' [v. 1.1.0 - 20250807]'
+        self.version = ' [v. 1.2.3 - 20251112]'
         self.mainWin.title(str('OCTexVIEW' + self.version))
         self.pathToFolder = None
         self.mainWin['padx'] = 5
         self.mainWin['pady'] = 5
 
-        # Initialize Menubar to window
-        self.menubar = tk.Menu(self.mainWin)
-        self.helpmenu = tk.Menu(self.menubar)
-        self.helpmenu.add_command(label = 'Help', command=self.onHelp)
-        self.helpmenu.add_command(label = 'About', command=self.onAbout)
-
-        self.menubar.add_cascade(label="Help", menu=self.helpmenu)
-        self.mainWin.config(menu=self.menubar)
-
         # seetings for resizing of the window
         self.mainWin.columnconfigure(0, weight = 1)
-        self.mainWin.rowconfigure(0, weight = 1)
-        self.mainWin.rowconfigure(1, weight = 0)
+        self.mainWin.rowconfigure(0, weight = 1)  # Main content row
+        self.mainWin.rowconfigure(1, weight = 0)  # Status bar row
 
         # set a custom icon
-        self.mainWin.iconbitmap("icons/thumb_4.ico")
+        try:
+            icon_path = resource_path("icons/thumb_4.ico")
+            self.mainWin.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"Warning: Could not set icon: {e}")
 
-        #self.style = Style(theme="darkly")
+        self.style = Style(theme="darkly")
+        self.context.style = self.style  # Store style in context for access by panels
+
+        # Create custom tab styles with different colors
+        self._setup_tab_styles()
 
 
-# %% Create exportTabFrame Here
-        # initialize a tabbed main frame
-        self.tabParent = ttk.Notebook(self.mainWin)
-        self.tabParent.grid(row = 0, column = 0, sticky = tk.E + tk.W + tk.N + tk.S)
+        # %% Create custom colored tab system
+        # Create container for custom tab system
+        self.tabContainer = ttk.Frame(self.mainWin)
+        self.tabContainer.grid(row = 0, column = 0, sticky = tk.E + tk.W + tk.N + tk.S)
+        self.tabContainer.columnconfigure(0, weight=1)
+        self.tabContainer.rowconfigure(1, weight=1)
+
+        # Create custom tab bar with colored buttons
+        self.tabBar = ttk.Frame(self.tabContainer)
+        self.tabBar.grid(row=0, column=0, sticky="ew", padx=5, pady=(5,0))
+
+        # Create colored tab buttons
+        self.create_colored_tab_buttons()
+
+        # Create content area (using notebook without visible tabs)
+        self.tabParent = ttk.Notebook(self.tabContainer)
+        self.tabParent.grid(row = 1, column = 0, sticky = tk.E + tk.W + tk.N + tk.S)
+
+        # Hide the notebook tabs after creation
+        self.tabParent.configure(style="Hidden.TNotebook")
         # make the window resizeable
         self.tabParent.columnconfigure(0, weight = 1)
         self.tabParent.rowconfigure(0, weight = 1)
@@ -69,57 +96,252 @@ class MainGui:
 
         # %% EXPORT TAB
         # create a frame holding the contents for the tab
-        self.exportTabFrame = ttk.Frame(self.tabParent)
-        self.tabParent.add(self.exportTabFrame, text = 'Export')
-        # Fill the tab with content defined in exportTab.py
-        exportTab.addContent(self, self.exportTabFrame)
+        if self.ENABLE_EXPORT:
+            self.exportTabFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.exportTabFrame, text = 'Export')
+            # Fill the tab with content defined in exportTab.py
+            exportTab.addContent(self, self.exportTabFrame)
 
 
-        # %% ADDITIONAL FRAME 1
-        self.analyzingFrame = ttk.Frame(self.tabParent)
-        self.tabParent.add(self.analyzingFrame, text = 'Analyze')
-        analyzingTab.addContent(self, self.analyzingFrame)
+        # %% Anylyzing Tab
+        if self.ENABLE_ANALYZE:
+            self.analyzingFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.analyzingFrame, text = 'Analyze')
+            analyzingTab.addContent(self, self.analyzingFrame)
+
+        # %% Carl Quant
+        if self.ENABLE_CARLQUANT:
+            self.carlQuantFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
+            carl_quant.addContent(self, self.carlQuantFrame)
+
+        # Apply custom styles to individual tabs after all tabs are created
+        self._apply_tab_colors()
+
+        # Select first available tab after everything is created
+        if self.tab_buttons and self.tabParent.index("end") > 0:
+            self.switch_tab(0)
 
         self.mainWin.update_idletasks()  # Ensure layout is processed
         self.mainWin.deiconify()
 
+    @handle_errors("MainGui.setup_tab_styles")
+    def _setup_tab_styles(self):
+        """Setup custom styles for colored tab buttons."""
+        # Hide the default notebook tabs completely by modifying the layout
+        self.style.layout("Hidden.TNotebook", [
+            ("Notebook.client", {"sticky": "nswe"})
+        ])  # Only keep the client area, remove tab area
 
-# =============================================================================
-#         # %% Carl Quant
-#         self.carlQuantFrame = ttk.Frame(self.tabParent)
-#         self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
-#         carl_quant.addContent(self, self.carlQuantFrame)
-# =============================================================================
+        # Alternative: Set tab height to 0
+        self.style.configure(
+            "Hidden.TNotebook.Tab",
+            padding=[0, 0, 0, 0],  # No padding at all
+            borderwidth=0,         # No border
+            focuscolor="none",
+            relief="flat"
+        )
 
+        # Make tabs invisible by setting their size to 0
+        self.style.map(
+            "Hidden.TNotebook.Tab",
+            expand=[("selected", [0, 0, 0, 0])],  # No expansion
+            background=[("selected", ""), ("active", ""), ("!active", "")],
+            foreground=[("selected", ""), ("active", ""), ("!active", "")]
+        )
 
+        # Create colored button styles for each tab
+        # Export tab - Blue/Primary
+        self.style.configure(
+            "Export.TButton",
+            background=self.style.colors.primary,
+            foreground="white",
+            borderwidth=0,
+            focuscolor="none",
+            padding=[20, 10]
+        )
+
+        # Analyze tab - Green/Success
+        self.style.configure(
+            "Analyze.TButton",
+            background=self.style.colors.success,
+            foreground="white",
+            borderwidth=0,
+            focuscolor="none",
+            padding=[20, 10]
+        )
+
+        # CarlQuant tab - Orange/Warning
+        self.style.configure(
+            "CarlQuant.TButton",
+            background=self.style.colors.warning,
+            foreground="white",
+            borderwidth=0,
+            focuscolor="none",
+            padding=[20, 10]
+        )
+
+    @handle_errors("MainGui.create_colored_tab_buttons")
+    def create_colored_tab_buttons(self):
+        """Create colored buttons that act as tabs, plus Help and About buttons."""
+        self.tab_buttons = []
+        self.current_tab = 0
+        
+        # Configure tabBar to have space between tab buttons and help buttons
+        self.tabBar.columnconfigure(0, weight=0)  # Tab buttons
+        self.tabBar.columnconfigure(1, weight=1)  # Spacer
+        self.tabBar.columnconfigure(2, weight=0)  # Help buttons
+        
+        # Container for tab buttons (left side)
+        tab_button_container = ttk.Frame(self.tabBar)
+        tab_button_container.grid(row=0, column=0, sticky="w")
+
+        # Track column position for dynamic button placement
+        col_index = 0
+        
+        # Export button
+        if self.ENABLE_EXPORT:
+            export_btn = ttk.Button(
+                tab_button_container,
+                text="Export", #📊
+                style="Export.TButton",
+                command=lambda idx=col_index: self.switch_tab(idx),
+                takefocus=False  # Prevent button from taking focus
+            )
+            export_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_ANALYZE or self.ENABLE_CARLQUANT else 0))
+            self.tab_buttons.append(export_btn)
+            col_index += 1
+
+        # Analyze button
+        if self.ENABLE_ANALYZE:
+            analyze_btn = ttk.Button(
+                tab_button_container,
+                text="Analyze", #🔬
+                style="Analyze.TButton",
+                command=lambda idx=col_index: self.switch_tab(idx),
+                takefocus=False  # Prevent button from taking focus
+            )
+            analyze_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_CARLQUANT else 0))
+            self.tab_buttons.append(analyze_btn)
+            col_index += 1
+
+        # CarlQuant button
+        if self.ENABLE_CARLQUANT:
+            carlquant_btn = ttk.Button(
+                tab_button_container,
+                text="CarlQuant", #⚡
+                style="CarlQuant.TButton",
+                command=lambda idx=col_index: self.switch_tab(idx),
+                takefocus=False  # Prevent button from taking focus
+            )
+            carlquant_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 0))
+            self.tab_buttons.append(carlquant_btn)
+            col_index += 1
+        
+        # Container for Help and About buttons (right side)
+        help_button_container = ttk.Frame(self.tabBar)
+        help_button_container.grid(row=0, column=2, sticky="e")
+        
+        # Help button
+        help_btn = ttk.Button(
+            help_button_container,
+            text="❓ Help",
+            bootstyle="secondary",
+            command=self.onHelp,
+            takefocus=False
+        )
+        help_btn.grid(row=0, column=0, padx=(0, 2))
+        
+        # About button
+        about_btn = ttk.Button(
+            help_button_container,
+            text="ℹ️ About",
+            bootstyle="secondary",
+            command=self.onAbout,
+            takefocus=False
+        )
+        about_btn.grid(row=0, column=1, padx=(2, 0))
+
+    @handle_errors("MainGui.switch_tab")
+    def switch_tab(self, tab_index):
+        """Switch to the specified tab."""
+        # Safeguard: Check if tab_index is valid
+        num_tabs = self.tabParent.index("end")
+        if num_tabs == 0:
+            # No tabs available, do nothing
+            return
+        
+        if tab_index >= num_tabs:
+            # Tab index out of bounds, do nothing
+            return
+        
+        # Force the button to lose focus immediately
+        self.mainWin.focus_set()
+
+        # Switch to the tab
+        self.tabParent.select(tab_index)
+        self.current_tab = tab_index
+
+        # Force an immediate update of the display
+        self.tabParent.update_idletasks()
+
+        # Update button appearances (optional: make selected button darker)
+        for i, btn in enumerate(self.tab_buttons):
+            # Remove focus from all buttons
+            btn.state(['!pressed', '!active'])
+
+            if i == tab_index:
+                # Make selected button slightly darker
+                if i == 0:  # Export
+                    btn.configure(style="Export.TButton")
+                elif i == 1:  # Analyze
+                    btn.configure(style="Analyze.TButton")
+                elif i == 2:  # CarlQuant
+                    btn.configure(style="CarlQuant.TButton")
+
+    @handle_errors("MainGui.apply_tab_colors")
+    def _apply_tab_colors(self):
+        """Apply the hidden style to notebook tabs."""
+        # Hide the default notebook tabs since we're using custom buttons
+        try:
+            for i in range(self.tabParent.index("end")):
+                self.tabParent.tab(i, text="")  # Remove text from hidden tabs
+        except tk.TclError:
+            pass
+
+    @handle_errors("MainGui.start")
     def start(self):
         self.mainWin.mainloop() #start monitoring and updating the GUI
 
+    @handle_errors("MainGui.onHelp")
     def onHelp(self):
+        """Show context-aware help based on the currently active tab."""
+        # Build mapping of tab indices to tab types based on enabled tabs
+        tab_type_map = []
+        if self.ENABLE_EXPORT:
+            tab_type_map.append(0)  # Export
+        if self.ENABLE_ANALYZE:
+            tab_type_map.append(1)  # Analyze
+        if self.ENABLE_CARLQUANT:
+            tab_type_map.append(2)  # CarlQuant
+        
+        # Get the actual tab type for the current tab index
+        if self.current_tab < len(tab_type_map):
+            actual_tab_type = tab_type_map[self.current_tab]
+        else:
+            # Fallback to first available tab type
+            actual_tab_type = tab_type_map[0] if tab_type_map else 0
+        
+        help_dialog = HelpDialog(self.mainWin, self.style, actual_tab_type)
+        help_dialog.show()
 
-        self.helpMessage = \
-            '1. Choose a folder with Thorlabs OCT files. All Files inside this\n   folder are populated into a list.\n' \
-            '   You can choose single files as well!\n \n' \
-            '2. You can select an item in the list to adapt the export range,  aequidistant slices or dispersion.\n\n' \
-            '3. You can display a given slice with the "Show" button. Adjust the slice with the slider\n\n' \
-            '4. Adjust Dyn. Range to you liking for a single file or for all\n   files. Check if the dispersion needs to be adjusted.\n\n' \
-            '5. Click on "Export" to start the export. The outputfolder is\n    found in the original directory of the OCT File'
-        tk.messagebox.askquestion(title = 'Help', message = self.helpMessage)
-
+    @handle_errors("MainGui.onAbout")
     def onAbout(self):
+        """Show About dialog with dark theme."""
+        about_dialog = AboutDialog(self.mainWin, self.style, self.version)
+        about_dialog.show()
 
-        self.aboutMassage = \
-            str('OCTexVIEW' + self.version) + '\n\n' \
-                'Developed by \nTobias Meißner [1], \n' \
-                'Maximilian Bemmann [1] \n' \
-                'with contribution from \n' \
-                'Jonas Golde [2]\n\n' \
-                '1: Universität Leipzig - Poliklinik für Zahnerhaltung und Parodontologie\n' \
-                '2: Technische Universität Dresden - Medizinische Fakultät Carl Gustav Carus - Klinisches Sensoring und Monitoring\n\n' \
-                'Error Reports to: tobias.meissner@medizin.uni-leipzig.de'
-
-        tk.messagebox.showinfo(title = 'Help', message = self.aboutMassage)
-
+    @handle_errors("MainGui.attach_status_bar")
     def attach_status_bar(self, context):
         """Attach the shared status bar to a given context."""
         if hasattr(self, "statusBar") and self.statusBar:

@@ -1,0 +1,422 @@
+---
+title: "OCTexVIEW Change Log"
+author: "Tobias Meißner"
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+editor: visual
+---
+
+# Version 1.2.3 (2025-11-12)
+
+## Distribution & Deployment
+
+### PyInstaller Executable Build
+
+-   Implemented PyInstaller support for Windows executable distribution
+-   Added `resource_path()` utility to resolve file paths for both development and frozen executables
+-   Configured resource bundling for icons, fonts, and configuration files in spec file
+-   Added `multiprocessing.freeze_support()` to prevent worker processes from re-launching GUI on Windows
+-   Updated logo and instruction file loading to use resource_path for proper bundled app support
+-   Created comprehensive setup documentation for building OCTexVIEW with PyInstaller
+-   Added requirements.txt with all production dependencies and version constraints
+-   Simplified PyInstaller spec file by removing unused dependencies and explicit hiddenimports
+
+### Build Optimization
+
+-   Removed ttkbootstrap data files and submodules collection to reduce executable size
+-   Documented rationale for pip-only installation to minimize bundle size
+-   Configured onedir mode for compatibility with NumPy/SciPy/scikit-learn
+
+## User Interface Enhancements
+
+### Tab Configuration System
+
+-   Introduced configurable tab visibility system with distribution flags
+-   Added ENABLE_EXPORT, ENABLE_ANALYZE, and ENABLE_CARLQUANT instance variables for selective tab control
+-   Updated tab button creation to dynamically position buttons based on enabled tabs
+-   Added automatic selection of first available tab on startup
+-   Fixed tab button command callbacks to use captured indices instead of dynamic length calculation
+-   Added bounds checking in switch_tab to prevent index errors
+-   Corrected help dialog mapping to actual tab types based on enabled tabs
+
+## Carl Quant Module - Algorithm Improvements
+
+### Lesion Depth Detection
+
+-   Improved depth calculation stability when shape methods are unstable
+-   Changed from inflection-only fallback to computing mean of all available methods (knee, shoulder, inflection)
+-   Prevents over-reliance on inflection as standalone measurement when designed as correction anchor
+-   Smooths out wobbliness by averaging all depth information rather than discarding unstable measurements
+
+### Coordinate Management
+
+-   Added coordinate validation for specimen annotations
+-   Implemented lazy loading of specimen annotations for better performance
+-   Added multi-select support for removing specimens from processing list
+-   Improved cancellation handling with partial completion state for specimens
+
+## Dependencies & Environment
+
+### Package Management
+
+-   Relaxed version constraints on core dependencies to allow more flexible updates
+-   Added customtkinter and CTkColorPicker for enhanced UI capabilities
+-   Fixed ttkbootstrap import statement
+
+------------------------------------------------------------------------
+
+# Version 1.2.2 (2025-10-21)
+
+## Carl Quant Module - Algorithm Improvements
+
+### Buffer Zone System for Transition Areas
+
+-   Implemented 10-pixel buffer zone around lesion boundaries to avoid transition artifacts
+-   Added `buffer_pixels` field (default 10) to `RegionConfig` data model
+-   Created helper methods for buffered coordinate calculations:
+    -   `get_buffered_lesion_start_x()`: Moves lesion start 10px right
+    -   `get_buffered_lesion_end_x()`: Moves lesion end 10px left
+    -   `get_buffered_sound_left_end_x()`: Ends sound area 1 at 10px before lesion
+    -   `get_buffered_sound_right_start_x()`: Starts sound area 2 at 10px after lesion
+-   Updated analysis functions to use buffered coordinates:
+    -   Interpolated surface fitting excludes transition zones
+    -   Sound region extraction avoids transition zone contamination
+    -   Lesion depth detection uses buffered boundaries (10px shorter on each side)
+    -   Cavitation detection uses buffered boundaries for consistency
+-   Visual boundaries remain at user-defined positions for clear feedback
+-   Backward compatible with existing configurations (defaults to 10px buffer)
+
+## Carl Quant Module - UI/UX Enhancements
+
+### Visualization & Color Scheme
+
+-   Centralized color scheme with individual component method visualization controls
+-   Updated color scheme for improved surface and region boundary visualization
+-   Moved color definitions to centralized `annotation_colors` module for consistency
+-   Updated annotation colors for better contrast and consistency across backgrounds
+
+### Interactive Features
+
+-   Added synchronized row highlighting with distinct colors for navigation and A-Scan modes
+-   Implemented row highlighting and adjusted pane proportions in results panel
+-   Added clear coordinates button to remove specimen boundaries and air coordinates
+
+### Coordinate Management
+
+-   Implemented keyframe-based coordinate interpolation for region and AIR boundaries
+-   Linear interpolation between user-defined keyframes across image stacks
+-   Intelligent propagation with distinction between keyframes and interpolated values
+
+## Performance Optimizations
+
+### Image Viewer
+
+-   Optimized image viewer synchronization by skipping redraws during slider drag
+-   Improved responsiveness during navigation
+
+## Carl Quant Module - Progress Tracking
+
+### Progress Dialog
+
+-   Enhanced progress UI with processing mode indicator
+-   Added completed row highlighting for better visual feedback
+
+## Bug Fixes
+
+### Specimen Panel
+
+-   Fixed specimen panel column indices after removing REGIONS and AIR columns
+
+## Documentation
+
+### Clarifications
+
+-   Clarified AIR as Air Reference region for empty space normalization
+
+## Code Quality
+
+### Refactoring
+
+-   Removed print statements in favor of status bar and error handling
+-   Improved code maintainability and debugging capabilities
+
+------------------------------------------------------------------------
+
+# Version 1.2.1 (2025-10-16)
+
+## Documentation
+
+### Manual Updates
+
+-   Added PyInstaller build optimization guide and quick reference
+-   Moved typical workflow sections to beginning of each chapter for better accessibility
+-   Added comprehensive Analyze section documentation with detailed UI components and workflows
+-   Added comprehensive Carl Quant section documentation with detailed UI components and workflows
+-   Added comprehensive Export section documentation with detailed parameters and workflows
+-   Improved manual layout and content organization with enhanced table of contents
+
+## Performance Optimizations
+
+### OCT Image Processing
+
+-   Optimized OCT image processing with noise floor subtraction for improved image quality
+-   Implemented vectorized median filter for faster image filtering
+-   Improved memory management in image processing pipeline
+
+## Code Refactoring
+
+### Export Module
+
+-   Optimized grid layout in export panel for better UI responsiveness
+
+## Carl Quant Module - A-Scan Viewer
+
+### Interactive Visualization
+
+-   Implemented dedicated A-Scan viewer with double-click activation from results panel
+-   Added intensity profile visualization with interactive column selection
+-   Implemented synchronized A-scan column indicator with slice navigation
+-   Redesigned viewer with hover annotations and responsive layout
+-   Added toggleable annotations and curve fits to A-scan visualization
+
+## Carl Quant Module - Algorithm Improvements
+
+### Lesion Depth Detection
+
+-   Implemented offset-based depth correction with adaptive weighting
+-   Added robust lesion depth curve fitting with spike removal and outlier detection
+-   Improved lesion depth averaging with debug visualization of individual detection methods
+-   Simplified depth detection logic to use knee point as initial placeholder
+-   Optimized stability analysis by collecting raw points during A-scan processing
+
+### Cavitation Detection
+
+-   Implemented cavitation-aware lesion depth measurement
+-   Standardized cavitation status output to TRUE/FALSE strings with blank fallback
+
+## Carl Quant Module - Data Management
+
+### Results & Export
+
+-   Fixed slice indices conversion from 0-based internal to 1-based Excel representation
+-   Implemented metadata-based result loading with improved folder skipping for annotations
+-   Simplified annotation output by using original filenames
+-   Added table update when region number changes
+-   Implemented lock feature to avoid conflicts when results table exists
+
+### Image Export
+
+-   Implemented image saving routines with annotation overlays
+
+## Code Refactoring & Cleanup
+
+### Naming & Clarity
+
+-   Renamed `knee_data` to `lesion_detection_data` for consistency
+-   Renamed surface curve types from spline/reference to actual/interpolated
+-   Renamed x variable to `ascan_x` for clarity in lesion depth calculation
+-   Simplified knee point detection logic by removing redundant profile handling
+
+### Performance & Maintenance
+
+-   Optimized memory usage in lesion depth calculations
+-   Removed unused `surface_offset` parameter
+-   Removed profile logger and debug printouts
+-   Removed obsolete files
+
+------------------------------------------------------------------------
+
+# Version 1.2.0 (2025-10-10)
+
+## Carl Quant Module - Core Algorithm Enhancements
+
+### Lesion Depth Detection Methods
+
+-   Implemented multiple lesion depth detection algorithms:
+    -   Sigmoidal shoulder fit for smooth lesion boundary detection
+    -   Kneepoint detection algorithm for sharp transitions
+    -   Entropy-based measurement for lesion raw depth analysis
+-   Introduced weighted averaging method combining multiple detection approaches
+-   Implemented weighted mean calculation using standard deviation across methods
+-   Added method coefficient of variation (CV) display in information panel
+-   Integrated spline smoothing for raw lesion depth data refinement
+
+### Surface Detection & Analysis
+
+-   Enhanced surface detection using spline fitting techniques
+-   Implemented 95th percentile-based surface peak detection
+-   Added surface peak offset adjustment capability
+-   Developed cavitation detection algorithm
+-   Implemented cavitated surface detection for damaged enamel analysis
+
+### Region Analysis & Data Extraction
+
+-   Implemented region gray value extraction from OCT images
+-   Added rotation matrix support for region orientation
+-   Developed sound vs. lesion area reflectivity comparison
+-   Transformed REGION PIXEL worksheet layout to long format for better data management
+-   Implemented text annotations inside region markers
+
+### Performance Optimizations
+
+-   Implemented parallel processing for slice-by-slice lesion depth calculation
+-   Automatic selection of parallel mode based on slice count
+-   Significantly improved processing speed for large datasets
+-   Enhanced DBSCAN clustering algorithm for better region detection
+
+## Carl Quant Module - User Interface & Workflow
+
+### Image Viewer & Visualization
+
+-   Developed dedicated image viewer panel with zoom and pan capabilities
+-   Improved visibility for specimen start/end and lesion region markers
+-   Removed redundant depth markers for cleaner visualization
+-   Enhanced annotation rendering with dedicated annotation renderer module
+-   Implemented hot reloading for development workflow
+-   Fixed image skipping issue on mouse wheel navigation
+
+### Settings & Configuration
+
+-   Comprehensive UI improvements for Settings panel adapted to dark theme
+-   Removed unused checkboxes and streamlined settings interface
+-   Implemented specimen start/end user input controls
+-   Updated default lesion number from 3 to 6
+-   Enhanced feedback mechanisms in specimen panel
+
+### Data Management
+
+-   Implemented annotation saving to JSON (surface, regions, lesion depth)
+-   Enhanced logic for reloading annotations and results
+-   Developed progress dialog to track Carl Quant processing visually
+-   Improved data structure with nested dataclasses for intensity and lesion data
+-   Added operator and measurement metadata fields
+
+### Results & Reporting
+
+-   Implemented "Compare All Methods" visualization for lesion depth algorithms
+-   Improved plotting behavior when comparing detection methods
+-   Enhanced results table with dynamic data structure reflection
+-   Added automatic column width adjustment for specimen and results tables
+
+## Application-Wide Improvements
+
+### Status Bar & Error Handling
+
+-   Replaced console prints with centralized status bar messaging system
+-   Implemented thread-safe status bar updates
+-   Enhanced status bar colors and behavior for better user feedback
+-   Added message truncation for long status messages
+-   Implemented file save dialog for status bar logs
+-   Integrated comprehensive error handler across all modules
+
+### Architecture & Code Quality
+
+-   Moved App context to top-level for centralized inter-app communication
+-   Implemented context manager for better resource management
+-   Refactored canvas panel to use base class (BaseCanvasPanel) reducing code redundancy
+-   Separated instruction renderer to improve separation of concerns
+-   Harmonized file naming conventions across the project
+-   Reorganized utility functions into dedicated utils directory
+
+### UI/UX Enhancements
+
+-   Adapted entire UI for dark theme compatibility
+-   Improved tab styling throughout the application
+-   Enhanced sash behavior for specimen and results table UI
+-   Implemented row highlighting on click in results table
+-   Fixed grid layout for scale and image canvas
+-   Improved row and column configuration for better responsiveness
+
+### Documentation & Help System
+
+-   Updated help dialog and instructions for every application section
+-   Improved help and about dialog boxes with app-aware content
+-   Added pointer to official documentation
+-   Updated Carl Quant quick instructions
+-   Enhanced instruction text throughout the application
+
+## Analysis Tab Enhancements
+
+### Configuration Management
+
+-   Implemented layout viewer showing selected key bindings
+-   Added configuration display button
+-   Implemented duplicate key binding validation
+-   Dynamic dropdown list for key bindings (excluding reserved keys F and H)
+-   Enhanced config loading with proper validation
+-   Improved dropdown menu updates when config is loaded
+
+### Data Handling
+
+-   Implemented save-all functionality for annotations, configs, and results
+-   Refactored loading/saving logic into dedicated data_io module
+-   Added automatic table reset when new dataset is loaded
+-   Enhanced annotation loading and display logic
+-   Fixed annotation toggling issues
+
+### Column Management
+
+-   Implemented dynamic column addition with key binding support
+-   Added remove last dynamic column functionality
+-   Automatic layout viewer updates reflecting column changes
+-   Improved data type selection (removed ratio from options)
+
+## Export Tab
+
+### Bug Fixes & Stability
+
+-   Fixed critical bugs in export functionality
+-   Resolved error handler issues in oct_functions module
+-   Improved export workflow reliability
+
+## General Maintenance
+
+### Code Cleanup
+
+-   Removed commented-out code blocks
+-   Cleaned up unused imports throughout codebase
+-   Removed whitespace and corrected indentation
+-   Removed old test data and deprecated functions
+-   Updated .gitignore to exclude test data, logs, and cache files
+
+### Development Infrastructure
+
+-   Included .gitignore for pycache and .pyc files
+-   Added error logging system
+-   Implemented development-friendly hot reloading
+
+------------------------------------------------------------------------
+
+# Version 1.0.0 (2025-09-22)
+
+## Initial Release
+
+### Core Features
+
+-   **Analysis Tab**: Complete implementation for OCT image analysis
+-   **Export Tab**: Basic export functionality for processed data
+-   **Status Bar**: Thread-safe status messaging system
+-   **Configuration System**: JSON-based configuration management
+-   **Key Binding System**: Customizable keyboard shortcuts for data entry
+
+### User Interface
+
+-   Modern tkinter-based GUI with ttkbootstrap styling
+-   Multi-tab interface (Analysis, Carl Quant, Export)
+-   Responsive layout with grid-based design
+
+### Foundation
+
+-   Initial project structure and architecture
+-   Error handling framework
+-   Basic documentation and README
+
+------------------------------------------------------------------------
+
+# Development Notes
+
+This change log summarizes major feature additions, improvements, and bug fixes. Minor commits such as whitespace cleanup, typo fixes, and internal refactoring are consolidated into broader categories. Test script updates are excluded as they are development-internal and do not affect the main application functionality.

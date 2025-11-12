@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Tobias Meißner">
+
+<title>OCTexVIEW User Manual</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="OCTexVIEW_MANUAL_files/libs/clipboard/clipboard.min.js"></script>
+<script src="OCTexVIEW_MANUAL_files/libs/quarto-html/quarto.js"></script>
+<script src="OCTexVIEW_MANUAL_files/libs/quarto-html/popper.min.js"></script>
+<script src="OCTexVIEW_MANUAL_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="OCTexVIEW_MANUAL_files/libs/quarto-html/anchor.min.js"></script>
+<link href="OCTexVIEW_MANUAL_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="OCTexVIEW_MANUAL_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="OCTexVIEW_MANUAL_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="OCTexVIEW_MANUAL_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="OCTexVIEW_MANUAL_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#purpose-and-scope" id="toc-purpose-and-scope" class="nav-link" data-scroll-target="#purpose-and-scope"><span class="header-section-number">1.1</span> Purpose and Scope</a></li>
+  <li><a href="#system-requirements" id="toc-system-requirements" class="nav-link" data-scroll-target="#system-requirements"><span class="header-section-number">1.2</span> System Requirements</a></li>
+  <li><a href="#application-overview" id="toc-application-overview" class="nav-link" data-scroll-target="#application-overview"><span class="header-section-number">1.3</span> Application Overview</a>
+  <ul class="collapse">
+  <li><a href="#export-section" id="toc-export-section" class="nav-link" data-scroll-target="#export-section">Export Section</a></li>
+  <li><a href="#analyze-section" id="toc-analyze-section" class="nav-link" data-scroll-target="#analyze-section">Analyze Section</a></li>
+  <li><a href="#carlquant-section" id="toc-carlquant-section" class="nav-link" data-scroll-target="#carlquant-section">CarlQuant Section</a></li>
+  </ul></li>
+  <li><a href="#workflow-integration" id="toc-workflow-integration" class="nav-link" data-scroll-target="#workflow-integration"><span class="header-section-number">1.4</span> Workflow Integration</a></li>
+  </ul></li>
+  <li><a href="#export-section-1" id="toc-export-section-1" class="nav-link" data-scroll-target="#export-section-1"><span class="header-section-number">2</span> Export Section</a>
+  <ul class="collapse">
+  <li><a href="#typical-workflow" id="toc-typical-workflow" class="nav-link" data-scroll-target="#typical-workflow"><span class="header-section-number">2.1</span> Typical Workflow</a></li>
+  <li><a href="#file-selection-panel" id="toc-file-selection-panel" class="nav-link" data-scroll-target="#file-selection-panel"><span class="header-section-number">2.2</span> File Selection Panel</a>
+  <ul class="collapse">
+  <li><a href="#select-folder" id="toc-select-folder" class="nav-link" data-scroll-target="#select-folder"><span class="header-section-number">2.2.1</span> Select Folder</a></li>
+  <li><a href="#select-file" id="toc-select-file" class="nav-link" data-scroll-target="#select-file"><span class="header-section-number">2.2.2</span> Select File</a></li>
+  <li><a href="#delete-entrys" id="toc-delete-entrys" class="nav-link" data-scroll-target="#delete-entrys"><span class="header-section-number">2.2.3</span> Delete Entry(s)</a></li>
+  <li><a href="#show" id="toc-show" class="nav-link" data-scroll-target="#show"><span class="header-section-number">2.2.4</span> Show</a></li>
+  </ul></li>
+  <li><a href="#global-settings-panel" id="toc-global-settings-panel" class="nav-link" data-scroll-target="#global-settings-panel"><span class="header-section-number">2.3</span> Global Settings Panel</a>
+  <ul class="collapse">
+  <li><a href="#aspect-ratio" id="toc-aspect-ratio" class="nav-link" data-scroll-target="#aspect-ratio"><span class="header-section-number">2.3.1</span> Aspect Ratio</a></li>
+  <li><a href="#prefer-raw" id="toc-prefer-raw" class="nav-link" data-scroll-target="#prefer-raw"><span class="header-section-number">2.3.2</span> Prefer Raw</a></li>
+  <li><a href="#local-filtering" id="toc-local-filtering" class="nav-link" data-scroll-target="#local-filtering"><span class="header-section-number">2.3.3</span> Local Filtering</a></li>
+  <li><a href="#export-format" id="toc-export-format" class="nav-link" data-scroll-target="#export-format"><span class="header-section-number">2.3.4</span> Export Format</a></li>
+  <li><a href="#averaging" id="toc-averaging" class="nav-link" data-scroll-target="#averaging"><span class="header-section-number">2.3.5</span> Averaging</a></li>
+  <li><a href="#apodization-window" id="toc-apodization-window" class="nav-link" data-scroll-target="#apodization-window"><span class="header-section-number">2.3.6</span> Apodization Window</a></li>
+  <li><a href="#show-error" id="toc-show-error" class="nav-link" data-scroll-target="#show-error"><span class="header-section-number">2.3.7</span> Show Error</a></li>
+  <li><a href="#draw-scale" id="toc-draw-scale" class="nav-link" data-scroll-target="#draw-scale"><span class="header-section-number">2.3.8</span> Draw Scale</a></li>
+  </ul></li>
+  <li><a href="#custom-settings-panel" id="toc-custom-settings-panel" class="nav-link" data-scroll-target="#custom-settings-panel"><span class="header-section-number">2.4</span> Custom Settings Panel</a>
+  <ul class="collapse">
+  <li><a href="#export-range" id="toc-export-range" class="nav-link" data-scroll-target="#export-range"><span class="header-section-number">2.4.1</span> Export Range</a></li>
+  <li><a href="#equidistant-slices" id="toc-equidistant-slices" class="nav-link" data-scroll-target="#equidistant-slices"><span class="header-section-number">2.4.2</span> Equidistant Slices</a></li>
+  <li><a href="#dynamic-range-db" id="toc-dynamic-range-db" class="nav-link" data-scroll-target="#dynamic-range-db"><span class="header-section-number">2.4.3</span> Dynamic Range [dB]</a></li>
+  <li><a href="#dispersion-compensation" id="toc-dispersion-compensation" class="nav-link" data-scroll-target="#dispersion-compensation"><span class="header-section-number">2.4.4</span> Dispersion Compensation</a></li>
+  <li><a href="#image-slice-direction" id="toc-image-slice-direction" class="nav-link" data-scroll-target="#image-slice-direction"><span class="header-section-number">2.4.5</span> Image Slice Direction</a></li>
+  <li><a href="#refractive-index" id="toc-refractive-index" class="nav-link" data-scroll-target="#refractive-index"><span class="header-section-number">2.4.6</span> Refractive Index</a></li>
+  </ul></li>
+  <li><a href="#execution-panel" id="toc-execution-panel" class="nav-link" data-scroll-target="#execution-panel"><span class="header-section-number">2.5</span> Execution Panel</a>
+  <ul class="collapse">
+  <li><a href="#export" id="toc-export" class="nav-link" data-scroll-target="#export"><span class="header-section-number">2.5.1</span> Export!</a></li>
+  <li><a href="#cancel" id="toc-cancel" class="nav-link" data-scroll-target="#cancel"><span class="header-section-number">2.5.2</span> Cancel!</a></li>
+  <li><a href="#quit" id="toc-quit" class="nav-link" data-scroll-target="#quit"><span class="header-section-number">2.5.3</span> Quit!</a></li>
+  </ul></li>
+  <li><a href="#queue-table" id="toc-queue-table" class="nav-link" data-scroll-target="#queue-table"><span class="header-section-number">2.6</span> Queue Table</a></li>
+  <li><a href="#output-structure" id="toc-output-structure" class="nav-link" data-scroll-target="#output-structure"><span class="header-section-number">2.7</span> Output Structure</a></li>
+  </ul></li>
+  <li><a href="#analyze-section-1" id="toc-analyze-section-1" class="nav-link" data-scroll-target="#analyze-section-1"><span class="header-section-number">3</span> Analyze Section</a>
+  <ul class="collapse">
+  <li><a href="#typical-workflow-1" id="toc-typical-workflow-1" class="nav-link" data-scroll-target="#typical-workflow-1"><span class="header-section-number">3.1</span> Typical Workflow</a></li>
+  <li><a href="#load-images-panel" id="toc-load-images-panel" class="nav-link" data-scroll-target="#load-images-panel"><span class="header-section-number">3.2</span> Load Images Panel</a>
+  <ul class="collapse">
+  <li><a href="#select-folder-1" id="toc-select-folder-1" class="nav-link" data-scroll-target="#select-folder-1"><span class="header-section-number">3.2.1</span> Select Folder</a></li>
+  <li><a href="#load-config" id="toc-load-config" class="nav-link" data-scroll-target="#load-config"><span class="header-section-number">3.2.2</span> Load Config</a></li>
+  </ul></li>
+  <li><a href="#image-annotation-canvas" id="toc-image-annotation-canvas" class="nav-link" data-scroll-target="#image-annotation-canvas"><span class="header-section-number">3.3</span> Image Annotation Canvas</a>
+  <ul class="collapse">
+  <li><a href="#navigation-controls" id="toc-navigation-controls" class="nav-link" data-scroll-target="#navigation-controls"><span class="header-section-number">3.3.1</span> Navigation Controls</a></li>
+  <li><a href="#annotation-features" id="toc-annotation-features" class="nav-link" data-scroll-target="#annotation-features"><span class="header-section-number">3.3.2</span> Annotation Features</a></li>
+  <li><a href="#zoom-and-pan" id="toc-zoom-and-pan" class="nav-link" data-scroll-target="#zoom-and-pan"><span class="header-section-number">3.3.3</span> Zoom and Pan</a></li>
+  </ul></li>
+  <li><a href="#add-columns-panel" id="toc-add-columns-panel" class="nav-link" data-scroll-target="#add-columns-panel"><span class="header-section-number">3.4</span> Add Columns Panel</a>
+  <ul class="collapse">
+  <li><a href="#column-name-entry" id="toc-column-name-entry" class="nav-link" data-scroll-target="#column-name-entry"><span class="header-section-number">3.4.1</span> Column Name Entry</a></li>
+  <li><a href="#key-binding-dropdown" id="toc-key-binding-dropdown" class="nav-link" data-scroll-target="#key-binding-dropdown"><span class="header-section-number">3.4.2</span> Key Binding Dropdown</a></li>
+  <li><a href="#data-type-dropdown" id="toc-data-type-dropdown" class="nav-link" data-scroll-target="#data-type-dropdown"><span class="header-section-number">3.4.3</span> Data Type Dropdown</a></li>
+  <li><a href="#color-picker" id="toc-color-picker" class="nav-link" data-scroll-target="#color-picker"><span class="header-section-number">3.4.4</span> Color Picker</a></li>
+  <li><a href="#add-column-button" id="toc-add-column-button" class="nav-link" data-scroll-target="#add-column-button"><span class="header-section-number">3.4.5</span> Add Column Button</a></li>
+  <li><a href="#remove-column-button" id="toc-remove-column-button" class="nav-link" data-scroll-target="#remove-column-button"><span class="header-section-number">3.4.6</span> Remove Column Button</a></li>
+  </ul></li>
+  <li><a href="#metadata-panel" id="toc-metadata-panel" class="nav-link" data-scroll-target="#metadata-panel"><span class="header-section-number">3.5</span> Metadata Panel</a>
+  <ul class="collapse">
+  <li><a href="#operator" id="toc-operator" class="nav-link" data-scroll-target="#operator"><span class="header-section-number">3.5.1</span> Operator</a></li>
+  <li><a href="#measurement" id="toc-measurement" class="nav-link" data-scroll-target="#measurement"><span class="header-section-number">3.5.2</span> Measurement</a></li>
+  <li><a href="#system" id="toc-system" class="nav-link" data-scroll-target="#system"><span class="header-section-number">3.5.3</span> System</a></li>
+  <li><a href="#save-config-button" id="toc-save-config-button" class="nav-link" data-scroll-target="#save-config-button"><span class="header-section-number">3.5.4</span> Save Config Button</a></li>
+  <li><a href="#show-config-button" id="toc-show-config-button" class="nav-link" data-scroll-target="#show-config-button"><span class="header-section-number">3.5.5</span> Show Config Button</a></li>
+  </ul></li>
+  <li><a href="#results-table" id="toc-results-table" class="nav-link" data-scroll-target="#results-table"><span class="header-section-number">3.6</span> Results Table</a>
+  <ul class="collapse">
+  <li><a href="#static-columns" id="toc-static-columns" class="nav-link" data-scroll-target="#static-columns"><span class="header-section-number">3.6.1</span> Static Columns</a></li>
+  <li><a href="#dynamic-columns" id="toc-dynamic-columns" class="nav-link" data-scroll-target="#dynamic-columns"><span class="header-section-number">3.6.2</span> Dynamic Columns</a></li>
+  <li><a href="#table-interactions" id="toc-table-interactions" class="nav-link" data-scroll-target="#table-interactions"><span class="header-section-number">3.6.3</span> Table Interactions</a></li>
+  </ul></li>
+  <li><a href="#keyboard-shortcuts" id="toc-keyboard-shortcuts" class="nav-link" data-scroll-target="#keyboard-shortcuts"><span class="header-section-number">3.7</span> Keyboard Shortcuts</a>
+  <ul class="collapse">
+  <li><a href="#global-shortcuts" id="toc-global-shortcuts" class="nav-link" data-scroll-target="#global-shortcuts"><span class="header-section-number">3.7.1</span> Global Shortcuts</a></li>
+  <li><a href="#custom-column-shortcuts" id="toc-custom-column-shortcuts" class="nav-link" data-scroll-target="#custom-column-shortcuts"><span class="header-section-number">3.7.2</span> Custom Column Shortcuts</a></li>
+  </ul></li>
+  <li><a href="#undo-system" id="toc-undo-system" class="nav-link" data-scroll-target="#undo-system"><span class="header-section-number">3.8</span> Undo System</a>
+  <ul class="collapse">
+  <li><a href="#undo-last-action" id="toc-undo-last-action" class="nav-link" data-scroll-target="#undo-last-action"><span class="header-section-number">3.8.1</span> Undo Last Action</a></li>
+  <li><a href="#undo-history-panel" id="toc-undo-history-panel" class="nav-link" data-scroll-target="#undo-history-panel"><span class="header-section-number">3.8.2</span> Undo History Panel</a></li>
+  </ul></li>
+  <li><a href="#data-persistence" id="toc-data-persistence" class="nav-link" data-scroll-target="#data-persistence"><span class="header-section-number">3.9</span> Data Persistence</a>
+  <ul class="collapse">
+  <li><a href="#auto-save" id="toc-auto-save" class="nav-link" data-scroll-target="#auto-save"><span class="header-section-number">3.9.1</span> Auto-Save</a></li>
+  <li><a href="#manual-save" id="toc-manual-save" class="nav-link" data-scroll-target="#manual-save"><span class="header-section-number">3.9.2</span> Manual Save</a></li>
+  </ul></li>
+  <li><a href="#output-files" id="toc-output-files" class="nav-link" data-scroll-target="#output-files"><span class="header-section-number">3.10</span> Output Files</a>
+  <ul class="collapse">
+  <li><a href="#results.csv" id="toc-results.csv" class="nav-link" data-scroll-target="#results.csv"><span class="header-section-number">3.10.1</span> results.csv</a></li>
+  <li><a href="#annotations.json" id="toc-annotations.json" class="nav-link" data-scroll-target="#annotations.json"><span class="header-section-number">3.10.2</span> annotations.json</a></li>
+  <li><a href="#config.json" id="toc-config.json" class="nav-link" data-scroll-target="#config.json"><span class="header-section-number">3.10.3</span> config.json</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#carlquant-section-1" id="toc-carlquant-section-1" class="nav-link" data-scroll-target="#carlquant-section-1"><span class="header-section-number">4</span> CarlQuant Section</a>
+  <ul class="collapse">
+  <li><a href="#typical-workflow-2" id="toc-typical-workflow-2" class="nav-link" data-scroll-target="#typical-workflow-2"><span class="header-section-number">4.1</span> Typical Workflow</a></li>
+  <li><a href="#load-images-panel-1" id="toc-load-images-panel-1" class="nav-link" data-scroll-target="#load-images-panel-1"><span class="header-section-number">4.2</span> Load Images Panel</a>
+  <ul class="collapse">
+  <li><a href="#select-folder-2" id="toc-select-folder-2" class="nav-link" data-scroll-target="#select-folder-2"><span class="header-section-number">4.2.1</span> Select Folder</a></li>
+  <li><a href="#remove-selected" id="toc-remove-selected" class="nav-link" data-scroll-target="#remove-selected"><span class="header-section-number">4.2.2</span> Remove Selected</a></li>
+  <li><a href="#start-analyzing" id="toc-start-analyzing" class="nav-link" data-scroll-target="#start-analyzing"><span class="header-section-number">4.2.3</span> Start Analyzing</a></li>
+  </ul></li>
+  <li><a href="#settings-panel" id="toc-settings-panel" class="nav-link" data-scroll-target="#settings-panel"><span class="header-section-number">4.3</span> Settings Panel</a>
+  <ul class="collapse">
+  <li><a href="#regions-n" id="toc-regions-n" class="nav-link" data-scroll-target="#regions-n"><span class="header-section-number">4.3.1</span> Regions (n)</a></li>
+  <li><a href="#method" id="toc-method" class="nav-link" data-scroll-target="#method"><span class="header-section-number">4.3.2</span> Method</a></li>
+  <li><a href="#operator-1" id="toc-operator-1" class="nav-link" data-scroll-target="#operator-1"><span class="header-section-number">4.3.3</span> Operator</a></li>
+  <li><a href="#measurement-1" id="toc-measurement-1" class="nav-link" data-scroll-target="#measurement-1"><span class="header-section-number">4.3.4</span> Measurement</a></li>
+  </ul></li>
+  <li><a href="#specimen-table" id="toc-specimen-table" class="nav-link" data-scroll-target="#specimen-table"><span class="header-section-number">4.4</span> Specimen Table</a>
+  <ul class="collapse">
+  <li><a href="#columns" id="toc-columns" class="nav-link" data-scroll-target="#columns"><span class="header-section-number">4.4.1</span> Columns</a></li>
+  <li><a href="#interaction" id="toc-interaction" class="nav-link" data-scroll-target="#interaction"><span class="header-section-number">4.4.2</span> Interaction</a></li>
+  </ul></li>
+  <li><a href="#image-viewer-panel" id="toc-image-viewer-panel" class="nav-link" data-scroll-target="#image-viewer-panel"><span class="header-section-number">4.5</span> Image Viewer Panel</a>
+  <ul class="collapse">
+  <li><a href="#navigation-controls-1" id="toc-navigation-controls-1" class="nav-link" data-scroll-target="#navigation-controls-1"><span class="header-section-number">4.5.1</span> Navigation Controls</a></li>
+  <li><a href="#region-boundary-definition" id="toc-region-boundary-definition" class="nav-link" data-scroll-target="#region-boundary-definition"><span class="header-section-number">4.5.2</span> Region Boundary Definition</a></li>
+  <li><a href="#air-selection" id="toc-air-selection" class="nav-link" data-scroll-target="#air-selection"><span class="header-section-number">4.5.3</span> AIR Selection</a></li>
+  <li><a href="#overlay-visualization" id="toc-overlay-visualization" class="nav-link" data-scroll-target="#overlay-visualization"><span class="header-section-number">4.5.4</span> Overlay Visualization</a></li>
+  <li><a href="#zoom-and-pan-1" id="toc-zoom-and-pan-1" class="nav-link" data-scroll-target="#zoom-and-pan-1"><span class="header-section-number">4.5.5</span> Zoom and Pan</a></li>
+  </ul></li>
+  <li><a href="#results-table-1" id="toc-results-table-1" class="nav-link" data-scroll-target="#results-table-1"><span class="header-section-number">4.6</span> Results Table</a>
+  <ul class="collapse">
+  <li><a href="#dynamic-columns-1" id="toc-dynamic-columns-1" class="nav-link" data-scroll-target="#dynamic-columns-1"><span class="header-section-number">4.6.1</span> Dynamic Columns</a></li>
+  <li><a href="#interaction-1" id="toc-interaction-1" class="nav-link" data-scroll-target="#interaction-1"><span class="header-section-number">4.6.2</span> Interaction</a></li>
+  <li><a href="#table-features" id="toc-table-features" class="nav-link" data-scroll-target="#table-features"><span class="header-section-number">4.6.3</span> Table Features</a></li>
+  </ul></li>
+  <li><a href="#a-scan-viewer" id="toc-a-scan-viewer" class="nav-link" data-scroll-target="#a-scan-viewer"><span class="header-section-number">4.7</span> A-Scan Viewer</a>
+  <ul class="collapse">
+  <li><a href="#opening-the-viewer" id="toc-opening-the-viewer" class="nav-link" data-scroll-target="#opening-the-viewer"><span class="header-section-number">4.7.1</span> Opening the Viewer</a></li>
+  <li><a href="#display-options" id="toc-display-options" class="nav-link" data-scroll-target="#display-options"><span class="header-section-number">4.7.2</span> Display Options</a></li>
+  <li><a href="#a-scan-slider" id="toc-a-scan-slider" class="nav-link" data-scroll-target="#a-scan-slider"><span class="header-section-number">4.7.3</span> A-Scan Slider</a></li>
+  <li><a href="#plot-features" id="toc-plot-features" class="nav-link" data-scroll-target="#plot-features"><span class="header-section-number">4.7.4</span> Plot Features</a></li>
+  <li><a href="#keyboard-shortcuts-1" id="toc-keyboard-shortcuts-1" class="nav-link" data-scroll-target="#keyboard-shortcuts-1"><span class="header-section-number">4.7.5</span> Keyboard Shortcuts</a></li>
+  </ul></li>
+  <li><a href="#data-persistence-1" id="toc-data-persistence-1" class="nav-link" data-scroll-target="#data-persistence-1"><span class="header-section-number">4.8</span> Data Persistence</a>
+  <ul class="collapse">
+  <li><a href="#auto-save-1" id="toc-auto-save-1" class="nav-link" data-scroll-target="#auto-save-1"><span class="header-section-number">4.8.1</span> Auto-Save</a></li>
+  <li><a href="#file-structure" id="toc-file-structure" class="nav-link" data-scroll-target="#file-structure"><span class="header-section-number">4.8.2</span> File Structure</a></li>
+  <li><a href="#configuration-file-config.json" id="toc-configuration-file-config.json" class="nav-link" data-scroll-target="#configuration-file-config.json"><span class="header-section-number">4.8.3</span> Configuration File (config.json)</a></li>
+  <li><a href="#results-file-results.csv" id="toc-results-file-results.csv" class="nav-link" data-scroll-target="#results-file-results.csv"><span class="header-section-number">4.8.4</span> Results File (results.csv)</a></li>
+  <li><a href="#annotations-folder" id="toc-annotations-folder" class="nav-link" data-scroll-target="#annotations-folder"><span class="header-section-number">4.8.5</span> Annotations Folder</a></li>
+  </ul></li>
+  <li><a href="#output-data" id="toc-output-data" class="nav-link" data-scroll-target="#output-data"><span class="header-section-number">4.9</span> Output Data</a>
+  <ul class="collapse">
+  <li><a href="#quantitative-measurements" id="toc-quantitative-measurements" class="nav-link" data-scroll-target="#quantitative-measurements"><span class="header-section-number">4.9.1</span> Quantitative Measurements</a></li>
+  <li><a href="#region-extraction" id="toc-region-extraction" class="nav-link" data-scroll-target="#region-extraction"><span class="header-section-number">4.9.2</span> Region Extraction</a></li>
+  <li><a href="#depth-detection-methods" id="toc-depth-detection-methods" class="nav-link" data-scroll-target="#depth-detection-methods"><span class="header-section-number">4.9.3</span> Depth Detection Methods</a></li>
+  </ul></li>
+  <li><a href="#advanced-features" id="toc-advanced-features" class="nav-link" data-scroll-target="#advanced-features"><span class="header-section-number">4.10</span> Advanced Features</a>
+  <ul class="collapse">
+  <li><a href="#cavitation-detection" id="toc-cavitation-detection" class="nav-link" data-scroll-target="#cavitation-detection"><span class="header-section-number">4.10.1</span> Cavitation Detection</a></li>
+  <li><a href="#multi-session-analysis" id="toc-multi-session-analysis" class="nav-link" data-scroll-target="#multi-session-analysis"><span class="header-section-number">4.10.2</span> Multi-Session Analysis</a></li>
+  <li><a href="#memory-management" id="toc-memory-management" class="nav-link" data-scroll-target="#memory-management"><span class="header-section-number">4.10.3</span> Memory Management</a></li>
+  </ul></li>
+  <li><a href="#keyboard-shortcuts-2" id="toc-keyboard-shortcuts-2" class="nav-link" data-scroll-target="#keyboard-shortcuts-2"><span class="header-section-number">4.11</span> Keyboard Shortcuts</a>
+  <ul class="collapse">
+  <li><a href="#global-shortcuts-1" id="toc-global-shortcuts-1" class="nav-link" data-scroll-target="#global-shortcuts-1"><span class="header-section-number">4.11.1</span> Global Shortcuts</a></li>
+  <li><a href="#mouse-interactions" id="toc-mouse-interactions" class="nav-link" data-scroll-target="#mouse-interactions"><span class="header-section-number">4.11.2</span> Mouse Interactions</a></li>
+  </ul></li>
+  <li><a href="#troubleshooting" id="toc-troubleshooting" class="nav-link" data-scroll-target="#troubleshooting"><span class="header-section-number">4.12</span> Troubleshooting</a>
+  <ul class="collapse">
+  <li><a href="#region-dropdown-locked" id="toc-region-dropdown-locked" class="nav-link" data-scroll-target="#region-dropdown-locked"><span class="header-section-number">4.12.1</span> Region Dropdown Locked</a></li>
+  <li><a href="#no-results-displayed" id="toc-no-results-displayed" class="nav-link" data-scroll-target="#no-results-displayed"><span class="header-section-number">4.12.2</span> No Results Displayed</a></li>
+  <li><a href="#air-selection-not-working" id="toc-air-selection-not-working" class="nav-link" data-scroll-target="#air-selection-not-working"><span class="header-section-number">4.12.3</span> AIR Selection Not Working</a></li>
+  <li><a href="#a-scan-viewer-shows-no-data" id="toc-a-scan-viewer-shows-no-data" class="nav-link" data-scroll-target="#a-scan-viewer-shows-no-data"><span class="header-section-number">4.12.4</span> A-Scan Viewer Shows No Data</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="..\OCTexVIEW_MANUAL.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">OCTexVIEW User Manual</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Tobias Meißner </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p><strong>OCTexVIEW</strong> is a software application designed for the export, analysis and quantification of Optical Coherence Tomography (OCT) images. Developed specifically for dental and medical research applications, OCTexVIEW provides researchers and clinicians with tools to extract data from OCT imaging studies.</p>
+<section id="purpose-and-scope" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="purpose-and-scope"><span class="header-section-number">1.1</span> Purpose and Scope</h2>
+<p>OCTexVIEW addresses the need for standardized, reproducible analysis of OCT images in research environments. The software enables users to:</p>
+<ul>
+<li><strong>Process large datasets</strong> of OCT images efficiently</li>
+<li><strong>Extract quantitative measurements</strong> from tissue structures</li>
+<li><strong>Apply consistent analysis protocols</strong> across multiple specimens</li>
+<li><strong>Maintain data integrity</strong> through automated workflows</li>
+</ul>
+<p>The application is particularly valuable for studies involving simple feature characterization, structural analysis, and longitudinal monitoring of samples.</p>
+</section>
+<section id="system-requirements" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="system-requirements"><span class="header-section-number">1.2</span> System Requirements</h2>
+<ul>
+<li><strong>Operating System</strong>: Windows 10/11, macOS 10.15+, or Linux</li>
+<li><strong>Memory</strong>: Minimum 8GB RAM (16GB recommended for large datasets)</li>
+<li><strong>Storage</strong>: At least 2GB free space for installation and temporary files</li>
+<li><strong>Display</strong>: Minimum 1920x1080 resolution for optimal interface experience</li>
+</ul>
+</section>
+<section id="application-overview" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="application-overview"><span class="header-section-number">1.3</span> Application Overview</h2>
+<p>OCTexVIEW is organized into three main functional sections, each designed for specific aspects of OCT image analysis:</p>
+<section id="export-section" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="export-section">Export Section</h3>
+<p>The <strong>Export</strong> section focuses on data preparation and batch processing capabilities. This module allows users to:</p>
+<ul>
+<li>Import and organize large collections of OCT image files</li>
+<li>Configure global processing parameters</li>
+<li>Apply custom settings to specific datasets</li>
+<li>Execute batch operations across multiple specimens</li>
+<li>Export processed data in various formats</li>
+</ul>
+<p><em>Primary Use Case</em>: Preparing raw OCT data for analysis and converting from OCT raw data to <code>png</code> files.</p>
+</section>
+<section id="analyze-section" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="analyze-section">Analyze Section</h3>
+<p>The <strong>Analyze</strong> section provides comprehensive tools for detailed image analysis and annotation. Key features include:</p>
+<ul>
+<li>Interactive image viewing and navigation</li>
+<li>Manual annotation tools</li>
+<li>Measurement and quantification capabilities</li>
+<li>Results compilation and statistical analysis</li>
+<li>Metadata management and documentation</li>
+</ul>
+<p><em>Primary Use Case</em>: Detailed analysis of individual specimens with manual oversight and quality control.</p>
+</section>
+<section id="carlquant-section" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="carlquant-section">CarlQuant Section</h3>
+<p>The <strong>CarlQuant</strong> section implements advanced quantitative analysis algorithms specifically developed for OCT image analysis. This module offers:</p>
+<ul>
+<li>region-of-interest selection</li>
+<li>Specialized lesion detpt algorithms</li>
+<li>Batch processing with consistent parameters</li>
+<li>Advanced statistical analysis and reporting</li>
+<li>Integration with research databases</li>
+</ul>
+<p><em>Primary Use Case</em>: High-throughput quantitative analysis using validated algorithms for research studies.</p>
+</section>
+</section>
+<section id="workflow-integration" class="level2" data-number="1.4">
+<h2 data-number="1.4" class="anchored" data-anchor-id="workflow-integration"><span class="header-section-number">1.4</span> Workflow Integration</h2>
+<p>The three sections are designed to work together in a typical research workflow:</p>
+<ol type="1">
+<li><strong>Data Preparation</strong> (Export): Import and organize raw OCT files</li>
+<li><strong>Image Anotatoion</strong> (Analyze): Review and annotate specimens</li>
+<li><strong>Quantitative Analysis</strong> (CarlQuant): Apply leasion depth algoryth to generate research data</li>
+</ol>
+<p>However, each section can also function independently, allowing users to enter the workflow at any point based on their specific needs.</p>
+<hr>
+</section>
+</section>
+<section id="export-section-1" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Export Section</h1>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/01_Export_mainWindow.png" class="img-fluid figure-img"></p>
+<figcaption>OCTexVIEW Export Section Main Window</figcaption>
+</figure>
+</div>
+<p>The Export Section is the primary module for batch processing and converting OCT raw data files into standard image formats (PNG or TIFF). This section provides comprehensive control over image processing parameters, slice selection, and export settings.</p>
+<section id="typical-workflow" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="typical-workflow"><span class="header-section-number">2.1</span> Typical Workflow</h2>
+<ol type="1">
+<li><strong>Load Files</strong>: Use “Select Folder” or “Select File” to add OCT files to the queue</li>
+<li><strong>Configure Global Settings</strong>: Set export format, averaging method, and scale bar preferences</li>
+<li><strong>Adjust Custom Settings</strong>: Fine-tune slice ranges, dynamic range, and other parameters for specific files</li>
+<li><strong>Preview</strong>: Select a file and click “Show” to preview the export result</li>
+<li><strong>Export</strong>: Click “Export!” to process all files in the queue</li>
+<li><strong>Monitor Progress</strong>: Watch the Status column for processing updates</li>
+</ol>
+</section>
+<section id="file-selection-panel" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="file-selection-panel"><span class="header-section-number">2.2</span> File Selection Panel</h2>
+<p>The File Selection Panel allows you to load OCT files into the processing queue.</p>
+<section id="select-folder" class="level3" data-number="2.2.1">
+<h3 data-number="2.2.1" class="anchored" data-anchor-id="select-folder"><span class="header-section-number">2.2.1</span> Select Folder</h3>
+<p><strong>Purpose</strong>: Choose a folder which contains at least one OCT file. All OCT files inside this folder and subfolders are detected and added to the queue.</p>
+<p><strong>Advanced Feature</strong>: If you supply a plain text file within an OCT-File directory [*.txt] with information about export range and equidistant slices, those parameters are imported automatically.</p>
+<p><strong>Format example</strong>:</p>
+<pre><code>33-444
+25</code></pre>
+<p>Or with advanced syntax:</p>
+<pre><code>XZ:20-80:20:1
+YZ:15-90:10:1.5</code></pre>
+<p>Where the format is: <code>[View]:[start]-[end]:[numSlices]:[refractiveIndex]</code></p>
+</section>
+<section id="select-file" class="level3" data-number="2.2.2">
+<h3 data-number="2.2.2" class="anchored" data-anchor-id="select-file"><span class="header-section-number">2.2.2</span> Select File</h3>
+<p><strong>Purpose</strong>: Choose a single OCT file for processing.</p>
+</section>
+<section id="delete-entrys" class="level3" data-number="2.2.3">
+<h3 data-number="2.2.3" class="anchored" data-anchor-id="delete-entrys"><span class="header-section-number">2.2.3</span> Delete Entry(s)</h3>
+<p><strong>Purpose</strong>: Delete one or more selected items in the queue.</p>
+</section>
+<section id="show" class="level3" data-number="2.2.4">
+<h3 data-number="2.2.4" class="anchored" data-anchor-id="show"><span class="header-section-number">2.2.4</span> Show</h3>
+<p><strong>Purpose</strong>: Select an OCT-Scan from the queue and display it in the preview canvas. Move the slider to display different slices.</p>
+</section>
+</section>
+<section id="global-settings-panel" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="global-settings-panel"><span class="header-section-number">2.3</span> Global Settings Panel</h2>
+<p>Global settings apply to all files in the export queue and control fundamental processing parameters.</p>
+<section id="aspect-ratio" class="level3" data-number="2.3.1">
+<h3 data-number="2.3.1" class="anchored" data-anchor-id="aspect-ratio"><span class="header-section-number">2.3.1</span> Aspect Ratio</h3>
+<p><strong>Purpose</strong>: Corrects pixel aspect ratio for natural-looking images.</p>
+<p><strong>Details</strong>: The pixels of an OCT scan are usually not isometric due to the standard acquisition parameters (x and y pixel size). A correction factor is calculated here so that the image does not look compressed or stretched, which makes the image appear natural.</p>
+<p><strong>Default</strong>: Enabled</p>
+</section>
+<section id="prefer-raw" class="level3" data-number="2.3.2">
+<h3 data-number="2.3.2" class="anchored" data-anchor-id="prefer-raw"><span class="header-section-number">2.3.2</span> Prefer Raw</h3>
+<p><strong>Purpose</strong>: When a scan contains both raw and processed data, this option determines which to use.</p>
+<p><strong>Details</strong>: If a scan was recorded as raw data and as spectral data, you can select here between processed and raw data export.</p>
+<p><strong>Status</strong>: Not yet fully implemented</p>
+<p><strong>Default</strong>: Enabled</p>
+</section>
+<section id="local-filtering" class="level3" data-number="2.3.3">
+<h3 data-number="2.3.3" class="anchored" data-anchor-id="local-filtering"><span class="header-section-number">2.3.3</span> Local Filtering</h3>
+<p><strong>Purpose</strong>: Experimental noise reduction filter for raw scans.</p>
+<p><strong>Details</strong>: This filter can reduce noise if a raw scan is available. The filter operates in 32bit color space and takes advantage of the “speckle” property of OCT. It detects strong deviations of a pixel from the mean gray value of the surrounding pixels and corrects this in a kind of median smoothing with a predefined box kernel size. Since this is done by iterating over a B-scan columns and rows, this correction can take some time.</p>
+<p><strong>Default</strong>: Disabled</p>
+<p><strong>Warning</strong>: This is an experimental feature and may significantly increase processing time.</p>
+</section>
+<section id="export-format" class="level3" data-number="2.3.4">
+<h3 data-number="2.3.4" class="anchored" data-anchor-id="export-format"><span class="header-section-number">2.3.4</span> Export Format</h3>
+<p><strong>Purpose</strong>: Select the output image format.</p>
+<p><strong>Options</strong>: - <strong>PNG</strong>: Results in smaller file size, suitable for most applications - <strong>TIFF</strong>: Ideal for post-processing and when maximum quality is required</p>
+<p><strong>Default</strong>: TIFF</p>
+</section>
+<section id="averaging" class="level3" data-number="2.3.5">
+<h3 data-number="2.3.5" class="anchored" data-anchor-id="averaging"><span class="header-section-number">2.3.5</span> Averaging</h3>
+<p><strong>Purpose</strong>: Control how A-scans are averaged when averaging was activated during recording.</p>
+<p><strong>Options</strong>: - <strong>None</strong>: No averaging applied - <strong>Incoherent</strong>: Leads to a noise-reduced image - <strong>Coherent</strong>: Results in a signal-intensive image</p>
+<p><strong>Default</strong>: Coherent</p>
+</section>
+<section id="apodization-window" class="level3" data-number="2.3.6">
+<h3 data-number="2.3.6" class="anchored" data-anchor-id="apodization-window"><span class="header-section-number">2.3.6</span> Apodization Window</h3>
+<p><strong>Purpose</strong>: Control the Tukey window size for spectral apodization.</p>
+<p><strong>Details</strong>: The pixels of an OCT scan are usually not isometric due to the standard acquisition parameters (x and y pixel size). A correction factor is calculated here so that the image does not look compressed or stretched, which makes the image appear natural.</p>
+<p><strong>Options</strong>: 0, 0.3, 0.5, 0.7, 0.9, 1</p>
+<p><strong>Default</strong>: 0.9</p>
+</section>
+<section id="show-error" class="level3" data-number="2.3.7">
+<h3 data-number="2.3.7" class="anchored" data-anchor-id="show-error"><span class="header-section-number">2.3.7</span> Show Error</h3>
+<p><strong>Purpose</strong>: Control whether error messages are displayed when text files are missing.</p>
+<p><strong>Details</strong>: If no text file is supplied next to the OCT file, an error message is displayed. You can disable/enable this here. It will suppress the error message.</p>
+<p><strong>Default</strong>: Disabled</p>
+</section>
+<section id="draw-scale" class="level3" data-number="2.3.8">
+<h3 data-number="2.3.8" class="anchored" data-anchor-id="draw-scale"><span class="header-section-number">2.3.8</span> Draw Scale</h3>
+<p><strong>Purpose</strong>: Insert a scale bar in the right corner of the image.</p>
+<p><strong>Details</strong>: Choose scale length and text size according to your needs.</p>
+<p><strong>Default</strong>: Enabled</p>
+<section id="scale-length-µm" class="level4" data-number="2.3.8.1">
+<h4 data-number="2.3.8.1" class="anchored" data-anchor-id="scale-length-µm"><span class="header-section-number">2.3.8.1</span> Scale Length [µm]</h4>
+<p><strong>Purpose</strong>: Define the physical length of the scale bar.</p>
+<p><strong>Details</strong>: Insert a number here. Most common are 250, 500, 1000.</p>
+<p><strong>Default</strong>: 500 µm</p>
+</section>
+<section id="text-size-pt" class="level4" data-number="2.3.8.2">
+<h4 data-number="2.3.8.2" class="anchored" data-anchor-id="text-size-pt"><span class="header-section-number">2.3.8.2</span> Text Size [pt]</h4>
+<p><strong>Purpose</strong>: Define the font size for the scale bar label.</p>
+<p><strong>Details</strong>: Insert a number for text size here, e.g., 24 or 30.</p>
+<p><strong>Default</strong>: 30 pt</p>
+</section>
+</section>
+</section>
+<section id="custom-settings-panel" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="custom-settings-panel"><span class="header-section-number">2.4</span> Custom Settings Panel</h2>
+<p>Custom settings allow fine-tuned control over individual files or selections in the queue.</p>
+<section id="export-range" class="level3" data-number="2.4.1">
+<h3 data-number="2.4.1" class="anchored" data-anchor-id="export-range"><span class="header-section-number">2.4.1</span> Export Range</h3>
+<p><strong>Purpose</strong>: Manually enter the first and last slice to be exported.</p>
+<p><strong>Controls</strong>: - <strong>First</strong>: Starting slice number - <strong>Last</strong>: Ending slice number - <strong>Selection</strong>: Apply the range to the currently selected entry - <strong>Set All</strong>: Apply the range to all entries in the queue - <strong>Reset Sel</strong>: Sets the first level to 1 and the last level to the last available level</p>
+</section>
+<section id="equidistant-slices" class="level3" data-number="2.4.2">
+<h3 data-number="2.4.2" class="anchored" data-anchor-id="equidistant-slices"><span class="header-section-number">2.4.2</span> Equidistant Slices</h3>
+<p><strong>Purpose</strong>: Export evenly distributed slices from a scan.</p>
+<p><strong>Details</strong>: To export evenly distributed slices from a scan, the number can be entered here and transferred to all or one entry in the queue.</p>
+<p><strong>Controls</strong>: - <strong>Number Entry</strong>: Enter the desired number of equidistant slices (default: 25) - <strong>Selection</strong>: Apply to the currently selected entry - <strong>Set All</strong>: Apply to all entries in the queue - <strong>Reset Sel</strong>: Resets the value to “all slices”</p>
+</section>
+<section id="dynamic-range-db" class="level3" data-number="2.4.3">
+<h3 data-number="2.4.3" class="anchored" data-anchor-id="dynamic-range-db"><span class="header-section-number">2.4.3</span> Dynamic Range [dB]</h3>
+<p><strong>Purpose</strong>: Adjust the signal-to-noise ratio and image contrast.</p>
+<p><strong>Details</strong>: Roughly speaking, the dynamic range indicates the range between the darkest and lightest grey values. A kind of contrast adjustment takes place, so to speak. In the concrete case, the signal-to-noise ratio is defined here.</p>
+<p><strong>Controls</strong>: - <strong>Min dB Slider</strong>: Set the minimum decibel threshold - <strong>Max dB Slider</strong>: Set the maximum decibel threshold - <strong>Selection</strong>: Apply to the currently selected entry - <strong>Set All</strong>: Apply to all entries in the queue</p>
+</section>
+<section id="dispersion-compensation" class="level3" data-number="2.4.4">
+<h3 data-number="2.4.4" class="anchored" data-anchor-id="dispersion-compensation"><span class="header-section-number">2.4.4</span> Dispersion Compensation</h3>
+<p><strong>Purpose</strong>: Correct for chromatic dispersion artifacts in OCT images.</p>
+<p><strong>Details</strong>: Dispersion compensation can improve image quality by correcting phase distortions.</p>
+<p><strong>Controls</strong>: - <strong>Method</strong>: Select dispersion compensation method (e.g., Quadratic) - <strong>Coefficient</strong>: Enter the dispersion coefficient value (default: -100) - <strong>Selection</strong>: Add value to selection - <strong>Set All</strong>: Add value to all in queue - <strong>Reset Sel</strong>: Reset values to -100</p>
+</section>
+<section id="image-slice-direction" class="level3" data-number="2.4.5">
+<h3 data-number="2.4.5" class="anchored" data-anchor-id="image-slice-direction"><span class="header-section-number">2.4.5</span> Image Slice Direction</h3>
+<p><strong>Purpose</strong>: Define the orientation of exported image slices.</p>
+<p><strong>Details</strong>: Define the image slice direction here. First character is always the X axis (width) and second always the Y axis (height) of the resulting image.</p>
+<p><strong>Options</strong>: - <strong>XZ</strong>: 2D projection along the XZ plane - <strong>YZ</strong>: 2D projection along the YZ plane (standard) - <strong>XY</strong>: 2D projection along the XY plane (en-face view)</p>
+<p><strong>Controls</strong>: - <strong>Selection</strong>: Apply to the currently selected entry - <strong>Set All</strong>: Apply to all entries in the queue</p>
+<p><strong>Note</strong>: Changing the slice direction automatically updates the “Last” slice value based on the scan dimensions.</p>
+</section>
+<section id="refractive-index" class="level3" data-number="2.4.6">
+<h3 data-number="2.4.6" class="anchored" data-anchor-id="refractive-index"><span class="header-section-number">2.4.6</span> Refractive Index</h3>
+<p><strong>Purpose</strong>: Apply refractive index correction to account for material properties.</p>
+<p><strong>Details</strong>: Defines how much the image is stretched or compressed. A value of 1 shows true surface dimensions; higher values distort the surface but retain approximate depth accuracy.</p>
+<p><strong>Usage</strong>: Enter the refractive index (e.g., 1.0). Values &gt;1 stretch the surface while maintaining depth cues. Use with caution for samples with varying indices.</p>
+<p><strong>Controls</strong>: - <strong>Entry Field</strong>: Enter refractive index value (default: 1.0) - <strong>Selection</strong>: Add value to selection - <strong>Set All</strong>: Add value to all in queue</p>
+<p><strong>Common Values</strong>: - Air: 1.0 - Water: 1.33 - Dental enamel: ~1.63 - Dental dentin: ~1.54</p>
+</section>
+</section>
+<section id="execution-panel" class="level2" data-number="2.5">
+<h2 data-number="2.5" class="anchored" data-anchor-id="execution-panel"><span class="header-section-number">2.5</span> Execution Panel</h2>
+<p>The Execution Panel controls the export process and application lifecycle.</p>
+<section id="export" class="level3" data-number="2.5.1">
+<h3 data-number="2.5.1" class="anchored" data-anchor-id="export"><span class="header-section-number">2.5.1</span> Export!</h3>
+<p><strong>Purpose</strong>: Start exporting of all entries in queue.</p>
+<p><strong>Details</strong>: Initiates batch processing of all OCT files in the queue with their configured settings. Progress is displayed in the Status column of the queue table.</p>
+</section>
+<section id="cancel" class="level3" data-number="2.5.2">
+<h3 data-number="2.5.2" class="anchored" data-anchor-id="cancel"><span class="header-section-number">2.5.2</span> Cancel!</h3>
+<p><strong>Purpose</strong>: Stop the current export process.</p>
+<p><strong>Details</strong>: Interrupts the export operation. Files already processed will remain saved.</p>
+</section>
+<section id="quit" class="level3" data-number="2.5.3">
+<h3 data-number="2.5.3" class="anchored" data-anchor-id="quit"><span class="header-section-number">2.5.3</span> Quit!</h3>
+<p><strong>Purpose</strong>: Exit the application.</p>
+<p><strong>Details</strong>: Closes OCTexVIEW. Unsaved queue configurations will be lost.</p>
+</section>
+</section>
+<section id="queue-table" class="level2" data-number="2.6">
+<h2 data-number="2.6" class="anchored" data-anchor-id="queue-table"><span class="header-section-number">2.6</span> Queue Table</h2>
+<p>The queue table displays all loaded OCT files and their export parameters. Each row represents one OCT file with the following columns:</p>
+<ul>
+<li><strong>Nr.</strong>: Sequential number</li>
+<li><strong>Name</strong>: Filename without extension</li>
+<li><strong>First</strong>: First slice to export</li>
+<li><strong>Last</strong>: Last slice to export</li>
+<li><strong>dB min</strong>: Minimum decibel threshold</li>
+<li><strong>dB max</strong>: Maximum decibel threshold</li>
+<li><strong>NumSlices</strong>: Number of slices to export</li>
+<li><strong>Refr. Ind.</strong>: Refractive index correction</li>
+<li><strong>Disp. Coeff</strong>: Dispersion compensation coefficient</li>
+<li><strong>Img. Slice Dir.</strong>: Image slice direction (XZ, YZ, or XY)</li>
+<li><strong>Data Type</strong>: Raw or Processed</li>
+<li><strong>Status</strong>: Current processing status</li>
+<li><strong>Path</strong>: Full path to the OCT file</li>
+</ul>
+<p><strong>Interaction</strong>: Double-click any cell to edit its value directly. Select multiple rows to apply batch operations.</p>
+</section>
+<section id="output-structure" class="level2" data-number="2.7">
+<h2 data-number="2.7" class="anchored" data-anchor-id="output-structure"><span class="header-section-number">2.7</span> Output Structure</h2>
+<p>Exported files are saved in subdirectories next to the original OCT files with the following naming convention:</p>
+<pre><code>[ExpNumber]_[FileName]_[NumSlices]_Slices_[SliceDirection]/
+    [FileName]_[ExpNumber]_#[SliceIndex]_[ImageNumber].png</code></pre>
+<p>Additionally, a video image (overview) is saved as:</p>
+<pre><code>[FileName]_[ExpNumber].jpg</code></pre>
+</section>
+</section>
+<section id="analyze-section-1" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Analyze Section</h1>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/02_Analyze_mainWindow.png" class="img-fluid figure-img"></p>
+<figcaption>OCTexVIEW Analyze Section Main Window</figcaption>
+</figure>
+</div>
+<p>The Analyze Section provides comprehensive tools for interactive image annotation, measurement, and data collection. This module is designed for detailed analysis of individual specimens with manual oversight and quality control, enabling researchers to annotate features, collect measurements, and compile results in a structured format.</p>
+<section id="typical-workflow-1" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="typical-workflow-1"><span class="header-section-number">3.1</span> Typical Workflow</h2>
+<ol type="1">
+<li><strong>Load Images</strong>: Click “Select Folder” to load a folder of images</li>
+<li><strong>Configure Columns</strong>:
+<ul>
+<li>Define custom columns with appropriate data types</li>
+<li>Assign keyboard shortcuts</li>
+<li>Choose colors for visual organization</li>
+</ul></li>
+<li><strong>Optional - Load Config</strong>: Load a previously saved configuration to restore column setup</li>
+<li><strong>Annotate and Measure</strong>:
+<ul>
+<li>Navigate through images using arrow keys</li>
+<li>Draw annotations by clicking to add points</li>
+<li>Press F to toggle between line and spline modes</li>
+<li>Press assigned key to commit annotation and record measurement</li>
+</ul></li>
+<li><strong>Enter Additional Data</strong>: Use keyboard shortcuts to enter Boolean, Categorical, or other data types</li>
+<li><strong>Review</strong>: Press H to toggle annotation visibility and review your work</li>
+<li><strong>Undo if Needed</strong>: Use Ctrl+Z for quick undo or Ctrl+U for selective undo</li>
+<li><strong>Save Configuration</strong>: Click “Save Config” to save your column setup for future use</li>
+</ol>
+</section>
+<section id="load-images-panel" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="load-images-panel"><span class="header-section-number">3.2</span> Load Images Panel</h2>
+<p>The Load Images Panel allows you to import image files and configure the analysis workspace.</p>
+<section id="select-folder-1" class="level3" data-number="3.2.1">
+<h3 data-number="3.2.1" class="anchored" data-anchor-id="select-folder-1"><span class="header-section-number">3.2.1</span> Select Folder</h3>
+<p><strong>Purpose</strong>: Choose a folder that contains OCT Image(s).</p>
+<p><strong>Supported Formats</strong>: PNG, JPG, TIF, TIFF</p>
+<p><strong>Details</strong>: All supported image files in the selected folder are automatically loaded and sorted naturally (e.g., image1, image2, image10). The folder name becomes the specimen name in the results table.</p>
+</section>
+<section id="load-config" class="level3" data-number="3.2.2">
+<h3 data-number="3.2.2" class="anchored" data-anchor-id="load-config"><span class="header-section-number">3.2.2</span> Load Config</h3>
+<p><strong>Purpose</strong>: Load a configuration file for layout and key bindings.</p>
+<p><strong>Details</strong>: Configuration files (JSON format) store custom column definitions, key bindings, data types, and colors. This allows you to quickly set up the same analysis parameters across multiple sessions or specimens.</p>
+</section>
+</section>
+<section id="image-annotation-canvas" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="image-annotation-canvas"><span class="header-section-number">3.3</span> Image Annotation Canvas</h2>
+<p>The central canvas displays the current image and provides interactive tools for annotation and measurement.</p>
+<section id="navigation-controls" class="level3" data-number="3.3.1">
+<h3 data-number="3.3.1" class="anchored" data-anchor-id="navigation-controls"><span class="header-section-number">3.3.1</span> Navigation Controls</h3>
+<p><strong>Keyboard Shortcuts</strong>: - <strong>Arrow Keys (←/→)</strong>: Navigate between images - <strong>Arrow Keys (↑/↓)</strong>: Navigate between images - <strong>Mouse Wheel</strong>: Zoom in/out - <strong>Middle Mouse Button + Drag</strong>: Pan the image - <strong>H Key</strong>: Toggle annotation visibility</p>
+<p><strong>Mouse Controls</strong>: - <strong>Left Click</strong>: Add annotation point - <strong>Left Click + Drag</strong>: Move existing annotation point (when hovering over a point) - <strong>Right Click on Point</strong>: Remove individual annotation point - <strong>Right Click on Empty Space</strong>: Clear all uncommitted annotation points</p>
+</section>
+<section id="annotation-features" class="level3" data-number="3.3.2">
+<h3 data-number="3.3.2" class="anchored" data-anchor-id="annotation-features"><span class="header-section-number">3.3.2</span> Annotation Features</h3>
+<section id="point-based-annotations" class="level4" data-number="3.3.2.1">
+<h4 data-number="3.3.2.1" class="anchored" data-anchor-id="point-based-annotations"><span class="header-section-number">3.3.2.1</span> Point-Based Annotations</h4>
+<p><strong>Purpose</strong>: Create line or spline annotations by clicking to add control points.</p>
+<p><strong>Details</strong>: Click on the image to add points that define a measurement path. Points can be dragged to adjust position. The annotation remains editable until committed to the results table via a keyboard shortcut.</p>
+<p><strong>Visual Feedback</strong>: - <strong>Yellow outline</strong>: Normal point state - <strong>Green outline</strong>: Hovering over a point (ready to drag) - <strong>White outline</strong>: Point being dragged - <strong>Cursor changes to hand</strong>: When hovering over a draggable point</p>
+</section>
+<section id="line-vs.-spline-mode" class="level4" data-number="3.3.2.2">
+<h4 data-number="3.3.2.2" class="anchored" data-anchor-id="line-vs.-spline-mode"><span class="header-section-number">3.3.2.2</span> Line vs.&nbsp;Spline Mode</h4>
+<p><strong>Purpose</strong>: Toggle between straight-line and smooth curve interpolation.</p>
+<p><strong>Keyboard Shortcut</strong>: <strong>F Key</strong></p>
+<p><strong>Details</strong>: - <strong>Line Mode</strong>: Connects points with straight line segments (default) - <strong>Spline Mode</strong>: Creates smooth cubic spline curves through points (requires minimum 4 points) - Dashed lines indicate spline mode is active but more points are needed</p>
+</section>
+<section id="annotation-visibility" class="level4" data-number="3.3.2.3">
+<h4 data-number="3.3.2.3" class="anchored" data-anchor-id="annotation-visibility"><span class="header-section-number">3.3.2.3</span> Annotation Visibility</h4>
+<p><strong>Purpose</strong>: Toggle display of committed annotations and overlay data.</p>
+<p><strong>Keyboard Shortcut</strong>: <strong>H Key</strong></p>
+<p><strong>Details</strong>: Press H to show/hide all committed annotations and non-drawn data overlays (Boolean, Categorical, Ordinal, Text/String values). Current uncommitted annotations remain visible for editing.</p>
+</section>
+</section>
+<section id="zoom-and-pan" class="level3" data-number="3.3.3">
+<h3 data-number="3.3.3" class="anchored" data-anchor-id="zoom-and-pan"><span class="header-section-number">3.3.3</span> Zoom and Pan</h3>
+<p><strong>Zoom Controls</strong>: - <strong>Mouse Wheel Up</strong>: Zoom in (centered on cursor position) - <strong>Mouse Wheel Down</strong>: Zoom out - <strong>Zoom Range</strong>: 0.1x to 10x magnification</p>
+<p><strong>Pan Controls</strong>: - <strong>Middle Mouse Button + Drag</strong>: Pan the zoomed image - <strong>Auto-centering</strong>: Image automatically centers when zoomed</p>
+</section>
+</section>
+<section id="add-columns-panel" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="add-columns-panel"><span class="header-section-number">3.4</span> Add Columns Panel</h2>
+<p>The Add Columns Panel allows you to define custom data columns with keyboard shortcuts for rapid data entry.</p>
+<section id="column-name-entry" class="level3" data-number="3.4.1">
+<h3 data-number="3.4.1" class="anchored" data-anchor-id="column-name-entry"><span class="header-section-number">3.4.1</span> Column Name Entry</h3>
+<p><strong>Purpose</strong>: Enter the name of the column.</p>
+<p><strong>Example</strong>: GAP, Interface, Lesion, Crack</p>
+<p><strong>Details</strong>: Column names appear as headers in the results table and should be descriptive of the feature being measured or annotated.</p>
+</section>
+<section id="key-binding-dropdown" class="level3" data-number="3.4.2">
+<h3 data-number="3.4.2" class="anchored" data-anchor-id="key-binding-dropdown"><span class="header-section-number">3.4.2</span> Key Binding Dropdown</h3>
+<p><strong>Purpose</strong>: Select a unique key to bind this column.</p>
+<p><strong>Details</strong>: Choose an available letter key (a-z) to create a keyboard shortcut for this column. Reserved keys (F, H) are excluded. Each key can only be assigned to one column.</p>
+</section>
+<section id="data-type-dropdown" class="level3" data-number="3.4.3">
+<h3 data-number="3.4.3" class="anchored" data-anchor-id="data-type-dropdown"><span class="header-section-number">3.4.3</span> Data Type Dropdown</h3>
+<p><strong>Purpose</strong>: Select the type of data stored in this column.</p>
+<p><strong>Options</strong>:</p>
+<ul>
+<li><p><strong>Continuous</strong>: A number that can take any value within a range. Used for measurements like length (mm, cm, m), weight (kg), or time (seconds). Automatically calculates length from drawn annotations and accumulates multiple measurements per slice.</p></li>
+<li><p><strong>Percentage</strong>: A value expressed as a part of 100. Useful for proportions or rates. Increments by 5% with each key press (0% → 5% → 10% → … → 100%).</p></li>
+<li><p><strong>Boolean</strong>: A simple Yes/No or True/False value. Great for binary decisions. Toggles between YES and NO with each key press.</p></li>
+<li><p><strong>Categorical</strong>: A label or category that describes a group. Not ordered. Increments as integer categories (0, 1, 2, …).</p></li>
+<li><p><strong>Ordinal</strong>: Categories that have a meaningful order, but not necessarily equal spacing. Increments as ordered scores (0, 1, 2, …).</p></li>
+<li><p><strong>Integer</strong>: Whole numbers without decimals. Used for counts or discrete values. Prompts for manual entry.</p></li>
+<li><p><strong>Float</strong>: Decimal numbers. More precise than integers. Prompts for manual entry (accepts comma or period as decimal separator).</p></li>
+<li><p><strong>Text/String</strong>: Free-form text or labels. Can be names, comments, or descriptions. Prompts for manual entry.</p></li>
+</ul>
+<p><strong>Default</strong>: Continuous</p>
+</section>
+<section id="color-picker" class="level3" data-number="3.4.4">
+<h3 data-number="3.4.4" class="anchored" data-anchor-id="color-picker"><span class="header-section-number">3.4.4</span> Color Picker</h3>
+<p><strong>Purpose</strong>: Choose a color for this column (hex format).</p>
+<p><strong>Details</strong>: The selected color is used to highlight the column in the results table and to color annotations associated with this column. Click “Pick Color” to open a color picker dialog. The color preview shows the currently selected color.</p>
+</section>
+<section id="add-column-button" class="level3" data-number="3.4.5">
+<h3 data-number="3.4.5" class="anchored" data-anchor-id="add-column-button"><span class="header-section-number">3.4.5</span> Add Column Button</h3>
+<p><strong>Purpose</strong>: Add a new custom column to the results table.</p>
+<p><strong>Details</strong>: Creates a new column with the specified name, keybinding, data type, and color. The keybinding allows quick data entry using keyboard shortcuts during image annotation. The column is inserted after the SLICE column.</p>
+</section>
+<section id="remove-column-button" class="level3" data-number="3.4.6">
+<h3 data-number="3.4.6" class="anchored" data-anchor-id="remove-column-button"><span class="header-section-number">3.4.6</span> Remove Column Button</h3>
+<p><strong>Purpose</strong>: Remove the last added custom column.</p>
+<p><strong>Details</strong>: Deletes the most recently added dynamic column from the results table and frees up its associated key binding for reuse.</p>
+</section>
+</section>
+<section id="metadata-panel" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="metadata-panel"><span class="header-section-number">3.5</span> Metadata Panel</h2>
+<p>The Metadata Panel captures contextual information about the analysis session.</p>
+<section id="operator" class="level3" data-number="3.5.1">
+<h3 data-number="3.5.1" class="anchored" data-anchor-id="operator"><span class="header-section-number">3.5.1</span> Operator</h3>
+<p><strong>Purpose</strong>: Define the Operator Abbreviation.</p>
+<p><strong>Example</strong>: TM, CR, JD</p>
+<p><strong>Details</strong>: Enter the initials or abbreviation of the person performing the analysis. This value is automatically added to each row in the results table.</p>
+<p><strong>Default</strong>: TM</p>
+</section>
+<section id="measurement" class="level3" data-number="3.5.2">
+<h3 data-number="3.5.2" class="anchored" data-anchor-id="measurement"><span class="header-section-number">3.5.2</span> Measurement</h3>
+<p><strong>Purpose</strong>: Measurement Number.</p>
+<p><strong>Example</strong>: 1, 2, 3</p>
+<p><strong>Details</strong>: Enter the measurement session number. Useful for tracking repeated measurements or different measurement sessions on the same specimen.</p>
+<p><strong>Default</strong>: 1</p>
+</section>
+<section id="system" class="level3" data-number="3.5.3">
+<h3 data-number="3.5.3" class="anchored" data-anchor-id="system"><span class="header-section-number">3.5.3</span> System</h3>
+<p><strong>Purpose</strong>: Define the imaging system used.</p>
+<p><strong>Example</strong>: OCT, µCT, SEM, LiMi</p>
+<p><strong>Details</strong>: Enter the abbreviation for the imaging system or technique used to acquire the images.</p>
+<p><strong>Default</strong>: OCT</p>
+</section>
+<section id="save-config-button" class="level3" data-number="3.5.4">
+<h3 data-number="3.5.4" class="anchored" data-anchor-id="save-config-button"><span class="header-section-number">3.5.4</span> Save Config Button</h3>
+<p><strong>Purpose</strong>: Save a config file for layout and key bindings.</p>
+<p><strong>Details</strong>: The config is saved as a JSON file in the image folder. It stores all custom column definitions, key bindings, data types, and colors. Load this file in future sessions to quickly restore your analysis setup.</p>
+</section>
+<section id="show-config-button" class="level3" data-number="3.5.5">
+<h3 data-number="3.5.5" class="anchored" data-anchor-id="show-config-button"><span class="header-section-number">3.5.5</span> Show Config Button</h3>
+<p><strong>Purpose</strong>: View assigned key bindings in a keyboard layout.</p>
+<p><strong>Details</strong>: Opens a visual keyboard layout window showing which keys are assigned to which columns. Helps prevent duplicate key assignments and provides a quick reference during analysis.</p>
+</section>
+</section>
+<section id="results-table" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="results-table"><span class="header-section-number">3.6</span> Results Table</h2>
+<p>The results table displays all collected measurements and annotations in a spreadsheet format.</p>
+<section id="static-columns" class="level3" data-number="3.6.1">
+<h3 data-number="3.6.1" class="anchored" data-anchor-id="static-columns"><span class="header-section-number">3.6.1</span> Static Columns</h3>
+<p>The following columns are automatically populated:</p>
+<ul>
+<li><strong>SPECIMEN_NAME</strong>: Folder name of the loaded images</li>
+<li><strong>SLICE</strong>: Image number (1-based index)</li>
+<li><strong>OPERATOR</strong>: Value from Operator field</li>
+<li><strong>MEASUREMENT</strong>: Value from Measurement field</li>
+<li><strong>SYSTEM</strong>: Value from System field</li>
+<li><strong>DATE_TIME</strong>: Timestamp when data was entered (YYYY-MM-DD HH:MM:SS)</li>
+</ul>
+</section>
+<section id="dynamic-columns" class="level3" data-number="3.6.2">
+<h3 data-number="3.6.2" class="anchored" data-anchor-id="dynamic-columns"><span class="header-section-number">3.6.2</span> Dynamic Columns</h3>
+<p>Custom columns you create appear after the SLICE column. Each dynamic column: - Has a custom background color for easy identification - Is linked to a keyboard shortcut for rapid data entry - Has a defined data type that controls input behavior - Automatically adjusts width based on header length</p>
+</section>
+<section id="table-interactions" class="level3" data-number="3.6.3">
+<h3 data-number="3.6.3" class="anchored" data-anchor-id="table-interactions"><span class="header-section-number">3.6.3</span> Table Interactions</h3>
+<ul>
+<li><strong>Single Select</strong>: Click to select individual cells</li>
+<li><strong>Row Select</strong>: Click row number to select entire row</li>
+<li><strong>Copy</strong>: Use Ctrl+C to copy selected cells</li>
+<li><strong>Right-Click Menu</strong>: Access additional options</li>
+<li><strong>Auto-scroll</strong>: Table automatically scrolls to show the current slice</li>
+</ul>
+</section>
+</section>
+<section id="keyboard-shortcuts" class="level2" data-number="3.7">
+<h2 data-number="3.7" class="anchored" data-anchor-id="keyboard-shortcuts"><span class="header-section-number">3.7</span> Keyboard Shortcuts</h2>
+<section id="global-shortcuts" class="level3" data-number="3.7.1">
+<h3 data-number="3.7.1" class="anchored" data-anchor-id="global-shortcuts"><span class="header-section-number">3.7.1</span> Global Shortcuts</h3>
+<ul>
+<li><strong>Arrow Keys (←/→/↑/↓)</strong>: Navigate between images</li>
+<li><strong>Mouse Wheel</strong>: Zoom in/out</li>
+<li><strong>H</strong>: Toggle annotation visibility</li>
+<li><strong>F</strong>: Toggle line/spline mode for current annotation</li>
+<li><strong>Ctrl+Z</strong>: Undo last action</li>
+<li><strong>Ctrl+U</strong>: Open undo history panel</li>
+</ul>
+</section>
+<section id="custom-column-shortcuts" class="level3" data-number="3.7.2">
+<h3 data-number="3.7.2" class="anchored" data-anchor-id="custom-column-shortcuts"><span class="header-section-number">3.7.2</span> Custom Column Shortcuts</h3>
+<p>Each custom column has a unique letter key (a-z, excluding f and h) that triggers data entry:</p>
+<p><strong>For Continuous Data Type</strong>: 1. Draw annotation points on the image 2. Press the assigned key 3. Length is automatically calculated and added to the cell 4. Annotation is committed and colored according to column color</p>
+<p><strong>For Boolean Data Type</strong>: - Press the assigned key to toggle between YES and NO</p>
+<p><strong>For Percentage Data Type</strong>: - Press the assigned key to increment by 5% (wraps at 100%)</p>
+<p><strong>For Categorical/Ordinal Data Type</strong>: - Press the assigned key to increment the category/score number</p>
+<p><strong>For Integer/Float/Text Data Type</strong>: - Press the assigned key to open an input dialog - Enter the value and press Enter or click Submit</p>
+</section>
+</section>
+<section id="undo-system" class="level2" data-number="3.8">
+<h2 data-number="3.8" class="anchored" data-anchor-id="undo-system"><span class="header-section-number">3.8</span> Undo System</h2>
+<section id="undo-last-action" class="level3" data-number="3.8.1">
+<h3 data-number="3.8.1" class="anchored" data-anchor-id="undo-last-action"><span class="header-section-number">3.8.1</span> Undo Last Action</h3>
+<p><strong>Keyboard Shortcut</strong>: <strong>Ctrl+Z</strong></p>
+<p><strong>Purpose</strong>: Revert the most recent data entry or annotation.</p>
+<p><strong>Details</strong>: Undoes the last action, restoring the previous cell value and removing any associated annotation. The undo stack preserves the complete history of all actions during the current session.</p>
+</section>
+<section id="undo-history-panel" class="level3" data-number="3.8.2">
+<h3 data-number="3.8.2" class="anchored" data-anchor-id="undo-history-panel"><span class="header-section-number">3.8.2</span> Undo History Panel</h3>
+<p><strong>Keyboard Shortcut</strong>: <strong>Ctrl+U</strong></p>
+<p><strong>Purpose</strong>: View complete undo history and selectively undo multiple actions.</p>
+<p><strong>Details</strong>: Opens a table showing all actions with timestamps, slice numbers, column names, old/new values, and annotation IDs. Double-click any row to undo all actions back to that point. Each row is color-coded according to its associated column color.</p>
+<p><strong>Columns</strong>: - <strong>Time</strong>: Timestamp of the action (HH:MM:SS) - <strong>Slice</strong>: Image number where action occurred - <strong>Column</strong>: Column name that was modified - <strong>Old Value</strong>: Previous cell value - <strong>New Value</strong>: New cell value - <strong>Feature</strong>: Feature name from annotation (if applicable) - <strong>Annotation ID</strong>: Unique identifier for associated annotation</p>
+</section>
+</section>
+<section id="data-persistence" class="level2" data-number="3.9">
+<h2 data-number="3.9" class="anchored" data-anchor-id="data-persistence"><span class="header-section-number">3.9</span> Data Persistence</h2>
+<section id="auto-save" class="level3" data-number="3.9.1">
+<h3 data-number="3.9.1" class="anchored" data-anchor-id="auto-save"><span class="header-section-number">3.9.1</span> Auto-Save</h3>
+<p><strong>Details</strong>: All data is automatically saved 1.5 seconds after each action. This includes: - Results table data (CSV format) - Annotations (JSON format) - Configuration (JSON format)</p>
+<p><strong>File Locations</strong>: - <code>[ImageFolder]/results.csv</code> - Results table data - <code>[ImageFolder]/annotations/annotations.json</code> - All annotations - <code>[ImageFolder]/config.json</code> - Column and key binding configuration</p>
+</section>
+<section id="manual-save" class="level3" data-number="3.9.2">
+<h3 data-number="3.9.2" class="anchored" data-anchor-id="manual-save"><span class="header-section-number">3.9.2</span> Manual Save</h3>
+<p><strong>Details</strong>: Use the “Save Config” button to manually save the current configuration. Results and annotations are saved automatically.</p>
+</section>
+</section>
+<section id="output-files" class="level2" data-number="3.10">
+<h2 data-number="3.10" class="anchored" data-anchor-id="output-files"><span class="header-section-number">3.10</span> Output Files</h2>
+<section id="results.csv" class="level3" data-number="3.10.1">
+<h3 data-number="3.10.1" class="anchored" data-anchor-id="results.csv"><span class="header-section-number">3.10.1</span> results.csv</h3>
+<p><strong>Format</strong>: Comma-separated values</p>
+<p><strong>Contents</strong>: Complete results table with all static and dynamic columns</p>
+<p><strong>Usage</strong>: Can be opened in Excel, R, Python, or any statistical software</p>
+</section>
+<section id="annotations.json" class="level3" data-number="3.10.2">
+<h3 data-number="3.10.2" class="anchored" data-anchor-id="annotations.json"><span class="header-section-number">3.10.2</span> annotations.json</h3>
+<p><strong>Format</strong>: JSON</p>
+<p><strong>Contents</strong>: All annotation data including: - Point coordinates - Annotation mode (line/spline) - Feature labels - Colors - Timestamps - Locked status</p>
+<p><strong>Structure</strong>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"slice_0"</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"id"</span><span class="fu">:</span> <span class="st">"GAP_0"</span><span class="fu">,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"feature"</span><span class="fu">:</span> <span class="st">"GAP"</span><span class="fu">,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"points"</span><span class="fu">:</span> <span class="ot">[[</span><span class="er">x1</span><span class="ot">,</span> <span class="er">y1</span><span class="ot">],</span> <span class="ot">[</span><span class="er">x2</span><span class="ot">,</span> <span class="er">y2</span><span class="ot">],</span> <span class="er">...</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"mode"</span><span class="fu">:</span> <span class="st">"line"</span><span class="fu">,</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"color"</span><span class="fu">:</span> <span class="st">"#FF0000"</span><span class="fu">,</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"locked"</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"timestamp"</span><span class="fu">:</span> <span class="st">"2025-01-01T10:00:00"</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="config.json" class="level3" data-number="3.10.3">
+<h3 data-number="3.10.3" class="anchored" data-anchor-id="config.json"><span class="header-section-number">3.10.3</span> config.json</h3>
+<p><strong>Format</strong>: JSON</p>
+<p><strong>Contents</strong>: Column definitions including: - Column names - Key bindings - Data types - Colors</p>
+<p><strong>Usage</strong>: Load this file to quickly restore your analysis setup in future sessions</p>
+</section>
+</section>
+</section>
+<section id="carlquant-section-1" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> CarlQuant Section</h1>
+<p>The CarlQuant Section implements advanced quantitative analysis algorithms specifically developed for OCT lesion depth analysis. This module offers automated lesion depth detection, region-of-interest extraction, batch processing with consistent parameters, and comprehensive statistical analysis for research studies.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/03_CarlQuant_mainWindow.png" class="img-fluid figure-img"></p>
+<figcaption>OCTexVIEW CarlQuant Section Main Window</figcaption>
+</figure>
+</div>
+<section id="typical-workflow-2" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="typical-workflow-2"><span class="header-section-number">4.1</span> Typical Workflow</h2>
+<ol type="1">
+<li><strong>Load Specimens</strong>: Click “Select Folder” and choose a folder containing OCT image stacks</li>
+<li><strong>Enter Metadata</strong>: Provide Operator and Measurement information when prompted</li>
+<li><strong>Configure Settings</strong>:
+<ul>
+<li>Select number of regions (must be even number)</li>
+<li>Choose detection method (Combined recommended)</li>
+</ul></li>
+<li><strong>Define Analysis Parameters</strong> (per specimen/slice):
+<ul>
+<li>Click four points to define region boundaries</li>
+<li>Drag rectangles to define AIR exclusion zones (if needed)</li>
+</ul></li>
+<li><strong>Start Analysis</strong>: Click “Start Analyzing” to process all specimens</li>
+<li><strong>Review Results</strong>:
+<ul>
+<li>Select specimens in the table to view results</li>
+<li>Double-click rows to open A-Scan viewer for detailed inspection</li>
+<li>Toggle overlays (H key) to visualize detection results</li>
+</ul></li>
+<li><strong>Export Data</strong>: Results are automatically saved to CSV files</li>
+</ol>
+<p><strong>Details</strong>: The “Start Analyzing” button processes all loaded specimens sequentially. Each specimen is analyzed independently with the same settings. Progress is shown in the specimen table’s STATE column.</p>
+</section>
+<section id="load-images-panel-1" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="load-images-panel-1"><span class="header-section-number">4.2</span> Load Images Panel</h2>
+<p>The Load Images Panel manages specimen selection and initiates the analysis workflow.</p>
+<section id="select-folder-2" class="level3" data-number="4.2.1">
+<h3 data-number="4.2.1" class="anchored" data-anchor-id="select-folder-2"><span class="header-section-number">4.2.1</span> Select Folder</h3>
+<p><strong>Purpose</strong>: Choose a folder containing CarlQuant data files.</p>
+<p><strong>Details</strong>: Selects a folder containing OCT image stacks for analysis. The system automatically detects all image folders (excluding ‘annotations’ subdirectories) and loads them as specimens. Each specimen folder should contain a series of image files (PNG, JPG, TIF, TIFF).</p>
+<p><strong>Metadata Handling</strong>: When selecting a folder, you’ll be prompted to enter Operator and Measurement metadata if not already set. This metadata is used to create unique data folders (Data_{operator}_{measurement}) for each analysis session, allowing multiple analyses with different parameters without overwriting previous results.</p>
+</section>
+<section id="remove-selected" class="level3" data-number="4.2.2">
+<h3 data-number="4.2.2" class="anchored" data-anchor-id="remove-selected"><span class="header-section-number">4.2.2</span> Remove Selected</h3>
+<p><strong>Purpose</strong>: Remove the selected specimen from the list to exclude it from processing.</p>
+<p><strong>Details</strong>: Removes the currently selected specimen from the processing queue. This does not delete any files, only excludes the specimen from the current analysis batch.</p>
+</section>
+<section id="start-analyzing" class="level3" data-number="4.2.3">
+<h3 data-number="4.2.3" class="anchored" data-anchor-id="start-analyzing"><span class="header-section-number">4.2.3</span> Start Analyzing</h3>
+<p><strong>Purpose</strong>: Begin analyzing the selected CarlQuant data folder.</p>
+<p><strong>Details</strong>: Initiates batch processing of all loaded specimens using the configured detection method and region settings. The analysis runs in a background thread to keep the UI responsive. Progress is displayed in the status bar and specimen table.</p>
+</section>
+</section>
+<section id="settings-panel" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="settings-panel"><span class="header-section-number">4.3</span> Settings Panel</h2>
+<p>The Settings Panel configures analysis parameters that apply to all specimens in the batch.</p>
+<section id="regions-n" class="level3" data-number="4.3.1">
+<h3 data-number="4.3.1" class="anchored" data-anchor-id="regions-n"><span class="header-section-number">4.3.1</span> Regions (n)</h3>
+<p><strong>Purpose</strong>: Number of regions to extract from the specimen.</p>
+<p><strong>Options</strong>: 2, 4, 6, 8, 10 (even numbers only)</p>
+<p><strong>Details</strong>: Must be an even number for equal split between sound and lesion areas. For example, selecting 6 regions will extract 3 sound regions and 3 lesion regions from each specimen. The regions are automatically positioned based on the defined region boundaries.</p>
+<p><strong>Note</strong>: This dropdown is locked when existing results are loaded to prevent inconsistencies. To change the region count, remove the specimen and re-analyze.</p>
+<p><strong>Default</strong>: 6</p>
+</section>
+<section id="method" class="level3" data-number="4.3.2">
+<h3 data-number="4.3.2" class="anchored" data-anchor-id="method"><span class="header-section-number">4.3.2</span> Method</h3>
+<p><strong>Purpose</strong>: Lesion depth detection algorithm.</p>
+<p><strong>Options</strong>:</p>
+<ul>
+<li><p><strong>Combined (Recommended)</strong>: Intelligently combines multiple methods using stability analysis. Filters out unstable methods (SD &gt; 20px) and uses weighted averaging to preserve natural lesion texture. Provides the most robust results across different lesion types.</p></li>
+<li><p><strong>Knee Point</strong>: Two-line fitting to find the transition point where intensity decay changes slope. Best for sharp exponential decay patterns. Fits an exponential model and finds the ‘elbow’ point.</p></li>
+<li><p><strong>Inflection</strong>: Sigmoid curve inflection point (50% transition, maximum rate of change). Ideal for smooth S-shaped intensity transitions.</p></li>
+<li><p><strong>Shoulder</strong>: Sigmoid shoulder point (15% from upper asymptote). Detects the early transition region, useful for identifying the start of lesion penetration.</p></li>
+</ul>
+<p><strong>Default</strong>: Combined</p>
+</section>
+<section id="operator-1" class="level3" data-number="4.3.3">
+<h3 data-number="4.3.3" class="anchored" data-anchor-id="operator-1"><span class="header-section-number">4.3.3</span> Operator</h3>
+<p><strong>Purpose</strong>: Enter the operator’s name or initials.</p>
+<p><strong>Details</strong>: This will be included in the analysis metadata and used to create the data folder name (Data_{operator}_{measurement}). Allows tracking of who performed the analysis.</p>
+</section>
+<section id="measurement-1" class="level3" data-number="4.3.4">
+<h3 data-number="4.3.4" class="anchored" data-anchor-id="measurement-1"><span class="header-section-number">4.3.4</span> Measurement</h3>
+<p><strong>Purpose</strong>: Enter the measurement number or ID.</p>
+<p><strong>Details</strong>: Must be a numeric value for tracking purposes. Used in combination with the operator name to create unique data folders for each analysis session. This allows multiple measurements of the same specimens without overwriting previous results.</p>
+</section>
+</section>
+<section id="specimen-table" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="specimen-table"><span class="header-section-number">4.4</span> Specimen Table</h2>
+<p>The specimen table displays all loaded specimens and their processing status.</p>
+<section id="columns" class="level3" data-number="4.4.1">
+<h3 data-number="4.4.1" class="anchored" data-anchor-id="columns"><span class="header-section-number">4.4.1</span> Columns</h3>
+<ul>
+<li><strong>SPECIMEN_ID</strong>: Unique identifier (folder name) of the specimen</li>
+<li><strong>SLICES</strong>: Number of image slices in the specimen</li>
+<li><strong>REGIONS</strong>: Number of configured regions (e.g., “6 regions”)</li>
+<li><strong>AIR</strong>: Location of the air used to define automatic thresholding for surface detection</li>
+<li><strong>STATE</strong>: Current processing status (New, Analyzing, Analyzed, Displayed)</li>
+</ul>
+</section>
+<section id="interaction" class="level3" data-number="4.4.2">
+<h3 data-number="4.4.2" class="anchored" data-anchor-id="interaction"><span class="header-section-number">4.4.2</span> Interaction</h3>
+<p><strong>Single Click</strong>: Select a specimen to view in the image viewer and results panels</p>
+<p><strong>Row Highlighting</strong>: Selected specimens are highlighted in yellow for easy identification</p>
+<p><strong>Status Updates</strong>: The STATE column updates in real-time during batch processing</p>
+</section>
+</section>
+<section id="image-viewer-panel" class="level2" data-number="4.5">
+<h2 data-number="4.5" class="anchored" data-anchor-id="image-viewer-panel"><span class="header-section-number">4.5</span> Image Viewer Panel</h2>
+<p>The image viewer provides interactive tools for visualizing OCT images and defining analysis parameters.</p>
+<section id="navigation-controls-1" class="level3" data-number="4.5.1">
+<h3 data-number="4.5.1" class="anchored" data-anchor-id="navigation-controls-1"><span class="header-section-number">4.5.1</span> Navigation Controls</h3>
+<p><strong>Keyboard Shortcuts</strong>: - <strong>Arrow Keys (←/→/↑/↓)</strong>: Navigate between images - <strong>Mouse Wheel</strong>: Zoom in/out - <strong>Ctrl + Mouse Wheel</strong>: Zoom in/out (alternative) - <strong>Ctrl + Drag</strong>: Pan the zoomed image - <strong>H Key</strong>: Toggle overlay visibility</p>
+</section>
+<section id="region-boundary-definition" class="level3" data-number="4.5.2">
+<h3 data-number="4.5.2" class="anchored" data-anchor-id="region-boundary-definition"><span class="header-section-number">4.5.2</span> Region Boundary Definition</h3>
+<p><strong>Purpose</strong>: Define the boundaries between sound and lesion tissue regions.</p>
+<p><strong>Method</strong>: Click four points on the image to define two boundary lines: 1. Click to set the first point of the sound-lesion boundary 2. Click to set the second point (completes first boundary line) 3. Click to set the first point of the second boundary 4. Click to set the second point (completes second boundary line)</p>
+<p><strong>Visual Feedback</strong>: Boundary lines are drawn in cyan with control points visible. The region between the boundaries is where lesion depth analysis will be performed.</p>
+<p><strong>Details</strong>: The two boundary lines define the region of interest where the software will extract intensity profiles for lesion depth analysis. The boundaries should encompass the area where the lesion transitions from sound to demineralized tissue.</p>
+</section>
+<section id="air-selection" class="level3" data-number="4.5.3">
+<h3 data-number="4.5.3" class="anchored" data-anchor-id="air-selection"><span class="header-section-number">4.5.3</span> AIR Selection</h3>
+<p><strong>Purpose</strong>: Define rectangular regions as air used for automatic thresholding of the tissue surface.</p>
+<p><strong>Method</strong>: Click and drag on the image to draw a rectangle: 1. Click and hold at one corner 2. Drag to the opposite corner 3. Release to complete the rectangle</p>
+<p><strong>Automatic Mode Detection</strong>: The system automatically distinguishes between clicks (region boundary) and drags (AIR selection) based on mouse movement distance (threshold: 5 pixels).</p>
+<p><strong>Visual Feedback</strong>: AIR rectangles are drawn in as cyan rectangles</p>
+<p><strong>Details</strong>: AIR regions are used to define the automatic thresholding for surface detection. The software will automatically detect the tissue surface based on the air regions mean intensity values.</p>
+</section>
+<section id="overlay-visualization" class="level3" data-number="4.5.4">
+<h3 data-number="4.5.4" class="anchored" data-anchor-id="overlay-visualization"><span class="header-section-number">4.5.4</span> Overlay Visualization</h3>
+<p><strong>Purpose</strong>: Toggle display of analysis results and annotations.</p>
+<p><strong>Keyboard Shortcut</strong>: <strong>H Key</strong></p>
+<p><strong>Overlay Types</strong>: - <strong>Surface Detection</strong>: Green line showing detected tissue surface - <strong>Lesion Depth</strong>: Magenta line showing detected lesion depth - <strong>Extraction Regions</strong>: Colored rectangles showing sound (green) and lesion (red) regions - <strong>Region Boundaries</strong>: Cyan lines showing user-defined boundaries - <strong>AIR Regions</strong>: Cyan rectangles air region - <strong>Region Markers</strong>: Labels (S1, S2, L1, L2, etc.) identifying each extraction region</p>
+</section>
+<section id="zoom-and-pan-1" class="level3" data-number="4.5.5">
+<h3 data-number="4.5.5" class="anchored" data-anchor-id="zoom-and-pan-1"><span class="header-section-number">4.5.5</span> Zoom and Pan</h3>
+<p><strong>Zoom Controls</strong>: - <strong>Mouse Wheel</strong>: Zoom in/out (centered on cursor position) - <strong>Ctrl + Mouse Wheel</strong>: Alternative zoom control - <strong>Zoom Range</strong>: 0.1x to 10x magnification</p>
+<p><strong>Pan Controls</strong>: - <strong>Ctrl + Left Click + Drag</strong>: Pan the zoomed image - <strong>Auto-centering</strong>: Image automatically centers when zoomed</p>
+</section>
+</section>
+<section id="results-table-1" class="level2" data-number="4.6">
+<h2 data-number="4.6" class="anchored" data-anchor-id="results-table-1"><span class="header-section-number">4.6</span> Results Table</h2>
+<p>The results table displays quantitative measurements for each analyzed slice.</p>
+<section id="dynamic-columns-1" class="level3" data-number="4.6.1">
+<h3 data-number="4.6.1" class="anchored" data-anchor-id="dynamic-columns-1"><span class="header-section-number">4.6.1</span> Dynamic Columns</h3>
+<p>The table structure adapts based on the configured number of regions:</p>
+<p><strong>Fixed Columns</strong>: - <strong>SPECIMEN_ID</strong>: Specimen identifier - <strong>SLICE</strong>: Slice number (1-based)</p>
+<p><strong>Sound Region Columns</strong> (e.g., SOUND_1, SOUND_2, SOUND_3): - Median intensity value for each sound region - Values represent the baseline tissue intensity</p>
+<p><strong>Lesion Region Columns</strong> (e.g., LESION_1, LESION_2, LESION_3): - Median intensity value for each lesion region - Values represent the demineralized tissue intensity</p>
+<p><strong>Analysis Columns</strong>: - <strong>LESION_DEPTH_MEAN</strong>: Mean lesion depth in pixels - <strong>IS_CAVITATED</strong>: TRUE/FALSE indicating surface cavitation detection</p>
+</section>
+<section id="interaction-1" class="level3" data-number="4.6.2">
+<h3 data-number="4.6.2" class="anchored" data-anchor-id="interaction-1"><span class="header-section-number">4.6.2</span> Interaction</h3>
+<p><strong>Single Click</strong>: Select individual cells</p>
+<p><strong>Copy</strong>: Use Ctrl+C to copy selected cells</p>
+<p><strong>Double-Click Row</strong>: Opens the A-Scan Viewer for detailed inspection of that slice</p>
+<p><strong>Row Highlighting</strong>: Double-clicked rows are highlighted in dark green</p>
+</section>
+<section id="table-features" class="level3" data-number="4.6.3">
+<h3 data-number="4.6.3" class="anchored" data-anchor-id="table-features"><span class="header-section-number">4.6.3</span> Table Features</h3>
+<ul>
+<li><strong>Auto-scroll</strong>: Table automatically scrolls to show the current specimen</li>
+<li><strong>Dynamic Width</strong>: Columns automatically adjust width based on content</li>
+<li><strong>Color Coding</strong>: Dark theme with high-contrast text for readability</li>
+</ul>
+</section>
+</section>
+<section id="a-scan-viewer" class="level2" data-number="4.7">
+<h2 data-number="4.7" class="anchored" data-anchor-id="a-scan-viewer"><span class="header-section-number">4.7</span> A-Scan Viewer</h2>
+<p>The A-Scan Viewer provides detailed visualization of intensity profiles for individual A-scans (vertical columns).</p>
+<section id="opening-the-viewer" class="level3" data-number="4.7.1">
+<h3 data-number="4.7.1" class="anchored" data-anchor-id="opening-the-viewer"><span class="header-section-number">4.7.1</span> Opening the Viewer</h3>
+<p><strong>Method</strong>: Double-click any row in the Results Table</p>
+<p><strong>Details</strong>: Opens a non-blocking popup window showing the intensity profile for the selected slice. The main application remains interactive while the viewer is open.</p>
+</section>
+<section id="display-options" class="level3" data-number="4.7.2">
+<h3 data-number="4.7.2" class="anchored" data-anchor-id="display-options"><span class="header-section-number">4.7.2</span> Display Options</h3>
+<p><strong>Checkboxes</strong> (toggle visualization elements):</p>
+<ul>
+<li><strong>Surface Points</strong>: Show detected surface points (green)</li>
+<li><strong>Knee Point</strong>: Show knee point depth detection (blue)</li>
+<li><strong>Sigmoid Inflection</strong>: Show sigmoid inflection point (orange)</li>
+<li><strong>Sigmoid Shoulder</strong>: Show sigmoid shoulder point (purple)</li>
+<li><strong>Combined Depth</strong>: Show combined depth result (magenta, bold)</li>
+<li><strong>Exp2 Fit Curve</strong>: Show exponential fit curve overlay</li>
+<li><strong>Sigmoid Fit Curve</strong>: Show sigmoid fit curve overlay</li>
+<li><strong>Zoom to Analysis</strong>: Zoom plot to analysis region (surface to lesion depth)</li>
+</ul>
+<p><strong>Default Active</strong>: Surface Points, Combined Depth</p>
+</section>
+<section id="a-scan-slider" class="level3" data-number="4.7.3">
+<h3 data-number="4.7.3" class="anchored" data-anchor-id="a-scan-slider"><span class="header-section-number">4.7.3</span> A-Scan Slider</h3>
+<p><strong>Purpose</strong>: Select which column (A-scan) to display.</p>
+<p><strong>Range</strong>: 0 to image width - 1</p>
+<p><strong>Default</strong>: Middle column of the image</p>
+<p><strong>Details</strong>: Drag the slider to view different A-scans across the image width. The column number is displayed next to the slider. An indicator line appears on the main image viewer showing the current A-scan position.</p>
+</section>
+<section id="plot-features" class="level3" data-number="4.7.4">
+<h3 data-number="4.7.4" class="anchored" data-anchor-id="plot-features"><span class="header-section-number">4.7.4</span> Plot Features</h3>
+<p><strong>X-Axis</strong>: Intensity (gray values 0-255)</p>
+<p><strong>Y-Axis</strong>: Depth (y-position in pixels, inverted so surface is at top)</p>
+<p><strong>Interactive Elements</strong>: - Hover over detection points to see exact values - Zoom to analysis region to focus on the lesion area - Multiple detection methods can be displayed simultaneously for comparison</p>
+<p><strong>Synchronization</strong>: The A-Scan viewer automatically updates when you navigate to a different slice in the main image viewer.</p>
+</section>
+<section id="keyboard-shortcuts-1" class="level3" data-number="4.7.5">
+<h3 data-number="4.7.5" class="anchored" data-anchor-id="keyboard-shortcuts-1"><span class="header-section-number">4.7.5</span> Keyboard Shortcuts</h3>
+<ul>
+<li><strong>Escape</strong>: Close the A-Scan viewer</li>
+</ul>
+</section>
+</section>
+<section id="data-persistence-1" class="level2" data-number="4.8">
+<h2 data-number="4.8" class="anchored" data-anchor-id="data-persistence-1"><span class="header-section-number">4.8</span> Data Persistence</h2>
+<section id="auto-save-1" class="level3" data-number="4.8.1">
+<h3 data-number="4.8.1" class="anchored" data-anchor-id="auto-save-1"><span class="header-section-number">4.8.1</span> Auto-Save</h3>
+<p><strong>Details</strong>: All analysis results are automatically saved after processing each specimen. This includes: - Configuration (region boundaries, AIR zones, detection method) - Surface detection results - Lesion depth measurements - Extraction region statistics</p>
+</section>
+<section id="file-structure" class="level3" data-number="4.8.2">
+<h3 data-number="4.8.2" class="anchored" data-anchor-id="file-structure"><span class="header-section-number">4.8.2</span> File Structure</h3>
+<p><strong>Data Folder</strong>: <code>Data_{operator}_{measurement}/</code></p>
+<p>Located in each specimen folder, this directory contains:</p>
+<p><strong>Files</strong>: - <code>config.json</code> - Analysis configuration (regions, AIR, boundaries, metadata) - <code>results.csv</code> - Quantitative results table - <code>annotations/</code> - Subdirectory with detailed annotation data</p>
+<p><strong>Multiple Analyses</strong>: Different operator/measurement combinations create separate data folders, allowing multiple analyses without overwriting previous results.</p>
+</section>
+<section id="configuration-file-config.json" class="level3" data-number="4.8.3">
+<h3 data-number="4.8.3" class="anchored" data-anchor-id="configuration-file-config.json"><span class="header-section-number">4.8.3</span> Configuration File (config.json)</h3>
+<p><strong>Format</strong>: JSON</p>
+<p><strong>Contents</strong>: - Region boundary coordinates - AIR exclusion zones - Detection method used - Operator and measurement metadata - Timestamp</p>
+<p><strong>Usage</strong>: Automatically loaded when reopening a specimen with existing results</p>
+</section>
+<section id="results-file-results.csv" class="level3" data-number="4.8.4">
+<h3 data-number="4.8.4" class="anchored" data-anchor-id="results-file-results.csv"><span class="header-section-number">4.8.4</span> Results File (results.csv)</h3>
+<p><strong>Format</strong>: Comma-separated values</p>
+<p><strong>Contents</strong>: Complete results table with all columns: - Specimen ID and slice number - Sound region median intensities - Lesion region median intensities - Mean lesion depth - Cavitation status</p>
+<p><strong>Usage</strong>: Can be opened in Excel, R, Python, or any statistical software for further analysis</p>
+</section>
+<section id="annotations-folder" class="level3" data-number="4.8.5">
+<h3 data-number="4.8.5" class="anchored" data-anchor-id="annotations-folder"><span class="header-section-number">4.8.5</span> Annotations Folder</h3>
+<p><strong>Contents</strong>: annotated images as png files: - Surface detection coordinates per slice - Lesion depth coordinates per slice - Extraction region boundaries per slice</p>
+<p><strong>Usage</strong>: Used for visualization overlays and detailed inspection</p>
+</section>
+</section>
+<section id="output-data" class="level2" data-number="4.9">
+<h2 data-number="4.9" class="anchored" data-anchor-id="output-data"><span class="header-section-number">4.9</span> Output Data</h2>
+<section id="quantitative-measurements" class="level3" data-number="4.9.1">
+<h3 data-number="4.9.1" class="anchored" data-anchor-id="quantitative-measurements"><span class="header-section-number">4.9.1</span> Quantitative Measurements</h3>
+<p><strong>Per Slice</strong>: - <strong>Sound Region Medians</strong>: Baseline intensity values (n regions) - <strong>Lesion Region Medians</strong>: Demineralized tissue intensity values (n regions) - <strong>Lesion Depth Mean</strong>: Average depth of lesion penetration (pixels) - <strong>Cavitation Status</strong>: Boolean indicating surface cavitation</p>
+<p><strong>Statistical Measures</strong>: - Median intensity per region (robust to outliers) - Mean lesion depth across all A-scans in the region - Standard deviation of depth measurements (stored in detailed results)</p>
+</section>
+<section id="region-extraction" class="level3" data-number="4.9.2">
+<h3 data-number="4.9.2" class="anchored" data-anchor-id="region-extraction"><span class="header-section-number">4.9.2</span> Region Extraction</h3>
+<p><strong>Sound Regions</strong>: Extracted from the area above the first boundary line, representing healthy tissue baseline</p>
+<p><strong>Lesion Regions</strong>: Extracted from the area between the two boundary lines, representing demineralized tissue</p>
+<p><strong>Spatial Distribution</strong>: Regions are evenly distributed across the defined boundaries to capture spatial variation</p>
+</section>
+<section id="depth-detection-methods" class="level3" data-number="4.9.3">
+<h3 data-number="4.9.3" class="anchored" data-anchor-id="depth-detection-methods"><span class="header-section-number">4.9.3</span> Depth Detection Methods</h3>
+<p><strong>Combined Method</strong> (Recommended): - Uses stability analysis to filter unreliable methods - Weighted averaging of stable methods - Preserves natural lesion texture - Most robust across different lesion types</p>
+<p><strong>Individual Methods</strong>: - <strong>Knee Point</strong>: Best for sharp transitions - <strong>Inflection</strong>: Best for smooth S-curves - <strong>Shoulder</strong>: Best for early transition detection</p>
+<p><strong>Method Selection</strong>: The Combined method automatically selects the most appropriate individual methods based on signal quality and stability metrics.</p>
+</section>
+</section>
+<section id="advanced-features" class="level2" data-number="4.10">
+<h2 data-number="4.10" class="anchored" data-anchor-id="advanced-features"><span class="header-section-number">4.10</span> Advanced Features</h2>
+<section id="cavitation-detection" class="level3" data-number="4.10.1">
+<h3 data-number="4.10.1" class="anchored" data-anchor-id="cavitation-detection"><span class="header-section-number">4.10.1</span> Cavitation Detection</h3>
+<p><strong>Purpose</strong>: Automatically detect surface cavitation (material loss)</p>
+<p><strong>Method</strong>: Analyzes surface profile for significant deviations from expected smooth surface</p>
+<p><strong>Output</strong>: Boolean flag (TRUE/FALSE) in results table</p>
+<p><strong>Usage</strong>: Helps identify specimens with advanced lesion progression</p>
+</section>
+<section id="multi-session-analysis" class="level3" data-number="4.10.2">
+<h3 data-number="4.10.2" class="anchored" data-anchor-id="multi-session-analysis"><span class="header-section-number">4.10.2</span> Multi-Session Analysis</h3>
+<p><strong>Purpose</strong>: Perform multiple analyses with different parameters without data loss</p>
+<p><strong>Method</strong>: Each operator/measurement combination creates a separate data folder</p>
+<p><strong>Benefits</strong>: - Compare different detection methods - Track repeated measurements - Preserve historical analysis data</p>
+</section>
+<section id="memory-management" class="level3" data-number="4.10.3">
+<h3 data-number="4.10.3" class="anchored" data-anchor-id="memory-management"><span class="header-section-number">4.10.3</span> Memory Management</h3>
+<p><strong>Optimization</strong>: Results are cleared from memory after saving and reloaded on-demand</p>
+<p><strong>Benefits</strong>: - Reduced RAM usage during batch processing - Faster processing of large datasets - Stable performance with hundreds of specimens</p>
+</section>
+</section>
+<section id="keyboard-shortcuts-2" class="level2" data-number="4.11">
+<h2 data-number="4.11" class="anchored" data-anchor-id="keyboard-shortcuts-2"><span class="header-section-number">4.11</span> Keyboard Shortcuts</h2>
+<section id="global-shortcuts-1" class="level3" data-number="4.11.1">
+<h3 data-number="4.11.1" class="anchored" data-anchor-id="global-shortcuts-1"><span class="header-section-number">4.11.1</span> Global Shortcuts</h3>
+<ul>
+<li><strong>Arrow Keys (←/→/↑/↓)</strong>: Navigate between images</li>
+<li><strong>Mouse Wheel</strong>: Zoom in/out</li>
+<li><strong>Ctrl + Mouse Wheel</strong>: Alternative zoom</li>
+<li><strong>Ctrl + Drag</strong>: Pan zoomed image</li>
+<li><strong>H</strong>: Toggle overlay visibility</li>
+<li><strong>Escape</strong>: Close A-Scan viewer (when open)</li>
+</ul>
+</section>
+<section id="mouse-interactions" class="level3" data-number="4.11.2">
+<h3 data-number="4.11.2" class="anchored" data-anchor-id="mouse-interactions"><span class="header-section-number">4.11.2</span> Mouse Interactions</h3>
+<ul>
+<li><strong>Click</strong>: Add region boundary point (4-click mode)</li>
+<li><strong>Click + Drag</strong>: Define AIR exclusion rectangle</li>
+<li><strong>Ctrl + Drag</strong>: Pan zoomed image</li>
+<li><strong>Double-Click Row</strong>: Open A-Scan viewer</li>
+</ul>
+</section>
+</section>
+<section id="troubleshooting" class="level2" data-number="4.12">
+<h2 data-number="4.12" class="anchored" data-anchor-id="troubleshooting"><span class="header-section-number">4.12</span> Troubleshooting</h2>
+<section id="region-dropdown-locked" class="level3" data-number="4.12.1">
+<h3 data-number="4.12.1" class="anchored" data-anchor-id="region-dropdown-locked"><span class="header-section-number">4.12.1</span> Region Dropdown Locked</h3>
+<p><strong>Cause</strong>: Existing results are loaded for the current operator/measurement</p>
+<p><strong>Solution</strong>: Remove the specimen and re-analyze, or use a different measurement number</p>
+</section>
+<section id="no-results-displayed" class="level3" data-number="4.12.2">
+<h3 data-number="4.12.2" class="anchored" data-anchor-id="no-results-displayed"><span class="header-section-number">4.12.2</span> No Results Displayed</h3>
+<p><strong>Cause</strong>: Specimen has not been analyzed yet, or analysis failed</p>
+<p><strong>Solution</strong>: Ensure region boundaries are defined, then click “Start Analyzing”</p>
+</section>
+<section id="air-selection-not-working" class="level3" data-number="4.12.3">
+<h3 data-number="4.12.3" class="anchored" data-anchor-id="air-selection-not-working"><span class="header-section-number">4.12.3</span> AIR Selection Not Working</h3>
+<p><strong>Cause</strong>: Dragging too slowly (below threshold)</p>
+<p><strong>Solution</strong>: Click and drag more quickly, or increase drag distance beyond 5 pixels</p>
+</section>
+<section id="a-scan-viewer-shows-no-data" class="level3" data-number="4.12.4">
+<h3 data-number="4.12.4" class="anchored" data-anchor-id="a-scan-viewer-shows-no-data"><span class="header-section-number">4.12.4</span> A-Scan Viewer Shows No Data</h3>
+<p><strong>Cause</strong>: Results not loaded or slice index out of range</p>
+<p><strong>Solution</strong>: Ensure the specimen has been analyzed and results are saved</p>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

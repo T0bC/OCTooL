@@ -1,0 +1,193 @@
+{
+  "carlquant_getting_started": {
+    "layout": "comprehensive_guide",
+    "title": {
+      "text": "◆ CARL QUANT - GETTING STARTED",
+      "color": "header_workflow"
+    },
+    "workflow_steps": [
+      {
+        "number": "1",
+        "title": "Load Images",
+        "panel": "Left Panel",
+        "actions": [
+          "▸ Click 'Select Folder' button",
+          "▸ Choose directory with OCT image stacks",
+          "▸ Each subfolder = one specimen"
+        ]
+      },
+      {
+        "number": "2",
+        "title": "Review Specimens",
+        "panel": "Specimen Table",
+        "actions": [
+          "▸ View loaded specimens in table",
+          "▸ Click specimen to select",
+          "▸ Check slice count and status"
+        ]
+      },
+      {
+        "number": "3",
+        "title": "Define Regions",
+        "panel": "Image Viewer",
+        "actions": [
+          "▸ REGION: Click 4× for boundaries",
+          "▸ Order: specimen start → lesion start → lesion end → specimen end",
+          "▸ AIR: Click & drag rectangle | Applies to ALL slices"
+        ]
+      },
+      {
+        "number": "4",
+        "title": "Configure Settings",
+        "panel": "Settings Panel",
+        "actions": [
+          "▸ Set operator name & measurement #",
+          "▸ Select detection method (default: Combined)",
+          "▸ Adjust region count if needed"
+        ]
+      },
+      {
+        "number": "5",
+        "title": "Start Analysis",
+        "panel": "Left Panel",
+        "actions": [
+          "▸ Click 'Start Analyzing' button",
+          "▸ Results saved to Data_[operator]_[measurement]",
+          "▸ Configuration auto-saved"
+        ]
+      }
+    ],
+    "quick_tips": {
+      "header": "💡 QUICK TIPS",
+      "tips": [
+        "◄ ► Navigate slices",
+        "⊕ Ctrl+Wheel: Zoom in/out",
+        "✋ Ctrl+Drag: Pan image",
+        "⌨ H key: Toggle overlays",
+        "▬ Yellow lines = Regions",
+        "▭ Cyan box = AIR",
+        "🖱️ Double-click slice in results → Opens A-scan viewer"
+      ]
+    }
+  },
+  "analyze_getting_started": {
+    "layout": "comprehensive_guide",
+    "title": {
+      "text": "◆ ANALYZE - GETTING STARTED",
+      "color": "header_workflow"
+    },
+    "workflow_steps": [
+      {
+        "number": "1",
+        "title": "Load Images",
+        "panel": "Load Panel",
+        "actions": [
+          "▸ Click 'Select Folder' to choose image directory",
+          "▸ Optional: 'Load Config' for existing table config",
+          "▸ Browse and select image stack"
+        ]
+      },
+      {
+        "number": "2",
+        "title": "Create Config",
+        "panel": "Add Columns Panel",
+        "actions": [
+          "▸ Column name: Mixed case + underscores (e.g., tG, gap_width)",
+          "▸ Meta/Comments: CAPITALS + underscores only",
+          "▸ Set key binding, data type, color → Add column"
+        ]
+      },
+      {
+        "number": "3",
+        "title": "Finalize Config",
+        "panel": "Add Columns Panel",
+        "actions": [
+          "▸ Review config with 'Show Config' button",
+          "▸ Define metadata fields if needed",
+          "▸ Save config to desired location"
+        ]
+      },
+      {
+        "number": "4",
+        "title": "Annotate Images",
+        "panel": "Image Viewer",
+        "actions": [
+          "▸ Click to add points | Right-click to remove",
+          "▸ Press key binding when feature complete",
+          "▸ Auto-saves after each annotation | Resume anytime"
+        ]
+      }
+    ],
+    "quick_tips": {
+      "header": "💡 QUICK TIPS",
+      "tips": [
+        "◄ ► Navigate frames",
+        "⊕ Ctrl+Wheel: Zoom",
+        "✋ Drag points to adjust",
+        "⌨ H key: Toggle annotations",
+        "🖱️ Left-click: Add | Right-click: Remove",
+        "💾 Auto-saves to disk"
+      ]
+    }
+  },
+  "export_getting_started": {
+    "layout": "comprehensive_guide",
+    "title": {
+      "text": "◆ EXPORT - GETTING STARTED",
+      "color": "header_workflow"
+    },
+    "workflow_steps": [
+      {
+        "number": "1",
+        "title": "Load Images",
+        "panel": "Load Panel",
+        "actions": [
+          "▸ Select source folder with images",
+          "▸ Preview loaded image stack",
+          "▸ Verify image count and format"
+        ]
+      },
+      {
+        "number": "2",
+        "title": "Configure Global Settings",
+        "panel": "Global Settings",
+        "actions": [
+          "▸ Set output resolution",
+          "▸ Choose export format (PNG, TIFF, etc.)",
+          "▸ Configure compression settings"
+        ]
+      },
+      {
+        "number": "3",
+        "title": "Customize Per-Image",
+        "panel": "Custom Settings",
+        "actions": [
+          "▸ Add text overlays",
+          "▸ Set scale bars",
+          "▸ Configure annotations"
+        ]
+      },
+      {
+        "number": "4",
+        "title": "Execute Export",
+        "panel": "Execution Panel",
+        "actions": [
+          "▸ Review export settings",
+          "▸ Click 'Start Export' button",
+          "▸ Monitor progress"
+        ]
+      }
+    ],
+    "quick_tips": {
+      "header": "💡 QUICK TIPS",
+      "tips": [
+        "◄ ► Navigate images",
+        "⊕ Preview before export",
+        "📁 Batch process folders",
+        "⚙️ Save settings presets",
+        "📊 Add scale bars",
+        "🎨 Customize overlays"
+      ]
+    }
+  }
+}

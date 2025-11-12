@@ -7,7 +7,7 @@ Created on Mon Sep 22 09:45:35 2025
 
 import tkinter as tk
 from tkinter import filedialog
-from ttkbootstrap import ttk
+import ttkbootstrap as ttk
 from datetime import datetime
 import csv
 import textwrap
@@ -22,7 +22,7 @@ class StatusBar:
 
         self.frame = ttk.Frame(parent, bootstyle=bootstyle)
 
-        self.label = ttk.Label(self.frame, text="Ready", anchor="w", bootstyle=bootstyle)
+        self.label = ttk.Label(self.frame, text="Ready", anchor="w", bootstyle=bootstyle, foreground="#E8E8E8")
         self.label.pack(fill="x", padx=5, pady=2)
         self.label.bind("<Button-1>", self.show_log_window)
 
@@ -68,13 +68,13 @@ class StatusBar:
         self._add_tooltip(self.label, message)
 
         colors = {
-            "info": (self.default_bootstyle, "black"),
-            "success": ("success", "black"),
-            "warning": ("warning", "black"),
-            "error": ("danger", "black"),
+            "info": "#E8E8E8",      # Bright gray for info
+            "success": "#4CAF50",   # Bright green for success
+            "warning": "#FFA726",   # Bright orange for warning
+            "error": "#EF5350",     # Bright red for error
         }
-        style, fg = colors.get(level, (self.default_bootstyle, "black"))
-        self.label.config(bootstyle=style)
+        fg = colors.get(level, "#E8E8E8")
+        self.label.config(foreground=fg)
 
         if self._clear_after_id:
             self.label.after_cancel(self._clear_after_id)
@@ -113,6 +113,7 @@ class StatusBar:
 
     def clear(self):
         self.label.config(text="Ready", bootstyle=self.default_bootstyle)
+        self.label.config(foreground="#E8E8E8")
 
     def show_log_window(self, event=None):
         log_window = tk.Toplevel(self.root)
