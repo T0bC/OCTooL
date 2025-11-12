@@ -22,6 +22,14 @@ from utils.about_dialog import AboutDialog
 class MainGui:
     @handle_errors("MainGui.init")
     def __init__(self):
+        # ========================================
+        # DISTRIBUTION CONFIGURATION
+        # Set to True to enable each section, False to hide
+        # ========================================
+        ENABLE_EXPORT = False
+        ENABLE_ANALYZE = False
+        ENABLE_CARLQUANT = True
+        # ========================================
 
         self.mainWin = tk.Tk()
         self.mainWin.withdraw()
@@ -84,24 +92,31 @@ class MainGui:
 
         # %% EXPORT TAB
         # create a frame holding the contents for the tab
-        self.exportTabFrame = ttk.Frame(self.tabParent)
-        self.tabParent.add(self.exportTabFrame, text = 'Export')
-        # Fill the tab with content defined in exportTab.py
-        exportTab.addContent(self, self.exportTabFrame)
+        if ENABLE_EXPORT:
+            self.exportTabFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.exportTabFrame, text = 'Export')
+            # Fill the tab with content defined in exportTab.py
+            exportTab.addContent(self, self.exportTabFrame)
 
 
         # %% Anylyzing Tab
-        self.analyzingFrame = ttk.Frame(self.tabParent)
-        self.tabParent.add(self.analyzingFrame, text = 'Analyze')
-        analyzingTab.addContent(self, self.analyzingFrame)
+        if ENABLE_ANALYZE:
+            self.analyzingFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.analyzingFrame, text = 'Analyze')
+            analyzingTab.addContent(self, self.analyzingFrame)
 
         # %% Carl Quant
-        self.carlQuantFrame = ttk.Frame(self.tabParent)
-        self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
-        carl_quant.addContent(self, self.carlQuantFrame)
+        if ENABLE_CARLQUANT:
+            self.carlQuantFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
+            carl_quant.addContent(self, self.carlQuantFrame)
 
         # Apply custom styles to individual tabs after all tabs are created
         self._apply_tab_colors()
+
+        # Select first available tab after everything is created
+        if self.tab_buttons and self.tabParent.index("end") > 0:
+            self.switch_tab(0)
 
         self.mainWin.update_idletasks()  # Ensure layout is processed
         self.mainWin.deiconify()
@@ -165,6 +180,11 @@ class MainGui:
     @handle_errors("MainGui.create_colored_tab_buttons")
     def create_colored_tab_buttons(self):
         """Create colored buttons that act as tabs, plus Help and About buttons."""
+        # Get configuration from __init__
+        ENABLE_EXPORT = False
+        ENABLE_ANALYZE = False
+        ENABLE_CARLQUANT = True
+        
         self.tab_buttons = []
         self.current_tab = 0
         
@@ -177,38 +197,47 @@ class MainGui:
         tab_button_container = ttk.Frame(self.tabBar)
         tab_button_container.grid(row=0, column=0, sticky="w")
 
+        # Track column position for dynamic button placement
+        col_index = 0
+        
         # Export button
-        export_btn = ttk.Button(
-            tab_button_container,
-            text="Export", #📊
-            style="Export.TButton",
-            command=lambda: self.switch_tab(0),
-            takefocus=False  # Prevent button from taking focus
-        )
-        export_btn.grid(row=0, column=0, padx=(0,2))
-        self.tab_buttons.append(export_btn)
+        if ENABLE_EXPORT:
+            export_btn = ttk.Button(
+                tab_button_container,
+                text="Export", #📊
+                style="Export.TButton",
+                command=lambda: self.switch_tab(len([b for b in self.tab_buttons if b.winfo_exists()])),
+                takefocus=False  # Prevent button from taking focus
+            )
+            export_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if ENABLE_ANALYZE or ENABLE_CARLQUANT else 0))
+            self.tab_buttons.append(export_btn)
+            col_index += 1
 
         # Analyze button
-        analyze_btn = ttk.Button(
-            tab_button_container,
-            text="Analyze", #🔬
-            style="Analyze.TButton",
-            command=lambda: self.switch_tab(1),
-            takefocus=False  # Prevent button from taking focus
-        )
-        analyze_btn.grid(row=0, column=1, padx=2)
-        self.tab_buttons.append(analyze_btn)
+        if ENABLE_ANALYZE:
+            analyze_btn = ttk.Button(
+                tab_button_container,
+                text="Analyze", #🔬
+                style="Analyze.TButton",
+                command=lambda: self.switch_tab(len([b for b in self.tab_buttons if b.winfo_exists()])),
+                takefocus=False  # Prevent button from taking focus
+            )
+            analyze_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if ENABLE_CARLQUANT else 0))
+            self.tab_buttons.append(analyze_btn)
+            col_index += 1
 
         # CarlQuant button
-        carlquant_btn = ttk.Button(
-            tab_button_container,
-            text="CarlQuant", #⚡
-            style="CarlQuant.TButton",
-            command=lambda: self.switch_tab(2),
-            takefocus=False  # Prevent button from taking focus
-        )
-        carlquant_btn.grid(row=0, column=2, padx=(2,0))
-        self.tab_buttons.append(carlquant_btn)
+        if ENABLE_CARLQUANT:
+            carlquant_btn = ttk.Button(
+                tab_button_container,
+                text="CarlQuant", #⚡
+                style="CarlQuant.TButton",
+                command=lambda: self.switch_tab(len([b for b in self.tab_buttons if b.winfo_exists()])),
+                takefocus=False  # Prevent button from taking focus
+            )
+            carlquant_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 0))
+            self.tab_buttons.append(carlquant_btn)
+            col_index += 1
         
         # Container for Help and About buttons (right side)
         help_button_container = ttk.Frame(self.tabBar)
