@@ -5,12 +5,18 @@ Created on Sat Oct 10 19:47:52 2020
 
 @author: Tobias Meissner
 """
+import sys
+import os
 import traceback
 import tkinter as tk
+import multiprocessing
 import MainGui as mainGui
 from utils.error_handler import show_error_popup, log_error_to_file
 
 if __name__ == '__main__':
+    # CRITICAL: Required for PyInstaller executables on Windows
+    # Prevents worker processes from re-launching the GUI
+    multiprocessing.freeze_support()
     try:
         myWindow = mainGui.MainGui()
         myWindow.start()
