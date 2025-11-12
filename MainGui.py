@@ -26,8 +26,8 @@ class MainGui:
         # DISTRIBUTION CONFIGURATION
         # Set to True to enable each section, False to hide
         # ========================================
-        self.ENABLE_EXPORT = False
-        self.ENABLE_ANALYZE = False
+        self.ENABLE_EXPORT = True
+        self.ENABLE_ANALYZE = True
         self.ENABLE_CARLQUANT = True
         # ========================================
 
