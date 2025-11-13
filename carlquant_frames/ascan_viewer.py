@@ -17,7 +17,15 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.error_handler import handle_errors
 from carlquant_frames.carl_quant_core import fit_exp2_to_profile, detect_depth_sigmoid_fit
-from carlquant_frames.annotation_colors import ROW_HIGHLIGHT_NAVIGATION_COLOR
+from carlquant_frames.annotation_colors import (
+    ROW_HIGHLIGHT_NAVIGATION_COLOR,
+    ACTUAL_SURFACE_COLOR,
+    INTERPOLATED_SURFACE_COLOR,
+    KNEE_POINT_COLOR,
+    INFLECTION_POINT_COLOR,
+    SHOULDER_POINT_COLOR,
+    LESION_DEPTH_PRIMARY_COLOR
+)
 
 
 class AScanViewer:
@@ -454,7 +462,7 @@ class AScanViewer:
                     intensity, surface_y, 
                     f'Actual Surface\nX: {intensity:.1f}\nY: {surface_y:.1f}',
                     'Actual Surface',
-                    'o', '#00ff00', 8, 5)
+                    'o', ACTUAL_SURFACE_COLOR, 8, 5)
             
             if interpolated_surface_y is not None:
                 intensity = column_data[int(interpolated_surface_y)] if int(interpolated_surface_y) < len(column_data) else 128
@@ -462,7 +470,7 @@ class AScanViewer:
                     intensity, interpolated_surface_y,
                     f'Interpolated Surface\nX: {intensity:.1f}\nY: {interpolated_surface_y:.1f}',
                     'Interpolated Surface',
-                    's', '#00ff88', 8, 5)
+                    's', INTERPOLATED_SURFACE_COLOR, 8, 5)
         
         # Plot detection method results if available
         if lesion_detection_data and surface_y is not None:
@@ -479,7 +487,7 @@ class AScanViewer:
                             intensity, absolute_depth,
                             f'Knee Point\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {knee_depth:.1f}px',
                             'Knee Point',
-                            '^', '#ff6b6b', 10, 4)
+                            '^', KNEE_POINT_COLOR, 10, 4)
             
             # Sigmoid inflection point (relative to surface)
             if self.show_sigmoid_inflection.get() and 'inflection_depth' in metadata:
@@ -492,7 +500,7 @@ class AScanViewer:
                             intensity, absolute_depth,
                             f'Sigmoid Inflection\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {inflection_depth:.1f}px',
                             'Sigmoid Inflection',
-                            'v', '#ffd93d', 10, 4)
+                            'v', INFLECTION_POINT_COLOR, 10, 4)
             
             # Sigmoid shoulder point (relative to surface)
             if self.show_sigmoid_shoulder.get() and 'shoulder_depth' in metadata:
@@ -505,7 +513,7 @@ class AScanViewer:
                             intensity, absolute_depth,
                             f'Sigmoid Shoulder\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {shoulder_depth:.1f}px',
                             'Sigmoid Shoulder',
-                            'd', '#ff9ff3', 10, 4)
+                            'd', SHOULDER_POINT_COLOR, 10, 4)
             
             # Combined depth (final result, relative to surface)
             if self.show_combined_depth.get():
@@ -524,7 +532,7 @@ class AScanViewer:
                             intensity, absolute_depth,
                             f'Combined Depth\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {combined_depth:.1f}px',
                             'Combined Depth',
-                            '*', '#ff4757', 15, 6)
+                            '*', LESION_DEPTH_PRIMARY_COLOR, 15, 6)
             
             # Plot fit curves (computed on-demand from image data)
             # Get the profile start position
