@@ -30,6 +30,10 @@ editor: visual
 -   Removed ttkbootstrap data files and submodules collection to reduce executable size
 -   Documented rationale for pip-only installation to minimize bundle size
 -   Configured onedir mode for compatibility with NumPy/SciPy/scikit-learn
+-   Fixed HTML documentation access in packaged application
+-   Updated PyInstaller spec to include HTML_docs directory and images in bundle
+-   Modified changelog and documentation file lookup to use resource_path for proper bundled app support
+-   Simplified error messages to be more user-friendly and specific to expected file locations
 
 ## User Interface Enhancements
 
@@ -42,15 +46,19 @@ editor: visual
 -   Fixed tab button command callbacks to use captured indices instead of dynamic length calculation
 -   Added bounds checking in switch_tab to prevent index errors
 -   Corrected help dialog mapping to actual tab types based on enabled tabs
+-   Enabled export and analyze features in main GUI
+-   Merged carl_quant_dev branch with full feature set
 
 ## Carl Quant Module - Algorithm Improvements
 
 ### Lesion Depth Detection
 
 -   Improved depth calculation stability when shape methods are unstable
--   Changed from inflection-only fallback to computing mean of all available methods (knee, shoulder, inflection)
 -   Prevents over-reliance on inflection as standalone measurement when designed as correction anchor
 -   Smooths out wobbliness by averaging all depth information rather than discarding unstable measurements
+-   Improved lesion depth detection for no-lesion cases
+-   Changed inflection-only case to trust stable inflection point directly instead of averaging with unstable methods
+-   Prevents misleading depth calculations when knee/shoulder instability indicates absence of lesion signature
 
 ### Coordinate Management
 
@@ -58,6 +66,35 @@ editor: visual
 -   Implemented lazy loading of specimen annotations for better performance
 -   Added multi-select support for removing specimens from processing list
 -   Improved cancellation handling with partial completion state for specimens
+
+## Code Quality & Refactoring
+
+### Color Management
+
+-   Centralized annotation color definitions across all modules
+-   Replaced hardcoded color values with named constants from annotation_colors module
+-   Applied consistent color scheme across surface, knee, inflection, shoulder, and depth markers
+
+### Resource Organization
+
+-   Consolidated font resources to centralized utils/fonts directory
+-   Removed duplicate LSANS font files from multiple locations (fonts/, export_frames/fonts/)
+-   Updated font loading to use resource_path helper for proper bundling
+-   Simplified PyInstaller spec to reference single font location
+
+### Code Cleanup
+
+-   Removed obsolete documentation files (ReadMe.txt with outdated setup instructions)
+-   Removed unused breeze-dark and equilux theme files from icons directory
+
+## Documentation
+
+### User Documentation
+
+-   Added comprehensive README with installation and usage guide
+-   Created detailed documentation covering all three main sections (Export, Analyze, CarlQuant)
+-   Added installation instructions, system requirements, and development setup guide
+-   Included build instructions with PyInstaller configuration details
 
 ## Dependencies & Environment
 
