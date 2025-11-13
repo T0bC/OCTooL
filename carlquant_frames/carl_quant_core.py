@@ -1128,28 +1128,15 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
         return combined_depth, method_used
     
     # === Case 2: Only inflection (no shape methods) ===
-    # When knee and shoulder are both unstable (wobbly), compute simple mean of all methods
-    # This is better than using inflection alone because:
-    # 1. Inflection is designed as a correction anchor, not standalone measurement
-    # 2. Unstable doesn't mean wrong - just inconsistent
-    # 3. Averaging smooths out wobbliness while incorporating all information
+    # When knee and shoulder are both unstable, this typically indicates NO LESION:
+    # - Unstable knee/shoulder means no clear decay pattern (no lesion signature)
+    # - Inflection point is close to surface (shallow/no lesion)
+    # - Averaging unstable methods with inflection creates misleading depths
+    # Solution: Trust the stable inflection point alone - it represents the true (shallow) depth
     elif inflection_stable:
-        # Collect all available depth values
-        available_depths = []
-        if not np.isnan(knee_depth):
-            available_depths.append(knee_depth)
-        if not np.isnan(shoulder_depth):
-            available_depths.append(shoulder_depth)
-        if not np.isnan(inflection_depth):
-            available_depths.append(inflection_depth)
-        
-        if len(available_depths) > 0:
-            # Simple mean - no weighting
-            combined_depth = np.mean(available_depths)
-            return combined_depth, "mean_all_methods"
-        else:
-            # Shouldn't happen (inflection_stable implies inflection_depth exists)
-            return inflection_depth, "inflection_only"
+        # Use inflection depth directly - it's the only reliable measurement
+        # This correctly handles the "no lesion" case where inflection is near surface
+        return inflection_depth, "inflection_only"
     
     # === Case 3: Only shape methods (no inflection) ===
     elif len(shape_methods) > 0:
