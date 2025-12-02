@@ -1183,6 +1183,10 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
             return np.nan, "none"
 
 
+# Default refractive index for tooth material (enamel/dentin)
+# Used for cavitation-aware depth correction
+TOOTH_REFRACTIVE_INDEX = 1.5
+
 def calculate_lesion_depth(surface: Surface, 
                           region_config,
                           image: np.ndarray,
@@ -1197,7 +1201,8 @@ def calculate_lesion_depth(surface: Surface,
                           stability_threshold: float = 20.0,
                           preserve_wobbliness: bool = True,
                           anchor_weight: float = 0.4,
-                          slice_id = None) -> Optional[LesionDepth]:
+                          slice_id = None,
+                          refractive_index: float = TOOTH_REFRACTIVE_INDEX) -> Optional[LesionDepth]:
     """
     Calculate lesion depth using various detection methods.
     
@@ -1232,6 +1237,10 @@ def calculate_lesion_depth(surface: Surface,
                            Methods with SD > threshold are excluded from combining
         preserve_wobbliness: If True, use weighted averaging to preserve lesion texture (default True)
                            Methods with higher SD get more weight
+        refractive_index: Refractive index of tooth material for cavitation depth correction (default 1.5)
+                         When cavitation is present, the subsurface lesion depth (below actual surface)
+                         is divided by this value to convert from optical to physical depth.
+                         Air (n=1) portion of cavitation requires no correction.
     
     Returns:
         LesionDepth object with depth measurements, or None if no valid surface
@@ -1377,14 +1386,32 @@ def calculate_lesion_depth(surface: Surface,
             # Convert relative depth to absolute y-coordinate (using actual surface)
             lesion_bottom_y = start_y + depth_value
             
-            # Calculate actual depth from surface
-            # For cavitated lesions, measure from interpolated surface to include cavitation depth
+            # Calculate actual depth from surface with refractive index correction
+            # For cavitated lesions, split depth into two parts:
+            # 1. Cavitation depth (air, n=1): from interpolated surface to actual surface - no correction
+            # 2. Subsurface depth (tooth, n~1.5): from actual surface to lesion bottom - divide by n
+            # This accounts for OCT measuring optical path length, not physical distance
             if interpolated_dict is not None and ascan_x in interpolated_dict:
                 interpolated_y = interpolated_dict[ascan_x]
-                actual_depth_from_surface = lesion_bottom_y - interpolated_y
+                actual_y = surface_dict[ascan_x]
+                
+                # Cavitation depth: air gap from interpolated to actual surface (n=1, no correction)
+                cavitation_depth = actual_y - interpolated_y
+                
+                # Subsurface depth: from actual surface into tooth material
+                # depth_value is already relative to actual surface (profile starts at surface_y_int)
+                subsurface_optical_depth = depth_value
+                
+                # Convert subsurface optical depth to physical depth using refractive index
+                # physical_depth = optical_depth / n (OCT measures optical path length)
+                subsurface_physical_depth = subsurface_optical_depth / refractive_index
+                
+                # Total corrected depth = air gap + corrected subsurface depth
+                actual_depth_from_surface = cavitation_depth + subsurface_physical_depth
             else:
-                # Non-cavitated: depth is just the detected value from actual surface
-                actual_depth_from_surface = depth_value
+                # Non-cavitated: apply refractive index correction to entire depth
+                # The depth is measured in tooth material throughout
+                actual_depth_from_surface = depth_value / refractive_index
             
             depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
             
