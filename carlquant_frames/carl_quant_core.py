@@ -23,6 +23,8 @@ import multiprocessing
 import time
 from enum import Enum
 import gc
+import traceback
+from utils.error_handler import show_error_popup, log_error_to_file
 
 
 # =============================================================================
@@ -1583,13 +1585,17 @@ def run_carl_quant(context):
                     
                     # Update specimen status to "Skipped"
                     specimen.status = "Skipped"
-                    specimen_panel = context.get_panel("carl_specimen")
-                    if specimen_panel:
-                        for row_idx in range(specimen_panel.sheet.total_rows()):
-                            if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
-                                specimen_panel.sheet.set_cell_data(row_idx, 2, "Skipped")
-                                specimen_panel._set_column_widths()
-                                break
+                    
+                    # Update GUI on main thread (Tkinter is not thread-safe)
+                    def update_skipped_status(sid=specimen_id):
+                        specimen_panel = context.get_panel("carl_specimen")
+                        if specimen_panel:
+                            for row_idx in range(specimen_panel.sheet.total_rows()):
+                                if specimen_panel.sheet.get_cell_data(row_idx, 0) == sid:
+                                    specimen_panel.sheet.set_cell_data(row_idx, 2, "Skipped")
+                                    specimen_panel._set_column_widths()
+                                    break
+                    context.root.after(0, update_skipped_status)
                     
                     progress_dialog.complete_specimen(specimen_idx)
                     continue
@@ -1863,25 +1869,28 @@ def run_carl_quant(context):
                         else:
                             specimen.status = "Completed"
                         
-                        # Update the specimen panel table
-                        specimen_panel = context.get_panel("carl_specimen")
-                        if specimen_panel:
-                            # Find the row for this specimen
-                            for row_idx in range(specimen_panel.sheet.total_rows()):
-                                if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
-                                    specimen_panel.sheet.set_cell_data(row_idx, 2, specimen.status)
-                                    # Refresh column widths to accommodate new status
-                                    specimen_panel._set_column_widths()
-                                    # Highlight the completed row with green color (only if fully completed)
-                                    if specimen.status == "Completed":
-                                        specimen_panel.highlight_completed_row(row_idx)
-                                    break
+                        # Update the specimen panel table on main thread (Tkinter is not thread-safe)
+                        def update_completed_status(sid=specimen_id, status=specimen.status, was_cancelled=cancelled):
+                            specimen_panel = context.get_panel("carl_specimen")
+                            if specimen_panel:
+                                # Find the row for this specimen
+                                for row_idx in range(specimen_panel.sheet.total_rows()):
+                                    if specimen_panel.sheet.get_cell_data(row_idx, 0) == sid:
+                                        specimen_panel.sheet.set_cell_data(row_idx, 2, status)
+                                        # Refresh column widths to accommodate new status
+                                        specimen_panel._set_column_widths()
+                                        # Highlight the completed row with green color (only if fully completed)
+                                        if status == "Completed":
+                                            specimen_panel.highlight_completed_row(row_idx)
+                                        break
+                            
+                            # Lock region dropdown after analysis completes (only if not cancelled)
+                            if not was_cancelled:
+                                settings_panel = context.get_panel("carl_settings")
+                                if settings_panel:
+                                    settings_panel.lock_region_dropdown(True)
                         
-                        # Lock region dropdown after analysis completes (only if not cancelled)
-                        if not cancelled:
-                            settings_panel = context.get_panel("carl_settings")
-                            if settings_panel:
-                                context.root.after(0, lambda: settings_panel.lock_region_dropdown(True))
+                        context.root.after(0, update_completed_status)
                         
                     except Exception as e:
                         context.status_bar.update(f"Error saving results for {specimen_id}: {e}", level="error")
@@ -1894,6 +1903,29 @@ def run_carl_quant(context):
                 context.status_bar.update("Analysis cancelled by user", level="warning")
             else:
                 context.status_bar.update("CarlQuant analysis complete.", level="success")
+        
+        except Exception as e:
+            # Catch any unhandled exception in the worker thread
+            tb = traceback.format_exc()
+            error_message = (
+                f"CarlQuant Analysis Error:\n\n"
+                f"Exception: {str(e)}\n\n"
+                f"Traceback:\n{tb}"
+            )
+            
+            # Log error to file
+            log_error_to_file("run_carl_quant.worker", (), {}, "Worker thread exception", tb)
+            
+            # Show error popup on main thread
+            def show_error():
+                show_error_popup("CarlQuant Analysis Error", error_message)
+            context.root.after(0, show_error)
+            
+            # Update status bar
+            context.status_bar.update(f"Analysis failed: {str(e)}", level="error")
+            
+            # Mark as cancelled so dialog closes properly
+            cancelled = True
         
         finally:
             # Close progress dialog
