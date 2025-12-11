@@ -10,6 +10,67 @@ format:
 editor: visual
 ---
 
+# Version 1.2.4 (2025-12)
+
+## Carl Quant Module - Algorithm Improvements
+
+### Refractive Index Correction
+
+-   Added `TOOTH_REFRACTIVE_INDEX` constant (1.5) for enamel/dentin optical properties
+-   Implemented cavitation-aware depth correction splitting measurements into air gap (n=1) and subsurface (n=1.5) components
+-   Applied refractive index correction to convert OCT optical path length to physical depth
+-   Added `refractive_index` parameter to `calculate_lesion_depth` function with comprehensive documentation
+
+### Lesion Depth Detection
+
+-   Improved lesion depth detection for no-lesion cases
+-   Changed inflection-only case to trust stable inflection point directly instead of averaging with unstable methods
+-   Prevents misleading depth calculations when knee/shoulder instability indicates absence of lesion signature
+
+## Bug Fixes & Stability
+
+### Thread Safety
+
+-   Wrapped specimen status updates in `context.root.after()` calls to execute on main thread
+-   Moved region dropdown locking into GUI update callback for thread safety
+-   Added top-level exception handler in worker thread with traceback logging and error popup
+
+### Image Processing
+
+-   Removed jpg from `IMAGE_EXTENSIONS` list as color video images are not needed for analysis
+
+## Code Quality & Refactoring
+
+### Color Management
+
+-   Centralized annotation color definitions across all modules
+-   Replaced hardcoded color values with named constants from `annotation_colors` module
+-   Applied consistent color scheme across surface, knee, inflection, shoulder, and depth markers
+
+### Resource Organization
+
+-   Consolidated font resources to centralized `utils/fonts` directory
+-   Removed duplicate LSANS font files from multiple locations (`fonts/`, `export_frames/fonts/`)
+-   Updated font loading to use `resource_path` helper for proper bundling
+-   Simplified PyInstaller spec to reference single font location
+
+### Code Cleanup
+
+-   Removed obsolete documentation files (ReadMe.txt with outdated setup instructions)
+-   Removed unused breeze-dark and equilux theme files from icons directory
+-   Removed obsolete error log file from September 2025
+
+## Documentation
+
+### User Documentation
+
+-   Added comprehensive README with installation and usage guide
+-   Created detailed documentation covering all three main sections (Export, Analyze, CarlQuant)
+-   Added installation instructions, system requirements, and development setup guide
+-   Included build instructions with PyInstaller configuration details
+
+------------------------------------------------------------------------
+
 # Version 1.2.3 (2025-11-12)
 
 ## Distribution & Deployment
