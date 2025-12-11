@@ -58,8 +58,8 @@ def convert_to_json_serializable(obj):
         return obj
 
 
-
-IMAGE_EXTENSIONS = ['*.jpg', '*.png', '*.tif', '*.tiff']
+# jpg files are not supported since the color video image is not needed for the analysis
+IMAGE_EXTENSIONS = ['*.png', '*.tif', '*.tiff']
 
 def natural_key(path):
     return [int(text) if text.isdigit() else text.lower()
