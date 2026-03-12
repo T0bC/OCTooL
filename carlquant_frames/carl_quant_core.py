@@ -1473,7 +1473,20 @@ def calculate_lesion_depth(surface: Surface,
                 
                 # Convert to absolute y-coordinate
                 lesion_bottom_y = surface_y + combined_depth
-                actual_depth_from_surface = combined_depth
+                
+                # Apply refractive index correction (same logic as non-combined methods)
+                # For cavitated lesions, split depth into:
+                # 1. Cavitation depth (air, n=1): interpolated surface to actual surface - no correction
+                # 2. Subsurface depth (tooth, n~1.5): actual surface to lesion bottom - divide by n
+                if interpolated_dict is not None and ascan_x in interpolated_dict:
+                    interpolated_y = interpolated_dict[ascan_x]
+                    actual_y = surface_dict[ascan_x]
+                    cavitation_depth = actual_y - interpolated_y
+                    subsurface_physical_depth = combined_depth / refractive_index
+                    actual_depth_from_surface = cavitation_depth + subsurface_physical_depth
+                else:
+                    # Non-cavitated: entire depth is in tooth material
+                    actual_depth_from_surface = combined_depth / refractive_index
                 
                 depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
                 
