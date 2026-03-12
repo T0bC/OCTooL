@@ -10,6 +10,19 @@ format:
 editor: visual
 ---
 
+# Version 1.2.5 (2026-03-12)
+
+## Bug Fixes
+
+### Refractive Index Correction for COMBINED_MEAN
+
+-   Fixed missing refractive index correction in the COMBINED_MEAN detection method path
+-   The COMBINED_MEAN recomputation block was using raw optical pixel depths instead of applying the cavitation-aware refractive index correction (air gap at n=1 + subsurface at n=1.5)
+-   This caused `LESION_DEPTH_MEAN` in the Excel Summary to report uncorrected (overestimated) depths when COMBINED_MEAN was selected
+-   Now applies the same correction logic as all other detection methods (KNEE_POINT, SIGMOID_FIT, SIGMOID_SHOULDER)
+
+------------------------------------------------------------------------
+
 # Version 1.2.4 (2025-12)
 
 ## Carl Quant Module - Algorithm Improvements
