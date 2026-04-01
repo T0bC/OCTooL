@@ -156,22 +156,23 @@ def getXMLAttributes(xmlContent):
     def safe_get_text(tag, default=None, cast_type=str):
         try:
             return cast_type(xmlContent.find(tag).getText())
-        except AttributeError:
+        except (AttributeError, TypeError, ValueError):
             return default
 
     def safe_nested_text(parent_tag, child_tag, default=None, cast_type=int):
         try:
             return cast_type(xmlContent.find(parent_tag).find(child_tag).getText())
-        except AttributeError:
+        except (AttributeError, TypeError, ValueError):
             return default
 
     def safe_get_attr(tag, attr, default=None):
         try:
             return xmlContent.find(tag).attrs.get(attr, default)
-        except AttributeError:
+        except (AttributeError, TypeError):
             return default
 
-    xmlDataType = xmlContent.find('Image').attrs
+    imageTag = xmlContent.find('Image')
+    xmlDataType = imageTag.attrs if imageTag else {}
     dataType = str(xmlDataType.get('Type', 'Unknown'))
 
     # Get mm Dimensions
@@ -227,6 +228,13 @@ def getXMLAttributes(xmlContent):
 
     dataFiles = xmlContent.Ocity.DataFiles.find_all('DataFile')
 
+    def find_datafile_by_type(data_files, type_value):
+        """Find a DataFile element by its Type attribute, order-independent."""
+        for df in data_files:
+            if df.get('Type') == type_value:
+                return df
+        return None
+
     # Determine if scan is 3D based on presence of Y-dimension
     is3D = all([
         imgSizemmY is not None,
@@ -234,18 +242,20 @@ def getXMLAttributes(xmlContent):
         spacingY > 0
     ])
 
-    if is3D:
-        apoLinePos = 3
-    else:
-        apoLinePos = 2
-
     if dataType != 'Processed':
-        Napo = int(dataFiles[apoLinePos].get('ApoRegionEnd0'))
-        Nx = int(dataFiles[apoLinePos].get('ScanRegionEnd0')) - int(dataFiles[apoLinePos].get('ScanRegionStart0'))
+        rawSpectralFile = find_datafile_by_type(dataFiles, 'RawSpectral')
+        if rawSpectralFile:
+            Napo = int(rawSpectralFile.get('ApoRegionEnd0'))
+            Nx = int(rawSpectralFile.get('ScanRegionEnd0')) - int(rawSpectralFile.get('ScanRegionStart0'))
         offsScale = float(xmlContent.find('BinaryToElectronCountScaling').getText())
 
-    videoImageZ = int(dataFiles[0].get('SizeZ'))
-    videoImageX = int(dataFiles[0].get('SizeX'))
+    videoImageFile = find_datafile_by_type(dataFiles, 'Colored')
+    if videoImageFile:
+        videoImageZ = int(videoImageFile.get('SizeZ'))
+        videoImageX = int(videoImageFile.get('SizeX'))
+    else:
+        videoImageZ = 0
+        videoImageX = 0
 
     xmlDict = {
         'xmlDataType': xmlDataType,
