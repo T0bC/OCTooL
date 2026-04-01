@@ -10,6 +10,22 @@ format:
 editor: visual
 ---
 
+# Version 1.2.51 (2026-04-01)
+
+## Bug Fixes
+
+### XML Error for OCT Export
+
+-   In some cases the order of elements in the XML sidecar file is different, this produced an error when parsing that file into an python dict (argument not found)
+
+-   Fix: Added `find_datafile_by_type()` helper that finds **`DataFile`** elements by their **`Type`** attribute instead of position
+
+-   **`videoImageFile`** now found by **`Type="Colored"`** instead of **`dataFiles[0]`**
+
+-   **`rawSpectralFile`** now found by **`Type="RawSpectral"`** instead of **`dataFiles[apoLinePos]`**
+
+-   Added null checks to handle cases where elements might not exist
+
 # Version 1.2.5 (2026-03-12)
 
 ## Bug Fixes
