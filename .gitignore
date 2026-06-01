@@ -1,11 +1,27 @@
+# Python
 __pycache__/
 *.pyc
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Local development data & logs
 testData/
 utils/logs/
+tests/
+*.log
+
+# Generated HTML assets (bundled libraries, not source)
 HTML_docs/OCTexVIEW_change_log_files/
 HTML_docs/OCTexVIEW_MANUAL_files/
 
-# PyInstaller build artifacts
+# PyInstaller
 build/
 dist/
 *.spec.bak
