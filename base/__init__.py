@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Base Module for OCTexVIEW Application
+Base Module for OCTooL Application
 
 This module provides base classes for common functionality across the application.
 

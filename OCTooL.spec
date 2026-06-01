@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['OCTexVIEW.py'],
+    ['OCTooL.py'],
     pathex=[],
     binaries=[],
     datas=[
@@ -27,7 +27,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='OCTexVIEW',
+    name='OCTooL',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -48,5 +48,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='OCTexVIEW',
+    name='OCTooL',
 )

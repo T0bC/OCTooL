@@ -35,5 +35,5 @@ if __name__ == '__main__':
             root.withdraw()
         
         show_error_popup("Application Startup Error", error_message)
-        log_error_to_file("OCTexVIEW.main", (), {}, "Critical startup error", tb)
+        log_error_to_file("OCTooL.main", (), {}, "Critical startup error", tb)
 

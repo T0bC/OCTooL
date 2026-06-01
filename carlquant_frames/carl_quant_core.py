@@ -32,7 +32,7 @@ from utils.error_handler import show_error_popup, log_error_to_file
 # =============================================================================
 # IMPORTANT: process_slice_parallel MUST be defined at module level (not nested)
 # to be picklable by ProcessPoolExecutor. Worker processes on Windows will
-# re-import this module, but multiprocessing.freeze_support() in OCTexVIEW.py
+# re-import this module, but multiprocessing.freeze_support() in OCTooL.py
 # prevents the GUI from being re-launched in worker processes.
 
 def process_slice_parallel(slice_idx, image_path, region_config, air_config, num_sound, num_lesion, detection_method_str='combined_mean'):

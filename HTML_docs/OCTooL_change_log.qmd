@@ -1,5 +1,5 @@
 ---
-title: "OCTexVIEW Change Log"
+title: "OCTooL Change Log"
 author: "Tobias Meißner"
 format: 
   html:
@@ -111,7 +111,7 @@ editor: visual
 -   Configured resource bundling for icons, fonts, and configuration files in spec file
 -   Added `multiprocessing.freeze_support()` to prevent worker processes from re-launching GUI on Windows
 -   Updated logo and instruction file loading to use resource_path for proper bundled app support
--   Created comprehensive setup documentation for building OCTexVIEW with PyInstaller
+-   Created comprehensive setup documentation for building OCTooL with PyInstaller
 -   Added requirements.txt with all production dependencies and version constraints
 -   Simplified PyInstaller spec file by removing unused dependencies and explicit hiddenimports
 

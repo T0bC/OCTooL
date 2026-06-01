@@ -13,7 +13,7 @@ authors:
   - family-names: "Golde"
     given-names: "Jonas"
     affiliation: "University of Leipzig, Department of Cariology, Endodontology and Periodontology"
-repository-code: "https://github.com/T0bC/OCTexVIEW"
+repository-code: "https://github.com/T0bC/OCTooL"
 version: 2026.2
 date-released: 2026-06-01
 license: GPL-3.0-or-later

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Instruction Renderer for OCTexVIEW Application
+Instruction Renderer for OCTooL Application
 
 This module provides a data-driven instruction rendering system that displays
 contextual help on canvas widgets. Instructions are loaded from JSON files,

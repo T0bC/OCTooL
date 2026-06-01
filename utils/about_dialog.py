@@ -17,7 +17,7 @@ from utils.app_context import resource_path
 
 
 class AboutDialog:
-    """Manages About dialog and changelog access for OCTexVIEW."""
+    """Manages About dialog and changelog access for OCTooL."""
     
     def __init__(self, parent, style, version):
         """
@@ -36,7 +36,7 @@ class AboutDialog:
     def show(self):
         """Show the About dialog."""
         about_content = (
-            f'OCTexVIEW{self.version}\n\n'
+            f'OCTooL{self.version}\n\n'
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'
             'DEVELOPED BY\n'
             '  • Tobias Meißner [1]\n'
@@ -63,7 +63,7 @@ class AboutDialog:
         """Create a custom dark-themed About dialog."""
         # Create modal dialog
         dialog = tk.Toplevel(self.parent)
-        dialog.title(f'About OCTexVIEW')
+        dialog.title(f'About OCTooL')
         dialog.transient(self.parent)
         dialog.grab_set()
         
@@ -144,8 +144,8 @@ class AboutDialog:
         """Open the changelog HTML file in the default browser."""
         # Try to find the changelog file using resource_path
         changelog_alternatives = [
-            'HTML_docs/OCTexVIEW_change_log.html',  # Primary location
-            'OCTexVIEW_change_log.html',
+            'HTML_docs/OCTooL_change_log.html',  # Primary location
+            'OCTooL_change_log.html',
             'CHANGELOG.html',
         ]
         
@@ -167,6 +167,6 @@ class AboutDialog:
         else:
             tk.messagebox.showwarning(
                 title='Changelog Not Found',
-                message='Could not find OCTexVIEW_change_log.html\n\n'
+                message='Could not find OCTooL_change_log.html\n\n'
                         'Please ensure the HTML_docs folder is included in the distribution.'
             )

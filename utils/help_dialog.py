@@ -3,7 +3,7 @@
 """
 Help Dialog Module
 
-Provides context-aware help dialogs for OCTexVIEW application.
+Provides context-aware help dialogs for OCTooL application.
 Shows tab-specific quick guides and provides access to full documentation.
 
 @author: Tobias Meissner
@@ -19,7 +19,7 @@ from utils.app_context import resource_path
 
 
 class HelpDialog:
-    """Manages help dialogs and documentation access for OCTexVIEW."""
+    """Manages help dialogs and documentation access for OCTooL."""
     
     def __init__(self, parent, style, current_tab=0):
         """
@@ -207,8 +207,8 @@ class HelpDialog:
         """Open the full HTML documentation in the default browser."""
         # Try to find the documentation file using resource_path
         doc_alternatives = [
-            'HTML_docs/OCTexVIEW_MANUAL.html',  # Primary location
-            'OCTexVIEW_MANUAL.html',
+            'HTML_docs/OCTooL_MANUAL.html',  # Primary location
+            'OCTooL_MANUAL.html',
             'documentation.html',
         ]
         
@@ -230,6 +230,6 @@ class HelpDialog:
         else:
             tk.messagebox.showwarning(
                 title='Documentation Not Found',
-                message='Could not find OCTexVIEW_MANUAL.html\n\n'
+                message='Could not find OCTooL_MANUAL.html\n\n'
                         'Please ensure the HTML_docs folder is included in the distribution.'
             )

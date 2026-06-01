@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Base Canvas Panel for OCTexVIEW Application
+Base Canvas Panel for OCTooL Application
 
 This module provides a base class for canvas-based image viewers with common
 functionality including zoom, pan, navigation, and coordinate conversion.

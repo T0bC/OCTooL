@@ -1,12 +1,12 @@
-# OCTexVIEW
+# OCTooL
 
-**OCTexVIEW** is a comprehensive software application designed for the export, analysis, and quantification of Optical Coherence Tomography (OCT) images. Developed specifically for dental and medical research applications, OCTexVIEW provides researchers and clinicians with powerful tools to extract quantitative data from OCT imaging studies.
+**OCTooL** is a comprehensive software application designed for the export, analysis, and quantification of Optical Coherence Tomography (OCT) images. Developed specifically for dental and medical research applications, OCTooL provides researchers and clinicians with powerful tools to extract quantitative data from OCT imaging studies.
 
 ---
 
 ## 📋 Table of Contents
 
-- [OCTexVIEW](#octexview)
+- [OCTooL](#octool)
   - [📋 Table of Contents](#-table-of-contents)
   - [✨ Features](#-features)
   - [💻 System Requirements](#-system-requirements)
@@ -19,7 +19,7 @@
     - [Analyze Section](#analyze-section)
     - [CarlQuant Section](#carlquant-section)
   - [🛠️ Development Setup](#️-development-setup)
-    - [Create Virtual Environment](#create-virtual-environment)
+    - [Create Conda Environment](#create-conda-environment)
     - [Development Tools](#development-tools)
   - [🔨 Building from Source](#-building-from-source)
     - [Install PyInstaller](#install-pyinstaller)
@@ -75,14 +75,14 @@ pip install -r requirements.txt
 ### Run the Application
 
 ```bash
-python OCTexVIEW.py
+python OCTooL.py
 ```
 
 ---
 
 ## 📖 Application Overview
 
-OCTexVIEW is organized into three main functional sections, each designed for specific aspects of OCT image analysis:
+OCTooL is organized into three main functional sections, each designed for specific aspects of OCT image analysis:
 
 ### Export Section
 
@@ -184,7 +184,7 @@ You can use any Python IDE or text editor for development. Popular choices inclu
 
 ## 🔨 Building from Source
 
-OCTexVIEW uses PyInstaller to create standalone executables. The build configuration is managed through a spec file.
+OCTooL uses PyInstaller to create standalone executables. The build configuration is managed through a spec file.
 
 ### Install PyInstaller
 
@@ -194,7 +194,7 @@ pip install pyinstaller
 
 ### Build the Application
 
-The application uses a spec file (`OCTexVIEW.spec`) that contains all build configurations, including:
+The application uses a spec file (`OCTooL.spec`) that contains all build configurations, including:
 
 - Icon file location (`icons/thumb_4.ico`)
 - Data files (icons, fonts, documentation)
@@ -204,19 +204,19 @@ The application uses a spec file (`OCTexVIEW.spec`) that contains all build conf
 To build the application:
 
 ```bash
-pyinstaller OCTexVIEW.spec
+pyinstaller OCTooL.spec
 ```
 
-The compiled application will be created in the `dist/OCTexVIEW/` directory.
+The compiled application will be created in the `dist/OCTooL/` directory.
 
 ### Development Mode (Console Enabled)
 
 During development, you may want to see console output for debugging. To enable the console window:
 
-1. Open `OCTexVIEW.spec`
+1. Open `OCTooL.spec`
 2. Find the line `console=False` in the `EXE` section
 3. Change it to `console=True`
-4. Rebuild with `pyinstaller OCTexVIEW.spec`
+4. Rebuild with `pyinstaller OCTooL.spec`
 
 This will open a terminal window alongside the GUI, displaying error messages and debug output.
 
@@ -233,11 +233,11 @@ Place the icon file in the `icons/` folder and reference it in the spec file.
 
 After building:
 
-1. The `dist/OCTexVIEW/` folder contains the complete application
+1. The `dist/OCTooL/` folder contains the complete application
 2. All required files (icons, fonts, documentation) are automatically included via the spec file
-3. Distribute the entire `OCTexVIEW` folder to users
+3. Distribute the entire `OCTooL` folder to users
 
-**Update Tip**: If you make changes without adding new dependencies, you can simply replace the `OCTexVIEW.exe` file in an existing installation to update the software.
+**Update Tip**: If you make changes without adding new dependencies, you can simply replace the `OCTooL.exe` file in an existing installation to update the software.
 
 ---
 
@@ -259,7 +259,7 @@ This software is developed for academic and research purposes. Please contact th
 
 ## 🙏 Acknowledgments
 
-OCTexVIEW was developed at the University of Leipzig for dental and medical OCT research applications. Special thanks to all contributors and researchers who provided feedback during development.
+OCTooL was developed at the University of Leipzig for dental and medical OCT research applications. Special thanks to all contributors and researchers who provided feedback during development.
 
 ---
 
@@ -267,7 +267,7 @@ OCTexVIEW was developed at the University of Leipzig for dental and medical OCT 
 
 For detailed user instructions, please refer to the complete manual:
 
-- HTML Documentation: `HTML_docs/OCTexVIEW_MANUAL.html`
-- Source Documentation: `HTML_docs/OCTexVIEW_MANUAL.qmd`
+- HTML Documentation: `HTML_docs/OCTooL_MANUAL.html`
+- Source Documentation: `HTML_docs/OCTooL_MANUAL.qmd`
 
 The manual includes comprehensive guides for each section, keyboard shortcuts, troubleshooting tips, and example workflows.
