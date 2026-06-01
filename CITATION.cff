@@ -1,0 +1,19 @@
+cff-version: "2026.2"
+message: "If you use this software, please cite it as below."
+type: software
+title: "OCTooL"
+abstract: "A modular toolkit for OCT image export, annotation, and quantitative analysis."
+authors:
+  - family-names: "Meissner"
+    given-names: "Tobias"
+    affiliation: "University of Leipzig, Department of Cariology, Endodontology and Periodontology"
+  - family-names: "Bemmann"
+    given-names: "Maximilian"
+    affiliation: "University of Leipzig, Department of Cariology, Endodontology and Periodontology"
+  - family-names: "Golde"
+    given-names: "Jonas"
+    affiliation: "University of Leipzig, Department of Cariology, Endodontology and Periodontology"
+repository-code: "https://github.com/T0bC/OCTexVIEW"
+version: 2026.2
+date-released: 2026-06-01
+license: MIT
