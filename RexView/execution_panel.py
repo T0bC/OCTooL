@@ -122,98 +122,77 @@ class executionPanel:
                                    f"{self.treeView.getValueFromRow(item[1],'NumSlices')}_Slices_{self.imgSliceDir}")
             Path(self.file).parent.joinpath(self.exportPath).mkdir(parents=True, exist_ok=True)
 
-            # Determine slices to process
-            self.selectedSliceNumber = np.linspace(
-                int(self.treeView.getValueFromRow(item[1],'First')) - 1,
-                int(self.treeView.getValueFromRow(item[1],'Last')) - 1,
-                int(self.treeView.getValueFromRow(item[1],'NumSlices'))
-            ).astype(int)
+            # Collect config and params using existing helpers
+            config = self._collect_export_config()
+            params = self._collect_slice_params(item[1])
 
-            if self.imgSliceDir == 'XZ':
-                self.slicesToLoadAndProcess = self.selectedSliceNumber
-            else:
-                self.slicesToLoadAndProcess = np.linspace(0, int(self.xmlDict['dimY']) - 1, int(self.xmlDict['dimY'])).astype(int)
+            # Use ExportService for preparation
+            metadata = OCTMetadata.from_xml_dict(self.xmlDict)
+            prep = self.export_service.prepare_export(params, config, metadata)
 
-            # Decide between raw or processed data
-            if (self.xmlDict['dataType'] == 'RawSpectraAndProcessedIntensity' and
-                self.globalSettingsFrame.prefRawBox.state() == ('selected',)) or \
-                self.xmlDict['dataType'] == 'RawSpectra':
-                self.selDataType = 'Raw'
-            else:
-                self.selDataType = 'Processed'
+            # Use prepared values
+            self.selectedSliceNumber = prep['selected_slices']
+            self.slicesToLoadAndProcess = prep['slices_to_load']
+            self.selDataType = prep['sel_data_type']
 
             # Callback to update GUI status
             def update_status(index):
                 self.treeView.setValueFromRow(item[1], 'Status', str(index))
 
-            # Generate image stack
-            self.imgStack = octF.createImageFromRaw(
-                xmlDict=self.xmlDict,
+            # Use ExportService for image loading
+            self.imgStack = self.export_service.load_image_stack(
                 archive=self.archive,
-                dBmin=int(self.treeView.getValueFromRow(item[1], column='dB min')),
-                dBmax=int(self.treeView.getValueFromRow(item[1], column='dB max')),
-                selDataType=self.selDataType,
-                averaging=self.globalSettingsFrame.averagingMenu.get(),
-                spectral=self.slicesToLoadAndProcess,
-                prefRaw=self.globalSettingsFrame.getPrefRawState()[0],
-                tukeySize=float(self.globalSettingsFrame.getTukeyWinSize()),
-                advancedFilter=self.globalSettingsFrame.getAdvancedFilter(),
-                dispersion=self.customSettingsFrame.getDispersion(),
-                update_callback=update_status
+                metadata=metadata,
+                params=params,
+                config=config,
+                slices_to_load=self.slicesToLoadAndProcess,
+                sel_data_type=self.selDataType,
+                progress_callback=update_status,
             )
 
-            # Loop through selected slices and export
+            # Loop through selected slices and export using ExportService
             for image in enumerate(self.selectedSliceNumber):
                 try:
                     if self.running == 1:
                         break
 
-                    # resize or add scale bar
-                    self.finImg =  self.prepareImageSlice(image=image, item=item)
+                    # Use ExportService for slice processing
+                    self.finImg = self.export_service.process_slice(
+                        img_stack=self.imgStack,
+                        slice_idx=image[0],
+                        image_idx=image[1],
+                        params=params,
+                        config=config,
+                        metadata=metadata,
+                    )
 
-                    # Add EXIF metadata
-                    self.exif = self.addExifToImage(self.finImg, self.xmlDict)
+                    # Use ExportService for DPI calculation
+                    self.dpi = self.export_service.calculate_dpi(self.finImg, params, metadata)
 
-                    # Calculate DPI from spatial dimensions
-                    if self.imgSliceDir == 'XZ':
-                        self.dpi = (round(self.finImg.size[0] / self.xmlDict['imgSizemmX']),
-                                    round(self.finImg.size[1] / self.xmlDict['imgSizemmZ']))
-                    elif self.imgSliceDir == 'YZ':
-                        self.dpi = (round(self.finImg.size[0] / self.xmlDict['imgSizemmY']),
-                                    round(self.finImg.size[1] / self.xmlDict['imgSizemmZ']))
-                    else:
-                        self.dpi = (round(self.finImg.size[0] / self.xmlDict['imgSizemmY']),
-                                    round(self.finImg.size[1] / self.xmlDict['imgSizemmX']))
+                    # Use ExportService for EXIF metadata
+                    self.exif = self.export_service.add_exif_metadata(self.finImg, metadata)
 
-                    # Save image with DPI and metadata
-                    export_name = f"{self.treeView.getValueFromRow(item[1],'Name')}_{self.xmlDict['expNumber']}_#" \
-                                  f"{image[1] + 1}_{image[0] + 1:04d}{self.globalSettingsFrame.getExpFormat()}"
+                    # Use ExportService for filename generation
+                    export_name = self.export_service.generate_export_filename(
+                        params, config, metadata, image[1], image[0]
+                    )
                     export_path = Path(self.file).parent / self.exportPath / export_name
 
-                    # in some cases image is in float
-                    self.finImg = self.finImg.convert(mode = 'L')
-
-                    self.finImg.save(export_path, dpi=self.dpi, resolution_unit=3, exif=self.exif)
+                    # Use ExportService for saving
+                    self.export_service.export_single_slice(self.finImg, export_path, self.dpi, self.exif)
 
                     self.treeView.setValueFromRow(item[1], 'Status', f"exp: {image[0]+1}")
                     gc.collect()
                 except Exception:
                     pass  # Continue processing other images
 
-            # export video image
-            try:
-                self.videoImage = Image.fromarray(
-                    octF.createVideoImageFromRaw(
-                        xmlDict=self.xmlDict,
-                        archive=self.archive
-                        )
-                    )
-
-                export_name = f"{self.treeView.getValueFromRow(item[1],'Name')}_{self.xmlDict['expNumber']}.jpg"
-                export_path_vid = Path(self.file).parent / self.exportPath.parent / export_name
-                self.videoImage.save(export_path_vid, format='JPEG', resolution_unit=3)
-            except Exception:
-                    pass  # Continue processing
+            # Use ExportService for video image export
+            self.export_service.export_video_image(
+                archive=self.archive,
+                metadata=metadata,
+                params=params,
+                export_dir=prep['export_dir'],
+            )
 
             # Final cleanup per item
             self.treeView.setValueFromRow(item[1], 'Status', 'Done')
