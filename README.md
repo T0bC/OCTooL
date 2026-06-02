@@ -4,37 +4,37 @@
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [OCTooL](#octool)
-  - [📋 Table of Contents](#-table-of-contents)
-  - [✨ Features](#-features)
-  - [💻 System Requirements](#-system-requirements)
-  - [📦 Installation](#-installation)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [System Requirements](#system-requirements)
+  - [Installation](#installation)
     - [Prerequisites](#prerequisites)
     - [Install Dependencies](#install-dependencies)
     - [Run the Application](#run-the-application)
-  - [📖 Application Overview](#-application-overview)
+  - [Application Overview](#application-overview)
     - [Export Section](#export-section)
     - [Analyze Section](#analyze-section)
     - [CarlQuant Section](#carlquant-section)
-  - [🛠️ Development Setup](#️-development-setup)
+  - [Development Setup](#development-setup)
     - [Create Conda Environment](#create-conda-environment)
     - [Development Tools](#development-tools)
-  - [🔨 Building from Source](#-building-from-source)
+  - [Building from Source](#building-from-source)
     - [Install PyInstaller](#install-pyinstaller)
     - [Build the Application](#build-the-application)
     - [Development Mode (Console Enabled)](#development-mode-console-enabled)
     - [Icon Creation](#icon-creation)
     - [Distribution](#distribution)
-  - [📧 Contact](#-contact)
-  - [📄 License](#-license)
-  - [🙏 Acknowledgments](#-acknowledgments)
-  - [📚 Documentation](#-documentation)
+  - [Contact](#contact)
+  - [License](#license)
+  - [Acknowledgments](#acknowledgments)
+  - [Documentation](#documentation)
 
 ---
 
-## ✨ Features
+## Features
 
 - **Batch Processing**: Efficiently process large datasets of OCT images
 - **Quantitative Analysis**: Extract precise measurements from tissue structures
@@ -46,7 +46,7 @@
 
 ---
 
-## 💻 System Requirements
+## System Requirements
 
 - **Operating System**: Windows 10/11, macOS 10.15+, or Linux
 - **Python Version**: Python 3.14 or higher
@@ -56,7 +56,7 @@
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 
@@ -80,7 +80,7 @@ python OCTooL.py
 
 ---
 
-## 📖 Application Overview
+## Application Overview
 
 OCTooL is organized into three main functional sections, each designed for specific aspects of OCT image analysis:
 
@@ -154,7 +154,7 @@ The **CarlQuant** section implements advanced quantitative analysis algorithms s
 
 ---
 
-## 🛠️ Development Setup
+## Development Setup
 
 ### Create Conda Environment
 
@@ -182,7 +182,7 @@ You can use any Python IDE or text editor for development. Popular choices inclu
 
 ---
 
-## 🔨 Building from Source
+## Building from Source
 
 OCTooL uses PyInstaller to create standalone executables. The build configuration is managed through a spec file.
 
@@ -241,7 +241,7 @@ After building:
 
 ---
 
-## 📧 Contact
+## Contact
 
 **Developer**: Tobias Meißner  
 **Email**: tobias.meissner@medizin.uni-leipzig.de  
@@ -251,19 +251,19 @@ For bug reports, feature requests, or questions, please contact via email or ope
 
 ---
 
-## 📄 License
+## License
 
 This software is developed for academic and research purposes. Please contact the developer for licensing information and usage terms.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 OCTooL was developed at the University of Leipzig for dental and medical OCT research applications. Special thanks to all contributors and researchers who provided feedback during development.
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 For detailed user instructions, please refer to the complete manual:
 
