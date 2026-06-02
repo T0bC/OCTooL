@@ -29,7 +29,7 @@ class BaseCanvasPanel:
     Abstract base class for canvas-based image viewers.
     
     This class centralizes common functionality used across AnnoLyze and
-    carlquant_frames panels, eliminating ~400-500 lines of duplicate code.
+    CarlQuant panels, eliminating ~400-500 lines of duplicate code.
     
     Common Functionality Provided:
     - Image display with zoom (Ctrl+MouseWheel, 1.0x to 10.0x)
