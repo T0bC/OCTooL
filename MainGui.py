@@ -11,7 +11,7 @@ from tkinter import ttk
 from ttkbootstrap import Style
 import rexViewTab
 import annoLyzeTab
-import carl_quant
+import carlQuantTab
 from utils.app_context import AppContext, resource_path
 from utils.status_bar import StatusBar
 from utils.error_handler import handle_errors
@@ -111,9 +111,9 @@ class MainGui:
 
         # %% Carl Quant
         if self.ENABLE_CARLQUANT:
-            self.carlQuantFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.carlQuantFrame, text='CarlQuant')
-            carl_quant.addContent(self, self.carlQuantFrame)
+            self.carlQuantTabFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.carlQuantTabFrame, text='CarlQuant')
+            carlQuantTab.addContent(self, self.carlQuantTabFrame)
 
         # Apply custom styles to individual tabs after all tabs are created
         self._apply_tab_colors()
