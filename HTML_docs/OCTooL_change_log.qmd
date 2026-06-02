@@ -14,7 +14,7 @@ editor: visual
 
 ## Bug Fixes
 
-### XML Error for OCT Export
+### XML Error for OCT RexView
 
 -   In some cases the order of elements in the XML sidecar file is different, this produced an error when parsing that file into an python dict (argument not found)
 
@@ -79,7 +79,7 @@ editor: visual
 ### Resource Organization
 
 -   Consolidated font resources to centralized `utils/fonts` directory
--   Removed duplicate LSANS font files from multiple locations (`fonts/`, `export_frames/fonts/`)
+-   Removed duplicate LSANS font files from multiple locations (`fonts/`, `RexView/fonts/`)
 -   Updated font loading to use `resource_path` helper for proper bundling
 -   Simplified PyInstaller spec to reference single font location
 
@@ -94,7 +94,7 @@ editor: visual
 ### User Documentation
 
 -   Added comprehensive README with installation and usage guide
--   Created detailed documentation covering all three main sections (Export, Analyze, CarlQuant)
+-   Created detailed documentation covering all three main sections (RexView, Analyze, CarlQuant)
 -   Added installation instructions, system requirements, and development setup guide
 -   Included build instructions with PyInstaller configuration details
 
@@ -130,7 +130,7 @@ editor: visual
 ### Tab Configuration System
 
 -   Introduced configurable tab visibility system with distribution flags
--   Added ENABLE_EXPORT, ENABLE_ANALYZE, and ENABLE_CARLQUANT instance variables for selective tab control
+-   Added ENABLE_REXVIEW, ENABLE_ANALYZE, and ENABLE_CARLQUANT instance variables for selective tab control
 -   Updated tab button creation to dynamically position buttons based on enabled tabs
 -   Added automatic selection of first available tab on startup
 -   Fixed tab button command callbacks to use captured indices instead of dynamic length calculation
@@ -168,7 +168,7 @@ editor: visual
 ### Resource Organization
 
 -   Consolidated font resources to centralized utils/fonts directory
--   Removed duplicate LSANS font files from multiple locations (fonts/, export_frames/fonts/)
+-   Removed duplicate LSANS font files from multiple locations (fonts/, RexView/fonts/)
 -   Updated font loading to use resource_path helper for proper bundling
 -   Simplified PyInstaller spec to reference single font location
 
@@ -182,7 +182,7 @@ editor: visual
 ### User Documentation
 
 -   Added comprehensive README with installation and usage guide
--   Created detailed documentation covering all three main sections (Export, Analyze, CarlQuant)
+-   Created detailed documentation covering all three main sections (RexView, Analyze, CarlQuant)
 -   Added installation instructions, system requirements, and development setup guide
 -   Included build instructions with PyInstaller configuration details
 
@@ -283,7 +283,7 @@ editor: visual
 -   Moved typical workflow sections to beginning of each chapter for better accessibility
 -   Added comprehensive Analyze section documentation with detailed UI components and workflows
 -   Added comprehensive Carl Quant section documentation with detailed UI components and workflows
--   Added comprehensive Export section documentation with detailed parameters and workflows
+-   Added comprehensive RexView section documentation with detailed parameters and workflows
 -   Improved manual layout and content organization with enhanced table of contents
 
 ## Performance Optimizations
@@ -296,7 +296,7 @@ editor: visual
 
 ## Code Refactoring
 
-### Export Module
+### RexView Module
 
 -   Optimized grid layout in export panel for better UI responsiveness
 
@@ -327,7 +327,7 @@ editor: visual
 
 ## Carl Quant Module - Data Management
 
-### Results & Export
+### Results & RexView
 
 -   Fixed slice indices conversion from 0-based internal to 1-based Excel representation
 -   Implemented metadata-based result loading with improved folder skipping for annotations
@@ -335,7 +335,7 @@ editor: visual
 -   Added table update when region number changes
 -   Implemented lock feature to avoid conflicts when results table exists
 
-### Image Export
+### Image RexView
 
 -   Implemented image saving routines with annotation overlays
 
@@ -492,7 +492,7 @@ editor: visual
 -   Automatic layout viewer updates reflecting column changes
 -   Improved data type selection (removed ratio from options)
 
-## Export Tab
+## RexView Tab
 
 ### Bug Fixes & Stability
 
@@ -525,7 +525,7 @@ editor: visual
 ### Core Features
 
 -   **Analysis Tab**: Complete implementation for OCT image analysis
--   **Export Tab**: Basic export functionality for processed data
+-   **RexView Tab**: Basic export functionality for processed data
 -   **Status Bar**: Thread-safe status messaging system
 -   **Configuration System**: JSON-based configuration management
 -   **Key Binding System**: Customizable keyboard shortcuts for data entry
@@ -533,7 +533,7 @@ editor: visual
 ### User Interface
 
 -   Modern tkinter-based GUI with ttkbootstrap styling
--   Multi-tab interface (Analysis, Carl Quant, Export)
+-   Multi-tab interface (Analysis, Carl Quant, RexView)
 -   Responsive layout with grid-based design
 
 ### Foundation

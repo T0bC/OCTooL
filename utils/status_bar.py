@@ -155,7 +155,7 @@ class StatusBar:
         filter_menu.bind("<<ComboboxSelected>>", lambda e: refresh_log())
         refresh_log()
 
-        # Export buttons
+        # RexView buttons
         export_frame = ttk.Frame(log_window)
         export_frame.pack(pady=5)
 
@@ -185,8 +185,8 @@ class StatusBar:
                         writer.writerow([level, msg])
 
 
-        ttk.Button(export_frame, text="Export as TXT", command=export_txt, bootstyle="info").pack(side="left", padx=5)
-        ttk.Button(export_frame, text="Export as CSV", command=export_csv, bootstyle="info").pack(side="left", padx=5)
+        ttk.Button(export_frame, text="RexView as TXT", command=export_txt, bootstyle="info").pack(side="left", padx=5)
+        ttk.Button(export_frame, text="RexView as CSV", command=export_csv, bootstyle="info").pack(side="left", padx=5)
 
 
 

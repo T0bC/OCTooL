@@ -15,7 +15,7 @@
     - [Install Dependencies](#install-dependencies)
     - [Run the Application](#run-the-application)
   - [Application Overview](#application-overview)
-    - [Export Section](#export-section)
+    - [RexView Section](#export-section)
     - [Analyze Section](#analyze-section)
     - [CarlQuant Section](#carlquant-section)
   - [Development Setup](#development-setup)
@@ -40,7 +40,7 @@
 - **Quantitative Analysis**: Extract precise measurements from tissue structures
 - **Interactive Annotation**: Manual annotation tools with customizable data types
 - **Advanced Algorithms**: Specialized lesion depth detection algorithms
-- **Multi-Format Export**: Export to PNG or TIFF formats with customizable parameters
+- **Multi-Format RexView**: RexView to PNG or TIFF formats with customizable parameters
 - **Data Integrity**: Automated workflows with comprehensive data persistence
 - **Research-Ready Output**: CSV and JSON exports compatible with statistical software
 
@@ -84,13 +84,13 @@ python OCTooL.py
 
 OCTooL is organized into three main functional sections, each designed for specific aspects of OCT image analysis:
 
-### Export Section
+### RexView Section
 
 <p align="center">
-  <img src="HTML_docs/images/01_Export_mainWindow.png" alt="Export Section Interface" width="800"/>
+  <img src="HTML_docs/images/01_Export_mainWindow.png" alt="RexView Section Interface" width="800"/>
 </p>
 
-The **Export** section focuses on data preparation and batch processing capabilities. This module is the primary tool for converting OCT raw data files into standard image formats (PNG or TIFF).
+The **RexView** section focuses on data preparation and batch processing capabilities. This module is the primary tool for converting OCT raw data files into standard image formats (PNG or TIFF).
 
 **Key Features:**
 
@@ -98,9 +98,9 @@ The **Export** section focuses on data preparation and batch processing capabili
 - **Global Processing Parameters**: Configure export format, averaging methods, aspect ratio correction, and scale bar preferences
 - **Custom Settings Per File**: Fine-tune slice ranges, dynamic range (dB), dispersion compensation, and refractive index for individual datasets
 - **Preview Capability**: Preview export results before processing entire batches
-- **Flexible Export Options**: Choose between PNG (smaller files) or TIFF (maximum quality) formats
+- **Flexible RexView Options**: Choose between PNG (smaller files) or TIFF (maximum quality) formats
 - **Advanced Processing**: Apply apodization windows, local filtering, and coherent/incoherent averaging
-- **Multi-View Support**: Export XZ, YZ, or XY slice orientations
+- **Multi-View Support**: RexView XZ, YZ, or XY slice orientations
 
 **Primary Use Case**: Preparing raw OCT data for analysis and converting proprietary OCT formats to standard image files for further processing.
 
@@ -124,7 +124,7 @@ The **Analyze** section provides comprehensive tools for detailed image analysis
 - **Comprehensive Undo System**: Full undo history with selective multi-action undo capability (Ctrl+Z, Ctrl+U)
 - **Metadata Management**: Track operator, measurement session, and imaging system information
 - **Auto-Save**: Automatic data persistence 1.5 seconds after each action
-- **Results Export**: Export to CSV format compatible with Excel, R, Python, and statistical software
+- **Results RexView**: RexView to CSV format compatible with Excel, R, Python, and statistical software
 
 **Primary Use Case**: Detailed analysis of individual specimens requiring manual measurements, feature annotation, and quality control with customizable data collection protocols.
 

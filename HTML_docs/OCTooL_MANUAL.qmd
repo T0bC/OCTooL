@@ -45,15 +45,15 @@ The application is particularly valuable for studies involving simple feature ch
 
 OCTooL is organized into three main functional sections, each designed for specific aspects of OCT image analysis:
 
-### Export Section {.unnumbered}
+### RexView Section {.unnumbered}
 
-The **Export** section focuses on data preparation and batch processing capabilities. This module allows users to:
+The **RexView** section focuses on data preparation and batch processing capabilities. This module allows users to:
 
 -   Import and organize large collections of OCT image files
 -   Configure global processing parameters
 -   Apply custom settings to specific datasets
 -   Execute batch operations across multiple specimens
--   Export processed data in various formats
+-   RexView processed data in various formats
 
 *Primary Use Case*: Preparing raw OCT data for analysis and converting from OCT raw data to `png` files.
 
@@ -85,7 +85,7 @@ The **CarlQuant** section implements advanced quantitative analysis algorithms s
 
 The three sections are designed to work together in a typical research workflow:
 
-1.  **Data Preparation** (Export): Import and organize raw OCT files
+1.  **Data Preparation** (RexView): Import and organize raw OCT files
 2.  **Image Anotatoion** (Analyze): Review and annotate specimens
 3.  **Quantitative Analysis** (CarlQuant): Apply leasion depth algoryth to generate research data
 
@@ -93,11 +93,11 @@ However, each section can also function independently, allowing users to enter t
 
 ------------------------------------------------------------------------
 
-# Export Section
+# RexView Section
 
-![OCTooL Export Section Main Window](images/01_Export_mainWindow.png)
+![OCTooL RexView Section Main Window](images/01_Export_mainWindow.png)
 
-The Export Section is the primary module for batch processing and converting OCT raw data files into standard image formats (PNG or TIFF). This section provides comprehensive control over image processing parameters, slice selection, and export settings.
+The RexView Section is the primary module for batch processing and converting OCT raw data files into standard image formats (PNG or TIFF). This section provides comprehensive control over image processing parameters, slice selection, and export settings.
 
 ## Typical Workflow
 
@@ -105,7 +105,7 @@ The Export Section is the primary module for batch processing and converting OCT
 2.  **Configure Global Settings**: Set export format, averaging method, and scale bar preferences
 3.  **Adjust Custom Settings**: Fine-tune slice ranges, dynamic range, and other parameters for specific files
 4.  **Preview**: Select a file and click "Show" to preview the export result
-5.  **Export**: Click "Export!" to process all files in the queue
+5.  **RexView**: Click "RexView!" to process all files in the queue
 6.  **Monitor Progress**: Watch the Status column for processing updates
 
 ## File Selection Panel
@@ -178,7 +178,7 @@ Global settings apply to all files in the export queue and control fundamental p
 
 **Warning**: This is an experimental feature and may significantly increase processing time.
 
-### Export Format
+### RexView Format
 
 **Purpose**: Select the output image format.
 
@@ -240,7 +240,7 @@ Global settings apply to all files in the export queue and control fundamental p
 
 Custom settings allow fine-tuned control over individual files or selections in the queue.
 
-### Export Range
+### RexView Range
 
 **Purpose**: Manually enter the first and last slice to be exported.
 
@@ -248,7 +248,7 @@ Custom settings allow fine-tuned control over individual files or selections in 
 
 ### Equidistant Slices
 
-**Purpose**: Export evenly distributed slices from a scan.
+**Purpose**: RexView evenly distributed slices from a scan.
 
 **Details**: To export evenly distributed slices from a scan, the number can be entered here and transferred to all or one entry in the queue.
 
@@ -298,7 +298,7 @@ Custom settings allow fine-tuned control over individual files or selections in 
 
 The Execution Panel controls the export process and application lifecycle.
 
-### Export!
+### RexView!
 
 **Purpose**: Start exporting of all entries in queue.
 
@@ -688,7 +688,7 @@ The CarlQuant Section implements advanced quantitative analysis algorithms speci
     -   Select specimens in the table to view results
     -   Double-click rows to open A-Scan viewer for detailed inspection
     -   Toggle overlays (H key) to visualize detection results
-7.  **Export Data**: Results are automatically saved to CSV files
+7.  **RexView Data**: Results are automatically saved to CSV files
 
 **Details**: The "Start Analyzing" button processes all loaded specimens sequentially. Each specimen is analyzed independently with the same settings. Progress is shown in the specimen table's STATE column.
 

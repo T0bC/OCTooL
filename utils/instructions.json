@@ -130,7 +130,7 @@
       ]
     }
   },
-  "export_getting_started": {
+  "rexview_getting_started": {
     "layout": "comprehensive_guide",
     "title": {
       "text": "◆ EXPORT - GETTING STARTED",
@@ -169,11 +169,11 @@
       },
       {
         "number": "4",
-        "title": "Execute Export",
+        "title": "Execute RexView",
         "panel": "Execution Panel",
         "actions": [
           "▸ Review export settings",
-          "▸ Click 'Start Export' button",
+          "▸ Click 'Start RexView' button",
           "▸ Monitor progress"
         ]
       }

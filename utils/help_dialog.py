@@ -28,7 +28,7 @@ class HelpDialog:
         Args:
             parent: Parent tkinter window
             style: ttkbootstrap Style object for theming
-            current_tab: Index of currently active tab (0=Export, 1=Analyze, 2=CarlQuant)
+            current_tab: Index of currently active tab (0=RexView, 1=Analyze, 2=CarlQuant)
         """
         self.parent = parent
         self.style = style
@@ -36,7 +36,7 @@ class HelpDialog:
         
         # Map tab indices to instruction keys
         self.tab_to_instruction_key = {
-            0: 'export_getting_started',
+            0: 'rexview_getting_started',
             1: 'analyze_getting_started',
             2: 'carlquant_getting_started'
         }
@@ -110,7 +110,7 @@ class HelpDialog:
     @handle_errors("HelpDialog.show")
     def show(self):
         """Show the help dialog for the current tab."""
-        instruction_key = self.tab_to_instruction_key.get(self.current_tab, 'export_getting_started')
+        instruction_key = self.tab_to_instruction_key.get(self.current_tab, 'rexview_getting_started')
         current_help = self._format_help_content(instruction_key)
         self._create_dialog(current_help['title'], current_help['content'])
     

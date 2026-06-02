@@ -9,7 +9,7 @@ Created on Sat Oct 10 18:54:40 2020
 import tkinter as tk
 from tkinter import ttk
 from ttkbootstrap import Style
-import exportTab
+import rexViewTab
 import analyzingTab
 import carl_quant
 from utils.app_context import AppContext, resource_path
@@ -26,7 +26,7 @@ class MainGui:
         # DISTRIBUTION CONFIGURATION
         # Set to True to enable each section, False to hide
         # ========================================
-        self.ENABLE_EXPORT = True
+        self.ENABLE_REXVIEW = True
         self.ENABLE_ANALYZE = True
         self.ENABLE_CARLQUANT = True
         # ========================================
@@ -96,11 +96,11 @@ class MainGui:
 
         # %% EXPORT TAB
         # create a frame holding the contents for the tab
-        if self.ENABLE_EXPORT:
-            self.exportTabFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.exportTabFrame, text = 'Export')
-            # Fill the tab with content defined in exportTab.py
-            exportTab.addContent(self, self.exportTabFrame)
+        if self.ENABLE_REXVIEW:
+            self.rexViewTabFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.rexViewTabFrame, text = 'RexView')
+            # Fill the tab with content defined in rexViewTab.py
+            rexViewTab.addContent(self, self.rexViewTabFrame)
 
 
         # %% Anylyzing Tab
@@ -151,9 +151,9 @@ class MainGui:
         )
 
         # Create colored button styles for each tab
-        # Export tab - Blue/Primary
+        # RexView tab - Blue/Primary
         self.style.configure(
-            "Export.TButton",
+            "RexView.TButton",
             background=self.style.colors.primary,
             foreground="white",
             borderwidth=0,
@@ -199,12 +199,12 @@ class MainGui:
         # Track column position for dynamic button placement
         col_index = 0
         
-        # Export button
-        if self.ENABLE_EXPORT:
+        # RexView button
+        if self.ENABLE_REXVIEW:
             export_btn = ttk.Button(
                 tab_button_container,
-                text="Export", #📊
-                style="Export.TButton",
+                text="RexView", #📊
+                style="RexView.TButton",
                 command=lambda idx=col_index: self.switch_tab(idx),
                 takefocus=False  # Prevent button from taking focus
             )
@@ -292,8 +292,8 @@ class MainGui:
 
             if i == tab_index:
                 # Make selected button slightly darker
-                if i == 0:  # Export
-                    btn.configure(style="Export.TButton")
+                if i == 0:  # RexView
+                    btn.configure(style="RexView.TButton")
                 elif i == 1:  # Analyze
                     btn.configure(style="Analyze.TButton")
                 elif i == 2:  # CarlQuant
@@ -318,8 +318,8 @@ class MainGui:
         """Show context-aware help based on the currently active tab."""
         # Build mapping of tab indices to tab types based on enabled tabs
         tab_type_map = []
-        if self.ENABLE_EXPORT:
-            tab_type_map.append(0)  # Export
+        if self.ENABLE_REXVIEW:
+            tab_type_map.append(0)  # RexView
         if self.ENABLE_ANALYZE:
             tab_type_map.append(1)  # Analyze
         if self.ENABLE_CARLQUANT:
