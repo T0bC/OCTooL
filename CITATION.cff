@@ -1,19 +1,65 @@
-cff-version: "2026.2"
-message: "If you use this software, please cite it as below."
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+title: "OCTooL: Optical Coherence Tomography Tool"
 type: software
-title: "OCTooL"
-abstract: "A modular toolkit for OCT image export, annotation, and quantitative analysis. Generative AI tools were used to assist with code generation, debugging, and documentation drafting during the development of this software. The authors reviewed all AI-generated content for correctness, functionality, and scientific accuracy and take full responsibility for the final published work. The following model(s) or application(s) were used: Claude Sonnet 4.6, Claude Opus 4.5, Kimi 2.5."
 authors:
-  - family-names: "Meissner"
+  - family-names: "Meißner"
     given-names: "Tobias"
-    affiliation: "University of Leipzig, Department of Cariology, Endodontology and Periodontology"
+    email: "tobias.meissner@medizin.uni-leipzig.de"
+    affiliation: >-
+      Leipzig University, Department of Cariology,
+      Endodontology and Periodontology
   - family-names: "Bemmann"
     given-names: "Maximilian"
-    affiliation: "University of Leipzig, Department of Cariology, Endodontology and Periodontology"
+    affiliation: >-
+      Leipzig University, Department of Cariology,
+      Endodontology and Periodontology
   - family-names: "Golde"
     given-names: "Jonas"
-    affiliation: "University of Leipzig, Department of Cariology, Endodontology and Periodontology"
-repository-code: "https://github.com/T0bC/OCTooL"
+    orcid: "https://orcid.org/0000-0002-8160-3000"
+    affiliation: >-
+      Fraunhofer Institute for Material and Beam Technology (IWS),
+      Technische Universität Dresden
+abstract: >-
+  OCTooL is a comprehensive software application designed for the export,
+  analysis, and quantification of Optical Coherence Tomography (OCT)
+  images. It provides researchers and clinicians with powerful tools to
+  extract quantitative data from OCT imaging studies, including batch
+  processing, interactive annotation, and advanced lesion depth detection
+  algorithms.
+keywords:
+  - OCT
+  - optical coherence tomography
+  - image analysis
+  - quantitative analysis
+  - lesion depth
+  - dental research
+  - medical imaging
+  - Python
+  - tkinter
+repository-code: "https://github.com/T0bC/OCTooL.git"
 version: 2026.2
 date-released: 2026-06-01
 license: GPL-3.0-or-later
+notes: >-
+  Author contributions by module:
+
+  - Tobias Meißner: Main developer and maintainer of OCTooL. Led
+    architecture and development across all modules (Export, Analyze,
+    CarlQuant), GUI design, error handling, documentation, and release
+    management.
+
+  - Maximilian Bemmann: Co-developed the prototype for the CarlQuant
+    quantitative analysis module (lesion depth detection algorithms)
+    during his affiliation at Leipzig University.
+
+  - Jonas Golde: Provided the foundational OCT spectral-to-grayvalue
+    conversion algorithm (originally implemented in MATLAB) that
+    underpins the Export module's image reconstruction logic.
+
+  Generative AI tools were used to assist with code generation,
+  debugging, and documentation drafting during the development of this
+  software. The authors reviewed all AI-generated content for
+  correctness, functionality, and scientific accuracy and take full
+  responsibility for the final published work. The following model(s) or
+  application(s) were used: Claude Sonnet 4.6, Claude Opus 4.5, Kimi 2.5.
