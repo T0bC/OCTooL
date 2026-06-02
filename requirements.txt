@@ -28,9 +28,12 @@ lxml>=4.9.0
 # Plotting
 matplotlib>=3.7.0
 
-# Optional: Testing Dependencies (uncomment if needed)
-# pytest>=7.4.0
-# pytest-cov>=4.1.0
+# Testing Dependencies
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Data Validation
+pydantic>=2.0.0
 
 # Note: The following are only used in test files and not required for production:
 # - opencv-python (cv2) - only in tests/test_image.py
