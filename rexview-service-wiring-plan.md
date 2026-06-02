@@ -109,8 +109,8 @@ Each step preserves the original logic in comments until verified. If issues ari
 
 ## Progress Tracking
 
-- [ ] **Step 1**: Wire `prepare_export()` - slice calculation, data type
-- [ ] **Step 2**: Wire `load_image_stack()` - image loading
-- [ ] **Step 3**: Wire `process_slice()` - slice processing
-- [ ] **Step 4**: Wire full `run_export()` per-item
-- [ ] **Step 5**: Integration tests and cleanup
+- [x] **Step 1**: Wire `prepare_export()` - slice calculation, data type
+- [x] **Step 2**: Wire `load_image_stack()` - image loading
+- [x] **Step 3**: Wire `process_slice()` - slice processing
+- [x] **Step 4**: Wire full `run_export()` per-item
+- [x] **Step 5**: Integration tests and cleanup
