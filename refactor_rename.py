@@ -16,7 +16,7 @@ RENAME_MAP = {
     # old_folder_name: new_folder_name
     "export_frames": "RexView",
     # Add more here before running, e.g.:
-    # "analyze_frames": "AnalyzeView",
+    # "AnnoLyze": "AnalyzeView",
     # "carlquant_frames": "CarlView",
 }
 
@@ -93,5 +93,5 @@ if __name__ == "__main__":
         print(f"  Removed {n} __pycache__ directories.")
 
     print("\nDone.")
-    print("Tip: If you also rename the top-level tab files (exportTab.py / analyzingTab.py / carl_quant.py),")
+    print("Tip: If you also rename the top-level tab files (exportTab.py / annoLyzeTab.py / carl_quant.py),")
     print("     remember to update the matching `import ...` statements in MainGui.py manually.")

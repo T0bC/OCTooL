@@ -94,7 +94,7 @@ editor: visual
 ### User Documentation
 
 -   Added comprehensive README with installation and usage guide
--   Created detailed documentation covering all three main sections (RexView, Analyze, CarlQuant)
+-   Created detailed documentation covering all three main sections (RexView, AnnoLyze, CarlQuant)
 -   Added installation instructions, system requirements, and development setup guide
 -   Included build instructions with PyInstaller configuration details
 
@@ -130,7 +130,7 @@ editor: visual
 ### Tab Configuration System
 
 -   Introduced configurable tab visibility system with distribution flags
--   Added ENABLE_REXVIEW, ENABLE_ANALYZE, and ENABLE_CARLQUANT instance variables for selective tab control
+-   Added ENABLE_REXVIEW, ENABLE_ANNOLYZE, and ENABLE_CARLQUANT instance variables for selective tab control
 -   Updated tab button creation to dynamically position buttons based on enabled tabs
 -   Added automatic selection of first available tab on startup
 -   Fixed tab button command callbacks to use captured indices instead of dynamic length calculation
@@ -182,7 +182,7 @@ editor: visual
 ### User Documentation
 
 -   Added comprehensive README with installation and usage guide
--   Created detailed documentation covering all three main sections (RexView, Analyze, CarlQuant)
+-   Created detailed documentation covering all three main sections (RexView, AnnoLyze, CarlQuant)
 -   Added installation instructions, system requirements, and development setup guide
 -   Included build instructions with PyInstaller configuration details
 
@@ -281,7 +281,7 @@ editor: visual
 
 -   Added PyInstaller build optimization guide and quick reference
 -   Moved typical workflow sections to beginning of each chapter for better accessibility
--   Added comprehensive Analyze section documentation with detailed UI components and workflows
+-   Added comprehensive AnnoLyze section documentation with detailed UI components and workflows
 -   Added comprehensive Carl Quant section documentation with detailed UI components and workflows
 -   Added comprehensive RexView section documentation with detailed parameters and workflows
 -   Improved manual layout and content organization with enhanced table of contents

@@ -28,7 +28,7 @@ class HelpDialog:
         Args:
             parent: Parent tkinter window
             style: ttkbootstrap Style object for theming
-            current_tab: Index of currently active tab (0=RexView, 1=Analyze, 2=CarlQuant)
+            current_tab: Index of currently active tab (0=RexView, 1=AnnoLyze, 2=CarlQuant)
         """
         self.parent = parent
         self.style = style
@@ -37,7 +37,7 @@ class HelpDialog:
         # Map tab indices to instruction keys
         self.tab_to_instruction_key = {
             0: 'rexview_getting_started',
-            1: 'analyze_getting_started',
+            1: 'annolyze_getting_started',
             2: 'carlquant_getting_started'
         }
         

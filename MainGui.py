@@ -10,7 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from ttkbootstrap import Style
 import rexViewTab
-import analyzingTab
+import annoLyzeTab
 import carl_quant
 from utils.app_context import AppContext, resource_path
 from utils.status_bar import StatusBar
@@ -27,7 +27,7 @@ class MainGui:
         # Set to True to enable each section, False to hide
         # ========================================
         self.ENABLE_REXVIEW = True
-        self.ENABLE_ANALYZE = True
+        self.ENABLE_ANNOLYZE = True
         self.ENABLE_CARLQUANT = True
         # ========================================
 
@@ -104,10 +104,10 @@ class MainGui:
 
 
         # %% Anylyzing Tab
-        if self.ENABLE_ANALYZE:
-            self.analyzingFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.analyzingFrame, text = 'Analyze')
-            analyzingTab.addContent(self, self.analyzingFrame)
+        if self.ENABLE_ANNOLYZE:
+            self.annoLyzeFrame = ttk.Frame(self.tabParent)
+            self.tabParent.add(self.annoLyzeFrame, text = 'AnnoLyze')
+            annoLyzeTab.addContent(self, self.annoLyzeFrame)
 
         # %% Carl Quant
         if self.ENABLE_CARLQUANT:
@@ -161,9 +161,9 @@ class MainGui:
             padding=[20, 10]
         )
 
-        # Analyze tab - Green/Success
+        # AnnoLyze tab - Green/Success
         self.style.configure(
-            "Analyze.TButton",
+            "AnnoLyze.TButton",
             background=self.style.colors.success,
             foreground="white",
             borderwidth=0,
@@ -208,16 +208,16 @@ class MainGui:
                 command=lambda idx=col_index: self.switch_tab(idx),
                 takefocus=False  # Prevent button from taking focus
             )
-            export_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_ANALYZE or self.ENABLE_CARLQUANT else 0))
+            export_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_ANNOLYZE or self.ENABLE_CARLQUANT else 0))
             self.tab_buttons.append(export_btn)
             col_index += 1
 
-        # Analyze button
-        if self.ENABLE_ANALYZE:
+        # AnnoLyze button
+        if self.ENABLE_ANNOLYZE:
             analyze_btn = ttk.Button(
                 tab_button_container,
-                text="Analyze", #🔬
-                style="Analyze.TButton",
+                text="AnnoLyze", #🔬
+                style="AnnoLyze.TButton",
                 command=lambda idx=col_index: self.switch_tab(idx),
                 takefocus=False  # Prevent button from taking focus
             )
@@ -294,8 +294,8 @@ class MainGui:
                 # Make selected button slightly darker
                 if i == 0:  # RexView
                     btn.configure(style="RexView.TButton")
-                elif i == 1:  # Analyze
-                    btn.configure(style="Analyze.TButton")
+                elif i == 1:  # AnnoLyze
+                    btn.configure(style="AnnoLyze.TButton")
                 elif i == 2:  # CarlQuant
                     btn.configure(style="CarlQuant.TButton")
 
@@ -320,8 +320,8 @@ class MainGui:
         tab_type_map = []
         if self.ENABLE_REXVIEW:
             tab_type_map.append(0)  # RexView
-        if self.ENABLE_ANALYZE:
-            tab_type_map.append(1)  # Analyze
+        if self.ENABLE_ANNOLYZE:
+            tab_type_map.append(1)  # AnnoLyze
         if self.ENABLE_CARLQUANT:
             tab_type_map.append(2)  # CarlQuant
         

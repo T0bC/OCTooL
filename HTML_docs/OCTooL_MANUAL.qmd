@@ -57,9 +57,9 @@ The **RexView** section focuses on data preparation and batch processing capabil
 
 *Primary Use Case*: Preparing raw OCT data for analysis and converting from OCT raw data to `png` files.
 
-### Analyze Section {.unnumbered}
+### AnnoLyze Section {.unnumbered}
 
-The **Analyze** section provides comprehensive tools for detailed image analysis and annotation. Key features include:
+The **AnnoLyze** section provides comprehensive tools for detailed image analysis and annotation. Key features include:
 
 -   Interactive image viewing and navigation
 -   Manual annotation tools
@@ -86,7 +86,7 @@ The **CarlQuant** section implements advanced quantitative analysis algorithms s
 The three sections are designed to work together in a typical research workflow:
 
 1.  **Data Preparation** (RexView): Import and organize raw OCT files
-2.  **Image Anotatoion** (Analyze): Review and annotate specimens
+2.  **Image Anotatoion** (AnnoLyze): Review and annotate specimens
 3.  **Quantitative Analysis** (CarlQuant): Apply leasion depth algoryth to generate research data
 
 However, each section can also function independently, allowing users to enter the workflow at any point based on their specific needs.
@@ -351,11 +351,11 @@ Additionally, a video image (overview) is saved as:
 [FileName]_[ExpNumber].jpg
 ```
 
-# Analyze Section
+# AnnoLyze Section
 
-![OCTooL Analyze Section Main Window](images/02_Analyze_mainWindow.png)
+![OCTooL AnnoLyze Section Main Window](images/02_Analyze_mainWindow.png)
 
-The Analyze Section provides comprehensive tools for interactive image annotation, measurement, and data collection. This module is designed for detailed analysis of individual specimens with manual oversight and quality control, enabling researchers to annotate features, collect measurements, and compile results in a structured format.
+The AnnoLyze Section provides comprehensive tools for interactive image annotation, measurement, and data collection. This module is designed for detailed analysis of individual specimens with manual oversight and quality control, enabling researchers to annotate features, collect measurements, and compile results in a structured format.
 
 ## Typical Workflow
 

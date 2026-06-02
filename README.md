@@ -16,7 +16,7 @@
     - [Run the Application](#run-the-application)
   - [Application Overview](#application-overview)
     - [RexView Section](#export-section)
-    - [Analyze Section](#analyze-section)
+    - [AnnoLyze Section](#analyze-section)
     - [CarlQuant Section](#carlquant-section)
   - [Development Setup](#development-setup)
     - [Create Conda Environment](#create-conda-environment)
@@ -106,13 +106,13 @@ The **RexView** section focuses on data preparation and batch processing capabil
 
 ---
 
-### Analyze Section
+### AnnoLyze Section
 
 <p align="center">
-  <img src="HTML_docs/images/02_Analyze_mainWindow.png" alt="Analyze Section Interface" width="800"/>
+  <img src="HTML_docs/images/02_Analyze_mainWindow.png" alt="AnnoLyze Section Interface" width="800"/>
 </p>
 
-The **Analyze** section provides comprehensive tools for detailed image analysis and manual annotation. This module enables researchers to perform detailed measurements with full manual oversight and quality control.
+The **AnnoLyze** section provides comprehensive tools for detailed image analysis and manual annotation. This module enables researchers to perform detailed measurements with full manual oversight and quality control.
 
 **Key Features:**
 
