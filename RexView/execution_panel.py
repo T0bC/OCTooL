@@ -18,6 +18,10 @@ from utils.tool_tip import Tooltip
 import gc
 from utils.error_handler import handle_errors
 
+# Import refactored logic components
+from app.logic.rexview import ExportConfig, SliceExportParams, ExportProgress, ExportService
+from app.logic.shared import OCTMetadata
+
 
 # %% To Prevent GUI Freezing during a long loop or function we need to set up
 # threads.
@@ -33,6 +37,9 @@ class executionPanel:
         self.globalSettingsFrame = self.context.get_panel("global_settings")
         self.customSettingsFrame = self.context.get_panel("custom_settings")
         self.mainWin = self.context.main_win
+        
+        # Initialize the export service (pure logic, no GUI dependencies)
+        self.export_service = ExportService()
 
         self.executeBtn = ttk.Button(self.frame, text='RexView!', width=10,
                                      command=self.mainRoutine,
@@ -329,3 +336,44 @@ class executionPanel:
 
 
         return exif
+
+    def _collect_export_config(self) -> ExportConfig:
+        """
+        Gather current GUI state into an ExportConfig object.
+        
+        This method bridges the GUI widgets to the pure logic layer.
+        """
+        return ExportConfig.from_gui_state(
+            resize_state=self.globalSettingsFrame.getResizeState(),
+            prefer_raw_state=self.globalSettingsFrame.prefRawBox.state(),
+            advanced_filter_state=self.globalSettingsFrame.getAdvancedFilter(),
+            export_format=self.globalSettingsFrame.getExpFormat(),
+            averaging=self.globalSettingsFrame.averagingMenu.get(),
+            tukey_size=self.globalSettingsFrame.getTukeyWinSize(),
+            scale_state=self.globalSettingsFrame.ScaleBox.state(),
+            scale_length=self.globalSettingsFrame.scaleEntry.get(),
+            scale_font_size=self.globalSettingsFrame.scaleTextSizeEntry.get(),
+        )
+
+    def _collect_slice_params(self, item_id: str) -> SliceExportParams:
+        """
+        Gather TreeView row values into a SliceExportParams object.
+        
+        Args:
+            item_id: The TreeView item identifier
+            
+        Returns:
+            SliceExportParams with values from the TreeView row
+        """
+        return SliceExportParams.from_treeview_row(
+            path=self.treeView.getValueFromRow(item_id, column='Path'),
+            name=self.treeView.getValueFromRow(item_id, 'Name'),
+            first=self.treeView.getValueFromRow(item_id, 'First'),
+            last=self.treeView.getValueFromRow(item_id, 'Last'),
+            num_slices=self.treeView.getValueFromRow(item_id, 'NumSlices'),
+            slice_dir=self.treeView.getValueFromRow(item_id, 'Img. Slice Dir.'),
+            db_min=self.treeView.getValueFromRow(item_id, column='dB min'),
+            db_max=self.treeView.getValueFromRow(item_id, column='dB max'),
+            refr_ind=self.treeView.getValueFromRow(item_id, 'Refr. Ind.'),
+            dispersion=self.customSettingsFrame.getDispersion(),
+        )
