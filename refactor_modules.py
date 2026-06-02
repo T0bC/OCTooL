@@ -10,7 +10,7 @@ from pathlib import Path
 # ============================================================
 MODULES = [
     {
-        "active": True,
+        "active": False,
         "old_dir": "export_frames",
         "new_dir": "RexView",
         "old_file": "exportTab.py",
@@ -28,12 +28,25 @@ MODULES = [
         "old_instruction": "export_getting_started",
         "new_instruction": "rexview_getting_started",
     },
-    # {
-    #     "active": False,
-    #     "old_dir": "analyze_frames",
-    #     "new_dir": "...",
-    #     ...
-    # },
+    {
+        "active": True,
+        "old_dir": "analyze_frames",
+        "new_dir": "AnnoLyze",
+        "old_file": "analyzingTab.py",
+        "new_file": "annoLyzeTab.py",
+        "old_import": "analyzingTab",
+        "new_import": "annoLyzeTab",
+        "old_display": "Analyze",
+        "new_display": "AnnoLyze",
+        "old_style": "Analyze",
+        "new_style": "AnnoLyze",
+        "old_enable": "ENABLE_ANALYZE",
+        "new_enable": "ENABLE_ANNOLYZE",
+        "old_frame": "analyzingFrame",
+        "new_frame": "annoLyzeFrame",
+        "old_instruction": "analyze_getting_started",
+        "new_instruction": "annolyze_getting_started",
+    },
 ]
 
 EXTS = (".py", ".spec", ".qmd", ".html", ".md", ".json")
@@ -67,7 +80,8 @@ def rename_files(root, mods):
 
 
 def refactor(root, mods):
-    files = [p for p in root.rglob("*") if p.is_file() and ".git" not in p.parts and p.suffix in EXTS]
+    script_path = Path(__file__).resolve()
+    files = [p for p in root.rglob("*") if p.is_file() and ".git" not in p.parts and p.suffix in EXTS and p.resolve() != script_path]
     files.sort()
     for m in mods:
         if not m.get("active"): continue
