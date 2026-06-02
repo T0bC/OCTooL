@@ -353,6 +353,147 @@ class ExportProgress(BaseModel):
         return (self.current_slice / self.total_slices) * 100
 
 
+class QueueItem(BaseModel):
+    """
+    Represents a single item in the export queue.
+    
+    Maps to a row in the TreeView table.
+    """
+    name: str = Field(description="File name without extension")
+    first_slice: int = Field(default=1, ge=1, description="First slice to export (1-indexed)")
+    last_slice: int = Field(ge=1, description="Last slice to export (1-indexed)")
+    db_min: int = Field(default=20, description="Minimum dB value")
+    db_max: int = Field(default=80, description="Maximum dB value")
+    num_slices: int = Field(ge=1, description="Number of slices to export")
+    refractive_index: float = Field(default=1.0, ge=0.1, le=5.0, description="Refractive index")
+    dispersion_coefficient: int = Field(default=20, description="Dispersion coefficient")
+    slice_direction: Literal['XZ', 'YZ', 'XY'] = Field(default='XZ', description="Image slice direction")
+    data_type: str = Field(default='Processed', description="OCT data type")
+    status: str = Field(default='in queue', description="Export status")
+    file_path: str = Field(description="Full path to OCT file")
+    
+    model_config = {
+        'frozen': False,
+        'validate_assignment': True,
+    }
+    
+    @model_validator(mode='after')
+    def validate_slice_range(self) -> 'QueueItem':
+        """Ensure first_slice <= last_slice."""
+        if self.first_slice > self.last_slice:
+            raise ValueError(f"first_slice ({self.first_slice}) must be <= last_slice ({self.last_slice})")
+        return self
+    
+    @model_validator(mode='after')
+    def validate_db_range(self) -> 'QueueItem':
+        """Ensure db_min < db_max."""
+        if self.db_min >= self.db_max:
+            raise ValueError(f"db_min ({self.db_min}) must be < db_max ({self.db_max})")
+        return self
+    
+    @classmethod
+    def from_treeview_values(
+        cls,
+        name: str,
+        first: str,
+        last: str,
+        db_min: str,
+        db_max: str,
+        num_slices: str,
+        refr_ind: str,
+        disp_coeff: str,
+        slice_dir: str,
+        data_type: str,
+        status: str,
+        path: str,
+    ) -> 'QueueItem':
+        """Create QueueItem from TreeView row string values."""
+        return cls(
+            name=name,
+            first_slice=int(first),
+            last_slice=int(last),
+            db_min=int(db_min),
+            db_max=int(db_max),
+            num_slices=int(num_slices),
+            refractive_index=float(refr_ind),
+            dispersion_coefficient=int(disp_coeff),
+            slice_direction=slice_dir,
+            data_type=data_type,
+            status=status,
+            file_path=path,
+        )
+    
+    def to_treeview_values(self) -> tuple:
+        """Convert to tuple for TreeView insertion."""
+        return (
+            self.name,
+            self.first_slice,
+            self.last_slice,
+            self.db_min,
+            self.db_max,
+            self.num_slices,
+            self.refractive_index,
+            self.dispersion_coefficient,
+            self.slice_direction,
+            self.data_type,
+            self.status,
+            self.file_path,
+        )
+
+
+class FileMetadata(BaseModel):
+    """
+    Metadata extracted from an OCT file.
+    
+    Contains information needed to create queue entries.
+    """
+    file_path: str = Field(description="Full path to OCT file")
+    file_name: str = Field(description="File name without extension")
+    data_type: str = Field(description="OCT data type (Processed, Raw, etc.)")
+    serial_number: Optional[str] = Field(default=None, description="Device serial number")
+    dim_x: int = Field(default=1, ge=1, description="X dimension in pixels")
+    dim_y: int = Field(default=1, ge=1, description="Y dimension in pixels")
+    dim_z: int = Field(default=1, ge=1, description="Z dimension in pixels")
+    
+    model_config = {
+        'frozen': False,
+        'validate_assignment': True,
+    }
+    
+    def get_dimension_for_direction(self, direction: Literal['XZ', 'YZ', 'XY']) -> int:
+        """Get the number of slices for a given slice direction."""
+        direction_map = {
+            'XZ': self.dim_y,
+            'YZ': self.dim_x,
+            'XY': self.dim_z,
+        }
+        return direction_map.get(direction, self.dim_y)
+
+
+class ExportSettings(BaseModel):
+    """
+    Export settings parsed from a sidecar metadata file.
+    
+    Represents settings for a single export direction.
+    """
+    start: int = Field(ge=1, description="Start slice (1-indexed)")
+    end: int = Field(ge=1, description="End slice (1-indexed)")
+    num_equidistant_slices: int = Field(ge=1, description="Number of equidistant slices")
+    refractive_index: float = Field(default=1.0, ge=0.1, le=5.0, description="Refractive index")
+    
+    model_config = {
+        'frozen': False,
+        'validate_assignment': True,
+    }
+    
+    @model_validator(mode='after')
+    def validate_range(self) -> 'ExportSettings':
+        """Ensure start <= end."""
+        if self.start > self.end:
+            raise ValueError(f"start ({self.start}) must be <= end ({self.end})")
+        return self
+
+
 class ImageDisplayConfig(BaseModel):
     """
     Configuration for OCT image preview display.
