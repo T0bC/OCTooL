@@ -9,12 +9,14 @@ Created on Sat Oct 10 18:55:08 2020
 import tkinter as tk
 from tkinter import ttk
 from utils.tool_tip import Tooltip
+from app.logic.rexview.settings_service import SettingsService
 
 class globalSettingsPanel:
     def __init__(self, context):
         self.context = context
         self.root = self.context.root
         self.frame = self.context.get_frame("global_settings")
+        self._settings_service = SettingsService()
 
         # %% Buttons and Checkboxes
 
@@ -278,3 +280,74 @@ class globalSettingsPanel:
 
         '''
         return self.tukeyWinSize.get()
+
+    def getScaleState(self)-> tuple:
+        '''
+        Returns state of Scale Checkbox
+
+        Returns
+        -------
+        tuple
+            ('selected',) or ().
+
+        '''
+        return self.ScaleBox.state()
+
+    def getScaleLength(self)-> str:
+        '''
+        Returns the scale length entry value
+
+        Returns
+        -------
+        str
+            Scale length in micrometers.
+
+        '''
+        return self.scaleEntry.get()
+
+    def getScaleFontSize(self)-> str:
+        '''
+        Returns the scale font size entry value
+
+        Returns
+        -------
+        str
+            Font size in points.
+
+        '''
+        return self.scaleTextSizeEntry.get()
+
+    def _collect_settings_config(self) -> dict:
+        '''
+        Collect current global settings state for SettingsConfig creation.
+
+        Returns
+        -------
+        dict
+            Dictionary with global settings values ready for SettingsConfig.from_gui_state().
+
+        '''
+        return {
+            'resize_state': self.getResizeState(),
+            'prefer_raw_state': self.getPrefRawState(),
+            'advanced_filter_state': self.getAdvancedFilter(),
+            'export_format': self.getExpFormat(),
+            'averaging': self.getAverageState(),
+            'tukey_size': self.getTukeyWinSize(),
+            'error_state': self.getErrorState(),
+            'scale_state': self.getScaleState(),
+            'scale_length': self.getScaleLength(),
+            'scale_font_size': self.getScaleFontSize(),
+        }
+
+    def get_defaults(self) -> dict:
+        '''
+        Get default settings values from SettingsService.
+
+        Returns
+        -------
+        dict
+            Dictionary with default settings values.
+
+        '''
+        return self._settings_service.DEFAULTS
