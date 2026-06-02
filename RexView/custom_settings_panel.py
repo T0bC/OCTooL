@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from utils import oct_functions as octF
 from utils.tool_tip import Tooltip
+from app.logic.rexview.settings_service import SettingsService
 
 class customSettingsPanel:
     def __init__(self, context):
@@ -17,6 +18,7 @@ class customSettingsPanel:
         self.root = self.context.root
         self.frame = self.context.get_frame("custom_settings")
         self.treeView = self.context.get_panel("tree")
+        self._settings_service = SettingsService()
 
         # %% Buttons and Checkboxes
 
@@ -319,3 +321,184 @@ class customSettingsPanel:
 
         '''
         return (self.dispersionMenu.get(), self.dispEntry.get()) #self.dispersionBox.state()[0],
+
+    def getFirstSlice(self)-> str:
+        '''
+        Returns the first slice entry value.
+
+        Returns
+        -------
+        str
+            First slice number or 'First' placeholder.
+
+        '''
+        return self.firstEntry.get()
+
+    def getLastSlice(self)-> str:
+        '''
+        Returns the last slice entry value.
+
+        Returns
+        -------
+        str
+            Last slice number or 'Last' placeholder.
+
+        '''
+        return self.lastEntry.get()
+
+    def getNumEquidistantSlices(self)-> str:
+        '''
+        Returns the number of equidistant slices entry value.
+
+        Returns
+        -------
+        str
+            Number of equidistant slices.
+
+        '''
+        return self.numSlicesEntry.get()
+
+    def getDbMin(self)-> int:
+        '''
+        Returns the minimum dB value from scale.
+
+        Returns
+        -------
+        int
+            Minimum dB value.
+
+        '''
+        return int(self.scaleMdB.get())
+
+    def getDbMax(self)-> int:
+        '''
+        Returns the maximum dB value from scale.
+
+        Returns
+        -------
+        int
+            Maximum dB value.
+
+        '''
+        return int(self.scaleAdB.get())
+
+    def getSliceDirection(self)-> str:
+        '''
+        Returns the selected slice direction.
+
+        Returns
+        -------
+        str
+            'XZ', 'YZ', or 'XY'.
+
+        '''
+        return self.expDirMenu.get()
+
+    def getRefractiveIndex(self)-> str:
+        '''
+        Returns the refractive index entry value.
+
+        Returns
+        -------
+        str
+            Refractive index value.
+
+        '''
+        return self.refractiveIndexEntry.get()
+
+    def _collect_settings_config(self) -> dict:
+        '''
+        Collect current custom settings state for SettingsConfig creation.
+
+        Returns
+        -------
+        dict
+            Dictionary with custom settings values ready for SettingsConfig.from_gui_state().
+
+        '''
+        disp_type, disp_coeff = self.getDispersion()
+        return {
+            'first_slice': self.getFirstSlice(),
+            'last_slice': self.getLastSlice(),
+            'num_equidistant_slices': self.getNumEquidistantSlices(),
+            'db_min': self.getDbMin(),
+            'db_max': self.getDbMax(),
+            'dispersion_type': disp_type,
+            'dispersion_coefficient': disp_coeff,
+            'slice_direction': self.getSliceDirection(),
+            'refractive_index': self.getRefractiveIndex(),
+        }
+
+    def validate_slice_range(self, first_slice: int, last_slice: int, total_slices: int):
+        '''
+        Validate slice range using SettingsService.
+
+        Parameters
+        ----------
+        first_slice : int
+            First slice number (1-indexed).
+        last_slice : int
+            Last slice number (1-indexed).
+        total_slices : int
+            Total number of slices available.
+
+        Returns
+        -------
+        ValidationResult
+            Result with is_valid, errors, and warnings.
+
+        '''
+        return self._settings_service.validate_slice_range(first_slice, last_slice, total_slices)
+
+    def validate_db_range(self, db_min: int, db_max: int):
+        '''
+        Validate dB range using SettingsService.
+
+        Parameters
+        ----------
+        db_min : int
+            Minimum dB value.
+        db_max : int
+            Maximum dB value.
+
+        Returns
+        -------
+        ValidationResult
+            Result with is_valid, errors, and warnings.
+
+        '''
+        return self._settings_service.validate_db_range(db_min, db_max)
+
+    def parse_dispersion(self):
+        '''
+        Parse current dispersion settings using SettingsService.
+
+        Returns
+        -------
+        tuple
+            (dispersion_type, dispersion_coefficient) with coefficient as int.
+
+        Raises
+        ------
+        ValueError
+            If dispersion settings are invalid.
+
+        '''
+        return self._settings_service.parse_dispersion(self.getDispersion())
+
+    def get_dispersion_recommendation(self, wavelength_nm: int) -> int:
+        '''
+        Get recommended dispersion coefficient for a wavelength.
+
+        Parameters
+        ----------
+        wavelength_nm : int
+            OCT center wavelength in nanometers.
+
+        Returns
+        -------
+        int
+            Recommended dispersion coefficient.
+
+        '''
+        return self._settings_service.get_dispersion_recommendation(wavelength_nm)
