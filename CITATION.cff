@@ -2,7 +2,7 @@ cff-version: "2026.2"
 message: "If you use this software, please cite it as below."
 type: software
 title: "OCTooL"
-abstract: "A modular toolkit for OCT image export, annotation, and quantitative analysis."
+abstract: "A modular toolkit for OCT image export, annotation, and quantitative analysis. Generative AI tools were used to assist with code generation, debugging, and documentation drafting during the development of this software. The authors reviewed all AI-generated content for correctness, functionality, and scientific accuracy and take full responsibility for the final published work. The following model(s) or application(s) were used: Claude Sonnet 4.6, Claude Opus 4.5, Kimi 2.5."
 authors:
   - family-names: "Meissner"
     given-names: "Tobias"
