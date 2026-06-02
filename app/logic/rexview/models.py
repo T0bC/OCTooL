@@ -4,8 +4,162 @@ RexView Pydantic Models
 Data models for OCT export configuration and parameters.
 """
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Literal, Optional, Tuple
+from typing import Literal, Optional, Tuple, List
 from pathlib import Path
+
+
+class SettingsConfig(BaseModel):
+    """
+    Configuration for OCT export settings from both global and custom settings panels.
+    
+    Combines settings from global_settings_panel and custom_settings_panel.
+    """
+    # Global settings
+    resize_enabled: bool = Field(default=True, description="Apply aspect ratio correction")
+    prefer_raw: bool = Field(default=True, description="Prefer raw spectral data over processed")
+    advanced_filter: bool = Field(default=False, description="Apply advanced speckle filtering")
+    export_format: Literal['.png', '.tiff'] = Field(default='.tiff', description="Output image format")
+    averaging: Literal['none', 'incoherent', 'coherent'] = Field(
+        default='coherent',
+        description="A-scan averaging method"
+    )
+    tukey_window_size: float = Field(
+        default=0.9,
+        ge=0.0,
+        le=1.0,
+        description="Tukey window parameter (0=rect, 1=Hann)"
+    )
+    show_error: bool = Field(default=False, description="Show error messages for missing text files")
+    
+    # Scale settings
+    scale_enabled: bool = Field(default=True, description="Add scale bar to exported images")
+    scale_length_um: int = Field(default=500, ge=1, description="Scale bar length in micrometers")
+    scale_font_size: int = Field(default=30, ge=1, description="Scale bar text font size")
+    
+    # Custom settings - slice range
+    first_slice: Optional[int] = Field(default=None, ge=1, description="First slice to export")
+    last_slice: Optional[int] = Field(default=None, ge=1, description="Last slice to export")
+    num_equidistant_slices: int = Field(default=25, ge=1, description="Number of equidistant slices")
+    
+    # Dynamic range
+    db_min: int = Field(default=30, ge=0, le=50, description="Minimum dB value")
+    db_max: int = Field(default=100, ge=50, le=120, description="Maximum dB value")
+    
+    # Dispersion
+    dispersion_type: Literal['Quadratic', 'None'] = Field(
+        default='Quadratic',
+        description="Dispersion compensation type"
+    )
+    dispersion_coefficient: int = Field(
+        default=-100,
+        ge=-100,
+        le=100,
+        description="Dispersion coefficient value"
+    )
+    
+    # Slice direction
+    slice_direction: Literal['XZ', 'YZ', 'XY'] = Field(
+        default='XZ',
+        description="Image slice orientation"
+    )
+    
+    # Refractive index
+    refractive_index: float = Field(
+        default=1.0,
+        ge=0.1,
+        le=5.0,
+        description="Refractive index correction factor"
+    )
+    
+    model_config = {
+        'frozen': False,
+        'validate_assignment': True,
+    }
+    
+    @model_validator(mode='after')
+    def validate_db_range(self) -> 'SettingsConfig':
+        """Ensure db_min < db_max."""
+        if self.db_min >= self.db_max:
+            raise ValueError(f"db_min ({self.db_min}) must be < db_max ({self.db_max})")
+        return self
+    
+    @model_validator(mode='after')
+    def validate_slice_range(self) -> 'SettingsConfig':
+        """Ensure first_slice <= last_slice when both are set."""
+        if self.first_slice is not None and self.last_slice is not None:
+            if self.first_slice > self.last_slice:
+                raise ValueError(f"first_slice ({self.first_slice}) must be <= last_slice ({self.last_slice})")
+        return self
+    
+    @classmethod
+    def from_gui_state(
+        cls,
+        resize_state: str,
+        prefer_raw_state: tuple,
+        advanced_filter_state: str,
+        export_format: str,
+        averaging: str,
+        tukey_size: str,
+        error_state: str,
+        scale_state: tuple,
+        scale_length: str,
+        scale_font_size: str,
+        first_slice: Optional[str] = None,
+        last_slice: Optional[str] = None,
+        num_equidistant_slices: str = '25',
+        db_min: int = 30,
+        db_max: int = 100,
+        dispersion_type: str = 'Quadratic',
+        dispersion_coefficient: str = '-100',
+        slice_direction: str = 'XZ',
+        refractive_index: str = '1.0',
+    ) -> 'SettingsConfig':
+        """
+        Create SettingsConfig from GUI widget states.
+        
+        This factory method handles the conversion from tkinter widget
+        state strings to proper Python types.
+        """
+        # Parse optional slice values
+        first = None
+        last = None
+        if first_slice and first_slice not in ('First', ''):
+            try:
+                first = int(first_slice)
+            except ValueError:
+                pass
+        if last_slice and last_slice not in ('Last', ''):
+            try:
+                last = int(last_slice)
+            except ValueError:
+                pass
+        
+        return cls(
+            resize_enabled=resize_state == 'selected',
+            prefer_raw=prefer_raw_state == ('selected',),
+            advanced_filter=advanced_filter_state == 'selected',
+            export_format=export_format,
+            averaging=averaging,
+            tukey_window_size=float(tukey_size),
+            show_error=error_state == 'selected',
+            scale_enabled=scale_state == ('selected',),
+            scale_length_um=int(scale_length),
+            scale_font_size=int(scale_font_size),
+            first_slice=first,
+            last_slice=last,
+            num_equidistant_slices=int(num_equidistant_slices),
+            db_min=db_min,
+            db_max=db_max,
+            dispersion_type=dispersion_type,
+            dispersion_coefficient=int(dispersion_coefficient),
+            slice_direction=slice_direction,
+            refractive_index=float(refractive_index),
+        )
+    
+    @property
+    def dispersion(self) -> Tuple[str, str]:
+        """Return dispersion as tuple for compatibility with existing code."""
+        return (self.dispersion_type, str(self.dispersion_coefficient))
 
 
 class ExportConfig(BaseModel):
