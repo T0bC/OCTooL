@@ -89,23 +89,42 @@ Added to `app/logic/rexview/models.py`:
 
 ---
 
-## Phase C: Settings Panels Refactoring
+## Phase C: Settings Panels Refactoring (COMPLETED)
 
 Extract validation and defaults from settings panels.
 
 ### C.1 Create SettingsService
 
-Create `app/logic/rexview/settings_service.py`:
+Created `app/logic/rexview/settings_service.py`:
 
-- `validate_export_config()` - Validate settings combinations
-- `get_defaults()` - Return default configuration
-- `parse_dispersion()` - Parse dispersion parameters
+- [x] `validate_export_config()` - Validate settings combinations
+- [x] `get_defaults()` - Return default configuration
+- [x] `parse_dispersion()` - Parse dispersion parameters
+- [x] `validate_slice_range()` - Validate slice range against total
+- [x] `calculate_num_slices()` - Calculate number of slices in range
+- [x] `calculate_equidistant_indices()` - Calculate equidistant slice indices
+- [x] `validate_db_range()` - Validate dynamic range values
+- [x] `get_dispersion_recommendation()` - Get recommended dispersion for wavelength
+- [x] `merge_with_defaults()` - Merge partial config with defaults
 
-### C.2 Wire Settings Panels
+### C.2 Create SettingsConfig Model
 
-- [ ] `global_settings_panel.py` → thin wrapper
-- [ ] `custom_settings_panel.py` → thin wrapper
-- [ ] Settings validation in logic layer
+Added to `app/logic/rexview/models.py`:
+
+- [x] `SettingsConfig` with all global and custom settings
+- [x] `from_gui_state()` factory method for widget state conversion
+- [x] Pydantic validators for dB range and slice range
+
+### C.3 Wire Settings Panels
+
+- [x] `global_settings_panel.py` → uses SettingsService, has `_collect_settings_config()`
+- [x] `custom_settings_panel.py` → uses SettingsService, has `_collect_settings_config()`
+- [x] Settings validation delegated to logic layer
+
+### C.4 Tests
+
+- [x] Unit tests for `SettingsService` methods (45+ tests)
+- [x] Unit tests for `SettingsConfig` model
 
 ---
 
@@ -211,12 +230,13 @@ app/
 - [x] Wire image_panel.py
 - [x] Add tests (36 unit tests)
 
-### Phase C: SettingsService
+### Phase C: SettingsService (COMPLETED)
 
-- [ ] Create SettingsService
-- [ ] Wire global_settings_panel.py
-- [ ] Wire custom_settings_panel.py
-- [ ] Add tests
+- [x] Create SettingsService
+- [x] Create SettingsConfig model
+- [x] Wire global_settings_panel.py
+- [x] Wire custom_settings_panel.py
+- [x] Add tests (45+ unit tests)
 
 ### Phase D: QueueService & FileDiscoveryService
 
@@ -405,11 +425,13 @@ app/logic/rexview/
 ├── __init__.py              # Exports public API
 ├── export_service.py        # ~380 lines, 8 public methods
 ├── image_service.py         # ~320 lines, 12 public methods
-└── models.py                # ~310 lines, 4 models
+├── settings_service.py      # ~310 lines, 10 public methods
+└── models.py                # ~460 lines, 5 models
 
 tests/unit/logic/
 ├── test_rexview_export.py   # ~350 lines, 65 tests
 ├── test_rexview_image.py    # ~520 lines, 36 tests
+├── test_rexview_settings.py # ~550 lines, 45+ tests
 
 tests/integration/
 └── test_export_pipeline.py  # ~260 lines, 13 tests
