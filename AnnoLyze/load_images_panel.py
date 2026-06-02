@@ -15,7 +15,7 @@ import json
 import csv
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
-from analyze_frames.data_io import DataLoader
+from AnnoLyze.data_io import DataLoader
 
 class loadImagePanel:
     @handle_errors("loadImagePanel.__init__")

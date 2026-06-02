@@ -8,7 +8,7 @@ Created on Thu Aug 14 13:02:23 2025
 from tkinter import ttk, messagebox
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
-from analyze_frames.keyboard_layout_viewer import KeyboardLayoutViewer
+from AnnoLyze.keyboard_layout_viewer import KeyboardLayoutViewer
 
 class metadataPanel:
     def __init__(self, context):

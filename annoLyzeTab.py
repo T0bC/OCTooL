@@ -8,15 +8,15 @@ Created on Tue Feb 23 15:14:14 2021
 import tkinter as tk
 from tkinter import ttk
 from utils.error_handler import handle_errors
-from analyze_frames.load_images_panel import loadImagePanel as loadImage
-from analyze_frames.annotate_images_panel import annotatePanel as annotateImages
-from analyze_frames.results_panel import resultsPanel as resultsPanel
-from analyze_frames.add_columns_panel import addColumnsPanel as addColumnsPanel
-from analyze_frames.metadata_panel import metadataPanel as metadataPanel
-from analyze_frames.config_manager import ConfigManager
+from AnnoLyze.load_images_panel import loadImagePanel as loadImage
+from AnnoLyze.annotate_images_panel import annotatePanel as annotateImages
+from AnnoLyze.results_panel import resultsPanel as resultsPanel
+from AnnoLyze.add_columns_panel import addColumnsPanel as addColumnsPanel
+from AnnoLyze.metadata_panel import metadataPanel as metadataPanel
+from AnnoLyze.config_manager import ConfigManager
 
 
-@handle_errors("analyzingTab.addContent")
+@handle_errors("annoLyzeTab.addContent")
 def addContent(self, frame):
     self.analyzingTabFrame = frame
     self.context.root = self.analyzingTabFrame

@@ -62,7 +62,7 @@ class annotatePanel(BaseCanvasPanel):
     
     def get_instruction_key(self):
         """Return instruction key for analyze panel."""
-        return 'analyze_getting_started'
+        return 'annolyze_getting_started'
     
     def get_image_list(self):
         """Return the image list from context."""

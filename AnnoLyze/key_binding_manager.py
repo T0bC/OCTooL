@@ -7,8 +7,8 @@ Created on Fri Sep 12 09:18:04 2025
 
 from utils.error_handler import handle_errors
 from datetime import datetime
-from analyze_frames.undo_panel import UndoPanel
-from analyze_frames.data_io import DataSaver
+from AnnoLyze.undo_panel import UndoPanel
+from AnnoLyze.data_io import DataSaver
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox

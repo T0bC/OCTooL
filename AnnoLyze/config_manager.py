@@ -10,7 +10,7 @@ import os
 from datetime import datetime
 from tkinter import filedialog, messagebox
 from utils.error_handler import handle_errors
-from analyze_frames.key_binding_manager import KeybindingManager
+from AnnoLyze.key_binding_manager import KeybindingManager
 from pathlib import Path
 
 class ConfigManager:

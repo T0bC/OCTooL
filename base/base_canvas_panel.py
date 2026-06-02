@@ -28,7 +28,7 @@ class BaseCanvasPanel:
     """
     Abstract base class for canvas-based image viewers.
     
-    This class centralizes common functionality used across analyze_frames and
+    This class centralizes common functionality used across AnnoLyze and
     carlquant_frames panels, eliminating ~400-500 lines of duplicate code.
     
     Common Functionality Provided:
@@ -218,7 +218,7 @@ class BaseCanvasPanel:
         Override this in subclasses to specify which instructions to display.
         
         Returns:
-            str: Key for instructions.json (e.g., 'analyze_getting_started')
+            str: Key for instructions.json (e.g., 'annolyze_getting_started')
         """
         return None
     
