@@ -18,22 +18,22 @@ from AnnoLyze.config_manager import ConfigManager
 
 @handle_errors("annoLyzeTab.addContent")
 def addContent(self, frame):
-    self.analyzingTabFrame = frame
-    self.context.root = self.analyzingTabFrame
+    self.annoLyzeTabFrame = frame
+    self.context.root = self.annoLyzeTabFrame
     self.context.config_manager = ConfigManager()
     self.attach_status_bar(self.context)
 
     # Configure columns
-    self.analyzingTabFrame.columnconfigure(0, minsize=50, weight=0)
-    self.analyzingTabFrame.columnconfigure(1, weight=1, minsize=800)
-    self.analyzingTabFrame.rowconfigure(2, weight=0)  # Status bar
+    self.annoLyzeTabFrame.columnconfigure(0, minsize=50, weight=0)
+    self.annoLyzeTabFrame.columnconfigure(1, weight=1, minsize=800)
+    self.annoLyzeTabFrame.rowconfigure(2, weight=0)  # Status bar
 
     # Configure rows
-    self.analyzingTabFrame.rowconfigure(0, weight=0)  # Controls and results
-    self.analyzingTabFrame.rowconfigure(1, weight=1)  # Image viewer
+    self.annoLyzeTabFrame.rowconfigure(0, weight=0)  # Controls and results
+    self.annoLyzeTabFrame.rowconfigure(1, weight=1)  # Image viewer
 
     # Left-side controls stacked vertically
-    self.controlsContainer = ttk.Frame(self.analyzingTabFrame)
+    self.controlsContainer = ttk.Frame(self.annoLyzeTabFrame)
     self.controlsContainer.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
 
     self.loadFrame = ttk.LabelFrame(self.controlsContainer, text='Load Images', relief=tk.RIDGE)
@@ -50,12 +50,12 @@ def addContent(self, frame):
     self.context.register_frame("metadata", self.metadataFrame)
 
     # Right-side results frame
-    self.resultsFrame = ttk.LabelFrame(self.analyzingTabFrame, text='Results', relief=tk.RIDGE)
+    self.resultsFrame = ttk.LabelFrame(self.annoLyzeTabFrame, text='Results', relief=tk.RIDGE)
     self.resultsFrame.grid(row=0, column=1, sticky="nsew", padx=(10, 5), pady=5)
     self.context.register_frame("results", self.resultsFrame)
 
     # Image Viewer Frame (dominates vertical space)
-    self.imgFrame = ttk.LabelFrame(self.analyzingTabFrame, text='Image Viewer', relief=tk.RIDGE)
+    self.imgFrame = ttk.LabelFrame(self.annoLyzeTabFrame, text='Image Viewer', relief=tk.RIDGE)
     self.imgFrame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("image", self.imgFrame)
 
