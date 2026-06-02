@@ -1,0 +1,37 @@
+{
+  "creators": [
+    {
+      "name": "Meißner, Tobias",
+      "affiliation": "Leipzig University, Department of Cariology, Endodontology and Periodontology",
+      "orcid": "0009-0007-4050-8182"
+    },
+    {
+      "name": "Bemmann, Maximilian",
+      "affiliation": "Leipzig University, Department of Cariology, Endodontology and Periodontology"
+    },
+    {
+      "name": "Golde, Jonas",
+      "affiliation": "Fraunhofer Institute for Material and Beam Technology (IWS), Technische Universität Dresden",
+      "orcid": "0000-0002-8160-3000"
+    }
+  ],
+  "title": "OCTooL: Optical Coherence Tomography Tool",
+  "description": "OCTooL is a comprehensive software application designed for the export, analysis, and quantification of Optical Coherence Tomography (OCT) images. It provides researchers and clinicians with powerful tools to extract quantitative data from OCT imaging studies, including batch processing, interactive annotation, and advanced lesion depth detection algorithms.",
+  "keywords": [
+    "OCT",
+    "optical coherence tomography",
+    "image analysis",
+    "quantitative analysis",
+    "lesion depth",
+    "dental research",
+    "medical imaging",
+    "Python",
+    "tkinter"
+  ],
+  "license": "GPL-3.0-or-later",
+  "upload_type": "software",
+  "version": "2026.2",
+  "publication_date": "2026-06-01",
+  "access_right": "open",
+  "notes": "Author contributions by module:\n\n- Tobias Meißner: Main developer and maintainer of OCTooL. Led architecture and development across all modules (Export, Analyze, CarlQuant), GUI design, error handling, documentation, and release management.\n\n- Maximilian Bemmann: Co-developed the prototype for the CarlQuant quantitative analysis module (lesion depth detection algorithms) during his affiliation at Leipzig University.\n\n- Jonas Golde: Provided the foundational OCT spectral-to-grayvalue conversion algorithm (originally implemented in MATLAB) that underpins the Export module's image reconstruction logic.\n\nGenerative AI tools were used to assist with code generation, debugging, and documentation drafting during the development of this software. The authors reviewed all AI-generated content for correctness, functionality, and scientific accuracy and take full responsibility for the final published work. The following model(s) or application(s) were used: Claude Sonnet 4.6, Claude Opus 4.5, Kimi 2.5."
+}
