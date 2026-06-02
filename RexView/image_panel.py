@@ -14,6 +14,8 @@ from PIL import Image, ImageTk
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
+from app.logic.rexview.image_service import ImageService
+from app.logic.rexview.models import ImageDisplayConfig
 
 class imagePanel:
     def __init__(self, context):
@@ -24,6 +26,10 @@ class imagePanel:
         self.globalSettingsFrame = self.context.get_panel("global_settings")
         self.customSettingsFrame = self.context.get_panel("custom_settings")
         self.pickFrame = self.context.get_frame("pick_files")
+        
+        # Initialize ImageService for pure logic operations
+        self.image_service = ImageService()
+        self.rawImage = None
 
 
         # Image Frame
@@ -105,6 +111,31 @@ class imagePanel:
                 return
             self.dispImageInCanvas()
 
+    def _collect_display_config(self) -> ImageDisplayConfig:
+        """
+        Gather current UI state into ImageDisplayConfig object.
+        
+        This method collects all display-related settings from the UI widgets
+        and returns a configuration object for the ImageService.
+        """
+        return ImageDisplayConfig.from_gui_state(
+            slice_index=int(self.scale.get() - 1),
+            slice_direction=self.treeView.getValue(column='Img. Slice Dir.'),
+            db_min=self.treeView.getValue(column='dB min'),
+            db_max=self.treeView.getValue(column='dB max'),
+            resize_state=self.globalSettingsFrame.getResizeState(),
+            refractive_index=self.treeView.getValue(column='Refr. Ind.'),
+            scale_state=self.globalSettingsFrame.ScaleBox.state(),
+            scale_length=self.globalSettingsFrame.scaleEntry.get(),
+            scale_font_size=self.globalSettingsFrame.scaleTextSizeEntry.get(),
+            data_type=self.treeView.getValue(column='Data Type'),
+            averaging=self.globalSettingsFrame.averagingMenu.get(),
+            tukey_size=self.globalSettingsFrame.getTukeyWinSize(),
+            advanced_filter_state=self.globalSettingsFrame.getAdvancedFilter(),
+            dispersion=self.customSettingsFrame.getDispersion(),
+            canvas_width=self.canvas.winfo_width(),
+            canvas_height=self.canvas.winfo_height(),
+        )
 
 # %% Functions
 
@@ -124,17 +155,14 @@ class imagePanel:
         if len(self.treeView.getFocus()) != 0:
             self.file = self.treeView.getValue(column = 'Path')
 
-            # Unzip Data and read XML Header to Buffer
-            # open zipfile without unpacking
-            self.archive = octF.unzipOCTData(self.file)
-
-            # Read the XML Data to Buffer use BS for read of XML
-            self.xmlContent = octF.readXMLContent(self.archive, 'Header.xml', 'xml')
+            # Use ImageService to load OCT file and get metadata
+            metadata = self.image_service.load_oct_file(self.file)
+            
+            # Keep references for backward compatibility with existing code
+            self.archive = self.image_service._archive
+            self.xmlDict = metadata.to_xml_dict()
 
             self.treeView.setValue('Status', 'displayed')
-
-            #  Get MetaInfo from XML File
-            self.xmlDict = octF.getXMLAttributes(self.xmlContent)
 
             self.dBmin = int(self.treeView.getValue(column='dB min'))
             self.dBmax = int(self.treeView.getValue(column='dB max'))
@@ -142,28 +170,18 @@ class imagePanel:
             # Insert a Scale to select current slice
             self.scale = ttk.Scale(self.frame,
                                    from_= 0,
-                                   to = self.xmlDict['dimY'],
+                                   to = self.image_service.total_slices,
                                    orient = 'horizontal',
                                    bootstyle="warning")
-            self.scale.set(round(self.xmlDict['dimY']/2))
+            self.scale.set(self.image_service.get_middle_slice_index())
 
-            # if oct file is in processed format, load the entire stack into memmory
+            # if oct file is in processed format, load the entire stack into memory
             # to avoid loading it every time the user wants to display another slice
-            if  self.treeView.getValue(column='Data Type') == 'Processed':
-                self.rawImage = octF.createImageFromRaw(xmlDict = self.xmlDict,
-                                                        archive = self.archive,
-                                                        dBmin = int(self.treeView.getValue(column='dB min')),
-                                                        dBmax = int(self.treeView.getValue(column='dB max')),
-                                                        selDataType = self.treeView.getValue(column='Data Type'),
-                                                        averaging = self.globalSettingsFrame.averagingMenu.get(),
-                                                        spectral = int(self.scale.get()-1),
-                                                        prefRaw = 'doesnt matter', #self.globalSettingsFrame.getPrefRawState()[0]
-                                                        #resizeState = self.globalSettingsFrame.getResizeState(),
-                                                        tukeySize = float(self.globalSettingsFrame.getTukeyWinSize()),
-                                                        advancedFilter = self.globalSettingsFrame.getAdvancedFilter(),
-                                                        dispersion = self.customSettingsFrame.getDispersion())
+            if self.treeView.getValue(column='Data Type') == 'Processed':
+                config = self._collect_display_config()
+                self.rawImage = self.image_service.load_processed_stack(config)
             else:
-                 self.rawImage = 0
+                self.rawImage = None
 
             self.scale.bind("<ButtonRelease-1>",
                             lambda event, scalePosition=int(self.scale.get()-1): [self.scale.focus_set(),
@@ -197,116 +215,24 @@ class imagePanel:
         Image in Canvas.
 
         '''
-
-        if self.treeView.getValue(column='Data Type') == 'Processed':
-            self.scaleValue.set(str(int(self.scale.get())))
-            self.canvas.delete("all")
-
-            # Extract the selected slice
-            img2D = self.rawImage[int(self.scale.get() - 1), :, :]
-
-            # Apply resizing and refractive index correction
-            imgSliceDir = self.treeView.getValue(column='Img. Slice Dir.')
-            if imgSliceDir == 'XZ':
-                if self.globalSettingsFrame.getResizeState() == 'selected':
-                    img2D = ndimage.zoom(img2D, zoom=(1, self.xmlDict['imgResizeFactorX']), order=0)
-                if self.treeView.getValue(column='Refr. Ind.') != 1:
-                    img2D = ndimage.zoom(img2D, zoom=(float(self.treeView.getValue(column='Refr. Ind.')), 1), order=0)
-
-            elif imgSliceDir == 'YZ':
-                if self.globalSettingsFrame.getResizeState() == 'selected':
-                    img2D = ndimage.zoom(img2D, zoom=(1, self.xmlDict['imgResizeFactorY']), order=0)
-                if self.treeView.getValue(column='Refr. Ind.') != 1:
-                    img2D = ndimage.zoom(img2D, zoom=(float(self.treeView.getValue(column='Refr. Ind.')), 1), order=0)
-
-            elif imgSliceDir == 'XY':
-                if self.globalSettingsFrame.getResizeState() == 'selected':
-                    img2D = ndimage.zoom(img2D,
-                                         zoom=(self.xmlDict['imgResizeFactorY'], self.xmlDict['imgResizeFactorX']),
-                                         order=0)
-
-            # Add scale bar if selected
-            if self.globalSettingsFrame.ScaleBox.state() == ('selected',):
-                self.finImg = octF.insertScale(
-                    img=Image.fromarray(img2D),
-                    scaleSize=int(self.globalSettingsFrame.scaleEntry.get()),
-                    xmlDict=self.xmlDict,
-                    fontSize=int(self.globalSettingsFrame.scaleTextSizeEntry.get()),
-                    imgSliceDir=imgSliceDir
-                )
-            else:
-                self.finImg = Image.fromarray(img2D)
-
-            # Resize to fit canvas
-            self.finImg = self.finImg.resize(
-                (int(self.canvas.winfo_height() * self.finImg.size[0] / self.finImg.size[1]),
-                 int(self.canvas.winfo_height())),
-                Image.LANCZOS
+        # Update scale value label
+        self.scaleValue.set(str(int(self.scale.get())))
+        self.canvas.delete("all")
+        
+        # Collect current display configuration from UI
+        config = self._collect_display_config()
+        
+        # Use ImageService to process the preview image
+        if config.data_type == 'Processed':
+            # Use pre-loaded stack for processed data
+            pil_img, x_position = self.image_service.process_preview_image(
+                config, image_stack=self.rawImage
             )
-
-            self.finImg = ImageTk.PhotoImage(self.finImg)
-            self.canvas.create_image(int(self.canvas.winfo_width() / 2) - round(int(self.finImg.width()) / 2),
-                                     0,
-                                     image=self.finImg,
-                                     anchor='nw')
-
-
         else:
-            self.imgSliceDir = self.treeView.getValue(column = 'Img. Slice Dir.')
-            self.scaleValue.set(str(int(self.scale.get())))
-            self.canvas.delete("all")
-            self.finImg = octF.createImageFromRaw(xmlDict = self.xmlDict,
-                                                  archive = self.archive,
-                                                  dBmin = int(self.treeView.getValue(column='dB min')),
-                                                  dBmax = int(self.treeView.getValue(column='dB max')),
-                                                  selDataType = self.treeView.getValue(column='Data Type'),
-                                                  averaging = self.globalSettingsFrame.averagingMenu.get(),
-                                                  spectral = int(self.scale.get()-1),
-                                                  prefRaw = 'doesnt matter',
-                                                  tukeySize = float(self.globalSettingsFrame.getTukeyWinSize()),
-                                                  advancedFilter = self.globalSettingsFrame.getAdvancedFilter(),
-                                                  dispersion = self.customSettingsFrame.getDispersion())
-
-            # Extract 2D image from stack based on slice direction
-            if self.imgSliceDir == 'XZ':
-                if self.globalSettingsFrame.getResizeState() == 'selected':
-                    self.finImg = ndimage.zoom(self.finImg, zoom=(1, self.xmlDict['imgResizeFactorX']), order=0)
-                # refractive index
-                if self.treeView.getValue(column = 'Refr. Ind.') != 1:
-                    self.finImg = ndimage.zoom(self.finImg, zoom=(float(self.treeView.getValue(column = 'Refr. Ind.')),1), order=0)
-
-            elif self.imgSliceDir == 'YZ':
-                if self.globalSettingsFrame.getResizeState() == 'selected':
-                    self.finImg = ndimage.zoom(self.finImg, zoom=(1, self.xmlDict['imgResizeFactorY']), order=0)
-                # refractive index
-                if self.treeView.getValue(column = 'Refr. Ind.') != 1:
-                        self.finImg = ndimage.zoom(self.finImg, zoom=(float(self.treeView.getValue(column = 'Refr. Ind.')),1), order=0)
-
-            elif self.imgSliceDir == 'XY':
-                if self.globalSettingsFrame.getResizeState() == 'selected':
-                    self.finImg = ndimage.zoom(self.finImg,
-                                            zoom=(self.xmlDict['imgResizeFactorY'], self.xmlDict['imgResizeFactorX']),
-                                            order=0)
-
-            # Add scale bar if selected
-            if self.globalSettingsFrame.ScaleBox.state() == ('selected',):
-                self.finImg = octF.insertScale(
-                    img=Image.fromarray(self.finImg),
-                    scaleSize=int(self.globalSettingsFrame.scaleEntry.get()),
-                    xmlDict=self.xmlDict,
-                    fontSize=int(self.globalSettingsFrame.scaleTextSizeEntry.get()),
-                    imgSliceDir=self.imgSliceDir
-                )
-            else:
-                self.finImg = Image.fromarray(self.finImg)
-
-            self.finImg = self.finImg.resize((int(self.canvas.winfo_height() * self.finImg.size[0] / self.finImg.size[1]),
-                                              int(self.canvas.winfo_height())), Image.LANCZOS)
-
-            self.finImg = ImageTk.PhotoImage(self.finImg)
-
-            self.canvas.create_image(int(self.canvas.winfo_width()/2)-round(int(self.finImg.width())/2),
-                                     0,
-                                     image = self.finImg,
-                                     anchor='nw')
+            # For raw data, service creates slice on demand
+            pil_img, x_position = self.image_service.process_preview_image(config)
+        
+        # Convert to PhotoImage and display on canvas (UI-only operations)
+        self.finImg = ImageTk.PhotoImage(pil_img)
+        self.canvas.create_image(x_position, 0, image=self.finImg, anchor='nw')
 
