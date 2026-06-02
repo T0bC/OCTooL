@@ -25,6 +25,8 @@ MODULES = [
         "new_enable": "ENABLE_REXVIEW",
         "old_frame": "exportTabFrame",
         "new_frame": "rexViewTabFrame",
+        "old_instruction": "export_getting_started",
+        "new_instruction": "rexview_getting_started",
     },
     # {
     #     "active": False,
@@ -34,7 +36,7 @@ MODULES = [
     # },
 ]
 
-EXTS = (".py", ".spec", ".qmd", ".html", ".md")
+EXTS = (".py", ".spec", ".qmd", ".html", ".md", ".json")
 CLEAN_PYCACHE = True
 
 
@@ -77,6 +79,8 @@ def refactor(root, mods):
             (m["old_display"], m["new_display"]),
             (m["old_dir"], m["new_dir"]),
         ]
+        if m.get("old_instruction"):
+            pairs.append((m["old_instruction"], m["new_instruction"]))
         for old, new in pairs:
             if old == new: continue
             pat = re.compile(rf"\b{re.escape(old)}\b")
