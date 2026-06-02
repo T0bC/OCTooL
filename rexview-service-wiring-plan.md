@@ -1,116 +1,411 @@
-# RexView ExportService Wiring Plan
+# RexView Module Separation Plan
 
-Gradually wire `mainRoutines()` in `execution_panel.py` to delegate to `ExportService`, replacing inline logic one method at a time while maintaining backward compatibility and testability.
+Gradually separate RexView into pure logic (`app/logic/rexview/`) and thin UI wrappers (`app/view/rexview/`), enabling comprehensive pytest-based testing without tkinter dependencies.
+
+---
+
+## Overview
+
+This plan covers the complete RexView module refactoring as part of the broader TDD refactor (see `tdd-refactor-plan.md`).
+
+**Goal**: Transform 7 tightly-coupled panel files into:
+- `app/logic/rexview/` - Pure business logic, fully testable
+- `app/view/rexview/` - Thin UI wrappers that delegate to logic layer
 
 ---
 
 ## Current State
 
+### Completed (Phase 2.1-2.2)
+
 - **ExportService** (`app/logic/rexview/export_service.py`): Complete with `prepare_export()`, `load_image_stack()`, `process_slice()`, `run_export()`, etc.
 - **Models** (`app/logic/rexview/models.py`): `ExportConfig`, `SliceExportParams`, `ExportProgress`
-- **Helper methods** in `execution_panel.py`: `_collect_export_config()`, `_collect_slice_params()` already exist
-- **Tests**: 65 unit tests passing, covering ExportService methods
-- **Problem**: `mainRoutines()` still has all inline logic (~100 lines) - doesn't use ExportService
+- **execution_panel.py**: Wired to use ExportService (Steps 1-5 complete)
+- **Tests**: 65+ unit tests passing, 13 integration tests
+
+### Remaining RexView Panels
+
+| Panel | File | Logic to Extract |
+|-------|------|------------------|
+| Image Panel | `image_panel.py` | OCT preview rendering, slice navigation |
+| Global Settings | `global_settings_panel.py` | Settings validation, defaults |
+| Custom Settings | `custom_settings_panel.py` | Dispersion, custom params |
+| Tree View | `tree_view_panel.py` | Queue management, item validation |
+| Pick Files | `pick_files_panel.py` | File discovery, metadata extraction |
+| Instructions | `instruction_panel.py` | Static (no logic extraction needed) |
 
 ---
 
-## Incremental Wiring Strategy
+## Phase A: ExportService Wiring (COMPLETED)
 
-Each step replaces one logical block, is independently testable, and can be paused/resumed.
+Wired `execution_panel.py` to delegate to `ExportService`.
 
-### Step 1: Wire `prepare_export()` for slice calculation and data type selection
-**Replace**: Lines 126-143 (slice calculation, data type selection)
-**Keep**: Everything else inline
-**Test**: Verify export still works, slices calculated correctly
-
-### Step 2: Wire `load_image_stack()` for image loading
-**Replace**: Lines 150-163 (createImageFromRaw call)
-**Keep**: Slice processing inline
-**Test**: Verify image loading produces same results
-
-### Step 3: Wire `process_slice()` for slice processing
-**Replace**: Lines 166-201 (prepareImageSlice, DPI calc, save)
-**Keep**: Outer loop, status updates
-**Test**: Verify exported images identical
-
-### Step 4: Wire full `run_export()` per-item
-**Replace**: Entire per-item processing block
-**Keep**: TreeView iteration, GUI callbacks
-**Test**: Full export workflow
-
-### Step 5: Add integration tests
-**Add**: Tests that verify panel → service → output chain
-**Cleanup**: Remove deprecated inline methods
+- [x] Wire `prepare_export()` - slice calculation, data type
+- [x] Wire `load_image_stack()` - image loading
+- [x] Wire `process_slice()` - slice processing
+- [x] Wire `export_video_image()` - video export
+- [x] Add integration tests
 
 ---
 
-## Step 1 Details (First Increment)
+## Phase B: Image Panel Refactoring (NEXT)
 
-### 1.1 Changes to `mainRoutines()`
+Extract preview rendering logic from `image_panel.py`.
 
-Replace slice calculation and data type selection with:
+### B.1 Create ImageService
+
+Create `app/logic/rexview/image_service.py`:
+
+- `load_preview()` - Load and prepare OCT preview image
+- `navigate_slice()` - Calculate slice index for navigation
+- `apply_display_settings()` - Apply contrast, zoom, etc.
+
+### B.2 Create ImageDisplayConfig Model
+
+Add to `app/logic/rexview/models.py`:
 
 ```python
-# Collect config and params using existing helpers
-config = self._collect_export_config()
-params = self._collect_slice_params(item[1])
-
-# Use ExportService for preparation
-metadata = OCTMetadata.from_xml_dict(self.xmlDict)
-prep = self.export_service.prepare_export(params, config, metadata)
-
-# Use prepared values
-self.selectedSliceNumber = prep['selected_slices']
-self.slicesToLoadAndProcess = prep['slices_to_load']
-self.selDataType = prep['sel_data_type']
+class ImageDisplayConfig(BaseModel):
+    slice_index: int = 0
+    contrast_min: int = 0
+    contrast_max: int = 255
+    zoom_level: float = 1.0
+    slice_direction: Literal['XZ', 'YZ', 'XY'] = 'XZ'
 ```
 
-### 1.2 Test Verification
+### B.3 Wire image_panel.py
 
-After this change:
-1. Run existing unit tests: `pytest tests/unit/ -v`
-2. Manual test: Export a sample OCT file, verify output matches previous behavior
-3. Add integration test for config collection → prepare_export flow
+- [ ] Add `_collect_display_config()` helper
+- [ ] Delegate preview loading to `ImageService`
+- [ ] Keep canvas rendering in UI layer
 
-### 1.3 Success Criteria
+### B.4 Tests
 
-- [ ] All 65 existing tests pass
-- [ ] Export produces identical output to before
-- [ ] `prepare_export()` is called instead of inline calculation
+- [ ] Unit tests for `ImageService` methods
+- [ ] Integration test for preview pipeline
 
 ---
 
-## Files to Modify
+## Phase C: Settings Panels Refactoring
 
-| File | Changes |
-|------|---------|
-| `RexView/execution_panel.py` | Wire `mainRoutines()` to use ExportService methods |
-| `tests/integration/test_export_pipeline.py` | Add integration tests for wiring |
+Extract validation and defaults from settings panels.
+
+### C.1 Create SettingsService
+
+Create `app/logic/rexview/settings_service.py`:
+
+- `validate_export_config()` - Validate settings combinations
+- `get_defaults()` - Return default configuration
+- `parse_dispersion()` - Parse dispersion parameters
+
+### C.2 Wire Settings Panels
+
+- [ ] `global_settings_panel.py` → thin wrapper
+- [ ] `custom_settings_panel.py` → thin wrapper
+- [ ] Settings validation in logic layer
 
 ---
 
-## Rollback Strategy
+## Phase D: Queue Management Refactoring
 
-Each step preserves the original logic in comments until verified. If issues arise:
-1. Uncomment original code
-2. Comment out service delegation
-3. Run tests to confirm rollback works
+Extract queue logic from `tree_view_panel.py` and `pick_files_panel.py`.
+
+### D.1 Create QueueService
+
+Create `app/logic/rexview/queue_service.py`:
+
+- `add_item()` - Validate and add item to queue
+- `remove_item()` - Remove item from queue
+- `validate_item()` - Check item parameters
+- `reorder_items()` - Handle queue reordering
+
+### D.2 Create FileDiscoveryService
+
+Create `app/logic/rexview/file_discovery_service.py`:
+
+- `scan_directory()` - Find OCT files in directory
+- `extract_metadata()` - Read OCT file metadata
+- `validate_file()` - Check file is valid OCT
+
+### D.3 Wire Panels
+
+- [ ] `tree_view_panel.py` → uses QueueService
+- [ ] `pick_files_panel.py` → uses FileDiscoveryService
 
 ---
 
-## After Each Step
+## Phase E: Move UI Files to app/view/rexview/
 
-1. Run `pytest tests/ -v` to verify no regressions
-2. Manual test with real OCT file
-3. Update this plan with completion status and any adjustments
-4. Commit changes with descriptive message
+After all logic is extracted, relocate UI files.
+
+### E.1 Create View Directory Structure
+
+```
+app/view/rexview/
+├── __init__.py
+├── execution_panel.py      # Thin UI wrapper
+├── image_panel.py
+├── global_settings_panel.py
+├── custom_settings_panel.py
+├── tree_view_panel.py
+├── pick_files_panel.py
+└── instruction_panel.py
+```
+
+### E.2 Update Imports
+
+- [ ] Update `rexViewTab.py` to import from `app.view.rexview`
+- [ ] Keep `RexView/` as deprecated re-exports for backward compatibility
+
+### E.3 Final Cleanup
+
+- [ ] Remove deprecated code from old panel files
+- [ ] Update all import paths
+- [ ] Verify all tests pass
+
+---
+
+## Target File Structure (End State)
+
+```
+app/
+├── logic/
+│   └── rexview/
+│       ├── __init__.py
+│       ├── export_service.py       # ✓ Complete
+│       ├── image_service.py        # Phase B
+│       ├── settings_service.py     # Phase C
+│       ├── queue_service.py        # Phase D
+│       ├── file_discovery_service.py  # Phase D
+│       └── models.py               # ✓ Complete + additions
+└── view/
+    └── rexview/
+        ├── __init__.py
+        ├── execution_panel.py      # Phase E
+        ├── image_panel.py          # Phase E
+        ├── global_settings_panel.py
+        ├── custom_settings_panel.py
+        ├── tree_view_panel.py
+        ├── pick_files_panel.py
+        └── instruction_panel.py
+```
 
 ---
 
 ## Progress Tracking
 
-- [x] **Step 1**: Wire `prepare_export()` - slice calculation, data type
-- [x] **Step 2**: Wire `load_image_stack()` - image loading
-- [x] **Step 3**: Wire `process_slice()` - slice processing
-- [x] **Step 4**: Wire full `run_export()` per-item
-- [x] **Step 5**: Integration tests and cleanup
+### Phase A: ExportService (COMPLETED)
+
+- [x] Create ExportService with all methods
+- [x] Create ExportConfig, SliceExportParams models
+- [x] Wire execution_panel.py
+- [x] Add unit and integration tests
+
+### Phase B: ImageService
+
+- [ ] Create ImageService
+- [ ] Create ImageDisplayConfig model
+- [ ] Wire image_panel.py
+- [ ] Add tests
+
+### Phase C: SettingsService
+
+- [ ] Create SettingsService
+- [ ] Wire global_settings_panel.py
+- [ ] Wire custom_settings_panel.py
+- [ ] Add tests
+
+### Phase D: QueueService & FileDiscoveryService
+
+- [ ] Create QueueService
+- [ ] Create FileDiscoveryService
+- [ ] Wire tree_view_panel.py
+- [ ] Wire pick_files_panel.py
+- [ ] Add tests
+
+### Phase E: UI File Migration
+
+- [ ] Create app/view/rexview/ directory
+- [ ] Move UI files
+- [ ] Update imports
+- [ ] Add backward compatibility re-exports
+- [ ] Final cleanup and verification
+
+---
+
+## RexView Completion Criteria
+
+Before moving to AnnoLyze/CarlQuant, RexView must be:
+
+- [ ] **Fully functional**: All export features work identically to before
+- [ ] **Fully tested**: 90%+ coverage on `app/logic/rexview/`
+- [ ] **Fully separated**: All logic in `app/logic/rexview/`, all UI in `app/view/rexview/`
+- [ ] **Documented**: This plan updated with lessons learned
+- [ ] **Standalone testable**: `pytest tests/unit/logic/test_rexview_*.py` runs without tkinter
+
+---
+
+## Replication Guide for Other Modules
+
+This section documents the **process** used for RexView so it can be applied to AnnoLyze and CarlQuant.
+
+### Step-by-Step Process
+
+#### 1. Analyze the Panel Files
+
+For each panel file in the module:
+
+```
+1. List all methods in the panel class
+2. Categorize each method:
+   - UI-only (widget creation, event binding) → stays in view
+   - Logic (calculations, data processing) → extract to service
+   - Mixed (reads widget state, does logic) → split into collector + service call
+3. Identify data flowing between methods → becomes Pydantic model
+```
+
+#### 2. Create Pydantic Models First
+
+```python
+# Pattern: app/logic/<module>/models.py
+
+class <Feature>Config(BaseModel):
+    """Configuration gathered from UI widgets."""
+    # Fields match what the logic needs, not widget structure
+    
+class <Feature>Params(BaseModel):
+    """Parameters for a single operation."""
+    # Includes validation via Pydantic validators
+    
+class <Feature>Result(BaseModel):
+    """Result returned from service to UI."""
+    # What the UI needs to display
+```
+
+#### 3. Create Service Class with Pure Logic
+
+```python
+# Pattern: app/logic/<module>/<feature>_service.py
+
+class <Feature>Service:
+    """Pure business logic - no tkinter imports."""
+    
+    def __init__(self):
+        # No GUI references
+        pass
+    
+    def prepare_<operation>(self, params: Params, config: Config) -> dict:
+        """Validate and prepare for operation."""
+        pass
+    
+    def execute_<operation>(self, ...) -> Result:
+        """Execute the core logic."""
+        pass
+```
+
+#### 4. Write Unit Tests for Service
+
+```python
+# Pattern: tests/unit/logic/test_<module>_<feature>.py
+
+class Test<Feature>Service:
+    
+    @pytest.fixture
+    def service(self):
+        return <Feature>Service()
+    
+    def test_<method>_<scenario>(self, service, ...):
+        # GIVEN
+        params = <Params>(...)
+        
+        # WHEN
+        result = service.<method>(params)
+        
+        # THEN
+        assert result.<field> == expected
+```
+
+#### 5. Add Collector Methods to Panel
+
+```python
+# Pattern: In existing panel class
+
+def _collect_<feature>_config(self) -> <Feature>Config:
+    """Gather current UI state into config object."""
+    return <Feature>Config.from_gui_state(
+        field1=self.widget1.get(),
+        field2=self.widget2.state(),
+        # ...
+    )
+```
+
+#### 6. Wire Panel to Service
+
+```python
+# Pattern: Replace inline logic with service delegation
+
+# Before (inline logic):
+def some_action(self):
+    value = self.widget.get()
+    result = complex_calculation(value)  # Logic mixed with UI
+    self.other_widget.set(result)
+
+# After (delegated):
+def some_action(self):
+    config = self._collect_config()
+    result = self.service.calculate(config)  # Pure logic call
+    self.other_widget.set(result.display_value)
+```
+
+#### 7. Add Integration Tests
+
+```python
+# Pattern: tests/integration/test_<module>_pipeline.py
+
+def test_<feature>_end_to_end(self, ...):
+    """Test config collection → service → result chain."""
+    # Uses real service, mocked file I/O
+```
+
+#### 8. Move UI Files (Final Step)
+
+```
+1. Create app/view/<module>/ directory
+2. Copy panel files to new location
+3. Update imports in panel files
+4. Update imports in tab file (<module>Tab.py)
+5. Add re-exports in old location for backward compatibility
+6. Run all tests
+7. Manual verification
+```
+
+### Key Lessons from RexView
+
+1. **Start with the most complex panel** - `execution_panel.py` had the most logic, extracting it first established patterns
+
+2. **Models before services** - Define data structures first, they clarify what the service interface should be
+
+3. **Incremental wiring** - Replace one method at a time, test after each change
+
+4. **Keep collectors in UI layer** - `_collect_*()` methods stay in panel, they know about widgets
+
+5. **Service methods take models, not primitives** - Pass `ExportConfig` not individual fields
+
+6. **Progress callbacks for long operations** - Service accepts `Callable` for UI updates
+
+7. **Factory methods on models** - `Config.from_gui_state()` handles widget-to-Python conversion
+
+### Files Created for RexView (Reference)
+
+```
+app/logic/rexview/
+├── __init__.py              # Exports public API
+├── export_service.py        # ~380 lines, 8 public methods
+└── models.py                # ~200 lines, 3 models
+
+tests/unit/logic/
+├── test_rexview_export.py   # ~350 lines, 65 tests
+
+tests/integration/
+└── test_export_pipeline.py  # ~260 lines, 13 tests
+```
