@@ -9,6 +9,7 @@ Created on Sat Oct 10 18:55:08 2020
 import tkinter as tk
 from tkinter import ttk
 from utils import oct_functions as octF
+from app.logic.rexview import QueueService, QueueItem
 
 
 class treeViewPanel:
@@ -20,6 +21,9 @@ class treeViewPanel:
         # Configure frame to expand
         self.frame.columnconfigure(0, weight=1)
         self.frame.rowconfigure(0, weight=1)
+
+        # Initialize QueueService for business logic
+        self._queue_service = QueueService()
 
         # canvas Frame and its contens
         self.cols = ('Nr.', 'Name', 'First', 'Last', 'dB min', 'dB max', 'NumSlices', 'Refr. Ind.' , 'Disp. Coeff', 'Img. Slice Dir.' ,'Data Type', 'Status', 'Path')
@@ -284,6 +288,35 @@ class treeViewPanel:
         for i ,(name, first, last, dBMin, dBMax, NumSlices, RefrInd, DispCoeff, imgSliceDir, dataType, status, path) in enumerate(tmpFileList, start=1):
             self.treeView.insert('','end', values=(i, name, first, last, dBMin, dBMax, NumSlices, RefrInd, DispCoeff, imgSliceDir, dataType, status, path))
 
+    def _collect_queue_item_from_row(self, item_id) -> QueueItem:
+        """
+        Collect current row values into a QueueItem model.
+        
+        Parameters
+        ----------
+        item_id : str
+            TreeView item ID
+            
+        Returns
+        -------
+        QueueItem
+            Model containing row data
+        """
+        return QueueItem.from_treeview_values(
+            name=self.treeView.set(item_id, 'Name'),
+            first=self.treeView.set(item_id, 'First'),
+            last=self.treeView.set(item_id, 'Last'),
+            db_min=self.treeView.set(item_id, 'dB min'),
+            db_max=self.treeView.set(item_id, 'dB max'),
+            num_slices=self.treeView.set(item_id, 'NumSlices'),
+            refr_ind=self.treeView.set(item_id, 'Refr. Ind.'),
+            disp_coeff=self.treeView.set(item_id, 'Disp. Coeff'),
+            slice_dir=self.treeView.set(item_id, 'Img. Slice Dir.'),
+            data_type=self.treeView.set(item_id, 'Data Type'),
+            status=self.treeView.set(item_id, 'Status'),
+            path=self.treeView.set(item_id, 'Path'),
+        )
+
     def addequiDistToQueue(self, numSlices: str, allFiles: bool):
         '''
         Add equidistant Slice number to treeView Table
@@ -302,15 +335,23 @@ class treeViewPanel:
 
         '''
         if allFiles == False:
-            if int(numSlices) > (int(self.getValue(column = 'Last')) - int(self.getValue(column = 'First'))):
-                tk.messagebox.showerror(title = ' Value Error 1',
-                                        message = 'The input value for column "NumSlices" [' +
-                                        str(numSlices) + '] is larger then the chosen export range ['
-                                        + str(int(self.getValue(column = 'Last')) - int(self.getValue(column = 'First'))) +
-                                        ']!\n\nPlease consider adapting the export range (First & Last) \nor the number of slices!')
+            first_slice = int(self.getValue(column='First'))
+            last_slice = int(self.getValue(column='Last'))
+            
+            # Use QueueService for validation
+            validation = self._queue_service.validate_equidistant_slices(
+                num_slices=int(numSlices),
+                first_slice=first_slice,
+                last_slice=last_slice,
+            )
+            
+            if not validation.is_valid:
+                tk.messagebox.showerror(
+                    title='Value Error',
+                    message=validation.errors[0]
+                )
             else:
                 self.treeView.set(self.treeView.focus(), 'NumSlices', value=numSlices)
-
 
         else:
             for item in enumerate(self.treeView.get_children()):
@@ -353,17 +394,10 @@ class treeViewPanel:
             tk.messagebox.showwarning("Missing Selection", "Please select a valid entry in the queue table before changing the slice direction.")
             return
 
-
         self.setValue('Img. Slice Dir.', expDir)
 
-        # Mapping slice directions to XML dimension keys
-        direction_map = {
-            'XZ': 'dimY',
-            'YZ': 'dimX',
-            'XY': 'dimZ'
-        }
-
-        dim_key = direction_map.get(expDir)
+        # Use QueueService to get dimension key
+        dim_key = self._queue_service.get_dimension_key_for_direction(expDir)
         if dim_key:
             self.newLastSliceToExport = octF.getXMLvalue(path, dim_key)
             self.setValue('Last', self.newLastSliceToExport)
@@ -385,13 +419,8 @@ class treeViewPanel:
         -------
         None
         """
-        direction_map = {
-            'XZ': 'dimY',
-            'YZ': 'dimX',
-            'XY': 'dimZ'
-        }
-
-        dim_key = direction_map.get(expDir)
+        # Use QueueService to get dimension key
+        dim_key = self._queue_service.get_dimension_key_for_direction(expDir)
         if not dim_key:
             tk.messagebox.showwarning("Invalid Direction", f"'{expDir}' is not a recognized slice direction.")
             return
