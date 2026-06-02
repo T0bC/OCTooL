@@ -69,7 +69,7 @@ class globalSettingsPanel:
                                            text = 'Exp. Format:')
         self.exportFormatLabel.grid(row = 0, column= 3, sticky= tk.E + tk.W)
 
-        self.expFormatMenuToolTip = 'Export format: *.png results in a smaller file size. *.tiff '\
+        self.expFormatMenuToolTip = 'RexView format: *.png results in a smaller file size. *.tiff '\
             'is ideal for postprocessing.'
         Tooltip(self.exportFormatLabel, text=self.expFormatMenuToolTip , wraplength=200)
 

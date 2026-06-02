@@ -34,7 +34,7 @@ class executionPanel:
         self.customSettingsFrame = self.context.get_panel("custom_settings")
         self.mainWin = self.context.main_win
 
-        self.executeBtn = ttk.Button(self.frame, text='Export!', width=10,
+        self.executeBtn = ttk.Button(self.frame, text='RexView!', width=10,
                                      command=self.mainRoutine,
                                      bootstyle="success")
         self.executeBtn.grid(row=0, column=1, sticky=tk.E + tk.W + tk.N + tk.S)

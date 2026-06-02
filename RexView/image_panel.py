@@ -71,10 +71,10 @@ class imagePanel:
     def instructionText(self):
         """
         Display instruction text and logo when no image is loaded.
-        Shows comprehensive getting started guide for Export module.
+        Shows comprehensive getting started guide for RexView module.
         """
         # Render comprehensive guide from JSON data
-        self.instruction_renderer.render('export_getting_started')
+        self.instruction_renderer.render('rexview_getting_started')
 
 
     @handle_errors("imagePanel")

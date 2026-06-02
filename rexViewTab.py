@@ -8,53 +8,53 @@ import tkinter as tk
 from tkinter import ttk
 from utils.app_context import AppContext
 from utils.status_bar import StatusBar
-from export_frames.tree_view_panel import treeViewPanel as table
-from export_frames.pick_files_panel import pickFilesPanel as pickFile
-from export_frames.global_settings_panel import globalSettingsPanel as globalSettings
-from export_frames.custom_settings_panel import customSettingsPanel as customSettings
-from export_frames.image_panel import imagePanel as imagePanel
-from export_frames.execution_panel import executionPanel as execution
+from RexView.tree_view_panel import treeViewPanel as table
+from RexView.pick_files_panel import pickFilesPanel as pickFile
+from RexView.global_settings_panel import globalSettingsPanel as globalSettings
+from RexView.custom_settings_panel import customSettingsPanel as customSettings
+from RexView.image_panel import imagePanel as imagePanel
+from RexView.execution_panel import executionPanel as execution
 
 def addContent(self, frame):
-    self.exportTabFrame = frame
-    self.context.root = self.exportTabFrame
+    self.rexViewTabFrame = frame
+    self.context.root = self.rexViewTabFrame
     self.context.main_win = self.mainWin
 
     self.attach_status_bar(self.context)
 
 
     # Column configuration: col 0 (settings) fixed, col 1 (tree/image) expands
-    self.exportTabFrame.columnconfigure(0, weight=0)
-    self.exportTabFrame.columnconfigure(1, weight=1)
+    self.rexViewTabFrame.columnconfigure(0, weight=0)
+    self.rexViewTabFrame.columnconfigure(1, weight=1)
     # Row configuration: only row 5 (image viewer) expands vertically
-    self.exportTabFrame.rowconfigure(0, weight=0)  # pickFrame - fixed height
-    self.exportTabFrame.rowconfigure(1, weight=0)  # glblSttngsFrame - fixed height
-    self.exportTabFrame.rowconfigure(4, weight=0)  # cstmSttngsFrame - fixed height
-    self.exportTabFrame.rowconfigure(5, weight=1)  # imgFrame - expands vertically
-    self.exportTabFrame.rowconfigure(9, weight=0)  # excFrame - fixed height
+    self.rexViewTabFrame.rowconfigure(0, weight=0)  # pickFrame - fixed height
+    self.rexViewTabFrame.rowconfigure(1, weight=0)  # glblSttngsFrame - fixed height
+    self.rexViewTabFrame.rowconfigure(4, weight=0)  # cstmSttngsFrame - fixed height
+    self.rexViewTabFrame.rowconfigure(5, weight=1)  # imgFrame - expands vertically
+    self.rexViewTabFrame.rowconfigure(9, weight=0)  # excFrame - fixed height
 
     # Create and register frames
-    self.treeFrame = ttk.LabelFrame(self.exportTabFrame, text='Queue', relief=tk.RIDGE)
+    self.treeFrame = ttk.LabelFrame(self.rexViewTabFrame, text='Queue', relief=tk.RIDGE)
     self.treeFrame.grid(row=0, column=1, rowspan=5, sticky=tk.E + tk.W + tk.N + tk.S)
     self.context.register_frame("tree", self.treeFrame)
 
-    self.pickFrame = ttk.LabelFrame(self.exportTabFrame, text='Select File(s)', relief=tk.RIDGE)
+    self.pickFrame = ttk.LabelFrame(self.rexViewTabFrame, text='Select File(s)', relief=tk.RIDGE)
     self.pickFrame.grid(row=0, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
     self.context.register_frame("pick_files", self.pickFrame)
 
-    self.glblSttngsFrame = ttk.LabelFrame(self.exportTabFrame, text='Global Settings', relief=tk.RIDGE)
+    self.glblSttngsFrame = ttk.LabelFrame(self.rexViewTabFrame, text='Global Settings', relief=tk.RIDGE)
     self.glblSttngsFrame.grid(row=1, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
     self.context.register_frame("global_settings", self.glblSttngsFrame)
 
-    self.cstmSttngsFrame = ttk.LabelFrame(self.exportTabFrame, text='Settings adjustable for each sample', relief=tk.RIDGE)
+    self.cstmSttngsFrame = ttk.LabelFrame(self.rexViewTabFrame, text='Settings adjustable for each sample', relief=tk.RIDGE)
     self.cstmSttngsFrame.grid(row=4, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
     self.context.register_frame("custom_settings", self.cstmSttngsFrame)
 
-    self.imgFrame = ttk.LabelFrame(self.exportTabFrame, text='Image Viewer', relief=tk.RIDGE)
+    self.imgFrame = ttk.LabelFrame(self.rexViewTabFrame, text='Image Viewer', relief=tk.RIDGE)
     self.imgFrame.grid(row=5, column=0, rowspan=4, columnspan=2, sticky=tk.E + tk.W + tk.N + tk.S)
     self.context.register_frame("image", self.imgFrame)
 
-    self.excFrame = ttk.LabelFrame(self.exportTabFrame, text='Execution', relief=tk.RIDGE)
+    self.excFrame = ttk.LabelFrame(self.rexViewTabFrame, text='Execution', relief=tk.RIDGE)
     self.excFrame.grid(row=9, column=0, columnspan=2, sticky=tk.W + tk.E + tk.S)
     self.context.register_frame("execution", self.excFrame)
 

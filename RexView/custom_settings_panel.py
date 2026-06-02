@@ -207,7 +207,7 @@ class customSettingsPanel:
         self.dipsResToolTip = "Reset values to -100."
         Tooltip(self.resetCurDispButton, text=self.dipsResToolTip , wraplength=200)
 
-        # %% Export direction
+        # %% RexView direction
         self.expDirLabelToolTip = 'Define the image slice direction here. First character is always the X axis (width) and second always the y axis (height) of the resulting image.'
 
         self.expDirLabel = ttk.Label(self.frame, text='Image Slice Direction')

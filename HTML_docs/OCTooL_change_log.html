@@ -145,7 +145,7 @@ ul.task-list li input[type="checkbox"] {
   </ul></li>
   <li><a href="#code-refactoring" id="toc-code-refactoring" class="nav-link" data-scroll-target="#code-refactoring"><span class="header-section-number">4.3</span> Code Refactoring</a>
   <ul class="collapse">
-  <li><a href="#export-module" id="toc-export-module" class="nav-link" data-scroll-target="#export-module"><span class="header-section-number">4.3.1</span> Export Module</a></li>
+  <li><a href="#export-module" id="toc-export-module" class="nav-link" data-scroll-target="#export-module"><span class="header-section-number">4.3.1</span> RexView Module</a></li>
   </ul></li>
   <li><a href="#carl-quant-module---a-scan-viewer" id="toc-carl-quant-module---a-scan-viewer" class="nav-link" data-scroll-target="#carl-quant-module---a-scan-viewer"><span class="header-section-number">4.4</span> Carl Quant Module - A-Scan Viewer</a>
   <ul class="collapse">
@@ -158,8 +158,8 @@ ul.task-list li input[type="checkbox"] {
   </ul></li>
   <li><a href="#carl-quant-module---data-management" id="toc-carl-quant-module---data-management" class="nav-link" data-scroll-target="#carl-quant-module---data-management"><span class="header-section-number">4.6</span> Carl Quant Module - Data Management</a>
   <ul class="collapse">
-  <li><a href="#results-export" id="toc-results-export" class="nav-link" data-scroll-target="#results-export"><span class="header-section-number">4.6.1</span> Results &amp; Export</a></li>
-  <li><a href="#image-export" id="toc-image-export" class="nav-link" data-scroll-target="#image-export"><span class="header-section-number">4.6.2</span> Image Export</a></li>
+  <li><a href="#results-export" id="toc-results-export" class="nav-link" data-scroll-target="#results-export"><span class="header-section-number">4.6.1</span> Results &amp; RexView</a></li>
+  <li><a href="#image-export" id="toc-image-export" class="nav-link" data-scroll-target="#image-export"><span class="header-section-number">4.6.2</span> Image RexView</a></li>
   </ul></li>
   <li><a href="#code-refactoring-cleanup" id="toc-code-refactoring-cleanup" class="nav-link" data-scroll-target="#code-refactoring-cleanup"><span class="header-section-number">4.7</span> Code Refactoring &amp; Cleanup</a>
   <ul class="collapse">
@@ -196,7 +196,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#data-handling" id="toc-data-handling" class="nav-link" data-scroll-target="#data-handling"><span class="header-section-number">5.4.2</span> Data Handling</a></li>
   <li><a href="#column-management" id="toc-column-management" class="nav-link" data-scroll-target="#column-management"><span class="header-section-number">5.4.3</span> Column Management</a></li>
   </ul></li>
-  <li><a href="#export-tab" id="toc-export-tab" class="nav-link" data-scroll-target="#export-tab"><span class="header-section-number">5.5</span> Export Tab</a>
+  <li><a href="#export-tab" id="toc-export-tab" class="nav-link" data-scroll-target="#export-tab"><span class="header-section-number">5.5</span> RexView Tab</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-stability-1" id="toc-bug-fixes-stability-1" class="nav-link" data-scroll-target="#bug-fixes-stability-1"><span class="header-section-number">5.5.1</span> Bug Fixes &amp; Stability</a></li>
   </ul></li>
@@ -299,7 +299,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 data-number="1.3.2" class="anchored" data-anchor-id="resource-organization"><span class="header-section-number">1.3.2</span> Resource Organization</h3>
 <ul>
 <li>Consolidated font resources to centralized <code>utils/fonts</code> directory</li>
-<li>Removed duplicate LSANS font files from multiple locations (<code>fonts/</code>, <code>export_frames/fonts/</code>)</li>
+<li>Removed duplicate LSANS font files from multiple locations (<code>fonts/</code>, <code>RexView/fonts/</code>)</li>
 <li>Updated font loading to use <code>resource_path</code> helper for proper bundling</li>
 <li>Simplified PyInstaller spec to reference single font location</li>
 </ul>
@@ -319,7 +319,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 data-number="1.4.1" class="anchored" data-anchor-id="user-documentation"><span class="header-section-number">1.4.1</span> User Documentation</h3>
 <ul>
 <li>Added comprehensive README with installation and usage guide</li>
-<li>Created detailed documentation covering all three main sections (Export, Analyze, CarlQuant)</li>
+<li>Created detailed documentation covering all three main sections (RexView, Analyze, CarlQuant)</li>
 <li>Added installation instructions, system requirements, and development setup guide</li>
 <li>Included build instructions with PyInstaller configuration details</li>
 </ul>
@@ -363,7 +363,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 data-number="2.2.1" class="anchored" data-anchor-id="tab-configuration-system"><span class="header-section-number">2.2.1</span> Tab Configuration System</h3>
 <ul>
 <li>Introduced configurable tab visibility system with distribution flags</li>
-<li>Added ENABLE_EXPORT, ENABLE_ANALYZE, and ENABLE_CARLQUANT instance variables for selective tab control</li>
+<li>Added ENABLE_REXVIEW, ENABLE_ANALYZE, and ENABLE_CARLQUANT instance variables for selective tab control</li>
 <li>Updated tab button creation to dynamically position buttons based on enabled tabs</li>
 <li>Added automatic selection of first available tab on startup</li>
 <li>Fixed tab button command callbacks to use captured indices instead of dynamic length calculation</li>
@@ -411,7 +411,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 data-number="2.4.2" class="anchored" data-anchor-id="resource-organization-1"><span class="header-section-number">2.4.2</span> Resource Organization</h3>
 <ul>
 <li>Consolidated font resources to centralized utils/fonts directory</li>
-<li>Removed duplicate LSANS font files from multiple locations (fonts/, export_frames/fonts/)</li>
+<li>Removed duplicate LSANS font files from multiple locations (fonts/, RexView/fonts/)</li>
 <li>Updated font loading to use resource_path helper for proper bundling</li>
 <li>Simplified PyInstaller spec to reference single font location</li>
 </ul>
@@ -430,7 +430,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 data-number="2.5.1" class="anchored" data-anchor-id="user-documentation-1"><span class="header-section-number">2.5.1</span> User Documentation</h3>
 <ul>
 <li>Added comprehensive README with installation and usage guide</li>
-<li>Created detailed documentation covering all three main sections (Export, Analyze, CarlQuant)</li>
+<li>Created detailed documentation covering all three main sections (RexView, Analyze, CarlQuant)</li>
 <li>Added installation instructions, system requirements, and development setup guide</li>
 <li>Included build instructions with PyInstaller configuration details</li>
 </ul>
@@ -566,7 +566,7 @@ ul.task-list li input[type="checkbox"] {
 <li>Moved typical workflow sections to beginning of each chapter for better accessibility</li>
 <li>Added comprehensive Analyze section documentation with detailed UI components and workflows</li>
 <li>Added comprehensive Carl Quant section documentation with detailed UI components and workflows</li>
-<li>Added comprehensive Export section documentation with detailed parameters and workflows</li>
+<li>Added comprehensive RexView section documentation with detailed parameters and workflows</li>
 <li>Improved manual layout and content organization with enhanced table of contents</li>
 </ul>
 </section>
@@ -585,7 +585,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="code-refactoring" class="level2" data-number="4.3">
 <h2 data-number="4.3" class="anchored" data-anchor-id="code-refactoring"><span class="header-section-number">4.3</span> Code Refactoring</h2>
 <section id="export-module" class="level3" data-number="4.3.1">
-<h3 data-number="4.3.1" class="anchored" data-anchor-id="export-module"><span class="header-section-number">4.3.1</span> Export Module</h3>
+<h3 data-number="4.3.1" class="anchored" data-anchor-id="export-module"><span class="header-section-number">4.3.1</span> RexView Module</h3>
 <ul>
 <li>Optimized grid layout in export panel for better UI responsiveness</li>
 </ul>
@@ -627,7 +627,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="carl-quant-module---data-management" class="level2" data-number="4.6">
 <h2 data-number="4.6" class="anchored" data-anchor-id="carl-quant-module---data-management"><span class="header-section-number">4.6</span> Carl Quant Module - Data Management</h2>
 <section id="results-export" class="level3" data-number="4.6.1">
-<h3 data-number="4.6.1" class="anchored" data-anchor-id="results-export"><span class="header-section-number">4.6.1</span> Results &amp; Export</h3>
+<h3 data-number="4.6.1" class="anchored" data-anchor-id="results-export"><span class="header-section-number">4.6.1</span> Results &amp; RexView</h3>
 <ul>
 <li>Fixed slice indices conversion from 0-based internal to 1-based Excel representation</li>
 <li>Implemented metadata-based result loading with improved folder skipping for annotations</li>
@@ -637,7 +637,7 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 <section id="image-export" class="level3" data-number="4.6.2">
-<h3 data-number="4.6.2" class="anchored" data-anchor-id="image-export"><span class="header-section-number">4.6.2</span> Image Export</h3>
+<h3 data-number="4.6.2" class="anchored" data-anchor-id="image-export"><span class="header-section-number">4.6.2</span> Image RexView</h3>
 <ul>
 <li>Implemented image saving routines with annotation overlays</li>
 </ul>
@@ -838,7 +838,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 <section id="export-tab" class="level2" data-number="5.5">
-<h2 data-number="5.5" class="anchored" data-anchor-id="export-tab"><span class="header-section-number">5.5</span> Export Tab</h2>
+<h2 data-number="5.5" class="anchored" data-anchor-id="export-tab"><span class="header-section-number">5.5</span> RexView Tab</h2>
 <section id="bug-fixes-stability-1" class="level3" data-number="5.5.1">
 <h3 data-number="5.5.1" class="anchored" data-anchor-id="bug-fixes-stability-1"><span class="header-section-number">5.5.1</span> Bug Fixes &amp; Stability</h3>
 <ul>
@@ -879,7 +879,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 data-number="6.1.1" class="anchored" data-anchor-id="core-features"><span class="header-section-number">6.1.1</span> Core Features</h3>
 <ul>
 <li><strong>Analysis Tab</strong>: Complete implementation for OCT image analysis</li>
-<li><strong>Export Tab</strong>: Basic export functionality for processed data</li>
+<li><strong>RexView Tab</strong>: Basic export functionality for processed data</li>
 <li><strong>Status Bar</strong>: Thread-safe status messaging system</li>
 <li><strong>Configuration System</strong>: JSON-based configuration management</li>
 <li><strong>Key Binding System</strong>: Customizable keyboard shortcuts for data entry</li>
@@ -889,7 +889,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 data-number="6.1.2" class="anchored" data-anchor-id="user-interface"><span class="header-section-number">6.1.2</span> User Interface</h3>
 <ul>
 <li>Modern tkinter-based GUI with ttkbootstrap styling</li>
-<li>Multi-tab interface (Analysis, Carl Quant, Export)</li>
+<li>Multi-tab interface (Analysis, Carl Quant, RexView)</li>
 <li>Responsive layout with grid-based design</li>
 </ul>
 </section>

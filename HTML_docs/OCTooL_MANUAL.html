@@ -86,13 +86,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#system-requirements" id="toc-system-requirements" class="nav-link" data-scroll-target="#system-requirements"><span class="header-section-number">1.2</span> System Requirements</a></li>
   <li><a href="#application-overview" id="toc-application-overview" class="nav-link" data-scroll-target="#application-overview"><span class="header-section-number">1.3</span> Application Overview</a>
   <ul class="collapse">
-  <li><a href="#export-section" id="toc-export-section" class="nav-link" data-scroll-target="#export-section">Export Section</a></li>
+  <li><a href="#export-section" id="toc-export-section" class="nav-link" data-scroll-target="#export-section">RexView Section</a></li>
   <li><a href="#analyze-section" id="toc-analyze-section" class="nav-link" data-scroll-target="#analyze-section">Analyze Section</a></li>
   <li><a href="#carlquant-section" id="toc-carlquant-section" class="nav-link" data-scroll-target="#carlquant-section">CarlQuant Section</a></li>
   </ul></li>
   <li><a href="#workflow-integration" id="toc-workflow-integration" class="nav-link" data-scroll-target="#workflow-integration"><span class="header-section-number">1.4</span> Workflow Integration</a></li>
   </ul></li>
-  <li><a href="#export-section-1" id="toc-export-section-1" class="nav-link" data-scroll-target="#export-section-1"><span class="header-section-number">2</span> Export Section</a>
+  <li><a href="#export-section-1" id="toc-export-section-1" class="nav-link" data-scroll-target="#export-section-1"><span class="header-section-number">2</span> RexView Section</a>
   <ul class="collapse">
   <li><a href="#typical-workflow" id="toc-typical-workflow" class="nav-link" data-scroll-target="#typical-workflow"><span class="header-section-number">2.1</span> Typical Workflow</a></li>
   <li><a href="#file-selection-panel" id="toc-file-selection-panel" class="nav-link" data-scroll-target="#file-selection-panel"><span class="header-section-number">2.2</span> File Selection Panel</a>
@@ -107,7 +107,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#aspect-ratio" id="toc-aspect-ratio" class="nav-link" data-scroll-target="#aspect-ratio"><span class="header-section-number">2.3.1</span> Aspect Ratio</a></li>
   <li><a href="#prefer-raw" id="toc-prefer-raw" class="nav-link" data-scroll-target="#prefer-raw"><span class="header-section-number">2.3.2</span> Prefer Raw</a></li>
   <li><a href="#local-filtering" id="toc-local-filtering" class="nav-link" data-scroll-target="#local-filtering"><span class="header-section-number">2.3.3</span> Local Filtering</a></li>
-  <li><a href="#export-format" id="toc-export-format" class="nav-link" data-scroll-target="#export-format"><span class="header-section-number">2.3.4</span> Export Format</a></li>
+  <li><a href="#export-format" id="toc-export-format" class="nav-link" data-scroll-target="#export-format"><span class="header-section-number">2.3.4</span> RexView Format</a></li>
   <li><a href="#averaging" id="toc-averaging" class="nav-link" data-scroll-target="#averaging"><span class="header-section-number">2.3.5</span> Averaging</a></li>
   <li><a href="#apodization-window" id="toc-apodization-window" class="nav-link" data-scroll-target="#apodization-window"><span class="header-section-number">2.3.6</span> Apodization Window</a></li>
   <li><a href="#show-error" id="toc-show-error" class="nav-link" data-scroll-target="#show-error"><span class="header-section-number">2.3.7</span> Show Error</a></li>
@@ -115,7 +115,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul></li>
   <li><a href="#custom-settings-panel" id="toc-custom-settings-panel" class="nav-link" data-scroll-target="#custom-settings-panel"><span class="header-section-number">2.4</span> Custom Settings Panel</a>
   <ul class="collapse">
-  <li><a href="#export-range" id="toc-export-range" class="nav-link" data-scroll-target="#export-range"><span class="header-section-number">2.4.1</span> Export Range</a></li>
+  <li><a href="#export-range" id="toc-export-range" class="nav-link" data-scroll-target="#export-range"><span class="header-section-number">2.4.1</span> RexView Range</a></li>
   <li><a href="#equidistant-slices" id="toc-equidistant-slices" class="nav-link" data-scroll-target="#equidistant-slices"><span class="header-section-number">2.4.2</span> Equidistant Slices</a></li>
   <li><a href="#dynamic-range-db" id="toc-dynamic-range-db" class="nav-link" data-scroll-target="#dynamic-range-db"><span class="header-section-number">2.4.3</span> Dynamic Range [dB]</a></li>
   <li><a href="#dispersion-compensation" id="toc-dispersion-compensation" class="nav-link" data-scroll-target="#dispersion-compensation"><span class="header-section-number">2.4.4</span> Dispersion Compensation</a></li>
@@ -124,7 +124,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul></li>
   <li><a href="#execution-panel" id="toc-execution-panel" class="nav-link" data-scroll-target="#execution-panel"><span class="header-section-number">2.5</span> Execution Panel</a>
   <ul class="collapse">
-  <li><a href="#export" id="toc-export" class="nav-link" data-scroll-target="#export"><span class="header-section-number">2.5.1</span> Export!</a></li>
+  <li><a href="#export" id="toc-export" class="nav-link" data-scroll-target="#export"><span class="header-section-number">2.5.1</span> RexView!</a></li>
   <li><a href="#cancel" id="toc-cancel" class="nav-link" data-scroll-target="#cancel"><span class="header-section-number">2.5.2</span> Cancel!</a></li>
   <li><a href="#quit" id="toc-quit" class="nav-link" data-scroll-target="#quit"><span class="header-section-number">2.5.3</span> Quit!</a></li>
   </ul></li>
@@ -323,14 +323,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 data-number="1.3" class="anchored" data-anchor-id="application-overview"><span class="header-section-number">1.3</span> Application Overview</h2>
 <p>OCTexVIEW is organized into three main functional sections, each designed for specific aspects of OCT image analysis:</p>
 <section id="export-section" class="level3 unnumbered">
-<h3 class="unnumbered anchored" data-anchor-id="export-section">Export Section</h3>
-<p>The <strong>Export</strong> section focuses on data preparation and batch processing capabilities. This module allows users to:</p>
+<h3 class="unnumbered anchored" data-anchor-id="export-section">RexView Section</h3>
+<p>The <strong>RexView</strong> section focuses on data preparation and batch processing capabilities. This module allows users to:</p>
 <ul>
 <li>Import and organize large collections of OCT image files</li>
 <li>Configure global processing parameters</li>
 <li>Apply custom settings to specific datasets</li>
 <li>Execute batch operations across multiple specimens</li>
-<li>Export processed data in various formats</li>
+<li>RexView processed data in various formats</li>
 </ul>
 <p><em>Primary Use Case</em>: Preparing raw OCT data for analysis and converting from OCT raw data to <code>png</code> files.</p>
 </section>
@@ -363,7 +363,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 data-number="1.4" class="anchored" data-anchor-id="workflow-integration"><span class="header-section-number">1.4</span> Workflow Integration</h2>
 <p>The three sections are designed to work together in a typical research workflow:</p>
 <ol type="1">
-<li><strong>Data Preparation</strong> (Export): Import and organize raw OCT files</li>
+<li><strong>Data Preparation</strong> (RexView): Import and organize raw OCT files</li>
 <li><strong>Image Anotatoion</strong> (Analyze): Review and annotate specimens</li>
 <li><strong>Quantitative Analysis</strong> (CarlQuant): Apply leasion depth algoryth to generate research data</li>
 </ol>
@@ -372,14 +372,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 </section>
 <section id="export-section-1" class="level1" data-number="2">
-<h1 data-number="2"><span class="header-section-number">2</span> Export Section</h1>
+<h1 data-number="2"><span class="header-section-number">2</span> RexView Section</h1>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="images/01_Export_mainWindow.png" class="img-fluid figure-img"></p>
-<figcaption>OCTexVIEW Export Section Main Window</figcaption>
+<figcaption>OCTexVIEW RexView Section Main Window</figcaption>
 </figure>
 </div>
-<p>The Export Section is the primary module for batch processing and converting OCT raw data files into standard image formats (PNG or TIFF). This section provides comprehensive control over image processing parameters, slice selection, and export settings.</p>
+<p>The RexView Section is the primary module for batch processing and converting OCT raw data files into standard image formats (PNG or TIFF). This section provides comprehensive control over image processing parameters, slice selection, and export settings.</p>
 <section id="typical-workflow" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="typical-workflow"><span class="header-section-number">2.1</span> Typical Workflow</h2>
 <ol type="1">
@@ -387,7 +387,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Configure Global Settings</strong>: Set export format, averaging method, and scale bar preferences</li>
 <li><strong>Adjust Custom Settings</strong>: Fine-tune slice ranges, dynamic range, and other parameters for specific files</li>
 <li><strong>Preview</strong>: Select a file and click “Show” to preview the export result</li>
-<li><strong>Export</strong>: Click “Export!” to process all files in the queue</li>
+<li><strong>RexView</strong>: Click “RexView!” to process all files in the queue</li>
 <li><strong>Monitor Progress</strong>: Watch the Status column for processing updates</li>
 </ol>
 </section>
@@ -443,7 +443,7 @@ YZ:15-90:10:1.5</code></pre>
 <p><strong>Warning</strong>: This is an experimental feature and may significantly increase processing time.</p>
 </section>
 <section id="export-format" class="level3" data-number="2.3.4">
-<h3 data-number="2.3.4" class="anchored" data-anchor-id="export-format"><span class="header-section-number">2.3.4</span> Export Format</h3>
+<h3 data-number="2.3.4" class="anchored" data-anchor-id="export-format"><span class="header-section-number">2.3.4</span> RexView Format</h3>
 <p><strong>Purpose</strong>: Select the output image format.</p>
 <p><strong>Options</strong>: - <strong>PNG</strong>: Results in smaller file size, suitable for most applications - <strong>TIFF</strong>: Ideal for post-processing and when maximum quality is required</p>
 <p><strong>Default</strong>: TIFF</p>
@@ -490,13 +490,13 @@ YZ:15-90:10:1.5</code></pre>
 <h2 data-number="2.4" class="anchored" data-anchor-id="custom-settings-panel"><span class="header-section-number">2.4</span> Custom Settings Panel</h2>
 <p>Custom settings allow fine-tuned control over individual files or selections in the queue.</p>
 <section id="export-range" class="level3" data-number="2.4.1">
-<h3 data-number="2.4.1" class="anchored" data-anchor-id="export-range"><span class="header-section-number">2.4.1</span> Export Range</h3>
+<h3 data-number="2.4.1" class="anchored" data-anchor-id="export-range"><span class="header-section-number">2.4.1</span> RexView Range</h3>
 <p><strong>Purpose</strong>: Manually enter the first and last slice to be exported.</p>
 <p><strong>Controls</strong>: - <strong>First</strong>: Starting slice number - <strong>Last</strong>: Ending slice number - <strong>Selection</strong>: Apply the range to the currently selected entry - <strong>Set All</strong>: Apply the range to all entries in the queue - <strong>Reset Sel</strong>: Sets the first level to 1 and the last level to the last available level</p>
 </section>
 <section id="equidistant-slices" class="level3" data-number="2.4.2">
 <h3 data-number="2.4.2" class="anchored" data-anchor-id="equidistant-slices"><span class="header-section-number">2.4.2</span> Equidistant Slices</h3>
-<p><strong>Purpose</strong>: Export evenly distributed slices from a scan.</p>
+<p><strong>Purpose</strong>: RexView evenly distributed slices from a scan.</p>
 <p><strong>Details</strong>: To export evenly distributed slices from a scan, the number can be entered here and transferred to all or one entry in the queue.</p>
 <p><strong>Controls</strong>: - <strong>Number Entry</strong>: Enter the desired number of equidistant slices (default: 25) - <strong>Selection</strong>: Apply to the currently selected entry - <strong>Set All</strong>: Apply to all entries in the queue - <strong>Reset Sel</strong>: Resets the value to “all slices”</p>
 </section>
@@ -533,7 +533,7 @@ YZ:15-90:10:1.5</code></pre>
 <h2 data-number="2.5" class="anchored" data-anchor-id="execution-panel"><span class="header-section-number">2.5</span> Execution Panel</h2>
 <p>The Execution Panel controls the export process and application lifecycle.</p>
 <section id="export" class="level3" data-number="2.5.1">
-<h3 data-number="2.5.1" class="anchored" data-anchor-id="export"><span class="header-section-number">2.5.1</span> Export!</h3>
+<h3 data-number="2.5.1" class="anchored" data-anchor-id="export"><span class="header-section-number">2.5.1</span> RexView!</h3>
 <p><strong>Purpose</strong>: Start exporting of all entries in queue.</p>
 <p><strong>Details</strong>: Initiates batch processing of all OCT files in the queue with their configured settings. Progress is displayed in the Status column of the queue table.</p>
 </section>
@@ -888,7 +888,7 @@ YZ:15-90:10:1.5</code></pre>
 <li>Double-click rows to open A-Scan viewer for detailed inspection</li>
 <li>Toggle overlays (H key) to visualize detection results</li>
 </ul></li>
-<li><strong>Export Data</strong>: Results are automatically saved to CSV files</li>
+<li><strong>RexView Data</strong>: Results are automatically saved to CSV files</li>
 </ol>
 <p><strong>Details</strong>: The “Start Analyzing” button processes all loaded specimens sequentially. Each specimen is analyzed independently with the same settings. Progress is shown in the specimen table’s STATE column.</p>
 </section>
