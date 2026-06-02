@@ -231,7 +231,7 @@ class ImageDisplayConfig(BaseModel):
     scale_font_size: int = Field(default=30, ge=1, description="Scale bar text font size")
     
     # Processing settings
-    data_type: Literal['Processed', 'Raw'] = Field(
+    data_type: Literal['Processed', 'Raw', 'RawSpectra', 'RawSpectraAndProcessedIntensity'] = Field(
         default='Processed',
         description="OCT data type"
     )
