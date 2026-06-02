@@ -128,31 +128,52 @@ Added to `app/logic/rexview/models.py`:
 
 ---
 
-## Phase D: Queue Management Refactoring
+## Phase D: Queue Management Refactoring (COMPLETED)
 
 Extract queue logic from `tree_view_panel.py` and `pick_files_panel.py`.
 
 ### D.1 Create QueueService
 
-Create `app/logic/rexview/queue_service.py`:
+Created `app/logic/rexview/queue_service.py`:
 
-- `add_item()` - Validate and add item to queue
-- `remove_item()` - Remove item from queue
-- `validate_item()` - Check item parameters
-- `reorder_items()` - Handle queue reordering
+- [x] `add_item()` - Validate and add item to queue
+- [x] `remove_item()` - Remove item from queue
+- [x] `validate_item()` - Check item parameters
+- [x] `reorder_items()` - Handle queue reordering
+- [x] `validate_equidistant_slices()` - Validate equidistant slice count
+- [x] `get_dimension_key_for_direction()` - Map slice direction to dimension
+- [x] `calculate_num_slices()` - Calculate slice count in range
 
 ### D.2 Create FileDiscoveryService
 
-Create `app/logic/rexview/file_discovery_service.py`:
+Created `app/logic/rexview/file_discovery_service.py`:
 
-- `scan_directory()` - Find OCT files in directory
-- `extract_metadata()` - Read OCT file metadata
-- `validate_file()` - Check file is valid OCT
+- [x] `scan_directory()` - Find OCT files in directory
+- [x] `extract_metadata()` - Read OCT file metadata
+- [x] `validate_file()` - Check file is valid OCT
+- [x] `parse_metadata_file()` - Parse sidecar metadata file
+- [x] `handle_metadata_parsing()` - Parse with fallback to defaults
+- [x] `get_default_db_values()` - Get dB defaults by data type
+- [x] `get_dispersion_coefficient()` - Get dispersion by serial number
+- [x] `build_queue_items_for_file()` - Build queue entries from file
 
-### D.3 Wire Panels
+### D.3 Create Models
 
-- [ ] `tree_view_panel.py` → uses QueueService
-- [ ] `pick_files_panel.py` → uses FileDiscoveryService
+Added to `app/logic/rexview/models.py`:
+
+- [x] `QueueItem` - Represents a queue row with validation
+- [x] `FileMetadata` - OCT file metadata
+- [x] `ExportSettings` - Parsed sidecar settings
+
+### D.4 Wire Panels
+
+- [x] `tree_view_panel.py` → uses QueueService
+- [x] `pick_files_panel.py` → uses FileDiscoveryService
+
+### D.5 Tests
+
+- [x] Unit tests for QueueService (30+ tests)
+- [x] Unit tests for FileDiscoveryService (35+ tests)
 
 ---
 
@@ -238,13 +259,14 @@ app/
 - [x] Wire custom_settings_panel.py
 - [x] Add tests (45+ unit tests)
 
-### Phase D: QueueService & FileDiscoveryService
+### Phase D: QueueService & FileDiscoveryService (COMPLETED)
 
-- [ ] Create QueueService
-- [ ] Create FileDiscoveryService
-- [ ] Wire tree_view_panel.py
-- [ ] Wire pick_files_panel.py
-- [ ] Add tests
+- [x] Create QueueService
+- [x] Create FileDiscoveryService
+- [x] Create QueueItem, FileMetadata, ExportSettings models
+- [x] Wire tree_view_panel.py
+- [x] Wire pick_files_panel.py
+- [x] Add tests (65+ tests)
 
 ### Phase E: UI File Migration
 
@@ -426,12 +448,16 @@ app/logic/rexview/
 ├── export_service.py        # ~380 lines, 8 public methods
 ├── image_service.py         # ~320 lines, 12 public methods
 ├── settings_service.py      # ~310 lines, 10 public methods
-└── models.py                # ~460 lines, 5 models
+├── queue_service.py         # ~320 lines, 15 public methods
+├── file_discovery_service.py # ~400 lines, 12 public methods
+└── models.py                # ~600 lines, 8 models
 
 tests/unit/logic/
 ├── test_rexview_export.py   # ~350 lines, 65 tests
 ├── test_rexview_image.py    # ~520 lines, 36 tests
 ├── test_rexview_settings.py # ~550 lines, 45+ tests
+├── test_rexview_queue.py    # ~450 lines, 30+ tests
+├── test_rexview_file_discovery.py # ~600 lines, 35+ tests
 
 tests/integration/
 └── test_export_pipeline.py  # ~260 lines, 13 tests
