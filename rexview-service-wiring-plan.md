@@ -48,41 +48,44 @@ Wired `execution_panel.py` to delegate to `ExportService`.
 
 ---
 
-## Phase B: Image Panel Refactoring (NEXT)
+## Phase B: Image Panel Refactoring (COMPLETED)
 
 Extract preview rendering logic from `image_panel.py`.
 
 ### B.1 Create ImageService
 
-Create `app/logic/rexview/image_service.py`:
+Created `app/logic/rexview/image_service.py`:
 
-- `load_preview()` - Load and prepare OCT preview image
-- `navigate_slice()` - Calculate slice index for navigation
-- `apply_display_settings()` - Apply contrast, zoom, etc.
+- [x] `load_oct_file()` - Load OCT file and extract metadata
+- [x] `load_processed_stack()` - Load full image stack for processed data
+- [x] `create_raw_slice()` - Create single slice from raw data
+- [x] `extract_slice()` - Extract 2D slice from 3D stack
+- [x] `apply_resize_correction()` - Apply aspect ratio correction
+- [x] `apply_refractive_index_correction()` - Apply refractive index correction
+- [x] `add_scale_bar()` - Add scale bar to image
+- [x] `resize_to_fit_canvas()` - Resize image to fit canvas
+- [x] `calculate_canvas_position()` - Calculate centered position
+- [x] `process_preview_image()` - Main method combining all processing
+- [x] `navigate_slice()` - Calculate slice index for navigation
+- [x] `get_middle_slice_index()` - Get middle slice index
 
 ### B.2 Create ImageDisplayConfig Model
 
-Add to `app/logic/rexview/models.py`:
+Added to `app/logic/rexview/models.py`:
 
-```python
-class ImageDisplayConfig(BaseModel):
-    slice_index: int = 0
-    contrast_min: int = 0
-    contrast_max: int = 255
-    zoom_level: float = 1.0
-    slice_direction: Literal['XZ', 'YZ', 'XY'] = 'XZ'
-```
+- [x] `ImageDisplayConfig` with all display-related settings
+- [x] `from_gui_state()` factory method for widget state conversion
 
 ### B.3 Wire image_panel.py
 
-- [ ] Add `_collect_display_config()` helper
-- [ ] Delegate preview loading to `ImageService`
-- [ ] Keep canvas rendering in UI layer
+- [x] Add `_collect_display_config()` helper
+- [x] Delegate preview loading to `ImageService`
+- [x] Keep canvas rendering in UI layer
 
 ### B.4 Tests
 
-- [ ] Unit tests for `ImageService` methods
-- [ ] Integration test for preview pipeline
+- [x] Unit tests for `ImageService` methods (36 tests)
+- [ ] Integration test for preview pipeline (optional)
 
 ---
 
@@ -201,12 +204,12 @@ app/
 - [x] Wire execution_panel.py
 - [x] Add unit and integration tests
 
-### Phase B: ImageService
+### Phase B: ImageService (COMPLETED)
 
-- [ ] Create ImageService
-- [ ] Create ImageDisplayConfig model
-- [ ] Wire image_panel.py
-- [ ] Add tests
+- [x] Create ImageService
+- [x] Create ImageDisplayConfig model
+- [x] Wire image_panel.py
+- [x] Add tests (36 unit tests)
 
 ### Phase C: SettingsService
 
@@ -401,10 +404,12 @@ def test_<feature>_end_to_end(self, ...):
 app/logic/rexview/
 ├── __init__.py              # Exports public API
 ├── export_service.py        # ~380 lines, 8 public methods
-└── models.py                # ~200 lines, 3 models
+├── image_service.py         # ~320 lines, 12 public methods
+└── models.py                # ~310 lines, 4 models
 
 tests/unit/logic/
 ├── test_rexview_export.py   # ~350 lines, 65 tests
+├── test_rexview_image.py    # ~520 lines, 36 tests
 
 tests/integration/
 └── test_export_pipeline.py  # ~260 lines, 13 tests
