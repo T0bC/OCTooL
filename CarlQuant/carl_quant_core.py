@@ -7,9 +7,9 @@ Created on Mon Sep 29 11:05:22 2025
 
 from time import sleep
 from threading import Thread
-from carlquant_frames.data_io import DataSaver
-from carlquant_frames.specimen_model import RegionStats, Surface, LesionDepth
-from carlquant_frames.progress_dialog import ProgressDialog
+from CarlQuant.data_io import DataSaver
+from CarlQuant.specimen_model import RegionStats, Surface, LesionDepth
+from CarlQuant.progress_dialog import ProgressDialog
 import random
 import numpy as np
 from PIL import Image

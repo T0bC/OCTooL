@@ -8,10 +8,10 @@ Created on Fri Sep 26 14:48:40 2025
 import tkinter as tk
 from tksheet import Sheet
 from utils.error_handler import handle_errors
-from carlquant_frames.specimen_model import RegionStats, Surface, LesionDepth, SliceResult
-from carlquant_frames.data_io import DataLoader
-from carlquant_frames.ascan_viewer import AScanViewer
-from carlquant_frames.annotation_colors import ROW_HIGHLIGHT_NAVIGATION_COLOR, ROW_HIGHLIGHT_ASCAN_COLOR
+from CarlQuant.specimen_model import RegionStats, Surface, LesionDepth, SliceResult
+from CarlQuant.data_io import DataLoader
+from CarlQuant.ascan_viewer import AScanViewer
+from CarlQuant.annotation_colors import ROW_HIGHLIGHT_NAVIGATION_COLOR, ROW_HIGHLIGHT_ASCAN_COLOR
 
 
 class resultsPanel:

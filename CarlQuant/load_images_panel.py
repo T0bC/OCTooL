@@ -11,8 +11,8 @@ from fnmatch import fnmatch
 from utils.error_handler import handle_errors
 from utils.metadata_prompt import prompt_for_metadata
 from utils.tool_tip import Tooltip
-from carlquant_frames.data_io import DataLoader, DataSaver
-from carlquant_frames.carl_quant_core import run_carl_quant
+from CarlQuant.data_io import DataLoader, DataSaver
+from CarlQuant.carl_quant_core import run_carl_quant
 import threading
 from tkinter import messagebox
 
