@@ -8,34 +8,34 @@ Created on Fri Sep 26 13:58:13 2025
 import tkinter as tk
 from tkinter import ttk
 from utils.error_handler import handle_errors
-from carlquant_frames.load_images_panel import loadImagePanel as loadImage
-from carlquant_frames.settings_panel import settingsPanel as settingsPanel
-from carlquant_frames.specimen_panel import specimenPanel as specimenPanel
-from carlquant_frames.results_panel import resultsPanel as resultsPanel
-from carlquant_frames.image_viewer_panel import image_viewer_panel as imagePanel
+from CarlQuant.load_images_panel import loadImagePanel as loadImage
+from CarlQuant.settings_panel import settingsPanel as settingsPanel
+from CarlQuant.specimen_panel import specimenPanel as specimenPanel
+from CarlQuant.results_panel import resultsPanel as resultsPanel
+from CarlQuant.image_viewer_panel import image_viewer_panel as imagePanel
 
-@handle_errors("carl_quant.addContent")
+@handle_errors("carlQuantTab.addContent")
 def addContent(self, frame):
-    self.carlQuantFrame = frame
-    self.context.root = self.carlQuantFrame
+    self.carlQuantTabFrame = frame
+    self.context.root = self.carlQuantTabFrame
 
     # Layout configuration
     # Column 0 → Controls container (holds Load Data + Settings)
-    self.carlQuantFrame.columnconfigure(0, minsize=50, weight=0)
+    self.carlQuantTabFrame.columnconfigure(0, minsize=50, weight=0)
     # Column 1 → Left pane of PanedWindow (Specimen table)
-    self.carlQuantFrame.columnconfigure(1, weight=1, minsize=400)
+    self.carlQuantTabFrame.columnconfigure(1, weight=1, minsize=400)
     # Column 2 → Right pane of PanedWindow (Results table)
-    self.carlQuantFrame.columnconfigure(2, weight=1, minsize=400)
+    self.carlQuantTabFrame.columnconfigure(2, weight=1, minsize=400)
     # Row 0 → Top row (Controls container + PanedWindow with Specimen + Results)
-    self.carlQuantFrame.rowconfigure(0, weight=0)
+    self.carlQuantTabFrame.rowconfigure(0, weight=0)
     # Row 1 → Middle row (Data Viewer frame spanning all columns)
-    self.carlQuantFrame.rowconfigure(1, weight=1)
+    self.carlQuantTabFrame.rowconfigure(1, weight=1)
     # Row 2 → Bottom row (Status bar, if present)
-    self.carlQuantFrame.rowconfigure(2, weight=0)
+    self.carlQuantTabFrame.rowconfigure(2, weight=0)
 
 
     # Controls container
-    self.controlsContainer = ttk.Frame(self.carlQuantFrame)
+    self.controlsContainer = ttk.Frame(self.carlQuantTabFrame)
     self.controlsContainer.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
 
     # Load Frame
@@ -51,7 +51,7 @@ def addContent(self, frame):
     # PanedWindow for Specimen and Results
     # Styled to match dark theme
     self.tablePane = tk.PanedWindow(
-        self.carlQuantFrame, 
+        self.carlQuantTabFrame, 
         orient=tk.HORIZONTAL,
         sashwidth=6,
         sashpad=2,
@@ -76,7 +76,7 @@ def addContent(self, frame):
     self.tablePane.after(100, lambda: self.tablePane.sash_place(0, 400, 0))
 
     # Viewer Frame
-    self.viewerFrame = ttk.LabelFrame(self.carlQuantFrame, text='Image Viewer', relief=tk.RIDGE)
+    self.viewerFrame = ttk.LabelFrame(self.carlQuantTabFrame, text='Image Viewer', relief=tk.RIDGE)
     self.viewerFrame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("carl_image", self.viewerFrame)
 
