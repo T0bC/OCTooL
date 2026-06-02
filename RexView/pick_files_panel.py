@@ -16,6 +16,7 @@ from fnmatch import fnmatch
 from utils import oct_functions as octF
 from concurrent import futures
 from utils.error_handler import handle_errors
+from app.logic.rexview import FileDiscoveryService
 
 
 class pickFilesPanel:
@@ -25,6 +26,9 @@ class pickFilesPanel:
         self.frame = self.context.get_frame("pick_files")
         self.treeView = self.context.get_panel("tree")
         self.globalSettings = self.context.get_panel("global_settings")
+
+        # Initialize FileDiscoveryService with XML reader
+        self._file_discovery_service = FileDiscoveryService(xml_reader=octF.getXMLvalue)
 
         # Add buttons and instructions here
         self.pickFolderToolTip = 'Choose a folder whichs contains at least one OCT file. ' \
@@ -168,12 +172,21 @@ class pickFilesPanel:
 
     #%%
     def _collect_oct_files(self, folder_path: Path):
-        oct_files = []
-        for path, _, files in os.walk(Path(folder_path)):
-            for file in files:
-                if fnmatch(file, '*.oct'):
-                    oct_files.append(Path(path) / file)
-        return sorted(oct_files)
+        """
+        Collect OCT files from a directory using FileDiscoveryService.
+        
+        Parameters
+        ----------
+        folder_path : Path
+            Directory to scan for OCT files
+            
+        Returns
+        -------
+        list
+            Sorted list of OCT file paths
+        """
+        result = self._file_discovery_service.scan_directory(folder_path, recursive=True)
+        return result.files
 
     def _create_progress_popup(self, total_files: int):
         self.running = 0
@@ -208,18 +221,33 @@ class pickFilesPanel:
                 self.popup = None
 
     def _build_entries_for_file(self, file_path: Path):
+        """
+        Build queue entries for a single OCT file.
+        
+        Uses FileDiscoveryService for metadata extraction and default values.
+        
+        Parameters
+        ----------
+        file_path : Path
+            Path to OCT file
+            
+        Returns
+        -------
+        list
+            List of entry tuples for TreeView
+        """
         file_path = Path(file_path)
         file_name = os.path.splitext(os.path.basename(file_path))[0]
-        pathToSideCarTXTFile = file_path.parent / (file_name + ".txt")
+        pathToSideCarTXTFile = self._file_discovery_service.get_sidecar_path(file_path)
 
         settings = self.handle_metadata_parsing(pathToSideCarTXTFile, octF.getXMLvalue(file_path, 'dimY'))
 
         data_type = octF.getXMLvalue(file_path, 'dataType')
         serial_number = octF.getXMLvalue(file_path, 'Serialnumber')
 
-        disp_coeff = '-100' if serial_number == 'M00427924' else '20'
-        min_db = '20' if data_type == 'Processed' else '30'
-        max_db = '80' if data_type == 'Processed' else '100'
+        # Use FileDiscoveryService for default values
+        db_values = self._file_discovery_service.get_default_db_values(data_type)
+        disp_coeff = self._file_discovery_service.get_dispersion_coefficient(serial_number)
 
         entries = []
         for export_direction, config in settings.items():
@@ -232,8 +260,8 @@ class pickFilesPanel:
                 file_name,
                 firstS,
                 lastS,
-                min_db,
-                max_db,
+                db_values['min'],
+                db_values['max'],
                 numAequidistSlices,
                 refractiveIndex,
                 disp_coeff,
@@ -423,33 +451,28 @@ class pickFilesPanel:
                 'XZ': {'start': 1, 'end': dimY, 'numAequidistSlices': dimY}
             }
         """
-
-        if not file_path.exists():
-            if self.globalSettings.getErrorState() == "selected":
-                self.show_error_box(
-                    "Metadata File Missing",
-                    f"No metadata file found at:\n{file_path}\n\nFalling back to full-range export (1 to {dimY})."
-                )
-
-            return {"XZ": {"start": 1, "end": dimY, "numAequidistSlices": dimY, "refractiveIndex": 1}}
-
-        try:
-            settings = self.parse_metadata_file(file_path)
-            return settings
-        except ValueError as ve:
-            if self.globalSettings.getErrorState() == "selected":
-                self.show_error_box(
-                    "Invalid Metadata Format",
-                    f"Error parsing metadata file:\n{ve}\n\nUsing default range as fallback."
-                )
-            return {"XZ": {"start": 1, "end": dimY, "numAequidistSlices": dimY, "refractiveIndex": 1}}
-        except RuntimeError as re:
-            if self.globalSettings.getErrorState() == "selected":
-                self.show_error_box(
-                    "Metadata File Error",
-                    f"Unable to read metadata file:\n{re}\n\nUsing default range as fallback."
-                )
-            return {"XZ": {"start": 1, "end": dimY, "numAequidistSlices": dimY, "refractiveIndex": 1}}
+        show_errors = self.globalSettings.getErrorState() == "selected"
+        
+        # Use FileDiscoveryService for metadata parsing
+        settings, error_msg = self._file_discovery_service.handle_metadata_parsing(
+            file_path,
+            dim_y=dimY,
+            show_errors=show_errors,
+        )
+        
+        if error_msg:
+            self.show_error_box("Metadata File Issue", error_msg)
+        
+        # Convert ExportSettings models to dict format for backward compatibility
+        result = {}
+        for direction, export_settings in settings.items():
+            result[direction] = {
+                'start': export_settings.start,
+                'end': export_settings.end,
+                'numAequidistSlices': export_settings.num_equidistant_slices,
+                'refractiveIndex': export_settings.refractive_index,
+            }
+        return result
 
 # %%
 
