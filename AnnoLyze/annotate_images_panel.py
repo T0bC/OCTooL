@@ -37,7 +37,7 @@ class annotatePanel(BaseCanvasPanel):
         self.hovered_point_index = None  # used for hover detection
         
         # Initialize base class (sets up canvas, zoom, pan, navigation, etc.)
-        super().__init__(context, "image", canvas_bg='#505050')
+        super().__init__(context, "anno_image", canvas_bg='#505050')
     
     # ============================================================================
     # HOOK METHOD IMPLEMENTATIONS

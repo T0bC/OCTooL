@@ -66,7 +66,7 @@ class UndoPanel:
 
 
     def _undo_to_index(self, index):
-        annotate_panel = self.context.get_panel("image")
+        annotate_panel = self.context.get_panel("anno_image")
 
         while len(self.undo_stack) > index:
             action = self.undo_stack.pop()

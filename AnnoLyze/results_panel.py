@@ -23,7 +23,7 @@ class resultsPanel:
         self.context = context
         self.root = context.root
         self.frame = context.get_frame("results")
-        self.img_frame = context.get_frame("image")
+        self.img_frame = context.get_frame("anno_image")
         self.load_frame = context.get_frame("load")
 
         self.static_col_names = ['SPECIMEN_NAME', 'SLICE', 'OPERATOR', 'MEASUREMENT', 'SYSTEM', 'DATE_TIME']

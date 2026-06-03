@@ -92,6 +92,38 @@ def log_error_to_file(function_name, args, kwargs, custom_message, traceback_tex
     with open(log_path, "a", encoding="utf-8") as log_file:
         log_file.write(log_entry)
 
+def install_tk_exception_handler(root):
+    """
+    Install a global handler for uncaught exceptions raised inside Tkinter
+    callbacks (button commands, event bindings, lambdas, ``after`` jobs, etc.).
+
+    Tkinter routes every uncaught callback exception through the root window's
+    ``report_callback_exception``. Overriding it here guarantees that *any*
+    callback error is shown to the user and logged, even for callbacks that are
+    not wrapped with :func:`handle_errors`. This is essential for windowed
+    PyInstaller builds, where stderr is not visible and the app would otherwise
+    fail silently.
+
+    Args:
+        root (tkinter.Tk): The application root window.
+    """
+    def report_callback_exception(exc_type, exc_value, exc_tb):
+        tb = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        popup_message = (
+            "An unexpected error occurred:\n\n"
+            f"Exception: {exc_value}\n\n"
+            f"Traceback:\n{tb}"
+        )
+        try:
+            show_error_popup("Error", popup_message)
+        except Exception:
+            # Never let the error handler itself crash the app.
+            pass
+        log_error_to_file("tkinter.callback", (), {}, "Unhandled Tk callback exception", tb)
+
+    root.report_callback_exception = report_callback_exception
+
+
 def handle_errors(custom_message=None):
     """
     Decorator that catches exceptions, shows a popup, and logs error details.

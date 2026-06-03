@@ -52,7 +52,7 @@ def addContent(self, frame):
 
     self.imgFrame = ttk.LabelFrame(self.rexViewTabFrame, text='Image Viewer', relief=tk.RIDGE)
     self.imgFrame.grid(row=5, column=0, rowspan=4, columnspan=2, sticky=tk.E + tk.W + tk.N + tk.S)
-    self.context.register_frame("image", self.imgFrame)
+    self.context.register_frame("rex_image", self.imgFrame)
 
     self.excFrame = ttk.LabelFrame(self.rexViewTabFrame, text='Execution', relief=tk.RIDGE)
     self.excFrame.grid(row=9, column=0, columnspan=2, sticky=tk.W + tk.E + tk.S)
@@ -72,7 +72,7 @@ def addContent(self, frame):
     self.context.register_panel("pick_files", self.pickPanel)
 
     self.imgPanel = imagePanel(self.context)
-    self.context.register_panel("image", self.imgPanel)
+    self.context.register_panel("rex_image", self.imgPanel)
 
     self.excPanel = execution(self.context)
     self.context.register_panel("execution", self.excPanel)

@@ -74,7 +74,7 @@ class pickFilesPanel:
         self.showBtn = ttk.Button(self.frame,
                                   text='Show',
                                   width=14,
-                                  command=lambda: self.context.get_panel("image").dispImageInCanvas(),
+                                  command=lambda: self.context.get_panel("rex_image").dispImageInCanvas(),
                                   bootstyle="success")
         self.showBtn.grid(row=0, column=6, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
         Tooltip(self.showBtn, text=self.showBtnToolTip , wraplength=200)

@@ -116,7 +116,7 @@ class loadImagePanel:
         self.context.image_list = self.tmpFileList
 
         # Display first image
-        annotate_panel = self.context.get_panel("image")
+        annotate_panel = self.context.get_panel("anno_image")
         if annotate_panel:
             annotate_panel.display_image()
 

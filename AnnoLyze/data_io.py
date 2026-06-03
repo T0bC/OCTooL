@@ -49,7 +49,7 @@ class DataLoader:
                 with open(annotation_path, "r", encoding="utf-8") as f:
                     annotations = json.load(f)
                 self.context.loaded_annotations = annotations
-                annotate_panel = self.context.get_panel("image")
+                annotate_panel = self.context.get_panel("anno_image")
                 if annotate_panel:
                     annotate_panel.load_annotations(annotations)
                 self.context.safe_status_update(f"Annotations loaded from: {annotation_path}", level="success")
@@ -87,7 +87,7 @@ class DataSaver:
         self.context = context
         self.metadata_panel = context.get_panel("metadata")
         self.results_panel = context.get_panel("results")
-        self.annotate_panel = context.get_panel("image")
+        self.annotate_panel = context.get_panel("anno_image")
         self.add_columns_panel = context.get_panel("add_columns")
         self.config_manager = context.config_manager
 

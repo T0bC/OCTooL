@@ -57,7 +57,7 @@ def addContent(self, frame):
     # Image Viewer Frame (dominates vertical space)
     self.imgFrame = ttk.LabelFrame(self.annoLyzeTabFrame, text='Image Viewer', relief=tk.RIDGE)
     self.imgFrame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
-    self.context.register_frame("image", self.imgFrame)
+    self.context.register_frame("anno_image", self.imgFrame)
 
 
     # Create panels and register them
@@ -75,4 +75,4 @@ def addContent(self, frame):
     self.metadataPanel.setup()
 
     self.imgPanel = annotateImages(self.context)
-    self.context.register_panel("image", self.imgPanel)
+    self.context.register_panel("anno_image", self.imgPanel)

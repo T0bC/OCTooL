@@ -21,7 +21,7 @@ class imagePanel:
     def __init__(self, context):
         self.context = context
         self.root = self.context.root
-        self.frame = self.context.get_frame("image")
+        self.frame = self.context.get_frame("rex_image")
         self.treeView = self.context.get_panel("tree")
         self.globalSettingsFrame = self.context.get_panel("global_settings")
         self.customSettingsFrame = self.context.get_panel("custom_settings")

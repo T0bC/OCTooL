@@ -140,7 +140,7 @@ class ConfigManager:
             metadata_panel = context.get_panel("metadata")
             results_panel = context.get_panel("results")
             add_columns_panel = context.get_panel("add_columns")
-            annotate_panel = context.get_panel("image")
+            annotate_panel = context.get_panel("anno_image")
 
             # Apply metadata
             for key in ["operator", "measurement", "system"]:

@@ -34,7 +34,7 @@ class executionPanel:
         self.root = self.context.root
         self.frame = self.context.get_frame("execution")
         self.treeView = self.context.get_panel("tree")
-        self.imageFrame = self.context.get_panel("image")
+        self.imageFrame = self.context.get_panel("rex_image")
         self.globalSettingsFrame = self.context.get_panel("global_settings")
         self.customSettingsFrame = self.context.get_panel("custom_settings")
         self.mainWin = self.context.main_win
