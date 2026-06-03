@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import ttk
 from tksheet import Sheet
 from ttkbootstrap import Style
+from app.logic.annolyze.display_service import DisplayService
 
 class UndoPanel:
     @handle_errors("UndoPanel.__init__")
@@ -19,6 +20,7 @@ class UndoPanel:
         self.context = context
         self.root = context.root
         self.undo_stack = undo_stack
+        self.display_service = DisplayService()
 
         self.frame = tk.Toplevel(self.root)
         self.frame.title("Undo History")
@@ -138,34 +140,12 @@ class UndoPanel:
 
     # %% font color calulation
     def get_luminance(self, hex_color: str) -> float:
-        """Calculate the relative luminance of a hex color.
-
-        Args:
-            hex_color (str): Hexadecimal color string.
-
-        Returns:
-            float: Luminance value between 0 and 1.
-        """
-        hex_color = hex_color.lstrip("#")
-        r, g, b = [int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4)]
-
-        def adjust(c):
-            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-
-        r, g, b = adjust(r), adjust(g), adjust(b)
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+        """Relative luminance of a hex color (delegates to DisplayService)."""
+        return self.display_service.luminance(hex_color)
 
     def choose_font_color(self, bg_color: str) -> str:
-        """Determine appropriate font color (black or white) based on background luminance.
-
-        Args:
-            bg_color (str): Background color in hexadecimal format.
-
-        Returns:
-            str: Font color in hexadecimal format.
-        """
-        luminance = self.get_luminance(bg_color)
-        return "#FFFFFF" if luminance < 0.5 else "#000000"
+        """Contrast-aware font color (delegates to DisplayService)."""
+        return self.display_service.choose_font_color(bg_color)
 
     # %% Column width logic
 
@@ -181,21 +161,8 @@ class UndoPanel:
         self.sheet.refresh()
 
     def _calculate_column_width(self, header: str) -> int:
-        """
-        Calculate column width based on header length.
-
-        Args:
-            header (str): Column header text.
-
-        Returns:
-            int: Suggested column width.
-        """
-        base_width = 40  # Minimum width
-        char_width = 7   # Approximate width per character
-        padding = 20     # Extra space for clarity
-        max_width = 250
-
-        return min(max(base_width, len(header) * char_width + padding), max_width)
+        """Column width based on header length (delegates to DisplayService)."""
+        return self.display_service.calculate_column_width(header)
 
     # %% window size
 
