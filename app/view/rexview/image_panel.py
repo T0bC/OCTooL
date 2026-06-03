@@ -25,23 +25,10 @@ class imagePanel:
         self.treeView = self.context.get_panel("tree")
         self.globalSettingsFrame = self.context.get_panel("global_settings")
         self.customSettingsFrame = self.context.get_panel("custom_settings")
-        self.pickFrame = self.context.get_frame("pick_files")
         
         # Initialize ImageService for pure logic operations
         self.image_service = ImageService()
         self.rawImage = None
-
-
-        # Image Frame
-        # displayed in pickFilesFrame
-        self.showBtn = ttk.Button(self.pickFrame,
-                                  text='Show',
-                                  width=14,
-                                  command = self.dispImageInCanvas,
-                                  bootstyle = "success")
-        self.showBtn.grid(row=0, column=6, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
-        self.showBtnToolTip = 'Select a OCT-Scan from the queue and display it.'
-        Tooltip(self.showBtn, text=self.showBtnToolTip , wraplength=200)
 
         # Configure frame grid 
         self.frame.rowconfigure(1, weight=1)
