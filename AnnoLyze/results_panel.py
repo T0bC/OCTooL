@@ -10,6 +10,7 @@ import tkinter as tk
 from tksheet import Sheet
 import csv
 from pathlib import Path
+from app.logic.annolyze.display_service import DisplayService
 
 class resultsPanel:
     @handle_errors("ResultsPanel.__init__")
@@ -25,6 +26,7 @@ class resultsPanel:
         self.frame = context.get_frame("results")
         self.img_frame = context.get_frame("anno_image")
         self.load_frame = context.get_frame("load")
+        self.display_service = DisplayService()
 
         self.static_col_names = ['SPECIMEN_NAME', 'SLICE', 'OPERATOR', 'MEASUREMENT', 'SYSTEM', 'DATE_TIME']
         self.dynamic_col_specs: list[tuple[str, str]] = []  # List of (col_name, color)
@@ -106,21 +108,8 @@ class resultsPanel:
         self.sheet.refresh()
 
     def _calculate_column_width(self, header: str) -> int:
-        """
-        Calculate column width based on header length.
-
-        Args:
-            header (str): Column header text.
-
-        Returns:
-            int: Suggested column width.
-        """
-        base_width = 40  # Minimum width
-        char_width = 7   # Approximate width per character
-        padding = 20     # Extra space for clarity
-        max_width = 250
-
-        return min(max(base_width, len(header) * char_width + padding), max_width)
+        """Calculate column width based on header length (delegates to DisplayService)."""
+        return self.display_service.calculate_column_width(header)
 
     @handle_errors("ResultsPanel.add_dynamic_column")
     def add_dynamic_column(self, col_name: str, color: str, keyBind: str) -> None:
@@ -259,17 +248,9 @@ class resultsPanel:
 
 
     def get_luminance(self, hex_color: str) -> float:
-        hex_color = hex_color.lstrip("#")
-        r, g, b = [int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4)]
-
-        def adjust(c):
-            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-
-        r, g, b = adjust(r), adjust(g), adjust(b)
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+        return self.display_service.luminance(hex_color)
 
     def choose_font_color(self, bg_color: str) -> str:
-        luminance = self.get_luminance(bg_color)
-        return "#FFFFFF" if luminance < 0.5 else "#000000"
+        return self.display_service.choose_font_color(bg_color)
 
 
