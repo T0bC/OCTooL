@@ -3,8 +3,8 @@
 Module-specific progress tracker. Pattern + process live in `REFACTOR-PLAN.md`.
 
 Status: **Milestone 1 (logic foundation) COMPLETE.** `app/logic/carlquant/` exists,
-is tkinter-free, and is unit-tested (29 tests). Panels still use legacy `CarlQuant/`
-imports — wiring + relocation to `app/view/carlquant/` is the next milestone.
+is tkinter-free, and is unit-tested (34 tests, **100% coverage**). Panels still use legacy
+`CarlQuant/` imports — wiring + relocation to `app/view/carlquant/` is the next milestone.
 
 ---
 
