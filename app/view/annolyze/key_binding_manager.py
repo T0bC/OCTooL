@@ -7,8 +7,8 @@ Created on Fri Sep 12 09:18:04 2025
 
 from utils.error_handler import handle_errors
 from datetime import datetime
-from AnnoLyze.undo_panel import UndoPanel
-from AnnoLyze.data_io import DataSaver
+from app.view.annolyze.undo_panel import UndoPanel
+from app.view.annolyze.data_io import DataSaver
 from app.logic.annolyze.measurement_service import MeasurementService
 import threading
 import tkinter as tk

@@ -8,7 +8,7 @@ Created on Thu Aug 14 15:21:37 2025
 import os
 from tkinter import filedialog, messagebox
 from utils.error_handler import handle_errors
-from AnnoLyze.key_binding_manager import KeybindingManager
+from app.view.annolyze.key_binding_manager import KeybindingManager
 from app.logic.annolyze.config_service import ConfigService
 from app.logic.annolyze.models import MetadataConfig, ColumnSpec
 from pathlib import Path

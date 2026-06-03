@@ -8,12 +8,12 @@ Created on Tue Feb 23 15:14:14 2021
 import tkinter as tk
 from tkinter import ttk
 from utils.error_handler import handle_errors
-from AnnoLyze.load_images_panel import loadImagePanel as loadImage
-from AnnoLyze.annotate_images_panel import annotatePanel as annotateImages
-from AnnoLyze.results_panel import resultsPanel as resultsPanel
-from AnnoLyze.add_columns_panel import addColumnsPanel as addColumnsPanel
-from AnnoLyze.metadata_panel import metadataPanel as metadataPanel
-from AnnoLyze.config_manager import ConfigManager
+from app.view.annolyze.load_images_panel import loadImagePanel as loadImage
+from app.view.annolyze.annotate_images_panel import annotatePanel as annotateImages
+from app.view.annolyze.results_panel import resultsPanel as resultsPanel
+from app.view.annolyze.add_columns_panel import addColumnsPanel as addColumnsPanel
+from app.view.annolyze.metadata_panel import metadataPanel as metadataPanel
+from app.view.annolyze.config_manager import ConfigManager
 
 
 @handle_errors("annoLyzeTab.addContent")
