@@ -21,9 +21,9 @@ from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
 from utils.metadata_prompt import ensure_metadata_set
-from CarlQuant.data_io import DataSaver
-from CarlQuant.interpolation import interpolate_region_coordinates, interpolate_air_coordinates
-from CarlQuant.annotation_renderer import (
+from app.logic.carlquant import DataSaver
+from app.logic.carlquant.interpolation import interpolate_region_coordinates, interpolate_air_coordinates
+from app.view.carlquant.annotation_renderer import (
     CoordinateConverter,
     SurfaceAnnotationRenderer,
     LesionDepthAnnotationRenderer,
@@ -473,7 +473,7 @@ class image_viewer_panel(BaseCanvasPanel):
             
             # Initialize config if needed
             if not specimen.config:
-                from CarlQuant.specimen_model import SpecimenConfig
+                from app.logic.carlquant import SpecimenConfig
                 specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
             
             # Update current slice as keyframe (don't save yet - interpolation will save)
@@ -715,7 +715,7 @@ class image_viewer_panel(BaseCanvasPanel):
             
             # Initialize config if needed
             if not specimen.config:
-                from CarlQuant.specimen_model import SpecimenConfig
+                from app.logic.carlquant import SpecimenConfig
                 specimen.config = SpecimenConfig(specimen_id=specimen.specimen_id)
             
             # Update current slice as keyframe (don't save yet - interpolation will save)
