@@ -11,19 +11,22 @@ from utils.tool_tip import Tooltip
 from PIL import Image, ImageTk, ImageDraw
 from utils.error_handler import handle_errors
 from utils.instruction_renderer import InstructionRenderer
-import numpy as np
-from scipy.interpolate import splprep, splev
 from pathlib import Path
-import json
 from datetime import datetime
 from base import BaseCanvasPanel
+from app.logic.annolyze.annotation_service import AnnotationService
+from app.logic.annolyze.data_service import DataService
 
 class annotatePanel(BaseCanvasPanel):
     @handle_errors("error in annotatePanel")
     def __init__(self, context):
         # Store reference to load frame before calling super()
         self.loadFrame = context.get_frame("load")
-        
+
+        # Logic services (tkinter-free)
+        self.annotation_service = AnnotationService()
+        self.data_service = DataService()
+
         # Initialize annotation-specific state BEFORE calling super().__init__()
         # because setup_specialized_bindings() is called at the end of super().__init__()
         self.slice_annotations = {}
@@ -154,24 +157,13 @@ class annotatePanel(BaseCanvasPanel):
                                                     dash=(4, 2),  # Dashed line to indicate "waiting for spline"
                                                     tags="annotation")
                     else:
-                        try:
-                            pts_np = np.array(canvas_pts)
-                            # Use cubic spline (k=3) which requires at least 4 points
-                            tck, _ = splprep([pts_np[:,0], pts_np[:,1]], s=0, k=3)
-                            u = np.linspace(0, 1, 500)
-                            x_new, y_new = splev(u, tck)
-                            for i in range(len(x_new)-1):
-                                self.canvas.create_line(x_new[i], y_new[i], x_new[i+1], y_new[i+1],
-                                                        fill=color,
-                                                        width=2,
-                                                        tags="annotation")
-                        except Exception as e:
-                            # If spline fails, fall back to line drawing
-                            for i in range(len(canvas_pts)-1):
-                                self.canvas.create_line(*canvas_pts[i], *canvas_pts[i+1],
-                                                        fill=color,
-                                                        width=2,
-                                                        tags="annotation")
+                        # Spline points computed by the service (falls back to input on failure)
+                        spline_pts = self.annotation_service.spline_points(canvas_pts, num=500)
+                        for i in range(len(spline_pts) - 1):
+                            self.canvas.create_line(*spline_pts[i], *spline_pts[i + 1],
+                                                    fill=color,
+                                                    width=2,
+                                                    tags="annotation")
 
             # Only draw point handles if annotation is editable
             if not locked:
@@ -198,37 +190,15 @@ class annotatePanel(BaseCanvasPanel):
             points = last_ann["points"]
             mode = last_ann["mode"]
 
-        if len(points) < 2:
-            return 0.0
-
-        pts = np.array(points)
-        if mode == "line":
-            diffs = np.diff(pts, axis=0)
-            length = np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
-        else:
-            # Spline mode: requires at least 4 points for cubic spline
-            if len(points) < 4:
-                # Fall back to line length calculation if not enough points
-                diffs = np.diff(pts, axis=0)
-                length = np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
-            else:
-                try:
-                    tck, _ = splprep([pts[:, 0], pts[:, 1]], s=0, k=3)
-                    u = np.linspace(0, 1, 1000)
-                    x_new, y_new = splev(u, tck)
-                    length = np.sum(np.sqrt(np.diff(x_new)**2 + np.diff(y_new)**2))
-                except Exception:
-                    # Fall back to line length if spline fails
-                    diffs = np.diff(pts, axis=0)
-                    length = np.sum(np.sqrt(np.sum(diffs**2, axis=1)))
-
-        return length
+        return self.annotation_service.annotation_length(points, mode)
 
     @handle_errors("annotatePanel.commit_annotation")
     def commit_annotation(self, label, color="#FFFFFF"):
         index = int(self.scale.get()) - 1
         if self.current_annotation and len(self.current_annotation["points"]) >= 2:
-            self.current_annotation["id"] = f"{label}_{len(self.slice_annotations.get(index, []))}"
+            self.current_annotation["id"] = self.annotation_service.make_annotation_id(
+                label, len(self.slice_annotations.get(index, []))
+            )
             self.current_annotation["feature"] = label
             self.current_annotation["color"] = color
             self.current_annotation["locked"] = True
@@ -574,49 +544,17 @@ class annotatePanel(BaseCanvasPanel):
             self.context.status_bar.update("Image folder not set. Cannot save annotations.", level="warning")
             return
 
-        annotation_folder = image_folder / "annotations"
-        annotation_folder.mkdir(exist_ok=True)
-        json_path = annotation_folder / "annotations.json"
-
-        json_data = {}
-        for slice_index, annotations in self.slice_annotations.items():
-            slice_key = f"slice_{slice_index}"
-            json_data[slice_key] = [
-                {
-                    "id": a.get("id"),
-                    "feature": a.get("feature", "unknown"),
-                    "points": a.get("points"),
-                    "mode": a.get("mode"),
-                    "color": a.get("color"),
-                    "locked": a.get("locked", False),  # Default to False if missing
-                    "timestamp": a.get("timestamp", datetime.now().isoformat())
-                }
-                for a in annotations
-            ]
-
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(json_data, f, indent=2)
-
+        json_path = image_folder / "annotations" / "annotations.json"
+        self.data_service.save_annotations(self.slice_annotations, json_path)
         self.context.status_bar.update(f"Annotations saved to: {json_path}", level="success")
 
     @handle_errors("annotatePanel.load_annotations")
     def load_annotations(self, annotations_dict):
-        def normalize(ann):
-            return {
-                "id": ann.get("id"),
-                "feature": ann.get("feature", "unknown"),
-                "points": ann.get("points", []),
-                "mode": ann.get("mode", "line"),
-                "color": ann.get("color", "#FFFFFF"),
-                "locked": ann.get("locked", False),
-                "timestamp": ann.get("timestamp", datetime.now().isoformat())
-            }
-
-        for slice_key, annotations in annotations_dict.items():
-            slice_index = int(slice_key.replace("slice_", ""))
-            self.slice_annotations[slice_index] = [normalize(a) for a in annotations]
-            # Don't mark as modified on load - only when user adds new annotations
-
+        # Deserialize via the service (normalizes + maps slice keys -> int indices)
+        self.slice_annotations.update(
+            self.annotation_service.deserialize_annotations(annotations_dict)
+        )
+        # Don't mark as modified on load - only when user adds new annotations
         self.draw_annotation()
     
     # ============================================================================
@@ -664,15 +602,9 @@ class annotatePanel(BaseCanvasPanel):
             mode = ann["mode"]
             color = ann.get("color", "#ffffb2")
             
-            # Convert hex color to RGB
-            if color.startswith('#'):
-                r = int(color[1:3], 16)
-                g = int(color[3:5], 16)
-                b = int(color[5:7], 16)
-                rgb_color = (r, g, b, 255)
-            else:
-                rgb_color = (255, 255, 178, 255)  # Default yellow
-            
+            # Convert hex color to RGBA via the service
+            rgb_color = self.annotation_service.hex_to_rgba(color)
+
             if len(pts) >= 2:
                 if mode == "line" or len(pts) < 4:
                     # Draw as lines - convert tuples to proper format
@@ -682,22 +614,10 @@ class annotatePanel(BaseCanvasPanel):
                         pt2 = tuple(pts[i+1]) if isinstance(pts[i+1], (list, tuple)) else pts[i+1]
                         draw.line([pt1, pt2], fill=rgb_color, width=3)
                 else:
-                    # Draw as spline
-                    try:
-                        pts_np = np.array(pts)
-                        tck, _ = splprep([pts_np[:,0], pts_np[:,1]], s=0, k=3)
-                        u = np.linspace(0, 1, 500)
-                        x_new, y_new = splev(u, tck)
-                        spline_pts = list(zip(x_new, y_new))
-                        for i in range(len(spline_pts)-1):
-                            draw.line([spline_pts[i], spline_pts[i+1]], fill=rgb_color, width=3)
-                    except Exception as e:
-                        self.logger.warning(f"Spline rendering failed: {e}, falling back to lines")
-                        # Fall back to lines if spline fails
-                        for i in range(len(pts)-1):
-                            pt1 = tuple(pts[i]) if isinstance(pts[i], (list, tuple)) else pts[i]
-                            pt2 = tuple(pts[i+1]) if isinstance(pts[i+1], (list, tuple)) else pts[i+1]
-                            draw.line([pt1, pt2], fill=rgb_color, width=3)
+                    # Draw as spline (service falls back to input points on failure)
+                    spline_pts = self.annotation_service.spline_points(pts, num=500)
+                    for i in range(len(spline_pts)-1):
+                        draw.line([spline_pts[i], spline_pts[i+1]], fill=rgb_color, width=3)
                 
                 # Note: Control points are NOT drawn in saved images
                 # (only shown in interactive canvas for editing)
