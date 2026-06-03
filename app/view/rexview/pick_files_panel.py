@@ -71,6 +71,15 @@ class pickFilesPanel:
         self.button_label = ttk.Label(self.frame, text='  ')
         self.button_label.grid( row=0, column=5, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
 
+        self.showBtnToolTip = 'Select a OCT-Scan from the queue and display it.'
+        self.showBtn = ttk.Button(self.frame,
+                                  text='Show',
+                                  width=14,
+                                  command=lambda: self.context.get_panel("image").dispImageInCanvas(),
+                                  bootstyle="success")
+        self.showBtn.grid(row=0, column=6, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
+        Tooltip(self.showBtn, text=self.showBtnToolTip , wraplength=200)
+
         #%% folder/file Picker
 
     @handle_errors("pickFilesPanel")
