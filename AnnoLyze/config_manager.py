@@ -11,59 +11,42 @@ from datetime import datetime
 from tkinter import filedialog, messagebox
 from utils.error_handler import handle_errors
 from AnnoLyze.key_binding_manager import KeybindingManager
+from app.logic.annolyze.config_service import ConfigService
+from app.logic.annolyze.models import MetadataConfig, ColumnSpec
 from pathlib import Path
 
 class ConfigManager:
     def __init__(self):
         self.config_version = "1.0"
-        self.default_config = {
-            "metadata": {
-                "operator": "TM",
-                "measurement": "1",
-                "system": "OCT"
-            },
-            "columns": {
-                "dynamic_columns": []
-            },
-            "ui_settings": {
-                "sheet_width": 800,
-                "sheet_height": 400
-            },
-            "config_info": {
-                "created_date": datetime.now().isoformat(),
-                "version": self.config_version,
-                "description": "OCTooL Analysis Configuration"
-            }
-        }
+        self.config_service = ConfigService()
+        self.default_config = self.config_service.default_config()
+
+    def _collect_metadata(self, metadata_panel) -> MetadataConfig:
+        """Collector: read metadata widget state into a model."""
+        return MetadataConfig.from_gui_state(
+            operator=metadata_panel.operatorEntry.get(),
+            measurement=metadata_panel.measurementEntry.get(),
+            system=metadata_panel.systemEntry.get(),
+        )
+
+    def _collect_columns(self, results_panel, add_columns_panel) -> list:
+        """Collector: read dynamic column widget state into ColumnSpec models."""
+        keybindings = getattr(add_columns_panel, 'column_keybindings', {})
+        data_types = getattr(add_columns_panel, 'column_data_types', {})
+        return [
+            ColumnSpec(
+                name=col_name,
+                keybinding=keybindings.get(col_name, ""),
+                data_type=data_types.get(col_name, ""),
+                color=color,
+            )
+            for col_name, color in results_panel.dynamic_col_specs
+        ]
 
     def build_config(self, metadata_panel, results_panel, add_columns_panel) -> dict:
-        config = self.default_config.copy()
-
-        # Metadata
-        config["metadata"] = {
-            "operator": metadata_panel.operatorEntry.get(),
-            "measurement": metadata_panel.measurementEntry.get(),
-            "system": metadata_panel.systemEntry.get()
-        }
-
-        # Dynamic Columns
-        config["columns"]["dynamic_columns"] = []
-        for i, (col_name, color) in enumerate(results_panel.dynamic_col_specs):
-            keybinding = getattr(add_columns_panel, 'column_keybindings', {}).get(col_name, "")
-            data_type = getattr(add_columns_panel, 'column_data_types', {}).get(col_name, "")
-            position_after = results_panel.dynamic_col_specs[i - 1][0] if i > 0 else "SLICE"
-
-            config["columns"]["dynamic_columns"].append({
-                "name": col_name,
-                "keybinding": keybinding,
-                "position_after": position_after,
-                "order": i,
-                "data_type": data_type,
-                "color": color
-            })
-
-        config["config_info"]["created_date"] = datetime.now().isoformat()
-        return config
+        metadata = self._collect_metadata(metadata_panel)
+        columns = self._collect_columns(results_panel, add_columns_panel)
+        return self.config_service.build_config(metadata, columns)
 
 
     @handle_errors("ConfigManager.save_config")
@@ -89,8 +72,7 @@ class ConfigManager:
         
         if filepath:
             try:
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump(config, f, indent=2, ensure_ascii=False)
+                self.config_service.save_config_to_file(config, filepath)
                 context.status_bar.update(f"Config saved to: {filepath}", level="success")
                 if show_dialog:
                     messagebox.showinfo("Success", f"Configuration saved to:\n{filepath}")
@@ -118,13 +100,11 @@ class ConfigManager:
 
         if filename and os.path.exists(filename):
             try:
-                with open(filename, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                if self.validate_config(config):
+                config = self.config_service.load_config_from_file(filename)
+                if config:
                     self.active_config = config
                     return config
-                else:
-                    return None
+                return None
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load configuration:\n{str(e)}")
 
@@ -132,7 +112,7 @@ class ConfigManager:
 
 
     def validate_config(self, config):
-        return all(key in config for key in ["metadata", "columns", "config_info"])
+        return self.config_service.validate_config(config)
 
     @handle_errors("ConfigManager.apply_config")
     def apply_config(self, config, context):
@@ -179,18 +159,7 @@ class ConfigManager:
 
             results_panel.sheet.refresh()
 
-            column_map = {}
-            for col in config["columns"]["dynamic_columns"]:
-                key = col.get("keybinding")
-                col_name = col["name"]
-                data_type = col.get("data_type", "Text/String")
-                color = col.get("color")
-                if key:
-                    column_map[key] = {
-                        "col_name": col_name,
-                        "data_type": data_type,
-                        "color": color
-                    }
+            column_map = self.config_service.build_column_map(config)
 
             keybinding_manager = KeybindingManager(
                 canvas=annotate_panel.canvas,
@@ -230,8 +199,5 @@ class ConfigManager:
 
     def get_data_type_for_column(self, col_name):
         config = getattr(self, "active_config", self.default_config)
-        for col in config["columns"]["dynamic_columns"]:
-            if col["name"] == col_name:
-                return col.get("data_type", "Text/String")
-        return "Text/String"
+        return self.config_service.get_data_type_for_column(config, col_name)
 
