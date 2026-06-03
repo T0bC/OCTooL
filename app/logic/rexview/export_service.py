@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 import gc
+import traceback
 
 from app.logic.rexview.models import ExportConfig, SliceExportParams, ExportProgress
 from app.logic.shared.models import OCTMetadata
@@ -302,75 +303,77 @@ class ExportService:
         xml_dict = octF.getXMLAttributes(xml_content)
         metadata = OCTMetadata.from_xml_dict(xml_dict)
         
-        # Prepare export
-        prep = self.prepare_export(params, config, metadata)
-        prep['export_dir'].mkdir(parents=True, exist_ok=True)
-        
-        # Load image stack
-        def load_callback(status: str):
-            if progress_callback:
-                progress_callback(ExportProgress(status=f"Loading: {status}"))
-        
-        img_stack = self.load_image_stack(
-            archive=archive,
-            metadata=metadata,
-            params=params,
-            config=config,
-            slices_to_load=prep['slices_to_load'],
-            sel_data_type=prep['sel_data_type'],
-            progress_callback=load_callback,
-        )
-        
-        # Process and export each slice
-        selected_slices = prep['selected_slices']
-        total_slices = len(selected_slices)
-        
-        for idx, slice_num in enumerate(selected_slices):
-            if self.is_cancelled:
-                break
+        try:
+            # Prepare export
+            prep = self.prepare_export(params, config, metadata)
+            prep['export_dir'].mkdir(parents=True, exist_ok=True)
             
-            try:
-                # Process slice
-                processed_img = self.process_slice(
-                    img_stack=img_stack,
-                    slice_idx=idx,
-                    image_idx=slice_num,
-                    params=params,
-                    config=config,
-                    metadata=metadata,
-                )
-                
-                # Calculate DPI and EXIF
-                dpi = self.calculate_dpi(processed_img, params, metadata)
-                exif = self.add_exif_metadata(processed_img, metadata)
-                
-                # Generate filename and save
-                filename = self.generate_export_filename(
-                    params, config, metadata, slice_num, idx
-                )
-                export_path = prep['export_dir'] / filename
-                
-                self.export_single_slice(processed_img, export_path, dpi, exif)
-                exported_files.append(export_path)
-                
-                # Update progress
+            # Load image stack
+            def load_callback(status: str):
                 if progress_callback:
-                    progress_callback(ExportProgress(
-                        current_slice=idx + 1,
-                        total_slices=total_slices,
-                        status=f"Exported: {idx + 1}/{total_slices}",
-                    ))
+                    progress_callback(ExportProgress(status=f"Loading: {status}"))
+            
+            img_stack = self.load_image_stack(
+                archive=archive,
+                metadata=metadata,
+                params=params,
+                config=config,
+                slices_to_load=prep['slices_to_load'],
+                sel_data_type=prep['sel_data_type'],
+                progress_callback=load_callback,
+            )
+            
+            # Process and export each slice
+            selected_slices = prep['selected_slices']
+            total_slices = len(selected_slices)
+            
+            for idx, slice_num in enumerate(selected_slices):
+                if self.is_cancelled:
+                    break
                 
-                gc.collect()
-                
-            except Exception:
-                continue  # Continue with other slices
-        
-        # Export video image
-        self.export_video_image(archive, metadata, params, prep['export_dir'])
-        
-        # Cleanup
-        archive.close()
-        gc.collect()
+                try:
+                    # Process slice
+                    processed_img = self.process_slice(
+                        img_stack=img_stack,
+                        slice_idx=idx,
+                        image_idx=slice_num,
+                        params=params,
+                        config=config,
+                        metadata=metadata,
+                    )
+                    
+                    # Calculate DPI and EXIF
+                    dpi = self.calculate_dpi(processed_img, params, metadata)
+                    exif = self.add_exif_metadata(processed_img, metadata)
+                    
+                    # Generate filename and save
+                    filename = self.generate_export_filename(
+                        params, config, metadata, slice_num, idx
+                    )
+                    export_path = prep['export_dir'] / filename
+                    
+                    self.export_single_slice(processed_img, export_path, dpi, exif)
+                    exported_files.append(export_path)
+                    
+                    # Update progress
+                    if progress_callback:
+                        progress_callback(ExportProgress(
+                            current_slice=idx + 1,
+                            total_slices=total_slices,
+                            status=f"Exported: {idx + 1}/{total_slices}",
+                        ))
+                    
+                    gc.collect()
+                    
+                except Exception:
+                    traceback.print_exc()
+                    continue  # Continue with other slices
+            
+            # Export video image
+            self.export_video_image(archive, metadata, params, prep['export_dir'])
+            
+            gc.collect()
+        finally:
+            archive.close()
         
         return exported_files
