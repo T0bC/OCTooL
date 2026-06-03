@@ -294,18 +294,6 @@ class customSettingsPanel:
         self.valueScale.set(str(str(int(self.scaleMdB.get())) + " - " + str(int(self.scaleAdB.get()))))
 
 
-    def getEbenenState(self)-> str:
-        '''
-        Returns state of box weather to export 25 slices
-
-        Returns
-        -------
-        str
-            'selected', 'alternate', 'disabled'.
-
-        '''
-        return self.expBox.state()
-
     def getDispersion(self):
         '''
         Returns a tuple with all information about the chosen dispersion settings.
