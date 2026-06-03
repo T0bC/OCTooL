@@ -3,7 +3,7 @@ CarlQuant Analysis Service
 
 Pure, tkinter-free business logic for the CarlQuant OCT analysis pipeline.
 
-This service wraps the pure compute functions in ``CarlQuant.carl_quant_core``
+This service wraps the pure compute functions in ``app.logic.carlquant.carl_quant_core``
 (surface detection, region extraction, lesion-depth calculation) and exposes the
 per-slice analysis pipeline that was previously embedded inside the UI/threading
 orchestration of ``run_carl_quant``.
@@ -27,13 +27,13 @@ from typing import Callable, List, Optional
 import numpy as np
 from PIL import Image
 
-from CarlQuant.carl_quant_core import (
+from app.logic.carlquant.carl_quant_core import (
     detect_surface,
     extract_regions,
     calculate_lesion_depth,
     process_slice_parallel,
 )
-from CarlQuant.data_io import DataSaver
+from app.logic.carlquant.data_io import DataSaver
 from app.logic.carlquant.models import (
     RegionStats,
     Surface,
