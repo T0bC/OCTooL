@@ -7,8 +7,8 @@ Created on Mon Sep 29 11:05:22 2025
 
 from time import sleep
 from threading import Thread
-from CarlQuant.data_io import DataSaver
-from CarlQuant.specimen_model import RegionStats, Surface, LesionDepth
+from app.logic.carlquant.data_io import DataSaver
+from app.logic.carlquant.specimen_model import RegionStats, Surface, LesionDepth
 import random
 import numpy as np
 from PIL import Image
