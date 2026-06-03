@@ -9,7 +9,7 @@ from tkinter import ttk
 import tkinter as tk
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
-from CarlQuant.carl_quant_core import DepthDetectionMethod
+from app.logic.carlquant import DepthDetectionMethod
 
 class settingsPanel:
     @handle_errors("settingsPanel.__init__")
