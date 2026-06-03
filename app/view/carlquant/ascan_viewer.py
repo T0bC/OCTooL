@@ -16,8 +16,8 @@ import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.error_handler import handle_errors
-from CarlQuant.carl_quant_core import fit_exp2_to_profile, detect_depth_sigmoid_fit
-from CarlQuant.annotation_colors import (
+from app.logic.carlquant.carl_quant_core import fit_exp2_to_profile, detect_depth_sigmoid_fit
+from app.logic.carlquant.annotation_colors import (
     ROW_HIGHLIGHT_NAVIGATION_COLOR,
     ACTUAL_SURFACE_COLOR,
     INTERPOLATED_SURFACE_COLOR,
