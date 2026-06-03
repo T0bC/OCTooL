@@ -6,15 +6,21 @@ processing, result storage, status setting, progress/mode callbacks, and
 cooperative cancellation. Saving is disabled (``save=False``) to keep tests fast
 and tkinter/Excel free; the persistence path is covered by DataSaver tests.
 """
+import threading
+
 import numpy as np
 import pytest
 from PIL import Image
 
 from app.logic.carlquant.analysis_service import AnalysisService, SpecimenAnalysisResult
-from app.logic.carlquant.models import Specimen
+from app.logic.carlquant.models import (
+    Specimen,
+    SpecimenConfig,
+    RegionConfig,
+)
 
 
-def _make_specimen(tmp_path, n_slices: int) -> Specimen:
+def _make_specimen(tmp_path, n_slices: int, *, with_config: bool = False) -> Specimen:
     """Create a Specimen backed by n bright-band PNG slices on disk."""
     img = np.full((128, 128), 10, dtype=np.uint8)
     img[60:65, :] = 220
@@ -23,7 +29,7 @@ def _make_specimen(tmp_path, n_slices: int) -> Specimen:
         p = tmp_path / f"tooth_{i:03d}.png"
         Image.fromarray(img, mode="L").save(p)
         paths.append(p)
-    return Specimen(
+    specimen = Specimen(
         specimen_id="S1",
         source=tmp_path,
         images=paths,
@@ -31,6 +37,21 @@ def _make_specimen(tmp_path, n_slices: int) -> Specimen:
         status="Pending",
         date=0.0,
     )
+    if with_config:
+        config = SpecimenConfig(specimen_id="S1")
+        for i in range(n_slices):
+            config.regions[i] = RegionConfig(
+                slice_index=i,
+                specimen_start=(5, 60),
+                lesion_start=(40, 60),
+                lesion_end=(90, 60),
+                tooth_end=(120, 60),
+                is_keyframe=True,
+            )
+        specimen.config = config
+    specimen.operator = "OP"
+    specimen.measurement = 1
+    return specimen
 
 
 class TestSequentialAnalysis:
@@ -103,3 +124,73 @@ class TestCancellation:
         )
         assert result.status == "Partial"
         assert result.processed_count == 1
+
+
+class TestRegionConfigPath:
+    @pytest.mark.unit
+    def test_uses_region_config_when_present(self, tmp_path):
+        """GIVEN a specimen with region config, WHEN analyzed, THEN slices processed."""
+        specimen = _make_specimen(tmp_path, 2, with_config=True)
+        result = AnalysisService.analyze_specimen(
+            specimen, num_sound=2, num_lesion=2, save=False,
+        )
+        assert result.status == "Completed"
+        assert result.processed_count == 2
+        # Real region stats were extracted (not just placeholders).
+        assert len(specimen.results[0].region_stats) > 0
+
+    @pytest.mark.unit
+    def test_result_lock_is_used_for_thread_safe_store(self, tmp_path):
+        """GIVEN a result_lock, WHEN analyzed, THEN storing acquires it per slice."""
+        specimen = _make_specimen(tmp_path, 2)
+
+        class CountingLock:
+            def __init__(self):
+                self.acquired = 0
+
+            def __enter__(self):
+                self.acquired += 1
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        lock = CountingLock()
+        AnalysisService.analyze_specimen(
+            specimen, num_sound=1, num_lesion=1, save=False, result_lock=lock,
+        )
+        assert lock.acquired == 2
+
+
+class TestSavePath:
+    @pytest.mark.unit
+    def test_save_writes_files_and_clears_results(self, tmp_path):
+        """GIVEN save=True, WHEN analyzed, THEN results persist and memory is cleared."""
+        specimen = _make_specimen(tmp_path, 2)
+        result = AnalysisService.analyze_specimen(
+            specimen, num_sound=1, num_lesion=1, save=True,
+        )
+        assert result.saved is True
+        # Excel results file is written under Data_{operator}_{measurement}.
+        data_dir = tmp_path / "Data_OP_1"
+        assert data_dir.exists()
+        assert any(data_dir.glob("*.xlsx"))
+        # In-memory results are cleared after saving.
+        assert specimen.results == {}
+
+
+class TestParallelPath:
+    @pytest.mark.slow
+    @pytest.mark.unit
+    def test_forced_parallel_processing(self, tmp_path):
+        """GIVEN a low parallel threshold, WHEN analyzed, THEN the parallel path runs."""
+        specimen = _make_specimen(tmp_path, 3)
+        modes = []
+        result = AnalysisService.analyze_specimen(
+            specimen, num_sound=1, num_lesion=1, save=False,
+            parallel_threshold=1, max_workers=2,
+            on_mode=lambda mode, workers: modes.append(mode),
+        )
+        assert modes == ["parallel"]
+        assert result.status == "Completed"
+        assert result.processed_count == 3
