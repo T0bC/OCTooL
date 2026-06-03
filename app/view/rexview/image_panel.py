@@ -186,15 +186,13 @@ class imagePanel:
                             lambda event, scalePosition=int(self.scale.get()-1): [self.scale.focus_set(),
                                                                                   self.showImage(scalePosition, self.rawImage)])
 
-            self.scale.grid(row=3, column = 0, sticky=tk.E + tk.W + tk.N + tk.S)
+            self.scale.grid(row=3, column=0, columnspan=2, sticky=tk.E + tk.W + tk.N + tk.S)
             self.scale.focus_set()
 
             self.scale.bind("<Left>", lambda e: [self.scale.set(int(self.scale.get())), self.showImage(int(self.scale.get()), self.rawImage)])
             self.scale.bind("<Right>", lambda e: [self.scale.set(int(self.scale.get())), self.showImage(int(self.scale.get()), self.rawImage)])
             self.scale.bind("<Up>", lambda e: [self.scale.set(int(self.scale.get())), self.showImage(int(self.scale.get()), self.rawImage)])
             self.scale.bind("<Down>", lambda e: [self.scale.set(int(self.scale.get())), self.showImage(int(self.scale.get()), self.rawImage)])
-            self.scaleToolTip = 'Move the slider to display a different slice. '
-            Tooltip(self.scale, text=self.scaleToolTip , wraplength=200)
 
             self.showImage(int(self.scale.get()-1), self.rawImage)
 
