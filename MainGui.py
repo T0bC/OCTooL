@@ -14,7 +14,7 @@ import annoLyzeTab
 import carlQuantTab
 from utils.app_context import AppContext, resource_path
 from utils.status_bar import StatusBar
-from utils.error_handler import handle_errors
+from utils.error_handler import handle_errors, install_tk_exception_handler
 from utils.help_dialog import HelpDialog
 from utils.about_dialog import AboutDialog
 
@@ -33,6 +33,10 @@ class MainGui:
 
         self.mainWin = tk.Tk()
         self.mainWin.withdraw()
+
+        # Route every uncaught Tk callback exception to a user-visible popup + log,
+        # so the app never fails silently (critical for windowed PyInstaller builds).
+        install_tk_exception_handler(self.mainWin)
 
         self.context = AppContext()
         self.context.root = self.mainWin
