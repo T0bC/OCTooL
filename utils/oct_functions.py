@@ -244,6 +244,14 @@ def getXMLAttributes(xmlContent):
 
     if dataType != 'Processed':
         rawSpectralFile = find_datafile_by_type(dataFiles, 'RawSpectral')
+        if rawSpectralFile is None:
+            # Type attribute can vary between OCT versions (e.g. 'RawSpectra').
+            # Fall back to the DataFile that actually carries raw-spectral
+            # attributes so Napo/Nx are populated regardless of the Type label.
+            for df in dataFiles:
+                if df.get('ApoRegionEnd0') is not None and df.get('ScanRegionEnd0') is not None:
+                    rawSpectralFile = df
+                    break
         if rawSpectralFile:
             Napo = int(rawSpectralFile.get('ApoRegionEnd0'))
             Nx = int(rawSpectralFile.get('ScanRegionEnd0')) - int(rawSpectralFile.get('ScanRegionStart0'))
