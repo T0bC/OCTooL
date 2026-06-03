@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from utils import oct_functions as octF
 from app.logic.rexview import QueueService, QueueItem
+from app.view.shared import dialogs
 
 
 class treeViewPanel:
@@ -346,10 +347,7 @@ class treeViewPanel:
             )
             
             if not validation.is_valid:
-                tk.messagebox.showerror(
-                    title='Value Error',
-                    message=validation.errors[0]
-                )
+                dialogs.show_error(self.root, 'Value Error', validation.errors[0])
             else:
                 self.treeView.set(self.treeView.focus(), 'NumSlices', value=numSlices)
 
@@ -391,7 +389,7 @@ class treeViewPanel:
         path = self.getValue('Path')
         if not path:
             # Early exit if there's no path selected to avoid errors
-            tk.messagebox.showwarning("Missing Selection", "Please select a valid entry in the queue table before changing the slice direction.")
+            dialogs.show_warning(self.root, "Missing Selection", "Please select a valid entry in the queue table before changing the slice direction.")
             return
 
         self.setValue('Img. Slice Dir.', expDir)
@@ -422,7 +420,7 @@ class treeViewPanel:
         # Use QueueService to get dimension key
         dim_key = self._queue_service.get_dimension_key_for_direction(expDir)
         if not dim_key:
-            tk.messagebox.showwarning("Invalid Direction", f"'{expDir}' is not a recognized slice direction.")
+            dialogs.show_warning(self.root, "Invalid Direction", f"'{expDir}' is not a recognized slice direction.")
             return
 
         items_updated = 0
@@ -439,4 +437,4 @@ class treeViewPanel:
             items_updated += 1
 
         if items_updated == 0:
-            tk.messagebox.showwarning("No Entries Updated", "No entries had a valid path to apply the slice direction.")
+            dialogs.show_warning(self.root, "No Entries Updated", "No entries had a valid path to apply the slice direction.")
