@@ -9,6 +9,7 @@ from utils.error_handler import handle_errors
 from datetime import datetime
 from AnnoLyze.undo_panel import UndoPanel
 from AnnoLyze.data_io import DataSaver
+from app.logic.annolyze.measurement_service import MeasurementService
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -21,6 +22,7 @@ class KeybindingManager:
         self.sheet = sheet
         self.column_map = column_map
         self.annotate_panel = annotate_panel
+        self.measurement_service = MeasurementService()
         self.handlers = {
             "Continuous": self.handle_continuous,
             "Percentage": self.handle_percentage,
@@ -139,23 +141,10 @@ class KeybindingManager:
         # Get current value from sheet
         current_value = self.sheet.get_cell_data(row, col)
 
-        # Parse current value as float (default to 0.0 if empty or invalid)
-        try:
-            current_float = float(current_value)
-        except (ValueError, TypeError):
-            current_float = 0.0
-
-        # Parse new measured value
-        if value is None:
+        # Compute new value via service (returns None for missing/invalid measurement)
+        new_value = self.measurement_service.apply_continuous(current_value, value)
+        if new_value is None:
             return
-
-        try:
-            measured_value = float(value)
-        except (ValueError, TypeError):
-            return
-
-        # Add new measurement to existing value
-        new_value = current_float + measured_value
 
         # Record undo info
         self.undo_stack.append({
@@ -165,14 +154,14 @@ class KeybindingManager:
             "old_value": current_value,
             "new_value": new_value,
             "key": data_type,
-            "feature": annotation_id.split("_")[0] if annotation_id else None,
+            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
             "annotation_id": annotation_id,
             "timestamp": datetime.now(),
             "color": color
         })
 
         # Update the sheet
-        self.sheet.set_cell_data(row, col, f"{new_value:.2f}")
+        self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
 
@@ -181,8 +170,8 @@ class KeybindingManager:
     def handle_boolean(self, row, col, color, data_type, value=None, annotation_id=None):
         current_value = self.sheet.get_cell_data(row, col)
 
-        # Toggle logic: if current is NO-like, switch to YES; otherwise switch to NO
-        new_value = "YES" if str(current_value).strip().upper() in ["NO", "0", "FALSE", ""] else "NO"
+        # Toggle YES/NO via service
+        new_value = self.measurement_service.toggle_boolean(current_value)
 
         # Record undo info
         self.undo_stack.append({
@@ -192,7 +181,7 @@ class KeybindingManager:
             "old_value": current_value,
             "new_value": new_value,
             "key": data_type,
-            "feature": annotation_id.split("_")[0] if annotation_id else None,
+            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
             "annotation_id": annotation_id,
             "timestamp": datetime.now(),
             "color": color
@@ -208,27 +197,22 @@ class KeybindingManager:
     def handle_percentage(self, row, col, color, data_type, value=None, annotation_id=None):
         current_value = self.sheet.get_cell_data(row, col)
 
-        try:
-            current_percent = int(current_value.replace("%", "").strip())
-        except (ValueError, TypeError):
-            current_percent = 0
-
-        new_percent = min(current_percent + 5, 100)
+        new_value = self.measurement_service.increment_percentage(current_value)
 
         self.undo_stack.append({
             "row": row,
             "col": col,
             "col_name": self.sheet.headers()[col],
             "old_value": current_value,
-            "new_value": f"{new_percent}%",
+            "new_value": new_value,
             "key": data_type,
-            "feature": annotation_id.split("_")[0] if annotation_id else None,
+            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
             "annotation_id": annotation_id,
             "timestamp": datetime.now(),
             "color": color
         })
 
-        self.sheet.set_cell_data(row, col, f"{new_percent}%")
+        self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
 
@@ -237,14 +221,8 @@ class KeybindingManager:
     def handle_categorical(self, row, col, color, data_type, value=None, annotation_id=None):
         current_value = self.sheet.get_cell_data(row, col)
 
-        # Try to parse current value as integer
-        try:
-            current_int = int(current_value)
-        except (ValueError, TypeError):
-            current_int = -1  # Start from -1 so first press sets to 0
-
-        # Increment category index
-        new_value = current_int + 1
+        # Increment category index via service (empty -> 0)
+        new_value = self.measurement_service.increment_categorical(current_value)
 
         # Record undo info
         self.undo_stack.append({
@@ -254,14 +232,14 @@ class KeybindingManager:
             "old_value": current_value,
             "new_value": new_value,
             "key": data_type,
-            "feature": annotation_id.split("_")[0] if annotation_id else None,
+            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
             "annotation_id": annotation_id,
             "timestamp": datetime.now(),
             "color": color
         })
 
         # Update sheet
-        self.sheet.set_cell_data(row, col, str(new_value))
+        self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
 
@@ -270,14 +248,8 @@ class KeybindingManager:
     def handle_ordinal(self, row, col, color, data_type, value=None, annotation_id=None):
         current_value = self.sheet.get_cell_data(row, col)
 
-        # Try to parse current value as integer
-        try:
-            current_int = int(current_value)
-        except (ValueError, TypeError):
-            current_int = 0
-
-        # Increment score
-        new_value = current_int + 1
+        # Increment ordinal score via service (empty -> 1)
+        new_value = self.measurement_service.increment_ordinal(current_value)
 
         # Record undo info
         self.undo_stack.append({
@@ -287,14 +259,14 @@ class KeybindingManager:
             "old_value": current_value,
             "new_value": new_value,
             "key": data_type,
-            "feature": annotation_id.split("_")[0] if annotation_id else None,
+            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
             "annotation_id": annotation_id,
             "timestamp": datetime.now(),
             "color": color
         })
 
         # Update sheet
-        self.sheet.set_cell_data(row, col, str(new_value))
+        self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
 
@@ -368,50 +340,44 @@ class KeybindingManager:
             raw_input = entry.get().strip()
             self.popup.destroy()
 
-            # Normalize decimal comma for float
-            if data_type == "Float":
-                raw_input = raw_input.replace(",", ".")
-
+            # Parse via service (raises ValueError on bad input)
             try:
                 if data_type == "Integer":
-                    if "." in raw_input:
-                        messagebox.showwarning("Invalid Input", "Please enter a whole number for Integer data.")
-                        return
-                    parsed_value = int(raw_input)
-
+                    parsed_value = self.measurement_service.parse_integer(raw_input)
                 elif data_type == "Float":
-                    parsed_value = float(raw_input)
-
+                    parsed_value = self.measurement_service.parse_float(raw_input)
                 elif data_type == "Text/String":
-                    parsed_value = raw_input
-
+                    parsed_value = self.measurement_service.parse_text(raw_input)
                 else:
                     return
+            except ValueError as e:
+                if data_type == "Integer" and "whole number" in str(e):
+                    messagebox.showwarning("Invalid Input", str(e))
+                else:
+                    messagebox.showerror("Invalid Input", f"Could not parse value: {raw_input}")
+                return
 
-                # Get current value for undo tracking
-                current_value = self.sheet.get_cell_data(row, col)
+            # Get current value for undo tracking
+            current_value = self.sheet.get_cell_data(row, col)
 
-                # Record undo info
-                self.undo_stack.append({
-                    "row": row,
-                    "col": col,
-                    "col_name": col_name,
-                    "old_value": current_value,
-                    "new_value": parsed_value,
-                    "key": data_type,
-                    "feature": annotation_id.split("_")[0] if annotation_id else None,
-                    "annotation_id": annotation_id,
-                    "timestamp": datetime.now(),
-                    "color": color
-                })
+            # Record undo info
+            self.undo_stack.append({
+                "row": row,
+                "col": col,
+                "col_name": col_name,
+                "old_value": current_value,
+                "new_value": parsed_value,
+                "key": data_type,
+                "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
+                "annotation_id": annotation_id,
+                "timestamp": datetime.now(),
+                "color": color
+            })
 
-                # Update the sheet
-                self.sheet.set_cell_data(row, col, str(parsed_value))
-                self.sheet.deselect("all")
-                self.flash_cell(row, col)
-
-            except ValueError:
-                messagebox.showerror("Invalid Input", f"Could not parse value: {raw_input}")
+            # Update the sheet
+            self.sheet.set_cell_data(row, col, str(parsed_value))
+            self.sheet.deselect("all")
+            self.flash_cell(row, col)
 
         # Create popup
         self.popup = tk.Toplevel(self.annotate_panel.window)
