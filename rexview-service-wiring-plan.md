@@ -197,14 +197,14 @@ app/view/rexview/
 
 ### E.2 Update Imports
 
-- [ ] Update `rexViewTab.py` to import from `app.view.rexview`
-- [ ] Keep `RexView/` as deprecated re-exports for backward compatibility
+- [x] Update `rexViewTab.py` to import from `app.view.rexview`
+- [x] Keep `RexView/` as deprecated re-exports for backward compatibility
 
 ### E.3 Final Cleanup
 
-- [ ] Remove deprecated code from old panel files
-- [ ] Update all import paths
-- [ ] Verify all tests pass
+- [x] Remove deprecated code from old panel files (now thin re-export shims)
+- [x] Update all import paths
+- [x] Verify all tests pass (265 passed)
 
 ---
 
@@ -268,13 +268,13 @@ app/
 - [x] Wire pick_files_panel.py
 - [x] Add tests (65+ tests)
 
-### Phase E: UI File Migration
+### Phase E: UI File Migration (COMPLETED)
 
-- [ ] Create app/view/rexview/ directory
-- [ ] Move UI files
-- [ ] Update imports
-- [ ] Add backward compatibility re-exports
-- [ ] Final cleanup and verification
+- [x] Create app/view/rexview/ directory
+- [x] Move UI files
+- [x] Update imports
+- [x] Add backward compatibility re-exports
+- [x] Final cleanup and verification
 
 ---
 
@@ -282,11 +282,11 @@ app/
 
 Before moving to AnnoLyze/CarlQuant, RexView must be:
 
-- [ ] **Fully functional**: All export features work identically to before
+- [ ] **Fully functional**: All export features work identically to before (needs manual GUI verification)
 - [ ] **Fully tested**: 90%+ coverage on `app/logic/rexview/`
-- [ ] **Fully separated**: All logic in `app/logic/rexview/`, all UI in `app/view/rexview/`
-- [ ] **Documented**: This plan updated with lessons learned
-- [ ] **Standalone testable**: `pytest tests/unit/logic/test_rexview_*.py` runs without tkinter
+- [x] **Fully separated**: All logic in `app/logic/rexview/`, all UI in `app/view/rexview/`
+- [x] **Documented**: This plan updated with lessons learned
+- [x] **Standalone testable**: `pytest tests/unit/logic/test_rexview_*.py` runs without tkinter
 
 ---
 
