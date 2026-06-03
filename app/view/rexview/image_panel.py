@@ -140,19 +140,12 @@ class imagePanel:
 
         '''
         if len(self.treeView.getFocus()) != 0:
-            self.file = self.treeView.getValue(column = 'Path')
+            file_path = self.treeView.getValue(column='Path')
 
-            # Use ImageService to load OCT file and get metadata
-            metadata = self.image_service.load_oct_file(self.file)
-            
-            # Keep references for backward compatibility with existing code
-            self.archive = self.image_service._archive
-            self.xmlDict = metadata.to_xml_dict()
+            # Use ImageService to load OCT file and extract metadata
+            self.image_service.load_oct_file(file_path)
 
             self.treeView.setValue('Status', 'displayed')
-
-            self.dBmin = int(self.treeView.getValue(column='dB min'))
-            self.dBmax = int(self.treeView.getValue(column='dB max'))
 
             # Reconfigure the existing slice scale for this stack
             self.scale.configure(from_=0, to=self.image_service.total_slices)
