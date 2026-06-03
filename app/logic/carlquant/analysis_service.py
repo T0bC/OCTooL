@@ -9,13 +9,17 @@ per-slice analysis pipeline that was previously embedded inside the UI/threading
 orchestration of ``run_carl_quant``.
 
 Layer rules (see REFACTOR-PLAN.md):
-- No tkinter here. Long-running orchestration accepts a ``progress_callback``.
+- No tkinter here. Long-running orchestration accepts progress/cancel callbacks.
 - Methods accept/return models, not widget references.
-- I/O (saving results/images) stays with the caller; this service only computes.
+- File I/O (Excel/JSON/PNG) is delegated to the tkinter-free DataSaver; the view
+  layer owns dialogs, threading and status-bar updates.
 """
 from __future__ import annotations
 
+import gc
+import multiprocessing
 import random
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, List, Optional
@@ -27,7 +31,9 @@ from CarlQuant.carl_quant_core import (
     detect_surface,
     extract_regions,
     calculate_lesion_depth,
+    process_slice_parallel,
 )
+from CarlQuant.data_io import DataSaver
 from app.logic.carlquant.models import (
     RegionStats,
     Surface,
@@ -58,6 +64,20 @@ class SliceAnalysis:
 # Type alias for the progress callback used by long-running operations.
 # Signature: (completed_slices, total_slices, current_slice_index) -> None
 ProgressCallback = Callable[[int, int, int], None]
+
+
+@dataclass
+class SpecimenAnalysisResult:
+    """Outcome of analysing a whole specimen.
+
+    ``status`` is one of ``"Completed"``, ``"Partial"`` (cancelled after some
+    slices) or ``"Cancelled"`` (cancelled before any slice finished).
+    """
+    specimen_id: str
+    status: str
+    processed_count: int
+    total_slices: int
+    saved: bool = False
 
 
 class AnalysisService:
@@ -249,3 +269,164 @@ class AnalysisService:
             if progress_callback is not None:
                 progress_callback(completed, total, slice_index)
         return results
+
+    # ------------------------------------------------------------------
+    # Whole-specimen pipeline (extracted from run_carl_quant)
+    # ------------------------------------------------------------------
+    @classmethod
+    def analyze_specimen(
+        cls,
+        specimen,
+        *,
+        num_sound: int,
+        num_lesion: int,
+        detection_method: str = DEFAULT_DETECTION_METHOD,
+        result_lock=None,
+        save: bool = True,
+        parallel_threshold: int = 10,
+        max_workers: Optional[int] = None,
+        on_status: Optional[Callable[[str], None]] = None,
+        on_slice_done: Optional[Callable[[int, int], None]] = None,
+        on_mode: Optional[Callable[[str, int], None]] = None,
+        on_error: Optional[Callable[[str], None]] = None,
+        is_cancelled: Optional[Callable[[], bool]] = None,
+    ) -> SpecimenAnalysisResult:
+        """Analyse every slice of a specimen, store and (optionally) save results.
+
+        This is the pure, tkinter-free core extracted from ``run_carl_quant``.
+        It chooses parallel (process pool) processing for large stacks and
+        sequential processing otherwise, stores each slice via
+        :class:`DataSaver`, optionally persists results/annotated images, then
+        sets ``specimen.status``.
+
+        All UI concerns are injected as optional callbacks:
+        ``on_status(msg)`` for progress text, ``on_slice_done(completed_idx,
+        total)`` for slice progress, ``on_mode(mode, workers)`` for the
+        processing mode, ``on_error(msg)`` for per-slice errors, and
+        ``is_cancelled()`` for cooperative cancellation.
+        """
+        def cancelled_now() -> bool:
+            return is_cancelled is not None and is_cancelled()
+
+        def emit_status(message: str) -> None:
+            if on_status is not None:
+                on_status(message)
+
+        def store(idx, region_stats, surface, lesion_depth) -> None:
+            if result_lock is not None:
+                with result_lock:
+                    DataSaver.store_slice_result(specimen, idx, region_stats, surface, lesion_depth)
+            else:
+                DataSaver.store_slice_result(specimen, idx, region_stats, surface, lesion_depth)
+
+        # Build per-slice tasks (images loaded on demand).
+        slice_tasks = []
+        for slice_index in range(specimen.slices):
+            image_path = specimen.images[slice_index]
+            region_config = None
+            air_config = None
+            if specimen.config:
+                region_config = specimen.config.regions.get(slice_index)
+                air_config = specimen.config.air.get(slice_index)
+            slice_tasks.append((slice_index, image_path, region_config, air_config))
+
+        total = len(slice_tasks)
+        workers = max_workers if max_workers is not None else max(1, multiprocessing.cpu_count() - 1)
+        use_parallel = total > parallel_threshold and workers > 1
+        processed_count = 0
+        cancelled = False
+
+        if use_parallel:
+            effective_workers = min(workers, total)
+            if on_mode is not None:
+                on_mode("parallel", effective_workers)
+            emit_status(f"Preparing {effective_workers} workers for parallel processing...")
+            with ProcessPoolExecutor(max_workers=effective_workers) as executor:
+                emit_status(f"Processing {total} slices with {effective_workers} workers...")
+                future_to_slice = {}
+                for slice_idx, image_path, region_config, air_config in slice_tasks:
+                    if cancelled_now():
+                        cancelled = True
+                        break
+                    future = executor.submit(
+                        process_slice_parallel,
+                        slice_idx, image_path, region_config, air_config,
+                        num_sound, num_lesion, detection_method,
+                    )
+                    future_to_slice[future] = slice_idx
+
+                if cancelled:
+                    for future in future_to_slice:
+                        future.cancel()
+                else:
+                    for future in as_completed(future_to_slice):
+                        if cancelled_now() and not cancelled:
+                            cancelled = True
+                            for pending in future_to_slice:
+                                if not pending.done():
+                                    pending.cancel()
+                            emit_status("Cancelling... waiting for active slices to finish")
+                        if future.cancelled():
+                            continue
+                        result_idx, region_stats, surface, lesion_depth, error = future.result()
+                        if error:
+                            if on_error is not None:
+                                on_error(f"Error on slice {result_idx + 1}")
+                            continue
+                        store(result_idx, region_stats, surface, lesion_depth)
+                        processed_count += 1
+                        if on_slice_done is not None:
+                            on_slice_done(processed_count - 1, total)
+                        if not cancelled:
+                            emit_status(f"Completed slice {result_idx + 1}")
+            gc.collect()
+        else:
+            if on_mode is not None:
+                on_mode("sequential", 1)
+            emit_status(f"Processing {total} slices sequentially...")
+            for slice_idx, image_path, region_config, air_config in slice_tasks:
+                if cancelled_now():
+                    cancelled = True
+                    break
+                try:
+                    analysis = cls.analyze_image(
+                        image_path, region_config, air_config,
+                        num_sound=num_sound, num_lesion=num_lesion,
+                        detection_method=detection_method, slice_index=slice_idx,
+                    )
+                    store(slice_idx, analysis.region_stats, analysis.surface, analysis.lesion_depth)
+                    processed_count += 1
+                    if on_slice_done is not None:
+                        on_slice_done(slice_idx, total)
+                    emit_status(f"Completed slice {slice_idx + 1}")
+                except Exception as exc:  # pragma: no cover - defensive per-slice guard
+                    if on_error is not None:
+                        on_error(f"Error on slice {slice_idx + 1}: {exc}")
+
+        # Persist results once all slices are processed (skip if nothing done).
+        saved = False
+        if save and (not cancelled or processed_count > 0):
+            emit_status("Saving results and images to disc...")
+            DataSaver.save_results(specimen)
+            DataSaver.save_annotated_images(specimen)
+            specimen.results.clear()
+            gc.collect()
+            saved = True
+
+        if not cancelled:
+            status = "Completed"
+        elif processed_count == 0:
+            status = "Cancelled"
+        elif processed_count < total:
+            status = "Partial"
+        else:
+            status = "Completed"
+        specimen.status = status
+
+        return SpecimenAnalysisResult(
+            specimen_id=specimen.specimen_id,
+            status=status,
+            processed_count=processed_count,
+            total_slices=total,
+            saved=saved,
+        )
