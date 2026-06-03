@@ -295,7 +295,7 @@ class FileDiscoveryService:
                 raise ValueError(f"Invalid range format: {range_str}")
             
             if count is None:
-                count = end - start
+                count = end - start + 1
             
             return view, ExportSettings(
                 start=start,
