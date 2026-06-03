@@ -5,7 +5,7 @@ Created on Thu Aug 14 09:54:49 2025
 @author: Tobias Meissner
 """
 
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog
 from pathlib import Path
 import os
 from concurrent import futures
@@ -16,6 +16,7 @@ import csv
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from app.view.annolyze.data_io import DataLoader
+from app.view.shared import dialogs
 
 class loadImagePanel:
     @handle_errors("loadImagePanel.__init__")
@@ -62,7 +63,7 @@ class loadImagePanel:
                 results_panel.reset_table()
             self.config_manager.apply_config(config, self.context)
         else:
-            messagebox.showerror("Error", "Missing panel references in context")
+            dialogs.show_error(self.root, "Error", "Missing panel references in context")
 
 
     # %% Threaded Image Picker

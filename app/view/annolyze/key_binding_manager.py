@@ -10,9 +10,10 @@ from datetime import datetime
 from app.view.annolyze.undo_panel import UndoPanel
 from app.view.annolyze.data_io import DataSaver
 from app.logic.annolyze.measurement_service import MeasurementService
+from app.view.shared import dialogs
 import threading
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 from concurrent.futures import ThreadPoolExecutor
 
 class KeybindingManager:
@@ -351,10 +352,11 @@ class KeybindingManager:
                 else:
                     return
             except ValueError as e:
+                parent = self.annotate_panel.window
                 if data_type == "Integer" and "whole number" in str(e):
-                    messagebox.showwarning("Invalid Input", str(e))
+                    dialogs.show_warning(parent, "Invalid Input", str(e))
                 else:
-                    messagebox.showerror("Invalid Input", f"Could not parse value: {raw_input}")
+                    dialogs.show_error(parent, "Invalid Input", f"Could not parse value: {raw_input}")
                 return
 
             # Get current value for undo tracking

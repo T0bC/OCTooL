@@ -6,9 +6,10 @@ Created on Thu Aug 14 15:21:37 2025
 """
 
 import os
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
 from utils.error_handler import handle_errors
 from app.view.annolyze.key_binding_manager import KeybindingManager
+from app.view.shared import dialogs
 from app.logic.annolyze.config_service import ConfigService
 from app.logic.annolyze.models import MetadataConfig, ColumnSpec
 from pathlib import Path
@@ -73,11 +74,11 @@ class ConfigManager:
                 self.config_service.save_config_to_file(config, filepath)
                 context.status_bar.update(f"Config saved to: {filepath}", level="success")
                 if show_dialog:
-                    messagebox.showinfo("Success", f"Configuration saved to:\n{filepath}")
+                    dialogs.show_info(context.root, "Success", f"Configuration saved to:\n{filepath}")
             except Exception as e:
                 context.status_bar.update(f"Failed to save config: {e}", level="error")
                 if show_dialog:
-                    messagebox.showerror("Error", f"Failed to save configuration:\n{str(e)}")
+                    dialogs.show_error(context.root, "Error", f"Failed to save configuration:\n{str(e)}")
 
     @handle_errors("ConfigManager.save_config_to_folder")
     def save_config_to_folder(self, folder_path, metadata_panel, results_panel, add_columns_panel, context):
@@ -104,7 +105,7 @@ class ConfigManager:
                     return config
                 return None
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to load configuration:\n{str(e)}")
+                dialogs.show_error(None, "Error", f"Failed to load configuration:\n{str(e)}")
 
         return None
 
@@ -192,7 +193,7 @@ class ConfigManager:
             return True
 
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to apply configuration:\n{str(e)}")
+            dialogs.show_error(context.root, "Error", f"Failed to apply configuration:\n{str(e)}")
             return False
 
     def get_data_type_for_column(self, col_name):

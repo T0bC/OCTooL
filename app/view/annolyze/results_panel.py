@@ -6,11 +6,9 @@ Created on Thu Aug 14 11:24:40 2025
 """
 
 from utils.error_handler import handle_errors
-import tkinter as tk
 from tksheet import Sheet
-import csv
-from pathlib import Path
 from app.logic.annolyze.display_service import DisplayService
+from app.view.shared import dialogs
 
 class resultsPanel:
     @handle_errors("ResultsPanel.__init__")
@@ -124,9 +122,10 @@ class resultsPanel:
 
         existing_names = [name for name, _ in self.dynamic_col_specs]
         if col_name in existing_names or col_name in self.static_col_names:
-            tk.messagebox.showwarning(
-                title="Duplicate Column",
-                message=f"The column '{col_name}' already exists in the table."
+            dialogs.show_warning(
+                self.root,
+                "Duplicate Column",
+                f"The column '{col_name}' already exists in the table."
             )
             return
 
@@ -134,9 +133,10 @@ class resultsPanel:
         if keyBind and keyBind.lower() != "none":
             for existing_col, _, existing_key in getattr(self, "dynamic_col_specs_full", []):
                 if keyBind == existing_key:
-                    tk.messagebox.showwarning(
-                        title="Duplicate Key Binding",
-                        message=f"The key binding '{keyBind}' is already assigned to column '{existing_col}'. Please choose a unique key."
+                    dialogs.show_warning(
+                        self.root,
+                        "Duplicate Key Binding",
+                        f"The key binding '{keyBind}' is already assigned to column '{existing_col}'. Please choose a unique key."
                     )
                     return
 

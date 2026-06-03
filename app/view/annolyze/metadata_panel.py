@@ -5,10 +5,11 @@ Created on Thu Aug 14 13:02:23 2025
 @author: Tobias Meissner
 """
 
-from tkinter import ttk, messagebox
+from tkinter import ttk
 from utils.tool_tip import Tooltip
 from utils.error_handler import handle_errors
 from app.view.annolyze.keyboard_layout_viewer import KeyboardLayoutViewer
+from app.view.shared import dialogs
 
 class metadataPanel:
     def __init__(self, context):
@@ -79,4 +80,4 @@ class metadataPanel:
         if results_panel and add_columns_panel:
             self.config_manager.save_config(self, results_panel, add_columns_panel, self.context)
         else:
-            messagebox.showerror("Error", "Missing panel references in context")
+            dialogs.show_error(self.root, "Error", "Missing panel references in context")
