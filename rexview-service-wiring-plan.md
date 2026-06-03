@@ -198,11 +198,11 @@ app/view/rexview/
 ### E.2 Update Imports
 
 - [x] Update `rexViewTab.py` to import from `app.view.rexview`
-- [x] Keep `RexView/` as deprecated re-exports for backward compatibility
+- [x] Add `RexView/` deprecated re-export shims, then remove them once confirmed no external imports remained
 
 ### E.3 Final Cleanup
 
-- [x] Remove deprecated code from old panel files (now thin re-export shims)
+- [x] Remove deprecated code from old panel files (old `RexView/` folder deleted)
 - [x] Update all import paths
 - [x] Verify all tests pass (265 passed)
 
