@@ -8,11 +8,11 @@ Created on Fri Sep 26 13:58:13 2025
 import tkinter as tk
 from tkinter import ttk
 from utils.error_handler import handle_errors
-from CarlQuant.load_images_panel import loadImagePanel as loadImage
-from CarlQuant.settings_panel import settingsPanel as settingsPanel
-from CarlQuant.specimen_panel import specimenPanel as specimenPanel
-from CarlQuant.results_panel import resultsPanel as resultsPanel
-from CarlQuant.image_viewer_panel import image_viewer_panel as imagePanel
+from app.view.carlquant.load_images_panel import loadImagePanel as loadImage
+from app.view.carlquant.settings_panel import settingsPanel as settingsPanel
+from app.view.carlquant.specimen_panel import specimenPanel as specimenPanel
+from app.view.carlquant.results_panel import resultsPanel as resultsPanel
+from app.view.carlquant.image_viewer_panel import image_viewer_panel as imagePanel
 
 @handle_errors("carlQuantTab.addContent")
 def addContent(self, frame):
