@@ -7,22 +7,18 @@ Created on Fri Sep 26 10:19:44 2025
 
 from pathlib import Path
 import json
-import csv
-from datetime import datetime
 from typing import Optional
+from app.logic.annolyze.data_service import DataService
 
 class DataLoader:
     def __init__(self, base_folder: Path, context):
         self.base_folder = base_folder
         self.context = context
         self.sample_name = base_folder.name
+        self.data_service = DataService()
 
     def find_file(self, pattern: str) -> Optional[Path]:
-        matches = list(self.base_folder.rglob(pattern))
-        if self.sample_name:
-            prioritized = [f for f in matches if self.sample_name in f.name]
-            return prioritized[0] if prioritized else (matches[0] if matches else None)
-        return matches[0] if matches else None
+        return self.data_service.find_file(self.base_folder, pattern, self.sample_name)
 
     def load_config(self):
         config_path = self.find_file("*config.json")
@@ -62,13 +58,10 @@ class DataLoader:
         results_path = self.find_file("*results.csv")
         if results_path:
             try:
-                with open(results_path, "r", encoding="utf-8") as f:
-                    reader = csv.reader(f)
-                    rows = list(reader)
-                if not rows:
+                headers, data = self.data_service.load_results(results_path)
+                if not headers:
                     self.context.status_bar.update("Results file is empty.", level="warning")
                     return
-                headers, data = rows[0], rows[1:]
                 results_panel = self.context.get_panel("results")
                 if results_panel:
                     results_panel.sheet.headers(headers)
@@ -90,11 +83,14 @@ class DataSaver:
         self.annotate_panel = context.get_panel("anno_image")
         self.add_columns_panel = context.get_panel("add_columns")
         self.config_manager = context.config_manager
+        self.data_service = DataService()
 
         self.operator = self.metadata_panel.operatorEntry.get()
         self.measurement = self.metadata_panel.measurementEntry.get()
         self.sample_folder = Path(context.image_folder)
-        self.data_folder = self.sample_folder / f"Data_{self.operator}_{self.measurement}"
+        self.data_folder = self.data_service.build_data_folder(
+            self.sample_folder, self.operator, self.measurement
+        )
         self.data_folder.mkdir(exist_ok=True)
 
     def save_config(self):
@@ -109,54 +105,31 @@ class DataSaver:
         config_path = self.data_folder / f"{self.sample_folder.name}_config.json"
 
         try:
-            with open(config_path, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=2, ensure_ascii=False)
+            self.data_service.save_config(config, config_path)
             self.context.status_bar.update(f"Config saved to: {config_path}", level="success")
         except Exception as e:
             self.context.status_bar.update(f"Failed to save config: {e}", level="error")
 
 
     def save_annotations(self):
-        annotation_folder = self.data_folder / "annotations"
-        annotation_folder.mkdir(exist_ok=True)
-        json_path = annotation_folder / f"{self.sample_folder.name}_annotations.json"
-
-        json_data = {}
-        for slice_index, annotations in self.annotate_panel.slice_annotations.items():
-            slice_key = f"slice_{slice_index}"
-            json_data[slice_key] = [
-                {
-                    "id": a.get("id"),
-                    "feature": a.get("feature", "unknown"),
-                    "points": a.get("points"),
-                    "mode": a.get("mode"),
-                    "color": a.get("color"),
-                    "locked": a.get("locked", False),
-                    "timestamp": a.get("timestamp", datetime.now().isoformat())
-                }
-                for a in annotations
-            ]
+        json_path = (
+            self.data_folder / "annotations" / f"{self.sample_folder.name}_annotations.json"
+        )
 
         try:
-            with open(json_path, "w", encoding="utf-8") as f:
-                json.dump(json_data, f, indent=2)
+            self.data_service.save_annotations(self.annotate_panel.slice_annotations, json_path)
             self.context.status_bar.update(f"Annotations saved to: {json_path}", level="success")
         except Exception as e:
             self.context.status_bar.update(f"Failed to save annotations: {e}", level="error")
 
     def save_results(self):
-        results_folder = self.data_folder / "results"
-        results_folder.mkdir(exist_ok=True)
-        csv_path = results_folder / f"{self.sample_folder.name}_results.csv"
+        csv_path = self.data_folder / "results" / f"{self.sample_folder.name}_results.csv"
 
         headers = self.results_panel.sheet.headers()
         data = self.results_panel.sheet.get_sheet_data()
 
         try:
-            with open(csv_path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(headers)
-                writer.writerows(data)
+            self.data_service.save_results(headers, data, csv_path)
             self.context.status_bar.update(f"Measurements saved to: {csv_path}", level="success")
         except Exception as e:
             self.context.status_bar.update(f"Failed to save measurements: {e}", level="error")
