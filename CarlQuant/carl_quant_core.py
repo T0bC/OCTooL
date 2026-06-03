@@ -9,7 +9,6 @@ from time import sleep
 from threading import Thread
 from CarlQuant.data_io import DataSaver
 from CarlQuant.specimen_model import RegionStats, Surface, LesionDepth
-from CarlQuant.progress_dialog import ProgressDialog
 import random
 import numpy as np
 from PIL import Image
@@ -24,7 +23,6 @@ import time
 from enum import Enum
 import gc
 import traceback
-from utils.error_handler import show_error_popup, log_error_to_file
 
 
 # =============================================================================
@@ -1553,6 +1551,12 @@ def run_carl_quant(context):
     - Saves results for completed specimens
     - Does not corrupt Excel/JSON files
     """
+    # Lazy imports: keep this module tkinter-free at import time so the pure
+    # compute functions can be reused by the headless logic layer
+    # (app/logic/carlquant). These UI/error helpers are only needed here.
+    from CarlQuant.progress_dialog import ProgressDialog
+    from utils.error_handler import show_error_popup, log_error_to_file
+
     def worker():
         # Prepare specimen list
         specimen_list = list(context.specimen_data.items())
