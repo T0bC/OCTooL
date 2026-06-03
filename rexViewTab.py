@@ -8,12 +8,12 @@ import tkinter as tk
 from tkinter import ttk
 from utils.app_context import AppContext
 from utils.status_bar import StatusBar
-from RexView.tree_view_panel import treeViewPanel as table
-from RexView.pick_files_panel import pickFilesPanel as pickFile
-from RexView.global_settings_panel import globalSettingsPanel as globalSettings
-from RexView.custom_settings_panel import customSettingsPanel as customSettings
-from RexView.image_panel import imagePanel as imagePanel
-from RexView.execution_panel import executionPanel as execution
+from app.view.rexview.tree_view_panel import treeViewPanel as table
+from app.view.rexview.pick_files_panel import pickFilesPanel as pickFile
+from app.view.rexview.global_settings_panel import globalSettingsPanel as globalSettings
+from app.view.rexview.custom_settings_panel import customSettingsPanel as customSettings
+from app.view.rexview.image_panel import imagePanel as imagePanel
+from app.view.rexview.execution_panel import executionPanel as execution
 
 def addContent(self, frame):
     self.rexViewTabFrame = frame
