@@ -5,9 +5,7 @@ Created on Thu Aug 14 15:21:37 2025
 @author: Tobias Meissner
 """
 
-import json
 import os
-from datetime import datetime
 from tkinter import filedialog, messagebox
 from utils.error_handler import handle_errors
 from AnnoLyze.key_binding_manager import KeybindingManager
