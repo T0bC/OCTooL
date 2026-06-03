@@ -119,7 +119,7 @@ class imagePanel:
         and returns a configuration object for the ImageService.
         """
         return ImageDisplayConfig.from_gui_state(
-            slice_index=int(self.scale.get() - 1),
+            slice_index=max(0, int(self.scale.get() - 1)),
             slice_direction=self.treeView.getValue(column='Img. Slice Dir.'),
             db_min=self.treeView.getValue(column='dB min'),
             db_max=self.treeView.getValue(column='dB max'),
