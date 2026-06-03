@@ -2,12 +2,12 @@
 
 Module-specific progress tracker. Pattern + process live in `REFACTOR-PLAN.md`.
 
-Status: **Milestone 2 (analysis pipeline split) COMPLETE.** Logic foundation done
-(Milestone 1) and the main analysis flow (`run_carl_quant`) is now split: pure
-per-specimen compute lives in `AnalysisService.analyze_specimen` (tkinter-free, tested),
-and UI/threading orchestration moved to `app/view/carlquant/analysis_runner.py`.
-Remaining panels still use legacy `CarlQuant/` imports — auditing/thinning + relocating
-them to `app/view/carlquant/` is the next milestone.
+Status: **Milestone 4 (view relocation) COMPLETE — refactor essentially done.**
+Logic lives in `app/logic/carlquant/` (tkinter-free, import-safety enforced); all view
+code lives in `app/view/carlquant/`; the old `CarlQuant/` folder is removed. The main
+analysis flow is split (pure compute in `AnalysisService`, UI/threading in
+`analysis_runner.py`). Full suite **444 passing**; `carlQuantTab` imports verified.
+Remaining: optional integration test + manual GUI smoke test.
 
 ---
 
@@ -65,18 +65,44 @@ Run (coverage): `& "C:\Users\meissnerto\AppData\Local\miniconda3\envs\octool\pyt
       save-to-disk, parallel, cancellation, status callbacks). Full suite **439 passing**;
       `app/logic/carlquant` at **92%** (uncovered = parallel-cancellation timing branches).
 
-## Next Milestone — Audit & relocate remaining panels (NOT started)
+## Milestone 3 — Logic relocation (DONE)
 
-Panels under `CarlQuant/` to audit (per-panel checklist in `REFACTOR-PLAN.md`) then move to
-`app/view/carlquant/`:
+- [x] `git mv` the pure logic into `app/logic/carlquant/`: `specimen_model.py`,
+      `annotation_colors.py`, `interpolation.py`, `data_io.py`, `carl_quant_core.py`.
+- [x] Rewired internal imports of the moved files + the service wrappers (`models.py`,
+      `analysis_service.py`, `interpolation_service.py`, `data_service.py`) to
+      `app.logic.carlquant.*` (no more `CarlQuant.*` logic imports).
+- [x] Updated all consumers to import logic from `app.logic.carlquant` (public API) or
+      `app.logic.carlquant.<module>`: `settings_panel`, `results_panel`,
+      `load_images_panel`, `image_viewer_panel`, `specimen_panel`, `ascan_viewer`,
+      `annotation_renderer`.
+- [x] Import-safety test now scans the relocated modules and still passes (logic
+      tkinter-free). Full suite **444 passing**; all edited panels `py_compile` clean;
+      `app.view.carlquant.analysis_runner` + `app.logic.carlquant` import-chain verified.
 
-- [ ] `settings_panel.py` — UI + context state (region count, method, operator/measurement)
-- [ ] `specimen_panel.py` — tksheet UI + DataLoader delegation
-- [ ] `results_panel.py` — tksheet UI + DataLoader delegation
-- [ ] `image_viewer_panel.py` — canvas UI + interpolation/annotation delegation
-- [ ] `load_images_panel.py` — relocate (logic already delegated to runner/service)
-- [ ] Relocate `progress_dialog.py`, `annotation_renderer.py`, `ascan_viewer.py` to view.
-- [ ] Physically move pure logic (`specimen_model`, `carl_quant_core`, `data_io`,
-      `interpolation`, `annotation_colors`) into `app/logic/carlquant/` and drop the
-      transitional re-export imports; update `carlQuantTab.py`; remove old `CarlQuant/`.
-- [ ] Integration test: `tests/integration/test_carlquant_analysis.py`
+> Note: `app/logic/carlquant` line-coverage now reads lower (~68%) only because the large
+> legacy modules (`carl_quant_core` 564 stmts, `data_io` 386) are counted in the package;
+> the newly-written service/model code stays fully covered. Backfilling tests for the
+> legacy compute/I/O is optional follow-up.
+
+## Milestone 4 — View relocation (DONE)
+
+- [x] `git mv` all 8 view files to `app/view/carlquant/`: `settings_panel.py`,
+      `specimen_panel.py`, `results_panel.py`, `image_viewer_panel.py`,
+      `load_images_panel.py`, `progress_dialog.py`, `annotation_renderer.py`,
+      `ascan_viewer.py`.
+- [x] Updated cross-imports to `app.view.carlquant.*`: `results_panel`→`ascan_viewer`,
+      `image_viewer_panel`→`annotation_renderer`, `analysis_runner`→`progress_dialog`.
+- [x] Updated `carlQuantTab.py` panel imports to `app.view.carlquant.*`.
+- [x] Removed the now-empty `CarlQuant/` folder.
+- [x] Routed `load_images_panel`'s validation error dialog through
+      `app/view/shared/dialogs.py` (`show_error`, anchored to the app root).
+- [x] Verified: full view import chain (`carlQuantTab`, panels, runner) imports
+      headlessly; full suite **444 passing**; touched files `py_compile` clean.
+
+## Optional follow-up
+
+- [ ] Integration test: `tests/integration/test_carlquant_analysis.py`.
+- [ ] Backfill unit tests for legacy compute/I/O (`carl_quant_core`, `data_io`) to raise
+      `app/logic/carlquant` line-coverage.
+- [ ] Manual GUI smoke test (load → set regions → analyze → cancel/complete → view results).
