@@ -127,6 +127,30 @@ def some_action(self):
     self.other_widget.set(result.display_value)
 ```
 
+### Error Handling & Robustness
+
+The app must **never fail silently** — especially in windowed PyInstaller builds where
+stderr is invisible. Two layers work together:
+
+1. **Global safety net (required, once at startup).** `install_tk_exception_handler(root)`
+   from `utils/error_handler.py` overrides the root window's `report_callback_exception`.
+   Tkinter routes *every* uncaught callback exception (button commands, event bindings,
+   lambdas, `after` jobs) through this, so all UI errors get a popup + log even when the
+   callback is an undecorated lambda. Installed in `MainGui.__init__` right after the root
+   `tk.Tk()` is created.
+2. **Targeted decorator (optional, for context).** `@handle_errors("<where>")` on a method
+   adds a clearer custom message and function-level args/kwargs to the log. Use it on
+   important entry-point methods; it is *not* a substitute for the global net.
+
+Rules for refactored panels:
+
+- **Do not** create per-panel `tk.Tk()` instances or ad-hoc try/except-to-stderr blocks.
+- View-layer user messaging goes through `app/view/shared/dialogs.py`.
+- Logic-layer services **raise** typed exceptions (e.g. `ValueError`) or return
+  result/error tuples; they never show dialogs. The view decides how to surface them.
+- A lambda wired to `command=`/`bind` is covered by the global net, but prefer a named
+  method when it does real work so it can be tested and optionally decorated.
+
 ### Centralized Dialogs
 
 All user messaging goes through `app/view/shared/dialogs.py`, reusing the app root
