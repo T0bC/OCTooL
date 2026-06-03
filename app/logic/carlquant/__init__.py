@@ -16,7 +16,11 @@ from app.logic.carlquant.models import (
     Specimen,
     DepthDetectionMethod,
 )
-from app.logic.carlquant.analysis_service import AnalysisService, SliceAnalysis
+from app.logic.carlquant.analysis_service import (
+    AnalysisService,
+    SliceAnalysis,
+    SpecimenAnalysisResult,
+)
 from app.logic.carlquant.interpolation_service import (
     InterpolationService,
     CoordinateDescriptor,
@@ -39,6 +43,7 @@ __all__ = [
     # Services
     "AnalysisService",
     "SliceAnalysis",
+    "SpecimenAnalysisResult",
     "InterpolationService",
     "DataLoader",
     "DataSaver",
