@@ -13,7 +13,7 @@ from utils.error_handler import handle_errors
 from tkinter import colorchooser
 import customtkinter as ctk
 from CTkColorPicker import AskColor
-import string
+from app.logic.annolyze.measurement_service import MeasurementService
 
 class addColumnsPanel:
     @handle_errors("error in addColumnsPanel.__init__")
@@ -22,6 +22,7 @@ class addColumnsPanel:
         self.root = context.root
         self.frame = context.get_frame("add_columns")
         self.resultsPanel = context.get_panel("results")
+        self.measurement_service = MeasurementService()
 
         self.column_keybindings = {}
         self.column_data_types = {}
@@ -141,16 +142,13 @@ class addColumnsPanel:
 
 
     def update_available_keys(self):
-        reserved_keys = {'f', 'h'}
-        all_keys = list(string.ascii_lowercase)
-
         # Pull used keys from centralized context
         used_keys = []
         if hasattr(self.context, "keybinding_specs") and self.context.keybinding_specs:
             used_keys = [spec[2] for spec in self.context.keybinding_specs if spec[2]]
 
-        # Filter out both used and reserved keys
-        available_keys = [k for k in all_keys if k not in used_keys and k not in reserved_keys]
+        # Filter out both used and reserved keys (delegates to MeasurementService)
+        available_keys = self.measurement_service.available_keys(used_keys)
 
         # Update dropdown
         self.keyBindDropdown["values"] = available_keys
