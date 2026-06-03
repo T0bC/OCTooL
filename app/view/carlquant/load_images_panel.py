@@ -11,10 +11,10 @@ from fnmatch import fnmatch
 from utils.error_handler import handle_errors
 from utils.metadata_prompt import prompt_for_metadata
 from utils.tool_tip import Tooltip
-from CarlQuant.data_io import DataLoader, DataSaver
+from app.logic.carlquant import DataLoader, DataSaver
 from app.view.carlquant.analysis_runner import run_carl_quant
 import threading
-from tkinter import messagebox
+from app.view.shared import dialogs
 
 
 class loadImagePanel:
@@ -458,11 +458,8 @@ class loadImagePanel:
                 "Invalid specimens are highlighted in RED in the table."
             )
         
-        # Show error dialog
-        messagebox.showerror(
-            title="Missing Coordinates",
-            message=error_message
-        )
+        # Show error dialog (anchored to the app root, not a throwaway tk.Tk())
+        dialogs.show_error(self.root, "Missing Coordinates", error_message)
     
     @handle_errors("loadImagePanel.refresh_validation_status")
     def refresh_validation_status(self):
