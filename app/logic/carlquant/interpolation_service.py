@@ -4,12 +4,12 @@ CarlQuant Interpolation Service
 Pure, tkinter-free keyframe interpolation for coordinate configurations
 (regions and AIR reference areas) across an image stack.
 
-Wraps the generic engine in ``CarlQuant.interpolation`` and exposes it from the
-logic layer's stable import location.
+Wraps the generic engine in ``app.logic.carlquant.interpolation`` and exposes it
+from the logic layer's stable import location.
 """
 from typing import Any, Callable, Dict
 
-from CarlQuant.interpolation import (
+from app.logic.carlquant.interpolation import (
     CoordinateDescriptor,
     REGION_DESCRIPTOR,
     AIR_DESCRIPTOR,
