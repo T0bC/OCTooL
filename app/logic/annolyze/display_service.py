@@ -1,0 +1,36 @@
+"""
+AnnoLyze Display Service
+
+Pure presentation math (no tkinter): relative luminance, contrast-aware font
+color, and header-based column-width estimation. This deduplicates identical
+helpers previously copied in results_panel.py and undo_panel.py.
+"""
+
+# Column width heuristics (kept identical to the original panel logic).
+BASE_WIDTH = 40
+CHAR_WIDTH = 7
+PADDING = 20
+MAX_WIDTH = 250
+
+
+class DisplayService:
+    """Pure color/luminance and column-width helpers."""
+
+    def luminance(self, hex_color: str) -> float:
+        """Relative luminance (WCAG) of a ``#RRGGBB`` color, in [0, 1]."""
+        hex_color = hex_color.lstrip("#")
+        r, g, b = (int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+
+        def adjust(c: float) -> float:
+            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+        r, g, b = adjust(r), adjust(g), adjust(b)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    def choose_font_color(self, bg_color: str) -> str:
+        """Return black or white for best contrast against ``bg_color``."""
+        return "#FFFFFF" if self.luminance(bg_color) < 0.5 else "#000000"
+
+    def calculate_column_width(self, header: str) -> int:
+        """Estimate a column width (px) from the header text length."""
+        return min(max(BASE_WIDTH, len(header) * CHAR_WIDTH + PADDING), MAX_WIDTH)
