@@ -285,9 +285,6 @@ class KeybindingManager:
         self.prompt_for_value(row, col, color, data_type, value, annotation_id)
 
 
-
-
-
     # %% Visual Feedback in tksheet results table
     def flash_cell(self, row, col, bg="#FFD700", fg="#000000", duration=800):
         # Highlight the cell
