@@ -14,7 +14,7 @@ import tkinter as tk
 import numpy as np
 
 # Import centralized color definitions
-from CarlQuant.annotation_colors import (
+from app.logic.carlquant.annotation_colors import (
     INTERPOLATED_SURFACE_COLOR,
     ACTUAL_SURFACE_COLOR,
     LESION_DEPTH_PRIMARY_COLOR,
