@@ -59,8 +59,10 @@ class TestSequentialAnalysis:
     def test_processes_all_slices_and_completes(self, tmp_path):
         """GIVEN a 3-slice specimen, WHEN analyzed, THEN all slices stored + Completed."""
         specimen = _make_specimen(tmp_path, 3)
+        statuses = []
         result = AnalysisService.analyze_specimen(
             specimen, num_sound=2, num_lesion=2, save=False,
+            on_status=statuses.append,
         )
         assert isinstance(result, SpecimenAnalysisResult)
         assert result.status == "Completed"
@@ -69,6 +71,9 @@ class TestSequentialAnalysis:
         assert result.saved is False
         assert len(specimen.results) == 3
         assert specimen.status == "Completed"
+        # Status messages were emitted via the callback (sequential mode + slices).
+        assert any("sequentially" in s for s in statuses)
+        assert any("Completed slice" in s for s in statuses)
 
     @pytest.mark.unit
     def test_reports_sequential_mode(self, tmp_path):
