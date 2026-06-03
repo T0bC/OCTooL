@@ -2,9 +2,9 @@
 
 Module-specific progress tracker. Pattern + process live in `REFACTOR-PLAN.md`.
 
-Status: **logic layer extracted + 100% tested (tkinter-free); panels wired in place to
-delegate to the services.** File relocation to `app/view/annolyze/` is the remaining
-optional step.
+Status: **COMPLETE.** Logic extracted to `app/logic/annolyze/` (100% tested, tkinter-free);
+panels wired to the services and relocated to `app/view/annolyze/`; old `AnnoLyze/` folder
+removed and all imports updated.
 
 ---
 
@@ -37,7 +37,12 @@ optional step.
 
 Run: `pytest tests/unit/logic -k annolyze --cov=app.logic.annolyze --cov-report=term-missing`
 
-## Panels Wired (in place under `AnnoLyze/`) — DONE
+## Panels Wired + Relocated to `app/view/annolyze/` — DONE
+
+All 11 files moved (via `git mv`) from `AnnoLyze/` to `app/view/annolyze/`; cross-imports
+(`metadata`→`keyboard_layout_viewer`, `load_images`→`data_io`, `key_binding_manager`→
+`undo_panel`/`data_io`, `config_manager`→`key_binding_manager`) and `annoLyzeTab.py`
+updated to `app.view.annolyze.*`. Old `AnnoLyze/` folder deleted.
 
 Pure/duplicated logic in each panel now delegates to the new services:
 
@@ -61,8 +66,11 @@ Pure/duplicated logic in each panel now delegates to the new services:
 Verification: `pytest tests/` all pass; `app/logic/annolyze` at 100% coverage;
 all edited panels `py_compile` clean.
 
-## Remaining (optional)
+## Remaining (optional polish)
 
-- [ ] Relocate panels to `app/view/annolyze/`, update `annoLyzeTab.py` imports, remove
+- [x] Relocate panels to `app/view/annolyze/`, update `annoLyzeTab.py` imports, remove
   old `AnnoLyze/` folder (mirrors the RexView end state).
-- [ ] Route view-layer messageboxes through `app/view/shared/dialogs.py`.
+- [ ] Route view-layer messageboxes (`messagebox.*` in `config_manager.py`,
+  `metadata_panel.py`, `load_images_panel.py`, `key_binding_manager.py`,
+  `results_panel.py`) through `app/view/shared/dialogs.py`.
+- [ ] Manual GUI smoke test (load folder → annotate → keybindings → save/load config).
