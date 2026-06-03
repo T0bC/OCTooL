@@ -167,13 +167,12 @@ class imagePanel:
             self.dBmin = int(self.treeView.getValue(column='dB min'))
             self.dBmax = int(self.treeView.getValue(column='dB max'))
 
-            # Insert a Scale to select current slice
-            self.scale = ttk.Scale(self.frame,
-                                   from_= 0,
-                                   to = self.image_service.total_slices,
-                                   orient = 'horizontal',
-                                   bootstyle="warning")
+            # Reconfigure the existing slice scale for this stack
+            self.scale.configure(from_=0, to=self.image_service.total_slices)
             self.scale.set(self.image_service.get_middle_slice_index())
+            # Clear any bindings from a previous load before re-binding below
+            for sequence in ("<ButtonRelease-1>", "<Left>", "<Right>", "<Up>", "<Down>"):
+                self.scale.unbind(sequence)
 
             # if oct file is in processed format, load the entire stack into memory
             # to avoid loading it every time the user wants to display another slice
