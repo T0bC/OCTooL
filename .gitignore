@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 *.egg-info/
 
+# Coverage
+.coverage
+
 # OS files
 .DS_Store
 Thumbs.db
