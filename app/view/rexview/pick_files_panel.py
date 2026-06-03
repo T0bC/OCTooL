@@ -237,41 +237,19 @@ class pickFilesPanel:
             List of entry tuples for TreeView
         """
         file_path = Path(file_path)
-        file_name = os.path.splitext(os.path.basename(file_path))[0]
-        pathToSideCarTXTFile = self._file_discovery_service.get_sidecar_path(file_path)
+        show_errors = self.globalSettings.getErrorState() == "selected"
 
-        settings = self.handle_metadata_parsing(pathToSideCarTXTFile, octF.getXMLvalue(file_path, 'dimY'))
+        # Delegate validation, metadata extraction, sidecar parsing and
+        # queue-item construction to the service (single OCT zip read path).
+        items, error_msg = self._file_discovery_service.process_file(
+            file_path,
+            show_errors=show_errors,
+        )
 
-        data_type = octF.getXMLvalue(file_path, 'dataType')
-        serial_number = octF.getXMLvalue(file_path, 'Serialnumber')
+        if error_msg:
+            self.show_error_box("Metadata File Issue", error_msg)
 
-        # Use FileDiscoveryService for default values
-        db_values = self._file_discovery_service.get_default_db_values(data_type)
-        disp_coeff = self._file_discovery_service.get_dispersion_coefficient(serial_number)
-
-        entries = []
-        for export_direction, config in settings.items():
-            firstS = config.get('start')
-            lastS = config.get('end')
-            numAequidistSlices = config.get('numAequidistSlices')
-            refractiveIndex = config.get('refractiveIndex')
-
-            entries.append([
-                file_name,
-                firstS,
-                lastS,
-                db_values['min'],
-                db_values['max'],
-                numAequidistSlices,
-                refractiveIndex,
-                disp_coeff,
-                export_direction,
-                data_type,
-                'in queue',
-                file_path
-            ])
-
-        return entries
+        return [list(item.to_treeview_values()) for item in items]
 
     def getFilePath(self)->str:
         """
