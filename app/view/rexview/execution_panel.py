@@ -16,6 +16,7 @@ from scipy import ndimage
 from PIL import Image
 from utils.tool_tip import Tooltip
 import gc
+import traceback
 from utils.error_handler import handle_errors
 
 # Import refactored logic components
@@ -151,6 +152,7 @@ class executionPanel:
             )
 
             # Loop through selected slices and export using ExportService
+            failed_count = 0
             for image in enumerate(self.selectedSliceNumber):
                 try:
                     if self.running == 1:
@@ -184,7 +186,9 @@ class executionPanel:
                     self.treeView.setValueFromRow(item[1], 'Status', f"exp: {image[0]+1}")
                     gc.collect()
                 except Exception:
-                    pass  # Continue processing other images
+                    failed_count += 1
+                    traceback.print_exc()
+                    continue  # Continue processing other images
 
             # Use ExportService for video image export
             self.export_service.export_video_image(
@@ -195,74 +199,12 @@ class executionPanel:
             )
 
             # Final cleanup per item
-            self.treeView.setValueFromRow(item[1], 'Status', 'Done')
+            if failed_count > 0:
+                self.treeView.setValueFromRow(item[1], 'Status', f'Done ({failed_count} failed)')
+            else:
+                self.treeView.setValueFromRow(item[1], 'Status', 'Done')
             self.archive.close()
             gc.collect()
-
-    @handle_errors("executionPanel")
-    def prepareImageSlice(self, image, item):
-        """
-        Prepares a 2D image slice from a 2D or 3D image stack, applies resizing,
-        refractive index correction, and optionally adds a scale bar.
-
-        Parameters:
-            image (tuple): Tuple of slice indices (e.g., (i, j))
-            item (tuple): TreeView item reference for metadata lookup
-
-        Returns:
-            PIL.Image: Final processed image with optional scale bar
-        """
-
-        # Determine if image stack is 2D or 3D
-        self.imgStack = np.squeeze(self.imgStack)
-        is2D = self.imgStack.ndim == 2
-
-        # Choose correct index depending on direction
-        self.imageToExport = image[0] if self.imgSliceDir == 'XZ' else image[1]
-
-        # Extract image slice
-        if is2D:
-            self.img = Image.fromarray(self.imgStack)
-        else:
-            if self.imgSliceDir == 'XZ':
-                self.img = Image.fromarray(self.imgStack[self.imageToExport, :, :])
-            elif self.imgSliceDir == 'YZ':
-                self.img = np.transpose(Image.fromarray(self.imgStack[:, :, self.imageToExport]))
-            elif self.imgSliceDir == 'XY':
-                self.img = Image.fromarray(self.imgStack[:, self.imageToExport, :])
-
-        # Resize if enabled
-        if self.globalSettingsFrame.getResizeState() == 'selected':
-
-            resizeX = self.xmlDict.get('imgResizeFactorX', 1)
-            resizeY = self.xmlDict.get('imgResizeFactorY', 1)
-
-            if self.imgSliceDir == 'XZ':
-                self.img = ndimage.zoom(self.img, zoom=(1, resizeX), order=0)
-            elif self.imgSliceDir == 'YZ':
-                self.img = ndimage.zoom(self.img, zoom=(1, resizeY), order=0)
-            elif self.imgSliceDir == 'XY' or is2D:
-                self.img = ndimage.zoom(self.img, zoom=(resizeY, resizeX), order=0)
-
-        # Apply refractive index correction
-        refrInd = float(self.treeView.getValueFromRow(item[1], 'Refr. Ind.'))
-        if refrInd != 1:
-            self.img = ndimage.zoom(self.img, zoom=(refrInd, 1), order=0)
-
-        # Add scale bar if selected
-        if self.globalSettingsFrame.ScaleBox.state() == ('selected',):
-            self.finImg = octF.insertScale(
-                img=Image.fromarray(self.img),
-                scaleSize=int(self.globalSettingsFrame.scaleEntry.get()),
-                xmlDict=self.xmlDict,
-                fontSize=int(self.globalSettingsFrame.scaleTextSizeEntry.get()),
-                imgSliceDir=self.imgSliceDir
-            )
-        else:
-            self.finImg = Image.fromarray(self.img)
-
-        return self.finImg
-
 
     def breakAll(self):
         '''
