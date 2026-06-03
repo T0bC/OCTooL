@@ -9,14 +9,13 @@ Created on Sat Oct 10 18:55:08 2020
 import tkinter as tk
 from tkinter import ttk
 from utils.tool_tip import Tooltip
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
 from pathlib import Path
-import os
-from fnmatch import fnmatch
-from utils import oct_functions as octF
 from concurrent import futures
 from utils.error_handler import handle_errors
+from utils import oct_functions as octF
 from app.logic.rexview import FileDiscoveryService
+from app.view.shared import dialogs
 
 
 class pickFilesPanel:
@@ -130,7 +129,8 @@ class pickFilesPanel:
             tmpPathList = self._collect_oct_files(self.folderPath)
 
             if not tmpPathList:
-                self.show_info_box(
+                dialogs.show_info(
+                    self.root,
                     "No OCT Files Found",
                     f"No OCT files were found in:\n{self.folderPath}\n\nPlease choose another folder."
                 )
@@ -164,7 +164,8 @@ class pickFilesPanel:
             self.filePath = Path(selected_path)
 
             if not self.filePath.exists():
-                self.show_error_box(
+                dialogs.show_error(
+                    self.root,
                     "File Not Found",
                     f"The selected file could not be located:\n{self.filePath}"
                 )
@@ -256,7 +257,7 @@ class pickFilesPanel:
         )
 
         if error_msg:
-            self.show_error_box("Metadata File Issue", error_msg)
+            dialogs.show_error(self.root, "Metadata File Issue", error_msg)
 
         return [list(item.to_treeview_values()) for item in items]
 
@@ -271,195 +272,6 @@ class pickFilesPanel:
 
         """
         return self.filePath
-
-    def parse_metadata_file(self, file_path: Path) -> dict:
-        """
-        Parses a metadata sidecar file for 2D slice export settings.
-
-        The metadata file is expected to contain lines specifying the view direction (XZ, YZ, XY),
-        slice range (start-end), and the number of equidistant slices to export. Each line follows
-        the format: <VIEW>:<START-END>:<COUNT>
-
-        Supports partial lines with missing fields. Defaults:
-            - View: XZ
-            - numAequidistSlices: calculated as end - start + 1
-            - refractiveIndex: 1.0
-
-        Format:
-        <VIEW(optional)>:<START-END>:<COUNT(optional)>:<REFRACTIVE(optional)>
-        Examples:
-        ":10-50::" (defaults to XZ, 41 slices, RI=1.0)
-        "YZ:20-80:15:" (defaults RI to 1.0)
-        "XY:25-90::1.33" (defaults COUNT to 66)
-
-        Parameters
-        ----------
-        file_path : Path
-            Path to the metadata .txt file. Point directly to the text file containing export instructions.
-
-        Raises
-        ------
-        ValueError
-            Raised if a line is incorrectly formatted or contains invalid numeric values.
-        RuntimeError
-            Raised if the file cannot be opened or parsed for any reason, such as file I/O errors.
-
-        Returns
-        -------
-        dict
-            Dictionary with view keys (`XZ`, `YZ`, `XY`) mapping to a configuration dictionary.
-            Each configuration dictionary contains:
-                - 'start': int, beginning slice index
-                - 'end'  : int, ending slice index
-                - 'numAequidistSlices': int, number of equidistant slices to export
-                - 'refractiveIndex': float, value for the refractive index
-
-        Example
-        -------
-        XZ:20-80:20:1
-        YZ:15-90:10:1
-
-        Returns:
-        {
-            'XZ': {'start': 20, 'end': 80, 'numAequidistSlices': 20, 'refractiveIndex': 1},
-            'YZ': {'start': 15, 'end': 90, 'numAequidistSlices': 10, 'refractiveIndex': 1.5}
-        }
-        """
-
-        export_settings = {}
-
-        def parse_line(line):
-            # Split by colon or fallback to full line
-            tokens = line.strip().split(":")
-            tokens = [t.strip() for t in tokens if t.strip()]
-
-            view = "XZ"
-            range_str = None
-            count = None
-            ri = 1.0
-
-            if len(tokens) == 1 and "-" in tokens[0]:  # Only range, no view
-                range_str = tokens[0]
-            elif len(tokens) == 2 and "-" in tokens[0]:  # Range and count/RI?
-                range_str = tokens[0]
-                try:
-                    count = int(tokens[1])
-                except ValueError:
-                    ri = float(tokens[1])
-            elif len(tokens) == 3 and "-" in tokens[1]:  # View + range + count
-                view = tokens[0].upper()
-                range_str = tokens[1]
-                count = int(tokens[2])
-            elif len(tokens) == 4:  # All fields present
-                view = tokens[0].upper()
-                range_str = tokens[1]
-                count = int(tokens[2])
-                ri = float(tokens[3])
-            else:
-                raise ValueError(f"Unrecognized format in line: {line}")
-
-            try:
-                start, end = map(int, range_str.split("-"))
-            except Exception:
-                raise ValueError(f"Invalid range format: {range_str}")
-
-            if count is None:
-                count = end - start
-
-            return view, {
-                "start": start,
-                "end": end,
-                "numAequidistSlices": count,
-                "refractiveIndex": ri
-            }
-
-        try:
-            with open(file_path, "r") as f:
-                for line in f:
-                    if not line.strip() or line.startswith("#"):
-                        continue
-                    view, config = parse_line(line)
-                    export_settings[view] = config
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to parse metadata file: {e}")
-
-        return export_settings
-
-
-    def show_error_box(self, title: str, message: str):
-        """
-        Displays a user-friendly error message using a Tkinter popup window.
-
-        This function creates a temporary, hidden Tkinter root window solely
-        for showing a messagebox dialog. It's useful for communicating parsing
-        or file I/O issues in a GUI application.
-
-        Parameters
-        ----------
-        title : str
-            Title of the error message box window.
-        message : str
-            Detailed message describing the error to the user.
-
-        Returns
-        -------
-        None
-        """
-
-        root_err = tk.Tk()
-        root_err.withdraw()  # Hide the main window
-        tk.messagebox.showerror(title, message)
-        root_err.destroy()   # Close the Tk instance
-
-    def show_info_box(self, title: str, message: str):
-        root_info = tk.Tk()
-        root_info.withdraw()
-        messagebox.showinfo(title, message)
-        root_info.destroy()
-
-    def handle_metadata_parsing(self, file_path: Path, dimY: int) -> dict:
-        """
-        Parses a metadata sidecar file and applies fallback if the file does not exist
-        or is malformed. Displays any issues via a user-friendly messagebox.
-
-        Parameters
-        ----------
-        file_path : Path
-            Path to the .txt metadata sidecar file.
-        dimY : int
-            Vertical dimension from the .oct scan used for default range calculation.
-
-        Returns
-        -------
-        dict
-            Dictionary with export settings either from file or fallback:
-            {
-                'XZ': {'start': 1, 'end': dimY, 'numAequidistSlices': dimY}
-            }
-        """
-        show_errors = self.globalSettings.getErrorState() == "selected"
-        
-        # Use FileDiscoveryService for metadata parsing
-        settings, error_msg = self._file_discovery_service.handle_metadata_parsing(
-            file_path,
-            dim_y=dimY,
-            show_errors=show_errors,
-        )
-        
-        if error_msg:
-            self.show_error_box("Metadata File Issue", error_msg)
-        
-        # Convert ExportSettings models to dict format for backward compatibility
-        result = {}
-        for direction, export_settings in settings.items():
-            result[direction] = {
-                'start': export_settings.start,
-                'end': export_settings.end,
-                'numAequidistSlices': export_settings.num_equidistant_slices,
-                'refractiveIndex': export_settings.refractive_index,
-            }
-        return result
 
 # %%
 
