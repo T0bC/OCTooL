@@ -31,15 +31,17 @@ Logic package `app/logic/carlquant/` (tkinter-free, verified by import-safety te
 | `data_service.py` | Surfaces `DataLoader` / `DataSaver` + helpers | Done |
 | `__init__.py` | Package exports | Done |
 
-### Tests (29 passing; full suite 425 passing)
+### Tests (34 passing, 100% coverage; full suite green)
 
 - [x] `test_carlquant_models.py` — RegionConfig buffers, SpecimenConfig, enum
-- [x] `test_carlquant_interpolation.py` — single/multi keyframe, backfill, forward-fill, AIR
+- [x] `test_carlquant_interpolation.py` — single/multi keyframe, backfill, forward-fill,
+      generic descriptor, AIR
 - [x] `test_carlquant_analysis.py` — surface detection, no-region placeholder path, image
-      loading, sequential iteration, progress callback, cancellation
+      loading, sequential iteration, progress callback, cancellation, region-config path,
+      extract_regions/calculate_lesion_depth delegators
 - [x] `test_carlquant_import_safety.py` — no tkinter in `app/logic/carlquant/`
 
-Run: `& "C:\Users\meissnerto\AppData\Local\miniconda3\envs\octool\python.exe" -m pytest tests/unit/logic -k carlquant -q`
+Run (coverage): `& "C:\Users\meissnerto\AppData\Local\miniconda3\envs\octool\python.exe" -m pytest tests/ --cov=app.logic.carlquant --cov-report=term-missing`
 
 ## Next Milestone — Wire & relocate panels (NOT started)
 
