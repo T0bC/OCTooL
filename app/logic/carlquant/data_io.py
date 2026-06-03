@@ -14,11 +14,11 @@ import json
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook
-from CarlQuant.specimen_model import (
+from app.logic.carlquant.specimen_model import (
     Specimen, SliceResult, RegionStats, LesionDepth, Surface,
     SpecimenConfig, RegionConfig, AirConfig
 )
-from CarlQuant.annotation_colors import (
+from app.logic.carlquant.annotation_colors import (
     INTERPOLATED_SURFACE_COLOR,
     ACTUAL_SURFACE_COLOR,
     LESION_DEPTH_PRIMARY_COLOR,
