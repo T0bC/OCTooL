@@ -2,7 +2,7 @@
 
 Module-specific progress tracker. Pattern + process live in `REFACTOR-PLAN.md`.
 
-Status: **logic extracted and panels moved; final view-layer cleanup (Phase F) outstanding.**
+Status: **logic extracted, panels moved, and Phase F view-layer cleanup complete — every `app/view/rexview/` file now contains only UI code (widgets/events) or thin service delegation.**
 
 ---
 
@@ -36,7 +36,7 @@ Status: **logic extracted and panels moved; final view-layer cleanup (Phase F) o
 
 ---
 
-## Phase F: View-Layer Cleanup (OUTSTANDING)
+## Phase F: View-Layer Cleanup (COMPLETE)
 
 Audit found stale pure-logic methods and ad-hoc dialogs still in the view layer.
 
@@ -60,12 +60,12 @@ Audit found stale pure-logic methods and ad-hoc dialogs still in the view layer.
 - [x] All tests pass (`pytest tests/`).
 
 ### F.3 Audit remaining panels (per-panel checklist in REFACTOR-PLAN.md)
-- [ ] `execution_panel.py`
-- [ ] `image_panel.py`
-- [ ] `global_settings_panel.py`
-- [ ] `custom_settings_panel.py`
-- [ ] `tree_view_panel.py`
-- [ ] `instruction_panel.py` (expected: no logic)
+- [x] `execution_panel.py` — collapsed duplicated inline pipeline in `mainRoutines` to a single `ExportService.run_export()` call (view now only iterates rows, runs `_collect_*` collectors, and translates `ExportProgress` → TreeView status). Wired `breakAll` → `export_service.cancel()` (+ `reset()` on start). Deleted dead `addExifToImage` and unused imports (`np`, `ndimage`, `Image`, `octF`, `gc`, `traceback`, `Path`, `OCTMetadata`, `ExportProgress`). Status text preserved exactly (`loading`, raw load index, `exp: N`, `Done`/`Done (N failed)`).
+- [x] `image_panel.py` — removed stale view-layer state from `dispImageInCanvas`: dropped leaky `self.archive = self.image_service._archive` (private-member access), unused `self.xmlDict`, and dead `self.dBmin`/`self.dBmax` (already carried via `_collect_display_config` → `db_min`/`db_max`). Demoted `self.file` to a local `file_path`. View now only orchestrates widgets + service calls; no logic/data leftovers.
+- [x] `global_settings_panel.py` — pure UI: widget construction + thin state getters (`getResizeState`, `getExpFormat`, etc.) + `_collect_settings_config`. No logic.
+- [x] `custom_settings_panel.py` — pure UI: widgets + getters + `_collect_settings_config`; validation/parsing methods are thin delegators to `SettingsService`. Deleted dead `getEbenenState` (referenced never-created `self.expBox`, no callers).
+- [x] `tree_view_panel.py` — UI: manipulates the `ttk.Treeview` widget; logic delegated to `QueueService` (`_collect_queue_item_from_row`, validations), messaging via `dialogs`. No standalone logic.
+- [x] `instruction_panel.py` — static UI only, no logic.
 
 ### F.4 Enforce the boundary
 - [x] Add import-safety test (`tests/unit/logic/test_rexview_import_safety.py`): `app/logic/rexview/*` imports with no tkinter, and source files contain no `import tkinter`.
