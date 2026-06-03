@@ -133,7 +133,7 @@ class QueueService:
         errors = []
         warnings = []
         
-        available_range = last_slice - first_slice
+        available_range = last_slice - first_slice + 1
         
         if num_slices <= 0:
             errors.append("num_slices must be positive")
