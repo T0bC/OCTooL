@@ -41,7 +41,7 @@ Status: **logic extracted and panels moved; final view-layer cleanup (Phase F) o
 Audit found stale pure-logic methods and ad-hoc dialogs still in the view layer.
 
 ### F.1 Shared dialog helper
-- [ ] Create `app/view/shared/dialogs.py` (`show_error`/`show_info` reusing root via `parent=`).
+- [x] Create `app/view/shared/dialogs.py` (`show_error`/`show_info`/`show_warning` reusing root via `parent=`).
 
 ### F.2 `pick_files_panel.py` (reference cleanup)
 
@@ -54,9 +54,10 @@ Audit found stale pure-logic methods and ad-hoc dialogs still in the view layer.
 | `_collect_oct_files`, `_build_entries_for_file` | — | Correct thin delegators | Keep |
 | `globalPicker`, `globalPickerThread`, progress popups, `breakAll` | — | UI-only | Keep |
 
-- [ ] Delete `parse_metadata_file` and `handle_metadata_parsing` (verify no callers first).
-- [ ] Replace dialog calls (lines 133, 167, 259) with `dialogs.show_error/show_info(self.root, ...)`.
-- [ ] Run `pytest tests/unit/logic/test_rexview_file_discovery.py` + GUI smoke test.
+- [x] Delete `parse_metadata_file` and `handle_metadata_parsing` (verified no callers).
+- [x] Replace dialog calls with `dialogs.show_error/show_info(self.root, ...)`.
+- [x] Migrate `tree_view_panel.py` messageboxes to `dialogs`.
+- [x] All tests pass (`pytest tests/`).
 
 ### F.3 Audit remaining panels (per-panel checklist in REFACTOR-PLAN.md)
 - [ ] `execution_panel.py`
@@ -67,8 +68,11 @@ Audit found stale pure-logic methods and ad-hoc dialogs still in the view layer.
 - [ ] `instruction_panel.py` (expected: no logic)
 
 ### F.4 Enforce the boundary
-- [ ] Add import-safety test: `app/logic/rexview/*` imports with no tkinter display.
-- [ ] (Optional) test asserting `app/logic/**` contains no `import tkinter`.
+- [x] Add import-safety test (`tests/unit/logic/test_rexview_import_safety.py`): `app/logic/rexview/*` imports with no tkinter, and source files contain no `import tkinter`.
+
+### F.5 Robustness fixes (added during Phase F)
+- [x] Global Tk exception handler: `install_tk_exception_handler(root)` in `utils/error_handler.py`, wired in `MainGui.__init__` so undecorated callbacks/lambdas surface a popup + log instead of failing silently.
+- [x] Fixed AppContext key collision: RexView image keys namespaced to `rex_image`, AnnoLyze to `anno_image` (CarlQuant already used `carl_*`). This fixed the `Show` button calling an AnnoLyze panel.
 
 ---
 
@@ -76,6 +80,6 @@ Audit found stale pure-logic methods and ad-hoc dialogs still in the view layer.
 
 - [ ] Fully functional (manual GUI verification)
 - [ ] 90%+ coverage on `app/logic/rexview/`
-- [ ] Fully separated — **blocked by Phase F** (stale logic in `pick_files_panel.py`)
+- [x] Fully separated — stale logic removed from `pick_files_panel.py`
 - [x] Standalone testable (`pytest tests/unit/logic/test_rexview_*.py` runs without tkinter)
-- [ ] No ad-hoc dialogs (all via `app/view/shared/dialogs.py`)
+- [x] No ad-hoc dialogs (all via `app/view/shared/dialogs.py`)

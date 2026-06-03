@@ -80,6 +80,20 @@ The **single pattern** every module follows.
 3. **Models cross the boundary, not primitives.** Services accept/return Pydantic models,
    not loose tuples or widget references.
 
+### AppContext Key Namespacing
+
+Panels and frames are registered in a single shared `AppContext` (`panels`/`frames` dicts).
+Because all modules share it, **keys must be module-prefixed to avoid collisions**:
+
+- RexView → `rex_*` (e.g. `rex_image`)
+- AnnoLyze → `anno_*` (e.g. `anno_image`)
+- CarlQuant → `carl_*` (e.g. `carl_image`)
+
+A bare key like `"image"` registered by two modules silently overwrites whichever loaded
+first, causing `get_panel()` to return the wrong panel at runtime (this caused the RexView
+`Show` button to call an AnnoLyze panel). When refactoring a module, give every
+`register_panel`/`register_frame`/`get_panel`/`get_frame` key the module prefix.
+
 ### Method Categorization (do this first for every panel)
 
 Label each panel method:
