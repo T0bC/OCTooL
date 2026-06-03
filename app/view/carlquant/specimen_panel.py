@@ -122,7 +122,7 @@ class specimenPanel:
             # Results are cleared after saving to reduce memory usage during batch processing
             # They are reloaded on-demand when user selects a specimen for viewing
             if not specimen_data.results and specimen_data.config:
-                from CarlQuant.data_io import DataLoader
+                from app.logic.carlquant import DataLoader
                 # Reload annotations (surface, lesion_depth, extraction_regions) from JSON
                 # Use load_annotations=True to load the full data now that user wants to view it
                 DataLoader.load_specimen_config(specimen_data, load_annotations=True)
