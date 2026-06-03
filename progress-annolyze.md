@@ -70,7 +70,8 @@ all edited panels `py_compile` clean.
 
 - [x] Relocate panels to `app/view/annolyze/`, update `annoLyzeTab.py` imports, remove
   old `AnnoLyze/` folder (mirrors the RexView end state).
-- [ ] Route view-layer messageboxes (`messagebox.*` in `config_manager.py`,
-  `metadata_panel.py`, `load_images_panel.py`, `key_binding_manager.py`,
-  `results_panel.py`) through `app/view/shared/dialogs.py`.
-- [ ] Manual GUI smoke test (load folder → annotate → keybindings → save/load config).
+- [x] Route view-layer messageboxes through `app/view/shared/dialogs.py`
+  (`config_manager.py`, `metadata_panel.py`, `load_images_panel.py`,
+  `key_binding_manager.py`, `results_panel.py`). Removed now-dead `messagebox`/`tk`/`csv`/
+  `Path` imports. 396 tests pass; AnnoLyze logic still 100% covered.
+- [ ] Manual GUI smoke test (load folder → annotate → keybindings → save/load config) — user.
