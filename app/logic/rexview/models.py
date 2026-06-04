@@ -470,6 +470,29 @@ class FileMetadata(BaseModel):
         return direction_map.get(direction, self.dim_y)
 
 
+class ExportResult(BaseModel):
+    """
+    Result of exporting a single OCT file.
+
+    Designed to be small and picklable so it can be returned across process
+    boundaries from a parallel export worker.
+    """
+    file_path: str = Field(description="Full path to the source OCT file")
+    exported_files: List[str] = Field(
+        default_factory=list,
+        description="Paths to the exported image files (as strings)",
+    )
+    failed_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of slices that failed to export",
+    )
+    error: Optional[str] = Field(
+        default=None,
+        description="Error message if the export failed entirely",
+    )
+
+
 class ExportSettings(BaseModel):
     """
     Export settings parsed from a sidecar metadata file.
