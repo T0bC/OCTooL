@@ -48,7 +48,7 @@ class HelpDialog:
     def _load_instructions(self):
         """Load instructions from the instructions.json file."""
         try:
-            json_path = resource_path('utils/instructions.json')
+            json_path = resource_path('assets/instructions.json')
             
             with open(json_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
