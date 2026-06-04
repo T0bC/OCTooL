@@ -161,13 +161,21 @@ prerequisites that unblock the rest; F–J are the moves; K is cleanup.
 - [x] Verified: shim + new-path imports succeed, all GUI modules `py_compile` clean,
       full `pytest` = 444 passed.
 
-### Step E — Move the shared view widgets
+### Step E — Move the shared view widgets — DONE
 For each of `tool_tip.py`, `status_bar.py`, `instruction_renderer.py`, `metadata_prompt.py`,
 `about_dialog.py`, `help_dialog.py` and `base/base_canvas_panel.py`:
-- [ ] Move file to `app/view/shared/`.
-- [ ] Update its internal imports to the new logic/view shared paths.
-- [ ] Leave a re-export shim at the old path (`utils/<file>.py`, `base/__init__.py`).
-- [ ] Verify app launches after each move.
+- [x] Moved each file to `app/view/shared/`.
+- [x] Updated internal imports to the new shared homes:
+      `instruction_renderer.py` → `resource_path` from `app.logic.shared.paths`;
+      `help_dialog.py`/`about_dialog.py` → `handle_errors` from `app.view.shared.error_handler`,
+      `resource_path` from `app.logic.shared.paths`;
+      `base_canvas_panel.py` → `Tooltip`/`handle_errors`/`InstructionRenderer` from `app.view.shared.*`,
+      `resource_path` from `app.logic.shared.paths`.
+      (`tool_tip.py`, `status_bar.py`, `metadata_prompt.py` had no internal `utils`/`base` imports.)
+- [x] Left re-export shims at the old paths (`utils/<file>.py`, and `base/__init__.py` for `BaseCanvasPanel`).
+- [x] Verified: shim + new-path imports succeed, GUI modules `py_compile` clean, full `pytest` = 444 passed.
+      Asset paths inside `instruction_renderer.py` (`utils/instructions.json`) and `base_canvas_panel.py`
+      remain unchanged — they move in Step F.
 
 ### Step F — Relocate assets and update references (D4)
 - [ ] Move `utils/instructions.json` → `assets/instructions.json`.
