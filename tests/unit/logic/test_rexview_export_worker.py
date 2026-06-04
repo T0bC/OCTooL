@@ -4,7 +4,6 @@ Unit tests for app/logic/rexview/export_worker.py
 Tests the top-level, picklable worker used for process-based parallel export.
 """
 import pickle
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
