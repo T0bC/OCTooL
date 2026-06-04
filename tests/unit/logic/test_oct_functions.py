@@ -1,5 +1,5 @@
 """
-Unit tests for utils/oct_functions.py
+Unit tests for app/logic/shared/oct_functions.py
 
 Tests pure functions that don't require GUI components.
 """
@@ -9,7 +9,7 @@ from PIL import Image
 from io import BytesIO
 from zipfile import ZipFile
 
-from utils import oct_functions as octF
+from app.logic.shared import oct_functions as octF
 
 
 class TestOctToGV:
