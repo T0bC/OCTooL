@@ -49,6 +49,15 @@ editor: visual
 -   Harmonized the Updates / Help / About buttons to use a consistent emoji font
 -   Enlarged and aligned the icons (including the About "i" symbol) for a uniform look across the header
 
+## Performance Improvements
+
+### Faster OCT File Detection (RexView)
+
+-   Sped up OCT file detection by parsing each scan's XML header only **once per file** instead of once per metadata field
+-   Previously, metadata extraction re-opened the OCT archive and re-parsed the entire `Header.xml` five times per file (one per value: `dataType`, `Serialnumber`, `dimX`, `dimY`, `dimZ`)
+-   Added `getXMLDict()` for single-pass header parsing; `getXMLvalue()` now delegates to it
+-   `FileDiscoveryService` now uses a single-pass `xml_dict_reader`, dramatically reducing detection time for folders with many OCT files
+
 ------------------------------------------------------------------------
 
 # Version 2026.2 (2026-04-01)
