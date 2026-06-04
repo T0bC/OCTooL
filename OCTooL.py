@@ -10,8 +10,9 @@ import os
 import traceback
 import tkinter as tk
 import multiprocessing
-import MainGui as mainGui
-from app.view.shared.error_handler import show_error_popup, log_error_to_file
+from app.view import MainGui as mainGui
+from app.view.shared.error_handler import show_error_popup
+from app.logic.shared.logging_utils import log_error_to_file
 
 if __name__ == '__main__':
     # CRITICAL: Required for PyInstaller executables on Windows
