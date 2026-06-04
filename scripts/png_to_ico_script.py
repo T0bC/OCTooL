@@ -9,8 +9,8 @@ from PIL import Image
 
 
 
-filename = r'icons\thumb_4.png'
+filename = r'icons\thumbnail_6.png'
 
 img = Image.open(filename)
 icon_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (255, 255)]
-img.save('icons/thumb_4.ico')
+img.save('icons/thumb_6.ico')
