@@ -103,10 +103,10 @@ class executionPanel:
 
         # Run the pool from a single helper thread so the UI stays responsive.
         threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
-        threadPoolExecutor.submit(self.mainRoutines, tasks)
+        threadPoolExecutor.submit(self.mainRoutines, tasks, config.worker_count)
 
     @handle_errors("executionPanel")
-    def mainRoutines(self, tasks):
+    def mainRoutines(self, tasks, worker_count=None):
         """
         Drive the ParallelExportCoordinator over the gathered tasks.
 
@@ -122,7 +122,9 @@ class executionPanel:
             # Schedule the TreeView update on the main thread.
             self.root.after(0, self._apply_result_status, result)
 
-        self.export_coordinator.run(tasks, progress_callback=on_result)
+        self.export_coordinator.run(
+            tasks, worker_count=worker_count, progress_callback=on_result
+        )
 
     def _apply_result_status(self, result):
         """Translate an ExportResult into a TreeView status (UI thread only)."""
