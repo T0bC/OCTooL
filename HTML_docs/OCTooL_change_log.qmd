@@ -36,6 +36,19 @@ editor: visual
 -   Accessible directly via in-app buttons
 -   Offline availability maintained for cached documentation
 
+## User Interface Fixes
+
+### About Dialog
+
+-   Fixed bottom action buttons (Changelog / Close) being partially cut off
+-   Added clickable links to the lab server (`dentlab.uni-leipzig.de`) and GitHub repository (`github.com/T0bC/OCTooL`)
+-   Added a DOI reference entry
+
+### Header Toolbar
+
+-   Harmonized the Updates / Help / About buttons to use a consistent emoji font
+-   Enlarged and aligned the icons (including the About "i" symbol) for a uniform look across the header
+
 ------------------------------------------------------------------------
 
 # Version 2026.2 (2026-04-01)
