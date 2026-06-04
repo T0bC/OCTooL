@@ -60,7 +60,7 @@ def insertScale(img, scaleSize, xmlDict, fontSize, imgSliceDir):
     y = img.size[1] - margin
 
     draw = ImageDraw.Draw(img)
-    font_path = resource_path("utils/fonts/LSANS.TTF")
+    font_path = resource_path("assets/fonts/LSANS.TTF")
     font = ImageFont.truetype(font_path, fontSize)
     draw.text((x, y), str(scaleSize) + ' \u00B5m', (255), font = font)
     draw.line((x, y + -10, x + lengthOfLine, y + -10), fill = 255, width=3)    # x1, y1, x2, y2
