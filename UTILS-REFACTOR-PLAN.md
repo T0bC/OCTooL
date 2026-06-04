@@ -111,11 +111,13 @@ OCTooL/
 > errors per `REFACTOR-PLAN.md`), and `resource_path` must come from the new pure
 > `app/logic/shared/paths.py`.
 
-> **`resource_path` depth fix (Step B):** the current implementation derives the project root
-> via `dirname(dirname(abspath(__file__)))` (2 levels, valid from `utils/`). When it moves to
-> `app/logic/shared/paths.py` (3 levels deep) the number of `dirname` calls **must** be
-> increased by one, or replaced with an anchor-based lookup. Verify both dev and PyInstaller
-> (`sys._MEIPASS`) paths after moving.
+> **`resource_path` depth fix (Step B — DONE):** the old implementation derived the project
+> root via `dirname(dirname(abspath(__file__)))` (2 levels, valid from `utils/`). In its new
+> home `app/logic/shared/paths.py` (3 packages deep) the project root is **4** `dirname` calls
+> up (`paths.py` -> `shared` -> `logic` -> `app` -> root). Implemented with 4 nested
+> `os.path.dirname` calls. Verified in dev: `resource_path('icons/thumb_4.ico')` resolves to
+> the project root. PyInstaller (`sys._MEIPASS`) branch unchanged and still to be verified in a
+> bundled build.
 
 ---
 
@@ -124,18 +126,18 @@ OCTooL/
 Each step is independently shippable and ends green (`pytest` + app launches). Steps A–E are
 prerequisites that unblock the rest; F–J are the moves; K is cleanup.
 
-### Step A — Scaffold the new homes (no behavior change)
-- [ ] Create `assets/` and `scripts/` directories.
-- [ ] Confirm `app/view/shared/__init__.py` and `app/logic/shared/__init__.py` exist.
-- [ ] No imports change yet. Commit as pure scaffolding.
+### Step A — Scaffold the new homes (no behavior change) — DONE
+- [x] Create `assets/` and `scripts/` directories (each with a `.gitkeep`).
+- [x] Confirm `app/view/shared/__init__.py` and `app/logic/shared/__init__.py` exist (both present).
+- [x] No imports change yet. Pure scaffolding.
 
-### Step B — Extract pure helpers into `app/logic/shared`
-- [ ] Create `app/logic/shared/paths.py` with `resource_path` (fix dirname depth).
-- [ ] Create `app/logic/shared/logging_utils.py` with `log_error_to_file`.
-- [ ] In `utils/app_context.py` and `utils/error_handler.py`, **re-export** from the new
+### Step B — Extract pure helpers into `app/logic/shared` — DONE
+- [x] Create `app/logic/shared/paths.py` with `resource_path` (dirname depth fixed: 4 levels up).
+- [x] Create `app/logic/shared/logging_utils.py` with `log_error_to_file` (writes to project-root `logs/`).
+- [x] In `utils/app_context.py` and `utils/error_handler.py`, **re-export** from the new
       modules (shim direction: old path → new module) so existing imports still work.
-- [ ] Point the `logs/` directory at the project root, not the module dir.
-- [ ] Verify: `python -c "import app.logic.shared.paths, app.logic.shared.logging_utils"`.
+- [x] Point the `logs/` directory at the project root, not the module dir (added `logs/` to `.gitignore`).
+- [x] Verify: `python -c "import app.logic.shared.paths, app.logic.shared.logging_utils"` (passed; full `pytest` = 444 passed).
 
 ### Step C — Make `app/logic/shared/oct_functions.py` the real implementation
 - [ ] Move the full body of `utils/oct_functions.py` into `app/logic/shared/oct_functions.py`,
@@ -209,16 +211,21 @@ For each of `tool_tip.py`, `status_bar.py`, `instruction_renderer.py`, `metadata
 
 ## Verification Commands (run after each step)
 
-```bash
+Use the project conda interpreter for every Python/pytest invocation:
+
+```pwsh
 # logic stays tkinter-free
-python -c "import app.logic.shared.oct_functions; import app.logic.shared.paths; import app.logic.shared.logging_utils"
+& "C:\Users\meissnerto\AppData\Local\miniconda3\envs\octool\python.exe" -c "import app.logic.shared.oct_functions; import app.logic.shared.paths; import app.logic.shared.logging_utils"
 
 # tests
-pytest tests/unit -q
-pytest -q
+& "C:\Users\meissnerto\AppData\Local\miniconda3\envs\octool\python.exe" -m pytest tests/unit -q
+& "C:\Users\meissnerto\AppData\Local\miniconda3\envs\octool\python.exe" -m pytest tests/ -q
+
+# with coverage (example)
+& "C:\Users\meissnerto\AppData\Local\miniconda3\envs\octool\python.exe" -m pytest tests/ --cov=app.logic.annolyze --cov-report=term-missing
 
 # app launches
-python OCTooL.py
+& "C:\Users\meissnerto\AppData\Local\miniconda3\envs\octool\python.exe" OCTooL.py
 
 # no stale imports (Step H/K gate)
 # (use the IDE grep tool for: 'from utils', 'import utils', 'from base', 'import base')
