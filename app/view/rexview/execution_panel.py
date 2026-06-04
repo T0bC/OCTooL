@@ -117,7 +117,7 @@ class executionPanel:
                         _item, 'Status', f"exp: {progress.current_slice}"
                     )
 
-            exported_files = self.export_service.run_export(
+            export_result = self.export_service.run_export(
                 file_path, params, config, progress_callback=progress_callback
             )
 
@@ -125,7 +125,7 @@ class executionPanel:
             if self.export_service.is_cancelled:
                 self.treeView.setValueFromRow(item, 'Status', 'Done')
             else:
-                failed_count = params.num_slices - len(exported_files)
+                failed_count = export_result.failed_count
                 if failed_count > 0:
                     self.treeView.setValueFromRow(item, 'Status', f'Done ({failed_count} failed)')
                 else:
