@@ -9,9 +9,9 @@ Created on Sat Oct 10 18:54:40 2020
 import tkinter as tk
 from tkinter import ttk
 from ttkbootstrap import Style
-import rexViewTab
-import annoLyzeTab
-import carlQuantTab
+from app.view.rexview import rexViewTab
+from app.view.annolyze import annoLyzeTab
+from app.view.carlquant import carlQuantTab
 from app.view.shared.app_context import AppContext
 from app.logic.shared.paths import resource_path
 from app.view.shared.status_bar import StatusBar
