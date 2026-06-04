@@ -27,7 +27,7 @@ class pickFilesPanel:
         self.globalSettings = self.context.get_panel("global_settings")
 
         # Initialize FileDiscoveryService with XML reader
-        self._file_discovery_service = FileDiscoveryService(xml_reader=octF.getXMLvalue)
+        self._file_discovery_service = FileDiscoveryService(xml_dict_reader=octF.getXMLDict)
 
         # Add buttons and instructions here
         self.pickFolderToolTip = 'Choose a folder whichs contains at least one OCT file. ' \
