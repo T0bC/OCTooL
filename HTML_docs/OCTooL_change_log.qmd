@@ -10,6 +10,23 @@ format:
 editor: visual
 ---
 
+# Version 2026.4 (2026-06-04)
+
+## User Experience
+
+### Help Dialog
+
+-   Added "Report an Issue" button to the help dialog, linking directly to the GitHub issues page
+
+### GitHub Issue Templates
+
+-   Updated bug report and feature request templates to reference OCTooL instead of AnStatR
+-   Added Windows version dropdown to bug reports
+-   Removed browser and session ID fields (not applicable for a locally-run desktop application)
+-   Improved date/time of occurrence field with clearer format guidance
+
+------------------------------------------------------------------------
+
 # Version 2026.3 (2026-06-04)
 
 ## Major Refactor & Architecture Restructure
