@@ -196,18 +196,27 @@ For each of `tool_tip.py`, `status_bar.py`, `instruction_renderer.py`, `metadata
 - [x] Moved `png_to_ico_script.py` → `scripts/png_to_ico_script.py`.
 - [x] Confirmed it is not imported anywhere (grep for `png_to_ico_script` = no results; standalone).
 
-### Step H — Migrate all callers off the shims
-- [ ] Find every remaining `from utils...`, `from base...`, and `import utils...`.
-- [ ] Repoint each to its `app.logic.shared.*` / `app.view.shared.*` home.
-- [ ] Update `tests/` imports (e.g. `from utils import oct_functions` → new path).
-- [ ] Run full `pytest`.
+### Step H — Migrate all callers off the shims — DONE
+- [x] Found and repointed every `from utils...` / `from base...` import across 28 files
+      (tabs, `MainGui.py`, `OCTooL.py`, and all `app/view/*` + `app/logic/rexview/*` modules)
+      to their `app.logic.shared.*` / `app.view.shared.*` homes:
+      `app_context.AppContext` → `app.view.shared.app_context`;
+      `app_context.resource_path` → `app.logic.shared.paths`;
+      `status_bar`/`error_handler`/`tool_tip`/`instruction_renderer`/`metadata_prompt`/
+      `help_dialog`/`about_dialog` → `app.view.shared.*`;
+      `oct_functions` → `app.logic.shared`; `base.BaseCanvasPanel` → `app.view.shared.base_canvas_panel`.
+- [x] `tests/` imports already pointed at new paths (only `test_oct_functions.py`, updated in Step C).
+- [x] Verified: grep for `^from (utils|base)` / `^import (utils|base)` = no results; full `pytest` = 444 passed.
 
-### Step I — Move root tab files into their module view folders (D2)
-- [ ] Move `rexViewTab.py` → `app/view/rexview/rexViewTab.py`.
-- [ ] Move `annoLyzeTab.py` → `app/view/annolyze/annoLyzeTab.py`.
-- [ ] Move `carlQuantTab.py` → `app/view/carlquant/carlQuantTab.py`.
-- [ ] Update each tab's internal imports.
-- [ ] Leave a root shim for each only if still referenced; otherwise update callers directly.
+### Step I — Move root tab files into their module view folders (D2) — DONE
+- [x] Moved `rexViewTab.py` → `app/view/rexview/rexViewTab.py`.
+- [x] Moved `annoLyzeTab.py` → `app/view/annolyze/annoLyzeTab.py`.
+- [x] Moved `carlQuantTab.py` → `app/view/carlquant/carlQuantTab.py`.
+- [x] No internal import changes needed — the tabs already use absolute `app.view.*` imports.
+- [x] No root shims: `MainGui.py` was the only referencer; updated its imports to
+      `from app.view.<module> import <Tab>` (preserving `<Tab>.addContent` usage).
+- [x] Verified: tabs + `MainGui.py` + `OCTooL.py` `py_compile` clean, tab modules import OK,
+      full `pytest` = 444 passed.
 
 ### Step J — Move `MainGui.py` into `app/view` (D2)
 - [ ] Move `MainGui.py` → `app/view/MainGui.py`.
