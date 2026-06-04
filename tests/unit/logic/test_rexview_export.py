@@ -343,6 +343,92 @@ class TestAddExifMetadata:
         assert 0x9286 in exif
 
 
+class TestRunExportPerformance:
+    """Step 1 performance guarantees for ExportService.run_export."""
+
+    @pytest.fixture
+    def service(self):
+        return ExportService()
+
+    @pytest.fixture
+    def params(self, tmp_path):
+        return SliceExportParams(
+            file_path=str(tmp_path / 'scan.oct'),
+            name='TestScan',
+            first_slice=1,
+            last_slice=3,
+            num_slices=3,
+            slice_direction='XZ',
+            db_min=20,
+            db_max=80,
+            refractive_index=1.0,
+            dispersion=('None', '0'),
+        )
+
+    @pytest.fixture
+    def config(self):
+        # scale enabled so process_slice would historically rebuild the dict
+        return ExportConfig(resize_enabled=False, scale_enabled=True)
+
+    def _patch_pipeline(self, sample_xml_dict):
+        """Patch the heavy octF entry points used by run_export.
+
+        Returns a context-manager-friendly tuple of patchers the caller starts.
+        """
+        stack = np.zeros((3, 8, 8), dtype=np.uint8)
+        patchers = [
+            patch('app.logic.rexview.export_service.octF.unzipOCTData', return_value=MagicMock()),
+            patch('app.logic.rexview.export_service.octF.readXMLContent', return_value=MagicMock()),
+            patch('app.logic.rexview.export_service.octF.getXMLAttributes', return_value=sample_xml_dict),
+            patch('app.logic.rexview.export_service.octF.createImageFromRaw', return_value=stack),
+            patch('app.logic.rexview.export_service.octF.insertScale', side_effect=lambda **kw: kw['img']),
+            patch('app.logic.rexview.export_service.octF.createVideoImageFromRaw',
+                  return_value=np.zeros((4, 4, 3), dtype=np.uint8)),
+        ]
+        return patchers
+
+    @pytest.mark.unit
+    def test_run_export_does_not_gc_per_slice(self, service, params, config, sample_xml_dict):
+        """GIVEN a multi-slice export, WHEN run_export runs, THEN gc.collect runs at most once."""
+        patchers = self._patch_pipeline(sample_xml_dict)
+        with patch('app.logic.rexview.export_service.gc') as mock_gc:
+            for p in patchers:
+                p.start()
+            try:
+                service.run_export(params.file_path, params, config)
+            finally:
+                for p in patchers:
+                    p.stop()
+
+        assert mock_gc.collect.call_count <= 1
+
+    @pytest.mark.unit
+    def test_run_export_builds_xml_dict_once(self, service, params, config, sample_xml_dict):
+        """GIVEN a multi-slice export, WHEN run_export runs, THEN to_xml_dict is built once."""
+        from app.logic.shared.models import OCTMetadata as _Meta
+
+        real_meta = _Meta.from_xml_dict(sample_xml_dict)
+        spy = Mock(side_effect=real_meta.to_xml_dict)
+
+        patchers = self._patch_pipeline(sample_xml_dict)
+        meta_patch = patch(
+            'app.logic.rexview.export_service.OCTMetadata.from_xml_dict',
+            return_value=real_meta,
+        )
+        with patch.object(real_meta, 'to_xml_dict', spy):
+            meta_patch.start()
+            for p in patchers:
+                p.start()
+            try:
+                service.run_export(params.file_path, params, config)
+            finally:
+                for p in patchers:
+                    p.stop()
+                meta_patch.stop()
+
+        assert spy.call_count == 1
+
+
 class TestExportSingleSlice:
     """Tests for ExportService.export_single_slice method."""
     
