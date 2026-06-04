@@ -11,11 +11,11 @@ Shows tab-specific quick guides and provides access to full documentation.
 
 import tkinter as tk
 from tkinter import ttk
-import webbrowser
-import os
 import json
 from app.view.shared.error_handler import handle_errors
 from app.logic.shared.paths import resource_path
+from app.logic.shared.doc_links import open_doc
+from app.logic.shared.app_config import MANUAL_URL
 
 
 class HelpDialog:
@@ -204,32 +204,17 @@ class HelpDialog:
     
     @handle_errors("HelpDialog.open_documentation")
     def open_documentation(self):
-        """Open the full HTML documentation in the default browser."""
-        # Try to find the documentation file using resource_path
-        doc_alternatives = [
-            'HTML_docs/OCTooL_MANUAL.html',  # Primary location
+        """Open the manual: server URL first, bundled HTML as offline fallback."""
+        local_alternatives = [
+            'HTML_docs/OCTooL_MANUAL.html',  # Primary local location
             'OCTooL_MANUAL.html',
             'documentation.html',
         ]
-        
-        # Try to find the documentation file
-        found_doc = None
-        for doc_path in doc_alternatives:
-            try:
-                test_path = resource_path(doc_path)
-                if os.path.exists(test_path):
-                    found_doc = test_path
-                    break
-            except Exception:
-                continue
-        
-        if found_doc:
-            # Convert to absolute path and use file:// protocol
-            abs_path = os.path.abspath(found_doc)
-            webbrowser.open('file://' + abs_path)
-        else:
+
+        if not open_doc(MANUAL_URL, local_alternatives):
             tk.messagebox.showwarning(
-                title='Documentation Not Found',
-                message='Could not find OCTooL_MANUAL.html\n\n'
-                        'Please ensure the HTML_docs folder is included in the distribution.'
+                title='Documentation Not Available',
+                message='Could not reach the online manual and no local copy '
+                        'was found.\n\nCheck your internet connection or ensure '
+                        'the HTML_docs folder is included in the distribution.'
             )
