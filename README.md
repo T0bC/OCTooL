@@ -196,7 +196,7 @@ pip install pyinstaller
 
 The application uses a spec file (`OCTooL.spec`) that contains all build configurations, including:
 
-- Icon file location (`icons/thumb_4.ico`)
+- Icon file location (`icons/thumb_6.ico`)
 - Data files (icons, fonts, documentation)
 - Build options and optimizations
 
