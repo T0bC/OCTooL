@@ -12,8 +12,10 @@ from app.logic.rexview.models import (
     QueueItem,
     FileMetadata,
     ExportSettings,
+    ExportResult,
 )
 from app.logic.rexview.export_service import ExportService
+from app.logic.rexview.export_worker import export_one_file
 from app.logic.rexview.image_service import ImageService
 from app.logic.rexview.settings_service import SettingsService, ValidationResult
 from app.logic.rexview.queue_service import QueueService
@@ -29,8 +31,10 @@ __all__ = [
     'QueueItem',
     'FileMetadata',
     'ExportSettings',
+    'ExportResult',
     # Services
     'ExportService',
+    'export_one_file',
     'ImageService',
     'SettingsService',
     'QueueService',
