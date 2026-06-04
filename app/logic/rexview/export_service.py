@@ -98,13 +98,15 @@ class ExportService:
         slices_to_load: np.ndarray,
         sel_data_type: str,
         progress_callback: Optional[Callable[[str], None]] = None,
+        xml_dict: Optional[dict] = None,
     ) -> np.ndarray:
         """
         Load and process the image stack from the OCT archive.
         
         This wraps oct_functions.createImageFromRaw with proper parameters.
         """
-        xml_dict = metadata.to_xml_dict()
+        if xml_dict is None:
+            xml_dict = metadata.to_xml_dict()
         
         return octF.createImageFromRaw(
             xmlDict=xml_dict,
@@ -129,6 +131,7 @@ class ExportService:
         params: SliceExportParams,
         config: ExportConfig,
         metadata: OCTMetadata,
+        xml_dict: Optional[dict] = None,
     ) -> Image.Image:
         """
         Process a single slice from the image stack.
@@ -179,7 +182,8 @@ class ExportService:
         
         # Add scale bar if enabled
         if config.scale_enabled:
-            xml_dict = metadata.to_xml_dict()
+            if xml_dict is None:
+                xml_dict = metadata.to_xml_dict()
             pil_img = octF.insertScale(
                 img=pil_img,
                 scaleSize=config.scale_length_um,
@@ -253,6 +257,7 @@ class ExportService:
         metadata: OCTMetadata,
         params: SliceExportParams,
         export_dir: Path,
+        xml_dict: Optional[dict] = None,
     ) -> Optional[Path]:
         """
         Export the video/preview image from the OCT file.
@@ -260,7 +265,8 @@ class ExportService:
         Returns the path to the exported image, or None if not available.
         """
         try:
-            xml_dict = metadata.to_xml_dict()
+            if xml_dict is None:
+                xml_dict = metadata.to_xml_dict()
             video_img_array = octF.createVideoImageFromRaw(
                 xmlDict=xml_dict,
                 archive=archive,
@@ -302,6 +308,9 @@ class ExportService:
         xml_content = octF.readXMLContent(archive, 'Header.xml', 'xml')
         xml_dict = octF.getXMLAttributes(xml_content)
         metadata = OCTMetadata.from_xml_dict(xml_dict)
+        # Build the xmlDict representation once and reuse it across the pipeline
+        # instead of rebuilding it per slice / per stage.
+        meta_xml_dict = metadata.to_xml_dict()
         
         try:
             # Prepare export
@@ -321,6 +330,7 @@ class ExportService:
                 slices_to_load=prep['slices_to_load'],
                 sel_data_type=prep['sel_data_type'],
                 progress_callback=load_callback,
+                xml_dict=meta_xml_dict,
             )
             
             # Process and export each slice
@@ -340,6 +350,7 @@ class ExportService:
                         params=params,
                         config=config,
                         metadata=metadata,
+                        xml_dict=meta_xml_dict,
                     )
                     
                     # Calculate DPI and EXIF
@@ -363,15 +374,16 @@ class ExportService:
                             status=f"Exported: {idx + 1}/{total_slices}",
                         ))
                     
-                    gc.collect()
-                    
                 except Exception:
                     traceback.print_exc()
                     continue  # Continue with other slices
             
             # Export video image
-            self.export_video_image(archive, metadata, params, prep['export_dir'])
+            self.export_video_image(
+                archive, metadata, params, prep['export_dir'], xml_dict=meta_xml_dict
+            )
             
+            # Single collection at the end of the file, not per slice.
             gc.collect()
         finally:
             archive.close()
