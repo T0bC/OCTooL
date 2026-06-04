@@ -18,6 +18,8 @@ from app.view.shared.status_bar import StatusBar
 from app.view.shared.error_handler import handle_errors, install_tk_exception_handler
 from app.view.shared.help_dialog import HelpDialog
 from app.view.shared.about_dialog import AboutDialog
+from app.logic.shared.app_config import VERSION_DISPLAY
+from app.logic.shared.update_checker import check_for_updates_async, check_for_updates_sync
 
 
 class MainGui:
@@ -42,7 +44,7 @@ class MainGui:
         self.context = AppContext()
         self.context.root = self.mainWin
 
-        self.version = ' [v. 2026.2]'
+        self.version = VERSION_DISPLAY
         self.mainWin.title(str('OCTooL' + self.version))
         self.pathToFolder = None
         self.mainWin['padx'] = 5
