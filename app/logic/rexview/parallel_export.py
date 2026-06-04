@@ -35,6 +35,8 @@ class ParallelExportCoordinator:
         executor_factory: Callable[..., object] = ProcessPoolExecutor,
         cpu_count: Optional[int] = None,
         max_workers_cap: Optional[int] = None,
+        available_memory_gb: Optional[float] = None,
+        gb_per_worker: Optional[float] = None,
     ):
         """
         Args:
@@ -43,11 +45,18 @@ class ParallelExportCoordinator:
                 a ``submit`` method (defaults to ``ProcessPoolExecutor``).
             cpu_count: Override for the detected CPU count (mainly for tests).
             max_workers_cap: Hard cap on worker processes.
+            available_memory_gb: Optional available RAM budget in GiB. When given
+                together with ``gb_per_worker``, the worker count is additionally
+                capped so the pool does not exhaust memory (raw-spectral exports
+                hold large arrays per process).
+            gb_per_worker: Estimated peak RAM per worker process in GiB.
         """
         self._worker_fn = worker_fn
         self._executor_factory = executor_factory
         self._cpu_count = cpu_count
         self._max_workers_cap = max_workers_cap or self.DEFAULT_MAX_WORKERS_CAP
+        self._available_memory_gb = available_memory_gb
+        self._gb_per_worker = gb_per_worker
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -79,6 +88,9 @@ class ParallelExportCoordinator:
         bounded = min(base, self._max_workers_cap)
         if queue_len > 0:
             bounded = min(bounded, queue_len)
+        if self._available_memory_gb is not None and self._gb_per_worker:
+            mem_workers = int(self._available_memory_gb // self._gb_per_worker)
+            bounded = min(bounded, mem_workers)
         return max(1, bounded)
 
     def run(
