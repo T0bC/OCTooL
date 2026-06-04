@@ -72,53 +72,44 @@ Each step ends green and is independently shippable. Verify after each with:
 ```
 
 ### Step 1 — Decide the coverage policy (config, no new tests)
-- [ ] Add a coverage gate scoped to logic in `pyproject.toml`, e.g. run CI/dev coverage with
-      `--cov=app.logic` (the meaningful gate) and keep `--cov=app` available for the full picture.
-- [ ] Optionally add `[tool.coverage.report] omit` entries for `app/view/*` when computing the
-      gate, OR document that the gate is `--cov=app.logic`.
-- [ ] (Optional) add `fail_under = 90` under `[tool.coverage.report]` once logic gaps are closed.
-- [ ] No behavior change; this just makes the headline number reflect testable code.
+- [x] Documented the gate in `pyproject.toml`: `--cov=app.logic` is the meaningful gate,
+      `--cov=app` keeps the full picture.
+- [x] Documented (in the config comment) that the gate is `--cov=app.logic`.
+- [x] (Optional) `fail_under` intentionally skipped so `--cov=app` keeps working — see Step 7 note.
+- [x] No behavior change; just makes the headline number reflect testable code.
 
 ### Step 2 — Close the cheap `shared` + carlquant gaps (high value, low effort)
-- [ ] `tests/unit/logic/test_logging_utils.py`: call `log_error_to_file(...)` with a monkeypatched
-      project root (or `tmp_path`) and assert the daily log file is created with the expected
-      header/traceback content. Covers `logging_utils.py` (0% → ~100%).
-- [ ] `tests/unit/logic/test_carlquant_annotation_colors.py`: exercise the color lookup/branches
-      at lines 64-70, 83 (76% → ≥ 95%).
-- [ ] Extend `test_carlquant_interpolation.py` for the missing edges (159, 230-233).
-- [ ] Run `--cov=app.logic.shared --cov=app.logic.carlquant`.
+- [x] `tests/unit/logic/test_logging_utils.py` added → `logging_utils.py` **100%**.
+- [x] `tests/unit/logic/test_carlquant_annotation_colors.py` added → `annotation_colors.py` **100%**.
+- [x] Extended `test_carlquant_interpolation.py` (adjacent keyframes + optional point2) → **100%**.
+- [x] Verified.
 
 ### Step 3 — carlquant `data_io` round-trip tests (biggest logic gap: 243 missing)
-- [ ] Add `tests/unit/logic/test_carlquant_data_io.py` using `tmp_path`:
-      - `DataSaver` writes JSON + Excel (openpyxl) → `DataLoader` reads them back → assert
-        round-trip equality for `Specimen`/`SliceResult`/`RegionStats`/`LesionDepth`/`Surface`.
-      - cover the load/save error branches (missing file, malformed JSON, empty workbook).
-- [ ] Target the large missing ranges (71-208, 218-371, 508-629) via realistic fixtures.
-- [ ] `data_io.py` 37% → ≥ 75%.
+- [x] Added `tests/unit/logic/test_carlquant_data_io.py` using `tmp_path`:
+      JSON config + annotations + Excel results round-trip, image-stack discovery,
+      annotated-image rendering, and the error/fallback branches (missing/malformed/legacy).
+- [x] `data_io.py` 37% → **84%** (target ≥ 75%).
 
 ### Step 4 — carlquant `carl_quant_core` numeric branches (138 missing)
-- [ ] Add focused tests for the fitting/detection helpers (`fit_exp2_to_profile`,
-      `detect_depth_sigmoid_fit`, spline smoothing) with small synthetic profiles.
-- [ ] Cover the guarded error/fallback branches (empty input, non-convergence) rather than every
-      numeric line. 76% → ≥ 85%.
-- [ ] Mark any genuinely slow fits with `@pytest.mark.slow`.
+- [x] Added `tests/unit/logic/test_carlquant_core.py` for the fitting/detection helpers
+      (`fit_exp2_to_profile`, `detect_depth_sigmoid_fit`, spline smoothing, `knee_pt`,
+      `compute_stable_combined_depth` all 4 cases, `process_slice_parallel`).
+- [x] Covered the guarded error/fallback branches. 76% → **88%** (target ≥ 85%).
+- [x] Synthetic profiles run fast; no `@pytest.mark.slow` needed.
 
 ### Step 5 — `oct_functions` testable paths + pragma the heavy raw path
-- [ ] Cover the small helper branches still missing (151-152, 163-164, 167-170, 221-222, 249-252).
-- [ ] For `createImageFromRaw` / `createVideoImageFromRaw` (309-504): either
-      (a) add a tiny synthetic `.oct`-like zip fixture exercising the **Processed** branch, or
-      (b) `# pragma: no cover` the raw-spectral FFT path that needs real instrument data, with a
-      comment pointing to the integration test that exercises it on real files.
-- [ ] 55% → ≥ 75%.
+- [x] Covered the small helper branches via a malformed-header test (151-152, 163-164,
+      221-222, 249-252). 167-170 is the unused `safe_get_attr` helper (left uncovered).
+- [x] Added synthetic-zip tests for the **Processed** branch of `createImageFromRaw` and for
+      `createVideoImageFromRaw`, plus `octToGV_legacy`; and `# pragma: no cover` on the
+      raw-spectral FFT path (needs real instrument data).
+- [x] 55% → **98%** (target ≥ 75%).
 
 ### Step 6 — View layer: import-smoke tests only (cheap regression guard)
-- [ ] Add `tests/unit/view/test_view_import_safety.py` mirroring the existing
-      `*_import_safety.py` pattern: import every `app/view/**` module and assert no import error
-      (no widget instantiation, no mainloop).
-- [ ] This raises many 0% files to "import covered", and—more importantly—catches the exact class
-      of breakage the refactor risked (bad import paths) on every CI run.
-- [ ] Explicitly **out of scope:** deep tkinter interaction tests. Document GUI behavior as
-      manually verified.
+- [x] Added `tests/unit/view/test_view_import_safety.py`: imports all 46 `app/view/**` modules
+      (no widget instantiation, no mainloop); skips on headless `TclError`.
+- [x] Raised many 0% view files to "import covered" and guards against bad import paths in CI.
+- [x] Deep tkinter interaction tests remain **out of scope** (manually verified).
 
 ### Step 7 — Re-baseline and document
 - [x] Re-run full `--cov=app` and `--cov=app.logic`; record the new numbers.
