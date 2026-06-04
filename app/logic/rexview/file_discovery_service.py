@@ -57,16 +57,25 @@ class FileDiscoveryService:
     # Default dispersion coefficient
     DEFAULT_DISPERSION = 20
     
-    def __init__(self, xml_reader: Optional[Callable[[str, str], str]] = None):
+    def __init__(
+        self,
+        xml_reader: Optional[Callable[[str, str], str]] = None,
+        xml_dict_reader: Optional[Callable[[str], Dict[str, Any]]] = None,
+    ):
         """
         Initialize FileDiscoveryService.
         
         Args:
-            xml_reader: Optional callable to read XML values from OCT files.
+            xml_reader: Optional callable to read a single XML value from OCT files.
                        Signature: (file_path: str, key: str) -> str
                        If not provided, metadata extraction will require explicit values.
+            xml_dict_reader: Optional callable to read the full XML metadata dict in
+                       a single pass. Signature: (file_path: str) -> dict.
+                       Preferred over xml_reader for performance, since it parses the
+                       OCT header only once per file instead of once per key.
         """
         self._xml_reader = xml_reader
+        self._xml_dict_reader = xml_dict_reader
     
     def scan_directory(
         self,
@@ -193,8 +202,16 @@ class FileDiscoveryService:
         file_path = Path(file_path)
         file_name = file_path.stem
         
-        # Use xml_reader if available
-        if self._xml_reader is not None:
+        # Prefer the single-pass dict reader: it parses the OCT header only once
+        # per file instead of once per key, which is dramatically faster.
+        if self._xml_dict_reader is not None:
+            xml_dict = self._xml_dict_reader(str(file_path))
+            data_type = data_type or xml_dict.get('dataType')
+            serial_number = serial_number or xml_dict.get('Serialnumber')
+            dim_x = dim_x or int(xml_dict.get('dimX') or 1)
+            dim_y = dim_y or int(xml_dict.get('dimY') or 1)
+            dim_z = dim_z or int(xml_dict.get('dimZ') or 1)
+        elif self._xml_reader is not None:
             path_str = str(file_path)
             data_type = data_type or self._xml_reader(path_str, 'dataType')
             serial_number = serial_number or self._xml_reader(path_str, 'Serialnumber')
