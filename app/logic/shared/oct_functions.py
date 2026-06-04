@@ -104,7 +104,28 @@ def getXMLvalue(path: str, value: str)-> str:
         Data type as string.
 
     '''
-    return getXMLAttributes(readXMLContent(unzipOCTData(path), 'Header.xml', 'xml'))[value]
+    return getXMLDict(path)[value]
+
+
+def getXMLDict(path: str) -> dict:
+    '''
+    Returns the full OCT metadata dictionary parsed from the Header.xml.
+
+    Reads and parses the archive only once, which is far cheaper than calling
+    getXMLvalue repeatedly for individual keys (each of those calls would
+    re-open the archive and re-parse the entire XML header).
+
+    Parameters
+    ----------
+    path : str
+        Path to file.
+
+    Returns
+    -------
+    dict
+        Full metadata dictionary as produced by getXMLAttributes.
+    '''
+    return getXMLAttributes(readXMLContent(unzipOCTData(path), 'Header.xml', 'xml'))
 
 
 # %% Read XML Content
