@@ -192,6 +192,14 @@ class MainGui:
             padding=[20, 10]
         )
 
+        # Header tool buttons (Updates / Help / About) - consistent emoji font
+        # so the glyphs all render at the same, larger size.
+        self.style.configure(
+            "Header.secondary.TButton",
+            font=("Segoe UI Emoji", 11),
+            padding=[12, 5]
+        )
+
     @handle_errors("MainGui.create_colored_tab_buttons")
     def create_colored_tab_buttons(self):
         """Create colored buttons that act as tabs, plus Help and About buttons."""
@@ -256,8 +264,8 @@ class MainGui:
         # Check for updates button
         update_btn = ttk.Button(
             help_button_container,
-            text="⭯ Check for updates",
-            bootstyle="secondary",
+            text="🔄 Check for updates",
+            style="Header.secondary.TButton",
             command=self.onCheckForUpdates,
             takefocus=False
         )
@@ -267,7 +275,7 @@ class MainGui:
         help_btn = ttk.Button(
             help_button_container,
             text="❓ Help",
-            bootstyle="secondary",
+            style="Header.secondary.TButton",
             command=self.onHelp,
             takefocus=False
         )
@@ -277,7 +285,7 @@ class MainGui:
         about_btn = ttk.Button(
             help_button_container,
             text="ℹ️ About",
-            bootstyle="secondary",
+            style="Header.secondary.TButton",
             command=self.onAbout,
             takefocus=False
         )
