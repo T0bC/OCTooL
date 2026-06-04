@@ -8,12 +8,12 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-from utils import oct_functions as octF
+from app.logic.shared import oct_functions as octF
 from scipy import ndimage
 from PIL import Image, ImageTk
-from utils.tool_tip import Tooltip
-from utils.error_handler import handle_errors
-from utils.instruction_renderer import InstructionRenderer
+from app.view.shared.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
+from app.view.shared.instruction_renderer import InstructionRenderer
 from app.logic.rexview.image_service import ImageService
 from app.logic.rexview.models import ImageDisplayConfig
 
@@ -43,7 +43,7 @@ class imagePanel:
         self.canvas.bind("<Configure>", self.onResize)
 
         # Initialize instruction renderer for this canvas
-        from utils.app_context import resource_path
+        from app.logic.shared.paths import resource_path
         self.instruction_renderer = InstructionRenderer(self.canvas)
         self.instruction_renderer.set_logo(resource_path("icons/WBM_UL_RGB_digital_Path.png"))
         

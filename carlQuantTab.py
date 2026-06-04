@@ -7,7 +7,7 @@ Created on Fri Sep 26 13:58:13 2025
 
 import tkinter as tk
 from tkinter import ttk
-from utils.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors
 from app.view.carlquant.load_images_panel import loadImagePanel as loadImage
 from app.view.carlquant.settings_panel import settingsPanel as settingsPanel
 from app.view.carlquant.specimen_panel import specimenPanel as specimenPanel

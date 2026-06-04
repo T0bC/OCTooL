@@ -7,9 +7,9 @@ Created on Thu Aug 14 11:42:25 2025
 
 import tkinter as tk
 from tkinter import ttk
-from utils import oct_functions as octF
-from utils.tool_tip import Tooltip
-from utils.error_handler import handle_errors
+from app.logic.shared import oct_functions as octF
+from app.view.shared.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
 from tkinter import colorchooser
 import customtkinter as ctk
 from CTkColorPicker import AskColor

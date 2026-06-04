@@ -5,7 +5,7 @@ Created on Thu Aug 14 11:24:40 2025
 @author: Tobias Meissner
 """
 
-from utils.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors
 from tksheet import Sheet
 from app.logic.annolyze.display_service import DisplayService
 from app.view.shared import dialogs

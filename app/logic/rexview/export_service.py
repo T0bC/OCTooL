@@ -14,7 +14,7 @@ import traceback
 
 from app.logic.rexview.models import ExportConfig, SliceExportParams, ExportProgress
 from app.logic.shared.models import OCTMetadata
-from utils import oct_functions as octF
+from app.logic.shared import oct_functions as octF
 
 
 class ExportService:

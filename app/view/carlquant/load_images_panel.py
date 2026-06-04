@@ -8,9 +8,9 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from pathlib import Path
 from fnmatch import fnmatch
-from utils.error_handler import handle_errors
-from utils.metadata_prompt import prompt_for_metadata
-from utils.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
+from app.view.shared.metadata_prompt import prompt_for_metadata
+from app.view.shared.tool_tip import Tooltip
 from app.logic.carlquant import DataLoader, DataSaver
 from app.view.carlquant.analysis_runner import run_carl_quant
 import threading

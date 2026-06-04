@@ -7,13 +7,13 @@ Created on Thu Aug 14 11:13:52 2025
 
 import tkinter as tk
 from tkinter import ttk
-from utils.tool_tip import Tooltip
+from app.view.shared.tool_tip import Tooltip
 from PIL import Image, ImageTk, ImageDraw
-from utils.error_handler import handle_errors
-from utils.instruction_renderer import InstructionRenderer
+from app.view.shared.error_handler import handle_errors
+from app.view.shared.instruction_renderer import InstructionRenderer
 from pathlib import Path
 from datetime import datetime
-from base import BaseCanvasPanel
+from app.view.shared.base_canvas_panel import BaseCanvasPanel
 from app.logic.annolyze.annotation_service import AnnotationService
 from app.logic.annolyze.data_service import DataService
 

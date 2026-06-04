@@ -17,10 +17,10 @@ Created on Mon Sep 29 15:46:17 2025
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
-from utils.tool_tip import Tooltip
-from utils.error_handler import handle_errors
-from utils.instruction_renderer import InstructionRenderer
-from utils.metadata_prompt import ensure_metadata_set
+from app.view.shared.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
+from app.view.shared.instruction_renderer import InstructionRenderer
+from app.view.shared.metadata_prompt import ensure_metadata_set
 from app.logic.carlquant import DataSaver
 from app.logic.carlquant.interpolation import interpolate_region_coordinates, interpolate_air_coordinates
 from app.view.carlquant.annotation_renderer import (
@@ -32,7 +32,7 @@ from app.view.carlquant.annotation_renderer import (
     AIRAnnotationRenderer,
     RegionMarkerAnnotationRenderer
 )
-from base import BaseCanvasPanel
+from app.view.shared.base_canvas_panel import BaseCanvasPanel
 
 
 class image_viewer_panel(BaseCanvasPanel):

@@ -8,8 +8,8 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-from utils import oct_functions as octF
-from utils.tool_tip import Tooltip
+from app.logic.shared import oct_functions as octF
+from app.view.shared.tool_tip import Tooltip
 from app.logic.rexview.settings_service import SettingsService
 
 class customSettingsPanel:

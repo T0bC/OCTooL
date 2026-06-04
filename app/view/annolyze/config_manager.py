@@ -7,7 +7,7 @@ Created on Thu Aug 14 15:21:37 2025
 
 import os
 from tkinter import filedialog
-from utils.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors
 from app.view.annolyze.key_binding_manager import KeybindingManager
 from app.view.shared import dialogs
 from app.logic.annolyze.config_service import ConfigService

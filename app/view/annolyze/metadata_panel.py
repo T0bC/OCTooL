@@ -6,8 +6,8 @@ Created on Thu Aug 14 13:02:23 2025
 """
 
 from tkinter import ttk
-from utils.tool_tip import Tooltip
-from utils.error_handler import handle_errors
+from app.view.shared.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
 from app.view.annolyze.keyboard_layout_viewer import KeyboardLayoutViewer
 from app.view.shared import dialogs
 

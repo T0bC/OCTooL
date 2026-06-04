@@ -6,8 +6,8 @@ Created on Tue Feb 23 14:58:13 2021
 """
 import tkinter as tk
 from tkinter import ttk
-from utils.app_context import AppContext
-from utils.status_bar import StatusBar
+from app.view.shared.app_context import AppContext
+from app.view.shared.status_bar import StatusBar
 from app.view.rexview.tree_view_panel import treeViewPanel as table
 from app.view.rexview.pick_files_panel import pickFilesPanel as pickFile
 from app.view.rexview.global_settings_panel import globalSettingsPanel as globalSettings

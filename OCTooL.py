@@ -11,7 +11,7 @@ import traceback
 import tkinter as tk
 import multiprocessing
 import MainGui as mainGui
-from utils.error_handler import show_error_popup, log_error_to_file
+from app.view.shared.error_handler import show_error_popup, log_error_to_file
 
 if __name__ == '__main__':
     # CRITICAL: Required for PyInstaller executables on Windows

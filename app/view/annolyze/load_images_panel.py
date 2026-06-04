@@ -13,8 +13,8 @@ from fnmatch import fnmatch
 import re
 import json
 import csv
-from utils.tool_tip import Tooltip
-from utils.error_handler import handle_errors
+from app.view.shared.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
 from app.view.annolyze.data_io import DataLoader
 from app.view.shared import dialogs
 

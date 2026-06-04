@@ -5,7 +5,7 @@ Created on Fri Sep 12 09:18:04 2025
 @author: Tobias Meissner
 """
 
-from utils.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors
 from datetime import datetime
 from app.view.annolyze.undo_panel import UndoPanel
 from app.view.annolyze.data_io import DataSaver

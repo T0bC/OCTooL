@@ -7,8 +7,8 @@ Created on Fri Sep 26 14:23:35 2025
 
 from tkinter import ttk
 import tkinter as tk
-from utils.tool_tip import Tooltip
-from utils.error_handler import handle_errors
+from app.view.shared.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
 from app.logic.carlquant import DepthDetectionMethod
 
 class settingsPanel:

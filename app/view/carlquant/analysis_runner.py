@@ -14,7 +14,7 @@ import traceback
 from threading import Thread
 
 from app.view.carlquant.progress_dialog import ProgressDialog
-from utils.error_handler import show_error_popup, log_error_to_file
+from app.view.shared.error_handler import show_error_popup, log_error_to_file
 from app.logic.carlquant import AnalysisService
 
 

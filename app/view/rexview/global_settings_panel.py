@@ -8,7 +8,7 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-from utils.tool_tip import Tooltip
+from app.view.shared.tool_tip import Tooltip
 from app.logic.rexview.settings_service import SettingsService
 
 class globalSettingsPanel:

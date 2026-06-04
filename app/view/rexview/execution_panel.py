@@ -9,8 +9,8 @@ Created on Sat Oct 10 18:55:08 2020
 import tkinter as tk
 from tkinter import ttk
 from concurrent import futures
-from utils.tool_tip import Tooltip
-from utils.error_handler import handle_errors
+from app.view.shared.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
 
 # Import refactored logic components
 from app.logic.rexview import ExportConfig, SliceExportParams, ExportService

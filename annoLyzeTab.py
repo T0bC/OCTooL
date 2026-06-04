@@ -7,7 +7,7 @@ Created on Tue Feb 23 15:14:14 2021
 
 import tkinter as tk
 from tkinter import ttk
-from utils.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors
 from app.view.annolyze.load_images_panel import loadImagePanel as loadImage
 from app.view.annolyze.annotate_images_panel import annotatePanel as annotateImages
 from app.view.annolyze.results_panel import resultsPanel as resultsPanel

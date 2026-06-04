@@ -6,7 +6,7 @@ Created on Fri Sep 26 14:49:04 2025
 """
 
 from tksheet import Sheet
-from utils.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors
 
 STATIC_BG_COLOR = "#2b2b2b"
 STATIC_FG_COLOR = "#dcdcdc"

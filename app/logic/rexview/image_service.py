@@ -11,7 +11,7 @@ from scipy import ndimage
 
 from app.logic.rexview.models import ImageDisplayConfig
 from app.logic.shared.models import OCTMetadata
-from utils import oct_functions as octF
+from app.logic.shared import oct_functions as octF
 
 
 class ImageService:

@@ -5,7 +5,7 @@ Created on Fri Sep 12 11:50:18 2025
 @author: Tobias Meissner
 """
 
-from utils.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk

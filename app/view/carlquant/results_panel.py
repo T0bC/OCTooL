@@ -7,7 +7,7 @@ Created on Fri Sep 26 14:48:40 2025
 
 import tkinter as tk
 from tksheet import Sheet
-from utils.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors
 from app.logic.carlquant import RegionStats, Surface, LesionDepth, SliceResult, DataLoader
 from app.view.carlquant.ascan_viewer import AScanViewer
 from app.logic.carlquant.annotation_colors import ROW_HIGHLIGHT_NAVIGATION_COLOR, ROW_HIGHLIGHT_ASCAN_COLOR

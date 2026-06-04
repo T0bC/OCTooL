@@ -8,7 +8,7 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-from utils import oct_functions as octF
+from app.logic.shared import oct_functions as octF
 from app.logic.rexview import QueueService, QueueItem
 from app.view.shared import dialogs
 

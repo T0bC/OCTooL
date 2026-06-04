@@ -12,11 +12,12 @@ from ttkbootstrap import Style
 import rexViewTab
 import annoLyzeTab
 import carlQuantTab
-from utils.app_context import AppContext, resource_path
-from utils.status_bar import StatusBar
-from utils.error_handler import handle_errors, install_tk_exception_handler
-from utils.help_dialog import HelpDialog
-from utils.about_dialog import AboutDialog
+from app.view.shared.app_context import AppContext
+from app.logic.shared.paths import resource_path
+from app.view.shared.status_bar import StatusBar
+from app.view.shared.error_handler import handle_errors, install_tk_exception_handler
+from app.view.shared.help_dialog import HelpDialog
+from app.view.shared.about_dialog import AboutDialog
 
 
 class MainGui:

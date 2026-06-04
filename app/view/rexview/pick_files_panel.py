@@ -8,12 +8,12 @@ Created on Sat Oct 10 18:55:08 2020
 
 import tkinter as tk
 from tkinter import ttk
-from utils.tool_tip import Tooltip
+from app.view.shared.tool_tip import Tooltip
 from tkinter import filedialog
 from pathlib import Path
 from concurrent import futures
-from utils.error_handler import handle_errors
-from utils import oct_functions as octF
+from app.view.shared.error_handler import handle_errors
+from app.logic.shared import oct_functions as octF
 from app.logic.rexview import FileDiscoveryService
 from app.view.shared import dialogs
 
