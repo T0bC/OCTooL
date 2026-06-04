@@ -58,6 +58,14 @@ editor: visual
 -   Added `getXMLDict()` for single-pass header parsing; `getXMLvalue()` now delegates to it
 -   `FileDiscoveryService` now uses a single-pass `xml_dict_reader`, dramatically reducing detection time for folders with many OCT files
 
+### Parallel Export (RexView)
+
+-   Export now processes multiple OCT files **in parallel across CPU cores** instead of strictly one after another
+-   Each file is exported in its own worker process, which is well suited to the CPU-bound raw-spectral reconstruction (FFT, noise-floor, filtering)
+-   Worker count defaults to `CPU cores - 1` (leaving a core for the UI), bounded by the number of queued files, a hard cap, and an optional memory budget; it can be overridden via `ExportConfig.worker_count`
+-   Removed a per-slice `gc.collect()` and now build the XML metadata dictionary only once per file, both of which speed up every export regardless of parallelism
+-   Export status is reported per file (`queued` → `Done` / `Done (N failed)` / `Error`); UI updates are marshalled back to the main thread for thread safety
+
 ------------------------------------------------------------------------
 
 # Version 2026.2 (2026-04-01)
