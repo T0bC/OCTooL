@@ -7,8 +7,8 @@ a = Analysis(
     binaries=[],
     datas=[
         ('icons', 'icons'),
-        ('utils/fonts', 'utils/fonts'),
-        ('utils/instructions.json', 'utils'),
+        ('assets/fonts', 'assets/fonts'),
+        ('assets/instructions.json', 'assets'),
         ('HTML_docs/*.html', 'HTML_docs'),
         ('HTML_docs/images', 'HTML_docs/images'),
     ],
