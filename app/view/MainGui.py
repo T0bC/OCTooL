@@ -8,6 +8,7 @@ Created on Sat Oct 10 18:54:40 2020
 
 import tkinter as tk
 from tkinter import ttk
+import webbrowser
 from ttkbootstrap import Style
 from app.view.rexview import rexViewTab
 from app.view.annolyze import annoLyzeTab
@@ -18,7 +19,7 @@ from app.view.shared.status_bar import StatusBar
 from app.view.shared.error_handler import handle_errors, install_tk_exception_handler
 from app.view.shared.help_dialog import HelpDialog
 from app.view.shared.about_dialog import AboutDialog
-from app.logic.shared.app_config import VERSION_DISPLAY
+from app.logic.shared.app_config import VERSION_DISPLAY, SERVER_BASE_URL
 from app.logic.shared.update_checker import check_for_updates_async, check_for_updates_sync
 
 
@@ -131,6 +132,9 @@ class MainGui:
 
         self.mainWin.update_idletasks()  # Ensure layout is processed
         self.mainWin.deiconify()
+
+        # Silent background update check: only prompts if a newer version exists.
+        check_for_updates_async(self.mainWin, self._on_update_available)
 
     @handle_errors("MainGui.setup_tab_styles")
     def _setup_tab_styles(self):
@@ -249,6 +253,16 @@ class MainGui:
         help_button_container = ttk.Frame(self.tabBar)
         help_button_container.grid(row=0, column=2, sticky="e")
         
+        # Check for updates button
+        update_btn = ttk.Button(
+            help_button_container,
+            text="⭯ Check for updates",
+            bootstyle="secondary",
+            command=self.onCheckForUpdates,
+            takefocus=False
+        )
+        update_btn.grid(row=0, column=0, padx=(0, 2))
+
         # Help button
         help_btn = ttk.Button(
             help_button_container,
@@ -257,7 +271,7 @@ class MainGui:
             command=self.onHelp,
             takefocus=False
         )
-        help_btn.grid(row=0, column=0, padx=(0, 2))
+        help_btn.grid(row=0, column=1, padx=2)
         
         # About button
         about_btn = ttk.Button(
@@ -267,7 +281,7 @@ class MainGui:
             command=self.onAbout,
             takefocus=False
         )
-        about_btn.grid(row=0, column=1, padx=(2, 0))
+        about_btn.grid(row=0, column=2, padx=(2, 0))
 
     @handle_errors("MainGui.switch_tab")
     def switch_tab(self, tab_index):
@@ -347,6 +361,42 @@ class MainGui:
         """Show About dialog with dark theme."""
         about_dialog = AboutDialog(self.mainWin, self.style, self.version)
         about_dialog.show()
+
+    @handle_errors("MainGui.onCheckForUpdates")
+    def onCheckForUpdates(self):
+        """Manual update check: always gives feedback (newer / up-to-date / error)."""
+        info = check_for_updates_sync()
+        if info.available:
+            self._on_update_available(info)
+        elif info.error:
+            tk.messagebox.showwarning(
+                title='Update Check Failed',
+                message='Could not check for updates.\n\n'
+                        f'{info.error}\n\nCheck your internet connection.'
+            )
+        else:
+            tk.messagebox.showinfo(
+                title='No Updates',
+                message=f'OCTooL{self.version} is up to date.'
+            )
+
+    @handle_errors("MainGui.on_update_available")
+    def _on_update_available(self, info):
+        """Show an 'update available' dialog and optionally open the download."""
+        message = (
+            f'A newer version of OCTooL is available.\n\n'
+            f'Installed:{self.version}\n'
+            f'Available:  [v. {info.latest_version}]\n'
+        )
+        if info.notes:
+            message += f'\n{info.notes}\n'
+        message += '\nOpen the download page now?'
+
+        if tk.messagebox.askyesno(title='Update Available', message=message):
+            if info.download_url:
+                webbrowser.open(info.download_url)
+            else:
+                webbrowser.open(SERVER_BASE_URL)
 
     @handle_errors("MainGui.attach_status_bar")
     def attach_status_bar(self, context):
