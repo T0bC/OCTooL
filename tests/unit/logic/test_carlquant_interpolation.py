@@ -146,3 +146,59 @@ class TestEdgeCases:
         InterpolationService.interpolate_air(configs, total_slices=3, update_func=update)
         assert configs[1].point1 == (50, 50)
         assert configs[1].point2 == (60, 60)
+
+    @pytest.mark.unit
+    def test_adjacent_keyframes_skip_interpolation(self):
+        """GIVEN adjacent keyframes (no gap), WHEN interpolating, THEN no slice is created between them."""
+        configs = {
+            0: _region(0, 0, keyframe=True),
+            1: _region(1, 100, keyframe=True),  # adjacent to slice 0 -> nothing to interpolate
+            3: _region(3, 300, keyframe=True),
+        }
+        result = _collect(configs, total_slices=4)
+        # Slice 2 lies in the gap between keyframes 1 and 3 and is interpolated.
+        assert result[2].is_keyframe is False
+        # The adjacent pair (0, 1) keeps both original keyframe values.
+        assert result[0].specimen_start == (0, 10)
+        assert result[1].specimen_start == (100, 10)
+
+    @pytest.mark.unit
+    def test_air_optional_point2_present_only_in_start(self):
+        """GIVEN start has point2 but end does not, WHEN interpolating, THEN start's point2 is kept."""
+        configs = {
+            0: AirConfig(slice_index=0, point1=(0, 0), point2=(10, 10), is_keyframe=True),
+            2: AirConfig(slice_index=2, point1=(100, 100), point2=None, is_keyframe=True),
+        }
+
+        def update(idx, cfg, is_keyframe):
+            configs[idx] = AirConfig(
+                slice_index=idx,
+                point1=cfg.point1,
+                point2=cfg.point2,
+                is_keyframe=is_keyframe,
+            )
+
+        InterpolationService.interpolate_air(configs, total_slices=3, update_func=update)
+        assert configs[1].point1 == (50, 50)
+        # end point2 is None -> start's point2 is carried forward unchanged.
+        assert configs[1].point2 == (10, 10)
+
+    @pytest.mark.unit
+    def test_air_optional_point2_absent_in_start(self):
+        """GIVEN start lacks point2, WHEN interpolating, THEN the interpolated point2 is None."""
+        configs = {
+            0: AirConfig(slice_index=0, point1=(0, 0), point2=None, is_keyframe=True),
+            2: AirConfig(slice_index=2, point1=(100, 100), point2=(110, 110), is_keyframe=True),
+        }
+
+        def update(idx, cfg, is_keyframe):
+            configs[idx] = AirConfig(
+                slice_index=idx,
+                point1=cfg.point1,
+                point2=cfg.point2,
+                is_keyframe=is_keyframe,
+            )
+
+        InterpolationService.interpolate_air(configs, total_slices=3, update_func=update)
+        assert configs[1].point1 == (50, 50)
+        assert configs[1].point2 is None
