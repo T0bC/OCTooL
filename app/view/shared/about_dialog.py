@@ -10,10 +10,9 @@ Provides About dialog with application information and changelog access.
 
 import tkinter as tk
 from tkinter import ttk
-import webbrowser
-import os
 from app.view.shared.error_handler import handle_errors
-from app.logic.shared.paths import resource_path
+from app.logic.shared.doc_links import open_doc
+from app.logic.shared.app_config import CHANGELOG_URL
 
 
 class AboutDialog:
@@ -141,32 +140,17 @@ class AboutDialog:
     
     @handle_errors("AboutDialog.open_changelog")
     def open_changelog(self):
-        """Open the changelog HTML file in the default browser."""
-        # Try to find the changelog file using resource_path
-        changelog_alternatives = [
-            'HTML_docs/OCTooL_change_log.html',  # Primary location
+        """Open the changelog: server URL first, bundled HTML as offline fallback."""
+        local_alternatives = [
+            'HTML_docs/OCTooL_change_log.html',  # Primary local location
             'OCTooL_change_log.html',
             'CHANGELOG.html',
         ]
-        
-        # Try to find the changelog file
-        found_changelog = None
-        for changelog_path in changelog_alternatives:
-            try:
-                test_path = resource_path(changelog_path)
-                if os.path.exists(test_path):
-                    found_changelog = test_path
-                    break
-            except Exception:
-                continue
-        
-        if found_changelog:
-            # Convert to absolute path and use file:// protocol
-            abs_path = os.path.abspath(found_changelog)
-            webbrowser.open('file://' + abs_path)
-        else:
+
+        if not open_doc(CHANGELOG_URL, local_alternatives):
             tk.messagebox.showwarning(
-                title='Changelog Not Found',
-                message='Could not find OCTooL_change_log.html\n\n'
-                        'Please ensure the HTML_docs folder is included in the distribution.'
+                title='Changelog Not Available',
+                message='Could not reach the online changelog and no local copy '
+                        'was found.\n\nCheck your internet connection or ensure '
+                        'the HTML_docs folder is included in the distribution.'
             )
