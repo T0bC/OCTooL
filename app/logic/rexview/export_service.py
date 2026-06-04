@@ -12,7 +12,7 @@ from scipy import ndimage
 import gc
 import traceback
 
-from app.logic.rexview.models import ExportConfig, SliceExportParams, ExportProgress
+from app.logic.rexview.models import ExportConfig, SliceExportParams, ExportProgress, ExportResult
 from app.logic.shared.models import OCTMetadata
 from app.logic.shared import oct_functions as octF
 
@@ -287,7 +287,7 @@ class ExportService:
         params: SliceExportParams,
         config: ExportConfig,
         progress_callback: Optional[Callable[[ExportProgress], None]] = None,
-    ) -> List[Path]:
+    ) -> ExportResult:
         """
         Execute the full export pipeline for a single OCT file.
         
@@ -298,7 +298,8 @@ class ExportService:
             progress_callback: Optional callback for progress updates
         
         Returns:
-            List of paths to exported files
+            ExportResult with exported file paths (as strings), the number of
+            failed slices, and an optional error message.
         """
         self.reset()
         exported_files = []
@@ -388,4 +389,10 @@ class ExportService:
         finally:
             archive.close()
         
-        return exported_files
+        failed_count = max(params.num_slices - len(exported_files), 0)
+        return ExportResult(
+            file_path=file_path,
+            exported_files=[str(p) for p in exported_files],
+            failed_count=failed_count,
+            error=None,
+        )
