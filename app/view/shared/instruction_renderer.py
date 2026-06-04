@@ -52,7 +52,7 @@ class InstructionRenderer:
         'step_number': 'Sans 10 bold',
     }
     
-    def __init__(self, canvas, instructions_file="utils/instructions.json"):
+    def __init__(self, canvas, instructions_file="assets/instructions.json"):
         """
         Initialize the instruction renderer.
         
