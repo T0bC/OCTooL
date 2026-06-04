@@ -218,20 +218,32 @@ For each of `tool_tip.py`, `status_bar.py`, `instruction_renderer.py`, `metadata
 - [x] Verified: tabs + `MainGui.py` + `OCTooL.py` `py_compile` clean, tab modules import OK,
       full `pytest` = 444 passed.
 
-### Step J — Move `MainGui.py` into `app/view` (D2)
-- [ ] Move `MainGui.py` → `app/view/MainGui.py`.
-- [ ] Update its imports of the tab modules to `app.view.<module>.<Tab>`.
-- [ ] Update `OCTooL.py`: `import MainGui as mainGui` → `from app.view import MainGui as mainGui`
-      and `from app.view.shared.error_handler import show_error_popup, log_error_to_file`
-      (or split: `log_error_to_file` from logic.shared).
-- [ ] Verify the app launches from `OCTooL.py`.
+### Step J — Move `MainGui.py` into `app/view` (D2) — DONE
+- [x] Moved `MainGui.py` → `app/view/MainGui.py`.
+- [x] Tab-module imports already used `from app.view.<module> import <Tab>` (set in Step I); no change needed.
+- [x] Updated `OCTooL.py`: `from app.view import MainGui as mainGui`, split error imports into
+      `from app.view.shared.error_handler import show_error_popup` and
+      `from app.logic.shared.logging_utils import log_error_to_file`.
+- [x] Verified: `OCTooL.py` + `app/view/MainGui.py` `py_compile` clean; `from app.view import MainGui`
+      imports and exposes the `MainGui` class.
 
-### Step K — Delete all shims and the empty packages
-- [ ] Remove every re-export shim left in `utils/` and `base/`.
-- [ ] Delete the now-empty `utils/` and `base/` directories.
-- [ ] Grep the repo to confirm zero `from utils`, `import utils`, `from base`, `import base`.
-- [ ] Confirm only `OCTooL.py` + project metadata remain at the root.
-- [ ] Run full `pytest`, launch the app
+### Step K — Delete all shims and the empty packages — DONE
+- [x] Removed every re-export shim in `utils/` and `base/`.
+- [x] Deleted the `utils/` and `base/` directories entirely (including stale `utils/logs/`).
+      Removed the now-obsolete `utils/logs/` entry from `.gitignore`.
+- [x] Grep confirms zero `from utils` / `import utils` / `from base` / `import base`
+      (the only `*.utils` references are the unrelated third-party `openpyxl.utils`).
+- [x] Confirmed only `OCTooL.py` + project metadata remain at the repo root (root `*.py` = just `OCTooL.py`).
+- [x] Ran full `pytest` = 444 passed. (GUI launch still requires a desktop session; imports/compile verified.)
+
+---
+
+## Refactor complete
+
+All steps A–K are done. Final layout matches the target: a single `app/` package (with `logic`
+vs `view` split and `*/shared/` homes), assets in `assets/`, the dev script in `scripts/`, and
+`OCTooL.py` as the only root Python module. **Remaining external check:** a windowed PyInstaller
+build to confirm bundled assets resolve (see Step F).
 
 ---
 
