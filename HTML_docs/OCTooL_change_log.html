@@ -60,6 +60,11 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#about-dialog" id="toc-about-dialog" class="nav-link" data-scroll-target="#about-dialog"><span class="header-section-number">1.4.1</span> About Dialog</a></li>
   <li><a href="#header-toolbar" id="toc-header-toolbar" class="nav-link" data-scroll-target="#header-toolbar"><span class="header-section-number">1.4.2</span> Header Toolbar</a></li>
   </ul></li>
+  <li><a href="#performance-improvements" id="toc-performance-improvements" class="nav-link" data-scroll-target="#performance-improvements"><span class="header-section-number">1.5</span> Performance Improvements</a>
+  <ul class="collapse">
+  <li><a href="#faster-oct-file-detection-rexview" id="toc-faster-oct-file-detection-rexview" class="nav-link" data-scroll-target="#faster-oct-file-detection-rexview"><span class="header-section-number">1.5.1</span> Faster OCT File Detection (RexView)</a></li>
+  <li><a href="#parallel-export-rexview" id="toc-parallel-export-rexview" class="nav-link" data-scroll-target="#parallel-export-rexview"><span class="header-section-number">1.5.2</span> Parallel Export (RexView)</a></li>
+  </ul></li>
   </ul></li>
   <li><a href="#version-2026.2-2026-04-01" id="toc-version-2026.2-2026-04-01" class="nav-link" data-scroll-target="#version-2026.2-2026-04-01"><span class="header-section-number">2</span> Version 2026.2 (2026-04-01)</a>
   <ul class="collapse">
@@ -325,6 +330,28 @@ ul.task-list li input[type="checkbox"] {
 <ul>
 <li>Harmonized the Updates / Help / About buttons to use a consistent emoji font</li>
 <li>Enlarged and aligned the icons (including the About “i” symbol) for a uniform look across the header</li>
+</ul>
+</section>
+</section>
+<section id="performance-improvements" class="level2" data-number="1.5">
+<h2 data-number="1.5" class="anchored" data-anchor-id="performance-improvements"><span class="header-section-number">1.5</span> Performance Improvements</h2>
+<section id="faster-oct-file-detection-rexview" class="level3" data-number="1.5.1">
+<h3 data-number="1.5.1" class="anchored" data-anchor-id="faster-oct-file-detection-rexview"><span class="header-section-number">1.5.1</span> Faster OCT File Detection (RexView)</h3>
+<ul>
+<li>Sped up OCT file detection by parsing each scan’s XML header only <strong>once per file</strong> instead of once per metadata field</li>
+<li>Previously, metadata extraction re-opened the OCT archive and re-parsed the entire <code>Header.xml</code> five times per file (one per value: <code>dataType</code>, <code>Serialnumber</code>, <code>dimX</code>, <code>dimY</code>, <code>dimZ</code>)</li>
+<li>Added <code>getXMLDict()</code> for single-pass header parsing; <code>getXMLvalue()</code> now delegates to it</li>
+<li><code>FileDiscoveryService</code> now uses a single-pass <code>xml_dict_reader</code>, dramatically reducing detection time for folders with many OCT files</li>
+</ul>
+</section>
+<section id="parallel-export-rexview" class="level3" data-number="1.5.2">
+<h3 data-number="1.5.2" class="anchored" data-anchor-id="parallel-export-rexview"><span class="header-section-number">1.5.2</span> Parallel Export (RexView)</h3>
+<ul>
+<li>Export now processes multiple OCT files <strong>in parallel across CPU cores</strong> instead of strictly one after another</li>
+<li>Each file is exported in its own worker process, which is well suited to the CPU-bound raw-spectral reconstruction (FFT, noise-floor, filtering)</li>
+<li>Worker count defaults to <code>CPU cores - 1</code> (leaving a core for the UI), bounded by the number of queued files, a hard cap, and an optional memory budget; it can be overridden via <code>ExportConfig.worker_count</code></li>
+<li>Removed a per-slice <code>gc.collect()</code> and now build the XML metadata dictionary only once per file, both of which speed up every export regardless of parallelism</li>
+<li>Export status is reported per file (<code>queued</code> → <code>Done</code> / <code>Done (N failed)</code> / <code>Error</code>); UI updates are marshalled back to the main thread for thread safety</li>
 </ul>
 <hr>
 </section>
