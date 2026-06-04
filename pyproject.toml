@@ -17,6 +17,12 @@ filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 
+# Coverage policy:
+#   The meaningful coverage gate is the pure logic layer. Run it with:
+#       pytest tests/ --cov=app.logic --cov-report=term-missing
+#   The full picture (includes the tkinter view layer, which only has
+#   import-smoke tests) is available with:
+#       pytest tests/ --cov=app --cov-report=term-missing
 [tool.coverage.run]
 source = ["app"]
 omit = ["*/tests/*", "*/__pycache__/*"]
