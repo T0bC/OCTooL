@@ -139,15 +139,18 @@ prerequisites that unblock the rest; F–J are the moves; K is cleanup.
 - [x] Point the `logs/` directory at the project root, not the module dir (added `logs/` to `.gitignore`).
 - [x] Verify: `python -c "import app.logic.shared.paths, app.logic.shared.logging_utils"` (passed; full `pytest` = 444 passed).
 
-### Step C — Make `app/logic/shared/oct_functions.py` the real implementation
-- [ ] Move the full body of `utils/oct_functions.py` into `app/logic/shared/oct_functions.py`,
-      replacing the current re-export shim.
-- [ ] Remove `@handle_errors` decorators from these functions (logic stays tkinter-free);
-      let callers/services handle errors.
-- [ ] Switch its `resource_path` import to `app.logic.shared.paths`.
-- [ ] Replace `utils/oct_functions.py` with a thin shim re-exporting from the new location.
-- [ ] Verify: `python -c "import app.logic.shared.oct_functions"` succeeds with **no tkinter**.
-- [ ] Run `tests/unit/logic/test_oct_functions.py` (update its import to the new path).
+### Step C — Make `app/logic/shared/oct_functions.py` the real implementation — DONE
+- [x] Moved the full body of `utils/oct_functions.py` into `app/logic/shared/oct_functions.py`,
+      replacing the previous re-export shim.
+- [x] Removed `@handle_errors` decorators from these functions (logic stays tkinter-free);
+      callers/services now surface errors.
+- [x] Switched its `resource_path` import to `app.logic.shared.paths`.
+- [x] Replaced `utils/oct_functions.py` with a thin shim re-exporting from the new location.
+- [x] Verified: `import app.logic.shared.oct_functions` succeeds with **no tkinter** in `sys.modules`.
+- [x] Updated `tests/unit/logic/test_oct_functions.py` import to `from app.logic.shared import oct_functions`.
+      Full `pytest` = 444 passed.
+- [ ] **Deferred to Step F:** the font path is still `resource_path("utils/fonts/LSANS.TTF")`;
+      it moves to `assets/fonts/LSANS.TTF` during the asset relocation step.
 
 ### Step D — Move tkinter infra into `app/view/shared`
 - [ ] Move `error_handler.py` popup/`install_tk_exception_handler`/`handle_errors` into
