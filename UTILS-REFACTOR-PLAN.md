@@ -152,12 +152,14 @@ prerequisites that unblock the rest; F–J are the moves; K is cleanup.
 - [ ] **Deferred to Step F:** the font path is still `resource_path("utils/fonts/LSANS.TTF")`;
       it moves to `assets/fonts/LSANS.TTF` during the asset relocation step.
 
-### Step D — Move tkinter infra into `app/view/shared`
-- [ ] Move `error_handler.py` popup/`install_tk_exception_handler`/`handle_errors` into
-      `app/view/shared/error_handler.py` (importing `log_error_to_file` from logic.shared).
-- [ ] Move `AppContext` into `app/view/shared/app_context.py`.
-- [ ] Leave shims at `utils/error_handler.py` and `utils/app_context.py`.
-- [ ] Verify app still launches.
+### Step D — Move tkinter infra into `app/view/shared` — DONE
+- [x] Moved `show_error_popup`/`install_tk_exception_handler`/`handle_errors` into
+      `app/view/shared/error_handler.py` (imports `log_error_to_file` from `app.logic.shared.logging_utils`).
+- [x] Moved `AppContext` into `app/view/shared/app_context.py`.
+- [x] Left thin re-export shims at `utils/error_handler.py` and `utils/app_context.py`
+      (`utils/app_context.py` also re-exports `resource_path`).
+- [x] Verified: shim + new-path imports succeed, all GUI modules `py_compile` clean,
+      full `pytest` = 444 passed.
 
 ### Step E — Move the shared view widgets
 For each of `tool_tip.py`, `status_bar.py`, `instruction_renderer.py`, `metadata_prompt.py`,
