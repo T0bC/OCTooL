@@ -21,7 +21,7 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#505050"
      inkscape:zoom="1.6117063"
-     inkscape:cx="256.25017"
+     inkscape:cx="256.56039"
      inkscape:cy="293.16756"
      inkscape:window-width="3440"
      inkscape:window-height="1369"
@@ -98,7 +98,10 @@
      r="210"
      fill="url(#scanGlow6)"
      id="circle7"
-     style="fill:url(#scanGlow6)" />
+     style="fill:url(#scanGlow6)"
+     inkscape:export-filename="thumbnail_6.png"
+     inkscape:export-xdpi="1200"
+     inkscape:export-ydpi="1200" />
   <polygon
      points="218,90 90,218 -90,218 -218,90 -218,-90 -90,-218 90,-218 218,-90 "
      fill="none"
