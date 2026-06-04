@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug or unexpected behavior in AnStatR
+description: Report a bug or unexpected behavior in OCTooL
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -48,18 +48,22 @@ body:
   - type: input
     id: version
     attributes:
-      label: AnStatR Version
-      description: Which version of AnStatR are you using? (shown in Settings)
+      label: OCTooL Version
+      description: Which version of OCTooL are you using? (shown in Settings)
       placeholder: e.g. 2026.7
     validations:
       required: true
 
-  - type: input
-    id: session_id
+  - type: dropdown
+    id: windows_version
     attributes:
-      label: Session ID
-      description: Your session ID (shown in Settings). This helps us retrieve the logs.
-      placeholder: e.g. a1b2c3d4
+      label: Windows Version
+      description: Which version of Windows are you running OCTooL on?
+      options:
+        - Windows 10
+        - Windows 11
+        - Windows Server 2019 / 2022
+        - Other
     validations:
       required: true
 
@@ -67,24 +71,12 @@ body:
     id: datetime
     attributes:
       label: Date and Time of Occurrence
-      description: When did the bug occur? Please include date and approximate time with timezone.
-      placeholder: e.g. 2026-05-20 14:30 (CET)
+      description: |
+        When did the bug occur? Please use the format `YYYY-MM-DD HH:MM` with timezone.
+        If you are unsure of the exact time, an approximate time is fine.
+      placeholder: e.g. 2026-06-04 14:30 (UTC+2)
     validations:
       required: true
-
-  - type: dropdown
-    id: browser
-    attributes:
-      label: Browser
-      description: Which browser are you using?
-      options:
-        - Chrome
-        - Firefox
-        - Edge
-        - Safari
-        - Other
-    validations:
-      required: false
 
   - type: textarea
     id: screenshots
