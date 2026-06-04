@@ -58,7 +58,7 @@ class MainGui:
 
         # set a custom icon
         try:
-            icon_path = resource_path("icons/thumb_4.ico")
+            icon_path = resource_path("icons/thumb_6.ico")
             self.mainWin.iconbitmap(icon_path)
         except Exception as e:
             print(f"Warning: Could not set icon: {e}")
