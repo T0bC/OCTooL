@@ -83,6 +83,23 @@ class TestComputeWorkerCount:
         coord = ParallelExportCoordinator(cpu_count=1, max_workers_cap=16)
         assert coord.compute_worker_count(queue_len=0) == 1
 
+    @pytest.mark.unit
+    def test_memory_cap_limits_workers(self):
+        # 5 GB available, 2 GB per worker -> at most 2 workers despite 7 cpu cores.
+        coord = ParallelExportCoordinator(
+            cpu_count=8, max_workers_cap=16,
+            available_memory_gb=5.0, gb_per_worker=2.0,
+        )
+        assert coord.compute_worker_count(queue_len=20) == 2
+
+    @pytest.mark.unit
+    def test_memory_cap_never_below_one(self):
+        coord = ParallelExportCoordinator(
+            cpu_count=8, max_workers_cap=16,
+            available_memory_gb=1.0, gb_per_worker=8.0,
+        )
+        assert coord.compute_worker_count(queue_len=20) == 1
+
 
 class TestRun:
     @pytest.mark.unit
