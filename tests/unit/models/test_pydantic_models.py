@@ -27,6 +27,19 @@ class TestExportConfig:
         assert config.scale_enabled is True
         assert config.scale_length_um == 500
         assert config.scale_font_size == 30
+        assert config.worker_count is None
+
+    @pytest.mark.unit
+    def test_worker_count_override(self):
+        """GIVEN a worker_count, WHEN ExportConfig is created, THEN it is stored."""
+        config = ExportConfig(worker_count=3)
+        assert config.worker_count == 3
+
+    @pytest.mark.unit
+    def test_worker_count_must_be_positive(self):
+        """GIVEN worker_count < 1, WHEN ExportConfig is created, THEN ValidationError."""
+        with pytest.raises(ValidationError):
+            ExportConfig(worker_count=0)
     
     @pytest.mark.unit
     def test_custom_values(self):
