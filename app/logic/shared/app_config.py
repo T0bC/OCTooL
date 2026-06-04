@@ -28,15 +28,15 @@ SERVER_BASE_URL = "https://dentlab.uni-leipzig.de/octool/"
 
 # Live documentation. These always reflect the latest pushed HTML on the server,
 # regardless of which app version the user has installed.
-MANUAL_URL = SERVER_BASE_URL + "docs/latest/OCTooL_MANUAL.html"
-CHANGELOG_URL = SERVER_BASE_URL + "docs/latest/OCTooL_change_log.html"
+MANUAL_URL = SERVER_BASE_URL + "OCTooL_MANUAL.html"
+CHANGELOG_URL = SERVER_BASE_URL + "OCTooL_change_log.html"
 
 # Update manifest. A small JSON file the app polls to detect newer releases.
 # Expected shape:
 #   {
 #     "version": "2026.3",
 #     "download_url": "https://.../octool/downloads/OCTooL_2026.3.zip",
-#     "changelog_url": "https://.../octool/docs/latest/OCTooL_change_log.html",
+#     "changelog_url": "https://.../octool/OCTooL_change_log.html",
 #     "notes": "Optional short message."
 #   }
 VERSION_MANIFEST_URL = SERVER_BASE_URL + "version.json"
