@@ -403,6 +403,27 @@ class TestRunExportPerformance:
         assert mock_gc.collect.call_count <= 1
 
     @pytest.mark.unit
+    def test_run_export_returns_export_result(self, service, params, config, sample_xml_dict):
+        """GIVEN a successful export, WHEN run_export runs, THEN it returns an ExportResult."""
+        from app.logic.rexview.models import ExportResult
+
+        patchers = self._patch_pipeline(sample_xml_dict)
+        for p in patchers:
+            p.start()
+        try:
+            result = service.run_export(params.file_path, params, config)
+        finally:
+            for p in patchers:
+                p.stop()
+
+        assert isinstance(result, ExportResult)
+        assert result.file_path == params.file_path
+        assert all(isinstance(f, str) for f in result.exported_files)
+        assert len(result.exported_files) == params.num_slices
+        assert result.failed_count == 0
+        assert result.error is None
+
+    @pytest.mark.unit
     def test_run_export_builds_xml_dict_once(self, service, params, config, sample_xml_dict):
         """GIVEN a multi-slice export, WHEN run_export runs, THEN to_xml_dict is built once."""
         from app.logic.shared.models import OCTMetadata as _Meta
