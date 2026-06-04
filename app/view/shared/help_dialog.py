@@ -12,10 +12,13 @@ Shows tab-specific quick guides and provides access to full documentation.
 import tkinter as tk
 from tkinter import ttk
 import json
+import webbrowser
 from app.view.shared.error_handler import handle_errors
 from app.logic.shared.paths import resource_path
 from app.logic.shared.doc_links import open_doc
 from app.logic.shared.app_config import MANUAL_URL
+
+GITHUB_ISSUES_URL = "https://github.com/T0bC/OCTooL/issues"
 
 
 class HelpDialog:
@@ -186,7 +189,16 @@ class HelpDialog:
             command=lambda: [self.open_documentation(), dialog.destroy()]
         )
         docs_btn.pack(side=tk.LEFT, padx=(0, 10))
-        
+
+        # GitHub Issues button
+        issues_btn = ttk.Button(
+            button_frame,
+            text="🐛 Report an Issue",
+            bootstyle="warning",
+            command=lambda: [webbrowser.open(GITHUB_ISSUES_URL), dialog.destroy()]
+        )
+        issues_btn.pack(side=tk.LEFT)
+
         # Close button
         close_btn = ttk.Button(
             button_frame,
