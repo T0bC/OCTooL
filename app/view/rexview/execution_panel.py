@@ -13,7 +13,12 @@ from app.view.shared.tool_tip import Tooltip
 from app.view.shared.error_handler import handle_errors
 
 # Import refactored logic components
-from app.logic.rexview import ExportConfig, SliceExportParams, ExportService
+from app.logic.rexview import (
+    ExportConfig,
+    SliceExportParams,
+    ExportService,
+    ParallelExportCoordinator,
+)
 
 
 # %% To Prevent GUI Freezing during a long loop or function we need to set up
@@ -33,6 +38,10 @@ class executionPanel:
         
         # Initialize the export service (pure logic, no GUI dependencies)
         self.export_service = ExportService()
+        # Coordinator for process-parallel, file-level export.
+        self.export_coordinator = ParallelExportCoordinator()
+        # Maps a file path to the queued TreeView item ids awaiting a result.
+        self._items_by_path = {}
 
         self.executeBtn = ttk.Button(self.frame, text='RexView!', width=10,
                                      command=self.mainRoutine,
@@ -68,79 +77,79 @@ class executionPanel:
     @handle_errors("executionPanel")
     def mainRoutine(self):
         '''
-        To prevent GUII from freezing during a loop or time consuming function
-        call, we need to set up threads.
-        In this thread we call the mainRoutines.
+        Gather the export queue on the UI thread (tkinter widgets must only be
+        read from the main thread), then dispatch the actual export to a
+        background thread that drives the ParallelExportCoordinator.
 
         Returns
         -------
         None.
 
         '''
-        #print('starting')
         self.running = 0
         self.export_service.reset()
-        # create a thread to keep UI responsive
+        self.export_coordinator.reset()
+
+        # Build the task list and the path -> items mapping on the UI thread.
+        config = self._collect_export_config()
+        tasks = []
+        self._items_by_path = {}
+        for item in self.treeView.getChildren():
+            file_path = self.treeView.getValueFromRow(item, column='Path')
+            params = self._collect_slice_params(item)
+            tasks.append((file_path, params, config))
+            self._items_by_path.setdefault(file_path, []).append(item)
+            self.treeView.setValueFromRow(item, 'Status', 'queued')
+
+        # Run the pool from a single helper thread so the UI stays responsive.
         threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
-        threadPoolExecutor.submit(self.mainRoutines)
+        threadPoolExecutor.submit(self.mainRoutines, tasks)
 
     @handle_errors("executionPanel")
-    def mainRoutines(self):
+    def mainRoutines(self, tasks):
         """
-        Iterate the TreeView queue and delegate each row's export to
-        ExportService.run_export(). This panel only does view work:
-        gather widget state via the _collect_* collectors, call the
-        service, and translate ExportProgress into TreeView status text.
+        Drive the ParallelExportCoordinator over the gathered tasks.
+
+        Runs on a background thread. Results are marshalled back to the UI
+        thread via ``root.after`` since tkinter is not thread-safe and the
+        worker processes cannot touch the GUI.
 
         Returns
         -------
         None
         """
-        for item in self.treeView.getChildren():
-            if self.running == 1:
-                break
+        def on_result(result):
+            # Schedule the TreeView update on the main thread.
+            self.root.after(0, self._apply_result_status, result)
 
-            file_path = self.treeView.getValueFromRow(item, column='Path')
-            config = self._collect_export_config()
-            params = self._collect_slice_params(item)
+        self.export_coordinator.run(tasks, progress_callback=on_result)
 
-            self.treeView.setValueFromRow(item, 'Status', 'loading')
-
-            def progress_callback(progress, _item=item):
-                # Translate ExportProgress -> TreeView status text.
-                if progress.status.startswith('Loading: '):
-                    self.treeView.setValueFromRow(
-                        _item, 'Status', progress.status[len('Loading: '):]
-                    )
-                elif progress.total_slices:
-                    self.treeView.setValueFromRow(
-                        _item, 'Status', f"exp: {progress.current_slice}"
-                    )
-
-            export_result = self.export_service.run_export(
-                file_path, params, config, progress_callback=progress_callback
+    def _apply_result_status(self, result):
+        """Translate an ExportResult into a TreeView status (UI thread only)."""
+        items = self._items_by_path.get(result.file_path)
+        if not items:
+            return
+        item = items.pop(0)
+        if result.error:
+            self.treeView.setValueFromRow(item, 'Status', 'Error')
+        elif result.failed_count > 0:
+            self.treeView.setValueFromRow(
+                item, 'Status', f'Done ({result.failed_count} failed)'
             )
-
-            # Final status per item (preserve legacy text).
-            if self.export_service.is_cancelled:
-                self.treeView.setValueFromRow(item, 'Status', 'Done')
-            else:
-                failed_count = export_result.failed_count
-                if failed_count > 0:
-                    self.treeView.setValueFromRow(item, 'Status', f'Done ({failed_count} failed)')
-                else:
-                    self.treeView.setValueFromRow(item, 'Status', 'Done')
+        else:
+            self.treeView.setValueFromRow(item, 'Status', 'Done')
 
     def breakAll(self):
         '''
-        Stop the export cycle: cancel the running service (breaks the
-        per-slice loop) and flag the outer queue loop to stop.
+        Stop the export cycle: cancel the coordinator (stops submitting new
+        files) and the running service, and flag the queue loop to stop.
 
         Returns
         -------
         None.
 
         '''
+        self.export_coordinator.cancel()
         self.export_service.cancel()
         self.running = 1
 
