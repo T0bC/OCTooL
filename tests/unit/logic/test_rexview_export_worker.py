@@ -43,11 +43,16 @@ class TestExportOneFile:
 
     @pytest.mark.unit
     def test_export_one_file_returns_result(self, params, config):
-        """GIVEN a successful export, WHEN export_one_file runs, THEN returns an ExportResult."""
-        fake_files = [Path('a.tiff'), Path('b.tiff'), Path('c.tiff')]
+        """GIVEN a successful export, WHEN export_one_file runs, THEN returns the ExportResult."""
+        fake_result = ExportResult(
+            file_path=params.file_path,
+            exported_files=['a.tiff', 'b.tiff', 'c.tiff'],
+            failed_count=params.num_slices - 3,
+            error=None,
+        )
         with patch(
             'app.logic.rexview.export_worker.ExportService.run_export',
-            return_value=fake_files,
+            return_value=fake_result,
         ):
             result = export_one_file(params.file_path, params, config)
 
@@ -55,16 +60,16 @@ class TestExportOneFile:
         assert result.file_path == params.file_path
         assert result.exported_files == ['a.tiff', 'b.tiff', 'c.tiff']
         assert all(isinstance(f, str) for f in result.exported_files)
-        assert result.failed_count == params.num_slices - len(fake_files)
+        assert result.failed_count == params.num_slices - 3
         assert result.error is None
 
     @pytest.mark.unit
     def test_export_one_file_is_picklable_result(self, params, config):
         """GIVEN a result, WHEN pickled, THEN it round-trips (cross-process return)."""
-        fake_files = [Path('a.tiff')]
+        fake_result = ExportResult(file_path=params.file_path, exported_files=['a.tiff'])
         with patch(
             'app.logic.rexview.export_worker.ExportService.run_export',
-            return_value=fake_files,
+            return_value=fake_result,
         ):
             result = export_one_file(params.file_path, params, config)
 
