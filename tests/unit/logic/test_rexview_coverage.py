@@ -162,8 +162,8 @@ class TestExportServiceUncovered:
             progress_callback=lambda p: progress.append(p),
         )
 
-        assert len(result) == 2
-        assert all(p.exists() for p in result)
+        assert len(result.exported_files) == 2
+        assert all(Path(p).exists() for p in result.exported_files)
         archive.close.assert_called_once()
         assert len(progress) > 0
 
@@ -223,7 +223,7 @@ class TestExportServiceUncovered:
 
         result = service.run_export(str(oct_file), params, config)
 
-        assert result == []
+        assert result.exported_files == []
 
     @pytest.mark.unit
     @patch('app.logic.rexview.export_service.octF')
@@ -248,7 +248,7 @@ class TestExportServiceUncovered:
         with patch.object(service, 'process_slice', side_effect=RuntimeError("bad slice")):
             result = service.run_export(str(oct_file), params, config)
 
-        assert result == []
+        assert result.exported_files == []
 
 
 # ============================================================================
