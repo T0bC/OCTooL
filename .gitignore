@@ -17,7 +17,6 @@ Thumbs.db
 # Local development data & logs
 testData/
 logs/
-utils/logs/
 *.log
 
 # Generated HTML assets (bundled libraries, not source)
