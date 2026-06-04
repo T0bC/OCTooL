@@ -8,7 +8,7 @@
 
 <meta name="author" content="Tobias Meißner">
 
-<title>OCTexVIEW User Manual</title>
+<title>OCTooL User Manual</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -58,16 +58,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="OCTexVIEW_MANUAL_files/libs/clipboard/clipboard.min.js"></script>
-<script src="OCTexVIEW_MANUAL_files/libs/quarto-html/quarto.js"></script>
-<script src="OCTexVIEW_MANUAL_files/libs/quarto-html/popper.min.js"></script>
-<script src="OCTexVIEW_MANUAL_files/libs/quarto-html/tippy.umd.min.js"></script>
-<script src="OCTexVIEW_MANUAL_files/libs/quarto-html/anchor.min.js"></script>
-<link href="OCTexVIEW_MANUAL_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="OCTexVIEW_MANUAL_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="OCTexVIEW_MANUAL_files/libs/bootstrap/bootstrap.min.js"></script>
-<link href="OCTexVIEW_MANUAL_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="OCTexVIEW_MANUAL_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="OCTooL_MANUAL_files/libs/clipboard/clipboard.min.js"></script>
+<script src="OCTooL_MANUAL_files/libs/quarto-html/quarto.js"></script>
+<script src="OCTooL_MANUAL_files/libs/quarto-html/popper.min.js"></script>
+<script src="OCTooL_MANUAL_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="OCTooL_MANUAL_files/libs/quarto-html/anchor.min.js"></script>
+<link href="OCTooL_MANUAL_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="OCTooL_MANUAL_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="OCTooL_MANUAL_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="OCTooL_MANUAL_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="OCTooL_MANUAL_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 
 
 </head>
@@ -86,13 +86,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#system-requirements" id="toc-system-requirements" class="nav-link" data-scroll-target="#system-requirements"><span class="header-section-number">1.2</span> System Requirements</a></li>
   <li><a href="#application-overview" id="toc-application-overview" class="nav-link" data-scroll-target="#application-overview"><span class="header-section-number">1.3</span> Application Overview</a>
   <ul class="collapse">
-  <li><a href="#export-section" id="toc-export-section" class="nav-link" data-scroll-target="#export-section">RexView Section</a></li>
-  <li><a href="#analyze-section" id="toc-analyze-section" class="nav-link" data-scroll-target="#analyze-section">AnnoLyze Section</a></li>
+  <li><a href="#rexview-section" id="toc-rexview-section" class="nav-link" data-scroll-target="#rexview-section">RexView Section</a></li>
+  <li><a href="#annolyze-section" id="toc-annolyze-section" class="nav-link" data-scroll-target="#annolyze-section">AnnoLyze Section</a></li>
   <li><a href="#carlquant-section" id="toc-carlquant-section" class="nav-link" data-scroll-target="#carlquant-section">CarlQuant Section</a></li>
   </ul></li>
   <li><a href="#workflow-integration" id="toc-workflow-integration" class="nav-link" data-scroll-target="#workflow-integration"><span class="header-section-number">1.4</span> Workflow Integration</a></li>
   </ul></li>
-  <li><a href="#export-section-1" id="toc-export-section-1" class="nav-link" data-scroll-target="#export-section-1"><span class="header-section-number">2</span> RexView Section</a>
+  <li><a href="#rexview-section-1" id="toc-rexview-section-1" class="nav-link" data-scroll-target="#rexview-section-1"><span class="header-section-number">2</span> RexView Section</a>
   <ul class="collapse">
   <li><a href="#typical-workflow" id="toc-typical-workflow" class="nav-link" data-scroll-target="#typical-workflow"><span class="header-section-number">2.1</span> Typical Workflow</a></li>
   <li><a href="#file-selection-panel" id="toc-file-selection-panel" class="nav-link" data-scroll-target="#file-selection-panel"><span class="header-section-number">2.2</span> File Selection Panel</a>
@@ -107,7 +107,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#aspect-ratio" id="toc-aspect-ratio" class="nav-link" data-scroll-target="#aspect-ratio"><span class="header-section-number">2.3.1</span> Aspect Ratio</a></li>
   <li><a href="#prefer-raw" id="toc-prefer-raw" class="nav-link" data-scroll-target="#prefer-raw"><span class="header-section-number">2.3.2</span> Prefer Raw</a></li>
   <li><a href="#local-filtering" id="toc-local-filtering" class="nav-link" data-scroll-target="#local-filtering"><span class="header-section-number">2.3.3</span> Local Filtering</a></li>
-  <li><a href="#export-format" id="toc-export-format" class="nav-link" data-scroll-target="#export-format"><span class="header-section-number">2.3.4</span> RexView Format</a></li>
+  <li><a href="#rexview-format" id="toc-rexview-format" class="nav-link" data-scroll-target="#rexview-format"><span class="header-section-number">2.3.4</span> RexView Format</a></li>
   <li><a href="#averaging" id="toc-averaging" class="nav-link" data-scroll-target="#averaging"><span class="header-section-number">2.3.5</span> Averaging</a></li>
   <li><a href="#apodization-window" id="toc-apodization-window" class="nav-link" data-scroll-target="#apodization-window"><span class="header-section-number">2.3.6</span> Apodization Window</a></li>
   <li><a href="#show-error" id="toc-show-error" class="nav-link" data-scroll-target="#show-error"><span class="header-section-number">2.3.7</span> Show Error</a></li>
@@ -115,7 +115,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul></li>
   <li><a href="#custom-settings-panel" id="toc-custom-settings-panel" class="nav-link" data-scroll-target="#custom-settings-panel"><span class="header-section-number">2.4</span> Custom Settings Panel</a>
   <ul class="collapse">
-  <li><a href="#export-range" id="toc-export-range" class="nav-link" data-scroll-target="#export-range"><span class="header-section-number">2.4.1</span> RexView Range</a></li>
+  <li><a href="#rexview-range" id="toc-rexview-range" class="nav-link" data-scroll-target="#rexview-range"><span class="header-section-number">2.4.1</span> RexView Range</a></li>
   <li><a href="#equidistant-slices" id="toc-equidistant-slices" class="nav-link" data-scroll-target="#equidistant-slices"><span class="header-section-number">2.4.2</span> Equidistant Slices</a></li>
   <li><a href="#dynamic-range-db" id="toc-dynamic-range-db" class="nav-link" data-scroll-target="#dynamic-range-db"><span class="header-section-number">2.4.3</span> Dynamic Range [dB]</a></li>
   <li><a href="#dispersion-compensation" id="toc-dispersion-compensation" class="nav-link" data-scroll-target="#dispersion-compensation"><span class="header-section-number">2.4.4</span> Dispersion Compensation</a></li>
@@ -124,14 +124,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul></li>
   <li><a href="#execution-panel" id="toc-execution-panel" class="nav-link" data-scroll-target="#execution-panel"><span class="header-section-number">2.5</span> Execution Panel</a>
   <ul class="collapse">
-  <li><a href="#export" id="toc-export" class="nav-link" data-scroll-target="#export"><span class="header-section-number">2.5.1</span> RexView!</a></li>
+  <li><a href="#rexview" id="toc-rexview" class="nav-link" data-scroll-target="#rexview"><span class="header-section-number">2.5.1</span> RexView!</a></li>
   <li><a href="#cancel" id="toc-cancel" class="nav-link" data-scroll-target="#cancel"><span class="header-section-number">2.5.2</span> Cancel!</a></li>
   <li><a href="#quit" id="toc-quit" class="nav-link" data-scroll-target="#quit"><span class="header-section-number">2.5.3</span> Quit!</a></li>
   </ul></li>
   <li><a href="#queue-table" id="toc-queue-table" class="nav-link" data-scroll-target="#queue-table"><span class="header-section-number">2.6</span> Queue Table</a></li>
   <li><a href="#output-structure" id="toc-output-structure" class="nav-link" data-scroll-target="#output-structure"><span class="header-section-number">2.7</span> Output Structure</a></li>
   </ul></li>
-  <li><a href="#analyze-section-1" id="toc-analyze-section-1" class="nav-link" data-scroll-target="#analyze-section-1"><span class="header-section-number">3</span> AnnoLyze Section</a>
+  <li><a href="#annolyze-section-1" id="toc-annolyze-section-1" class="nav-link" data-scroll-target="#annolyze-section-1"><span class="header-section-number">3</span> AnnoLyze Section</a>
   <ul class="collapse">
   <li><a href="#typical-workflow-1" id="toc-typical-workflow-1" class="nav-link" data-scroll-target="#typical-workflow-1"><span class="header-section-number">3.1</span> Typical Workflow</a></li>
   <li><a href="#load-images-panel" id="toc-load-images-panel" class="nav-link" data-scroll-target="#load-images-panel"><span class="header-section-number">3.2</span> Load Images Panel</a>
@@ -267,13 +267,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul></li>
   </ul></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="..\OCTexVIEW_MANUAL.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="..\OCTooL_MANUAL.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
 </div>
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">OCTexVIEW User Manual</h1>
+<h1 class="title">OCTooL User Manual</h1>
+<p class="subtitle lead">Version 2026.3 (2026-06-04)</p>
 </div>
 
 
@@ -298,10 +299,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level1" data-number="1">
 <h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
-<p><strong>OCTexVIEW</strong> is a software application designed for the export, analysis and quantification of Optical Coherence Tomography (OCT) images. Developed specifically for dental and medical research applications, OCTexVIEW provides researchers and clinicians with tools to extract data from OCT imaging studies.</p>
+<p><strong>OCTooL</strong> is a software application designed for the export, analysis and quantification of Optical Coherence Tomography (OCT) images. Developed specifically for dental and medical research applications, OCTooL provides researchers and clinicians with tools to extract data from OCT imaging studies.</p>
 <section id="purpose-and-scope" class="level2" data-number="1.1">
 <h2 data-number="1.1" class="anchored" data-anchor-id="purpose-and-scope"><span class="header-section-number">1.1</span> Purpose and Scope</h2>
-<p>OCTexVIEW addresses the need for standardized, reproducible analysis of OCT images in research environments. The software enables users to:</p>
+<p>OCTooL addresses the need for standardized, reproducible analysis of OCT images in research environments. The software enables users to:</p>
 <ul>
 <li><strong>Process large datasets</strong> of OCT images efficiently</li>
 <li><strong>Extract quantitative measurements</strong> from tissue structures</li>
@@ -321,9 +322,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="application-overview" class="level2" data-number="1.3">
 <h2 data-number="1.3" class="anchored" data-anchor-id="application-overview"><span class="header-section-number">1.3</span> Application Overview</h2>
-<p>OCTexVIEW is organized into three main functional sections, each designed for specific aspects of OCT image analysis:</p>
-<section id="export-section" class="level3 unnumbered">
-<h3 class="unnumbered anchored" data-anchor-id="export-section">RexView Section</h3>
+<p>OCTooL is organized into three main functional sections, each designed for specific aspects of OCT image analysis:</p>
+<section id="rexview-section" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="rexview-section">RexView Section</h3>
 <p>The <strong>RexView</strong> section focuses on data preparation and batch processing capabilities. This module allows users to:</p>
 <ul>
 <li>Import and organize large collections of OCT image files</li>
@@ -334,8 +335,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
 <p><em>Primary Use Case</em>: Preparing raw OCT data for analysis and converting from OCT raw data to <code>png</code> files.</p>
 </section>
-<section id="analyze-section" class="level3 unnumbered">
-<h3 class="unnumbered anchored" data-anchor-id="analyze-section">AnnoLyze Section</h3>
+<section id="annolyze-section" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="annolyze-section">AnnoLyze Section</h3>
 <p>The <strong>AnnoLyze</strong> section provides comprehensive tools for detailed image analysis and annotation. Key features include:</p>
 <ul>
 <li>Interactive image viewing and navigation</li>
@@ -371,12 +372,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <hr>
 </section>
 </section>
-<section id="export-section-1" class="level1" data-number="2">
+<section id="rexview-section-1" class="level1" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> RexView Section</h1>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="images/01_Export_mainWindow.png" class="img-fluid figure-img"></p>
-<figcaption>OCTexVIEW RexView Section Main Window</figcaption>
+<figcaption>OCTooL RexView Section Main Window</figcaption>
 </figure>
 </div>
 <p>The RexView Section is the primary module for batch processing and converting OCT raw data files into standard image formats (PNG or TIFF). This section provides comprehensive control over image processing parameters, slice selection, and export settings.</p>
@@ -442,8 +443,8 @@ YZ:15-90:10:1.5</code></pre>
 <p><strong>Default</strong>: Disabled</p>
 <p><strong>Warning</strong>: This is an experimental feature and may significantly increase processing time.</p>
 </section>
-<section id="export-format" class="level3" data-number="2.3.4">
-<h3 data-number="2.3.4" class="anchored" data-anchor-id="export-format"><span class="header-section-number">2.3.4</span> RexView Format</h3>
+<section id="rexview-format" class="level3" data-number="2.3.4">
+<h3 data-number="2.3.4" class="anchored" data-anchor-id="rexview-format"><span class="header-section-number">2.3.4</span> RexView Format</h3>
 <p><strong>Purpose</strong>: Select the output image format.</p>
 <p><strong>Options</strong>: - <strong>PNG</strong>: Results in smaller file size, suitable for most applications - <strong>TIFF</strong>: Ideal for post-processing and when maximum quality is required</p>
 <p><strong>Default</strong>: TIFF</p>
@@ -489,8 +490,8 @@ YZ:15-90:10:1.5</code></pre>
 <section id="custom-settings-panel" class="level2" data-number="2.4">
 <h2 data-number="2.4" class="anchored" data-anchor-id="custom-settings-panel"><span class="header-section-number">2.4</span> Custom Settings Panel</h2>
 <p>Custom settings allow fine-tuned control over individual files or selections in the queue.</p>
-<section id="export-range" class="level3" data-number="2.4.1">
-<h3 data-number="2.4.1" class="anchored" data-anchor-id="export-range"><span class="header-section-number">2.4.1</span> RexView Range</h3>
+<section id="rexview-range" class="level3" data-number="2.4.1">
+<h3 data-number="2.4.1" class="anchored" data-anchor-id="rexview-range"><span class="header-section-number">2.4.1</span> RexView Range</h3>
 <p><strong>Purpose</strong>: Manually enter the first and last slice to be exported.</p>
 <p><strong>Controls</strong>: - <strong>First</strong>: Starting slice number - <strong>Last</strong>: Ending slice number - <strong>Selection</strong>: Apply the range to the currently selected entry - <strong>Set All</strong>: Apply the range to all entries in the queue - <strong>Reset Sel</strong>: Sets the first level to 1 and the last level to the last available level</p>
 </section>
@@ -532,8 +533,8 @@ YZ:15-90:10:1.5</code></pre>
 <section id="execution-panel" class="level2" data-number="2.5">
 <h2 data-number="2.5" class="anchored" data-anchor-id="execution-panel"><span class="header-section-number">2.5</span> Execution Panel</h2>
 <p>The Execution Panel controls the export process and application lifecycle.</p>
-<section id="export" class="level3" data-number="2.5.1">
-<h3 data-number="2.5.1" class="anchored" data-anchor-id="export"><span class="header-section-number">2.5.1</span> RexView!</h3>
+<section id="rexview" class="level3" data-number="2.5.1">
+<h3 data-number="2.5.1" class="anchored" data-anchor-id="rexview"><span class="header-section-number">2.5.1</span> RexView!</h3>
 <p><strong>Purpose</strong>: Start exporting of all entries in queue.</p>
 <p><strong>Details</strong>: Initiates batch processing of all OCT files in the queue with their configured settings. Progress is displayed in the Status column of the queue table.</p>
 </section>
@@ -545,7 +546,7 @@ YZ:15-90:10:1.5</code></pre>
 <section id="quit" class="level3" data-number="2.5.3">
 <h3 data-number="2.5.3" class="anchored" data-anchor-id="quit"><span class="header-section-number">2.5.3</span> Quit!</h3>
 <p><strong>Purpose</strong>: Exit the application.</p>
-<p><strong>Details</strong>: Closes OCTexVIEW. Unsaved queue configurations will be lost.</p>
+<p><strong>Details</strong>: Closes OCTooL. Unsaved queue configurations will be lost.</p>
 </section>
 </section>
 <section id="queue-table" class="level2" data-number="2.6">
@@ -577,12 +578,12 @@ YZ:15-90:10:1.5</code></pre>
 <pre><code>[FileName]_[ExpNumber].jpg</code></pre>
 </section>
 </section>
-<section id="analyze-section-1" class="level1" data-number="3">
+<section id="annolyze-section-1" class="level1" data-number="3">
 <h1 data-number="3"><span class="header-section-number">3</span> AnnoLyze Section</h1>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="images/02_Analyze_mainWindow.png" class="img-fluid figure-img"></p>
-<figcaption>OCTexVIEW AnnoLyze Section Main Window</figcaption>
+<figcaption>OCTooL AnnoLyze Section Main Window</figcaption>
 </figure>
 </div>
 <p>The AnnoLyze Section provides comprehensive tools for interactive image annotation, measurement, and data collection. This module is designed for detailed analysis of individual specimens with manual oversight and quality control, enabling researchers to annotate features, collect measurements, and compile results in a structured format.</p>
@@ -863,7 +864,7 @@ YZ:15-90:10:1.5</code></pre>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="images/03_CarlQuant_mainWindow.png" class="img-fluid figure-img"></p>
-<figcaption>OCTexVIEW CarlQuant Section Main Window</figcaption>
+<figcaption>OCTooL CarlQuant Section Main Window</figcaption>
 </figure>
 </div>
 <section id="typical-workflow-2" class="level2" data-number="4.1">
