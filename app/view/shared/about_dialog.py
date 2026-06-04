@@ -12,8 +12,8 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 import os
-from utils.error_handler import handle_errors
-from utils.app_context import resource_path
+from app.view.shared.error_handler import handle_errors
+from app.logic.shared.paths import resource_path
 
 
 class AboutDialog:

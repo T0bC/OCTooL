@@ -17,7 +17,7 @@ Created on Wed Oct 01 11:48:00 2025
 import tkinter as tk
 import json
 from PIL import Image, ImageTk
-from utils.app_context import resource_path
+from app.logic.shared.paths import resource_path
 
 
 class InstructionRenderer:

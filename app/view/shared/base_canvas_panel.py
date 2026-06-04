@@ -15,9 +15,9 @@ Created on Thu Oct 02 09:43:00 2025
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageDraw, ImageFont
-from utils.tool_tip import Tooltip
-from utils.error_handler import handle_errors
-from utils.instruction_renderer import InstructionRenderer
+from app.view.shared.tool_tip import Tooltip
+from app.view.shared.error_handler import handle_errors
+from app.view.shared.instruction_renderer import InstructionRenderer
 import threading
 import queue
 from pathlib import Path
@@ -129,7 +129,7 @@ class BaseCanvasPanel:
         self._setup_common_bindings()
         
         # Initialize instruction renderer
-        from utils.app_context import resource_path
+        from app.logic.shared.paths import resource_path
         self.instruction_renderer = InstructionRenderer(self.canvas)
         self.instruction_renderer.set_logo(resource_path("icons/WBM_UL_RGB_digital_Path.png"))
         
