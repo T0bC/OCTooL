@@ -177,20 +177,24 @@ For each of `tool_tip.py`, `status_bar.py`, `instruction_renderer.py`, `metadata
       Asset paths inside `instruction_renderer.py` (`utils/instructions.json`) and `base_canvas_panel.py`
       remain unchanged — they move in Step F.
 
-### Step F — Relocate assets and update references (D4)
-- [ ] Move `utils/instructions.json` → `assets/instructions.json`.
-- [ ] Move `utils/fonts/` → `assets/fonts/`.
-- [ ] Update `resource_path` call sites:
+### Step F — Relocate assets and update references (D4) — DONE
+- [x] Moved `utils/instructions.json` → `assets/instructions.json`.
+- [x] Moved `utils/fonts/` → `assets/fonts/`.
+- [x] Updated `resource_path` call sites:
       `"utils/instructions.json"` → `"assets/instructions.json"`,
       `"utils/fonts/LSANS.TTF"` → `"assets/fonts/LSANS.TTF"`
-      (in `instruction_renderer.py`, `help_dialog.py`, `oct_functions.py`).
-- [ ] Update `OCTooL.spec` `datas`: `('assets/fonts', 'assets/fonts')`,
+      (in `app/view/shared/instruction_renderer.py` default arg + `app/view/shared/help_dialog.py` +
+      `app/logic/shared/oct_functions.py`).
+- [x] Updated `OCTooL.spec` `datas`: `('assets/fonts', 'assets/fonts')`,
       `('assets/instructions.json', 'assets')`.
-- [ ] Verify a windowed PyInstaller build still finds fonts + instructions.
+- [x] Verified in dev: `resource_path('assets/fonts/LSANS.TTF')` and `resource_path('assets/instructions.json')`
+      both exist and the JSON loads; full `pytest` = 444 passed.
+- [ ] **Still recommended:** run a windowed PyInstaller build to confirm the bundled app finds fonts +
+      instructions (could not be exercised here).
 
-### Step G — Relocate the dev script (D4)
-- [ ] Move `png_to_ico_script.py` → `scripts/png_to_ico_script.py`.
-- [ ] Confirm it is not imported anywhere (it is standalone).
+### Step G — Relocate the dev script (D4) — DONE
+- [x] Moved `png_to_ico_script.py` → `scripts/png_to_ico_script.py`.
+- [x] Confirmed it is not imported anywhere (grep for `png_to_ico_script` = no results; standalone).
 
 ### Step H — Migrate all callers off the shims
 - [ ] Find every remaining `from utils...`, `from base...`, and `import utils...`.
