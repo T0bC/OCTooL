@@ -4,30 +4,9 @@ Created on Thu Sep 11 12:16:39 2025
 
 @author: Tobias Meissner
 """
-import sys
-import os
-
-def resource_path(relative_path):
-    """
-    Get absolute path to resource, works for dev and for PyInstaller.
-    
-    When running as a PyInstaller bundle, files are in sys._MEIPASS.
-    When running as a normal script, files are relative to the script location.
-    
-    Args:
-        relative_path: Path relative to the application root (e.g., 'icons/thumb_4.ico')
-    
-    Returns:
-        Absolute path to the resource
-    """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        # Running as normal Python script
-        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
-    return os.path.join(base_path, relative_path)
+# resource_path now lives in app/logic/shared/paths.py. Re-exported here as a
+# thin shim for backward compatibility during the refactor.
+from app.logic.shared.paths import resource_path  # noqa: F401
 
 class AppContext:
     def __init__(self):
