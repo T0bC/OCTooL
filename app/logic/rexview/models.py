@@ -195,6 +195,13 @@ class ExportConfig(BaseModel):
     scale_length_um: int = Field(default=500, ge=1, description="Scale bar length in micrometers")
     scale_font_size: int = Field(default=30, ge=1, description="Scale bar text font size")
     
+    # Parallel export
+    worker_count: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Number of worker processes for parallel export (None = auto)",
+    )
+    
     model_config = {
         'frozen': False,
         'validate_assignment': True,
@@ -212,6 +219,7 @@ class ExportConfig(BaseModel):
         scale_state: tuple,
         scale_length: str,
         scale_font_size: str,
+        worker_count: Optional[int] = None,
     ) -> 'ExportConfig':
         """
         Create ExportConfig from GUI widget states.
@@ -229,6 +237,7 @@ class ExportConfig(BaseModel):
             scale_enabled=scale_state == ('selected',),
             scale_length_um=int(scale_length),
             scale_font_size=int(scale_font_size),
+            worker_count=worker_count,
         )
 
 
