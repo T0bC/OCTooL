@@ -40,15 +40,7 @@ def export_one_file(
     """
     service = ExportService()
     try:
-        exported = service.run_export(file_path, params, config)
-        exported_files = [str(p) for p in exported]
-        failed_count = max(params.num_slices - len(exported_files), 0)
-        return ExportResult(
-            file_path=file_path,
-            exported_files=exported_files,
-            failed_count=failed_count,
-            error=None,
-        )
+        return service.run_export(file_path, params, config)
     except Exception as exc:  # noqa: BLE001 - must never crash the worker
         return ExportResult(
             file_path=file_path,
