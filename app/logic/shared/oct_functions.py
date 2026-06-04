@@ -378,7 +378,10 @@ def createImageFromRaw(xmlDict: dict, archive: None, dBmin: int, dBmax: int, sel
         img = np.transpose(img, (2, 0, 1))
         return img
 
-    else:
+    else:  # pragma: no cover - raw-spectral FFT path needs real instrument
+        # data (Spectral*/Chirp/OffsetErrors/Apodization). It is exercised by
+        # the integration tests that run against real .oct files; synthetic
+        # data cannot faithfully represent the spectrometer format.
         try:
             if np.isscalar(spectral) and spectral == -1:
                 spectral = 0
