@@ -8,11 +8,16 @@ Provides About dialog with application information and changelog access.
 @author: Tobias Meissner
 """
 
+import webbrowser
 import tkinter as tk
 from tkinter import ttk
 from app.view.shared.error_handler import handle_errors
 from app.logic.shared.doc_links import open_doc
 from app.logic.shared.app_config import CHANGELOG_URL
+
+SERVER_URL = "https://dentlab.uni-leipzig.de"
+GITHUB_URL = "https://github.com/T0bC/OCTooL"
+DOI = "DOI: <placeholder>"
 
 
 class AboutDialog:
@@ -52,7 +57,9 @@ class AboutDialog:
             '    Klinisches Sensoring und Monitoring\n\n'
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'
             'ERROR REPORTS\n'
-            '  📧 tobias.meissner@medizin.uni-leipzig.de'
+            '  📧 tobias.meissner@medizin.uni-leipzig.de\n\n'
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'
+            'LINKS\n'
         )
         
         self._create_dialog(about_content)
@@ -68,7 +75,7 @@ class AboutDialog:
         
         # Set size and center the dialog
         dialog_width = 550
-        dialog_height = 500
+        dialog_height = 580
         screen_width = dialog.winfo_screenwidth()
         screen_height = dialog.winfo_screenheight()
         x = (screen_width - dialog_width) // 2
@@ -85,7 +92,7 @@ class AboutDialog:
         
         # Content text widget with scrollbar
         text_frame = ttk.Frame(main_frame)
-        text_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+        text_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(0, 15))
         
         scrollbar = ttk.Scrollbar(text_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -108,11 +115,30 @@ class AboutDialog:
         text_widget.tag_configure("center", justify='center')
         text_widget.insert('1.0', content)
         text_widget.tag_add("center", "1.0", "end")
+
+        # Clickable links
+        def _add_link(label, url):
+            tag = f"link_{label}"
+            text_widget.insert('end', f"  {label}\n", (tag, "center"))
+            text_widget.tag_configure(
+                tag, foreground=self.style.colors.info, underline=True
+            )
+            text_widget.tag_bind(tag, '<Button-1>',
+                                  lambda e, u=url: webbrowser.open(u))
+            text_widget.tag_bind(tag, '<Enter>',
+                                  lambda e: text_widget.config(cursor='hand2'))
+            text_widget.tag_bind(tag, '<Leave>',
+                                  lambda e: text_widget.config(cursor=''))
+
+        _add_link("🌐 dentlab.uni-leipzig.de", SERVER_URL)
+        _add_link("💻 github.com/T0bC/OCTooL", GITHUB_URL)
+        text_widget.insert('end', f"\n  {DOI}", "center")
+
         text_widget.config(state=tk.DISABLED)  # Make read-only
         
-        # Button frame
+        # Button frame (packed at the bottom first so it stays visible)
         button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X)
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X)
         
         # Changelog button
         changelog_btn = ttk.Button(
