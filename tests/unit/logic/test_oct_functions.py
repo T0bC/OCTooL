@@ -248,3 +248,117 @@ class TestGetXMLValue:
         
         result = octF.getXMLvalue(str(zip_path), 'expNumber')
         assert result == 5
+
+
+class TestGetXMLAttributesFallbacks:
+    """Exercise the defensive fallback branches in getXMLAttributes."""
+
+    @pytest.mark.unit
+    def test_malformed_header_triggers_fallbacks(self, tmp_path):
+        """GIVEN a malformed/old header, WHEN parsing, THEN safe fallbacks fire."""
+        # SizeReal has only 2 entries (imgSizemmY index 2 -> IndexError fallback),
+        # no IntensityAveraging tag (safe_nested_text AttributeError fallback),
+        # a non-numeric Timestamp (datetime fallback -> 'Unknown'), and a
+        # RawSpectral DataFile labelled 'RawSpectra' (Type mismatch -> attribute
+        # fallback loop).
+        xml = """<?xml version="1.0"?>
+<Ocity>
+    <Image Type="RawSpectra"/>
+    <SizeReal>2.0
+6.0</SizeReal>
+    <SizePixel>512
+512
+128</SizePixel>
+    <PixelSpacing>0.0039
+0.0117
+0.0469</PixelSpacing>
+    <Study>S</Study>
+    <SpectrometerElements>2048</SpectrometerElements>
+    <Timestamp>notanumber</Timestamp>
+    <BinaryToElectronCountScaling>1.0</BinaryToElectronCountScaling>
+    <DataFiles>
+        <DataFile Type="RawSpectra" ApoRegionEnd0="64" ScanRegionStart0="0" ScanRegionEnd0="512"/>
+    </DataFiles>
+</Ocity>"""
+        zip_path = tmp_path / "old.oct"
+        with ZipFile(zip_path, 'w') as zf:
+            zf.writestr('Header.xml', xml)
+        archive = ZipFile(zip_path, 'r')
+        xml_content = octF.readXMLContent(archive, 'Header.xml', 'xml')
+        result = octF.getXMLAttributes(xml_content)
+        archive.close()
+
+        assert result['imgSizemmY'] is None        # safe_split IndexError fallback
+        assert result['aScanAv'] == 1              # safe_nested_text fallback default
+        assert result['Acquisition_DateTime'] == 'Unknown'  # datetime fallback
+        assert result['Napo'] == 64                # raw-datafile attribute fallback
+        assert result['Nx'] == 512
+        assert result['is3D'] is False
+
+
+class TestCreateVideoImageFromRaw:
+    """Tests for createVideoImageFromRaw (packed ARGB decode)."""
+
+    @pytest.mark.unit
+    def test_decodes_argb_to_rgb(self):
+        x, z = 4, 4
+        # Build a packed ARGB buffer: A=255, R=10, G=20, B=30 for every pixel.
+        argb = (255 << 24) | (10 << 16) | (20 << 8) | 30
+        data = np.full(x * z, argb, dtype=np.uint32).tobytes()
+
+        buffer = BytesIO()
+        with ZipFile(buffer, 'w') as zf:
+            zf.writestr('data/VideoImage.data', data)
+        buffer.seek(0)
+        archive = ZipFile(buffer, 'r')
+
+        xml_dict = {'videoImageX': x, 'videoImageZ': z}
+        rgb = octF.createVideoImageFromRaw(xml_dict, archive)
+        archive.close()
+
+        assert rgb.shape == (x, z, 3)
+        assert rgb.dtype == np.uint8
+        assert tuple(rgb[0, 0]) == (10, 20, 30)
+
+
+class TestCreateImageFromRawProcessed:
+    """Tests for the Processed branch of createImageFromRaw."""
+
+    @pytest.mark.unit
+    def test_processed_branch_returns_uint8(self):
+        dimY, dimX, dimZ = 1, 2, 2
+        intensity = np.full(dimY * dimX * dimZ, 1112000000, dtype=np.int32).tobytes()
+
+        buffer = BytesIO()
+        with ZipFile(buffer, 'w') as zf:
+            zf.writestr('data/Intensity.data', intensity)
+        buffer.seek(0)
+        archive = ZipFile(buffer, 'r')
+
+        xml_dict = {'dimY': dimY, 'dimX': dimX, 'dimZ': dimZ}
+        img = octF.createImageFromRaw(
+            xml_dict, archive, dBmin=20, dBmax=80, selDataType='Processed',
+            averaging='coherent', spectral=0, prefRaw=False, tukeySize=0.9,
+            advancedFilter='', dispersion=('None', '0'),
+        )
+        archive.close()
+
+        assert img.dtype == np.uint8
+        assert img.ndim == 3
+
+
+class TestOctToGVLegacy:
+    """Tests for the legacy octToGV implementation."""
+
+    @pytest.mark.unit
+    def test_legacy_returns_clipped_output(self, sample_complex_bscan):
+        result = octF.octToGV_legacy(sample_complex_bscan, dBmin=20, dBmax=80, advancedFilter='')
+        assert result.min() >= 0 and result.max() <= 255
+
+    @pytest.mark.unit
+    def test_legacy_advanced_filter_runs(self):
+        # Small array with some dark values (< 50) to exercise the outlier loop.
+        bscan = np.ones((6, 6), dtype=np.complex128) * (10 + 0j)
+        bscan[2, 2] = 1e6 + 0j  # one bright pixel so others fall below threshold
+        result = octF.octToGV_legacy(bscan, dBmin=20, dBmax=80, advancedFilter='selected')
+        assert result.shape == (6, 6)
