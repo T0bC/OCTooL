@@ -209,6 +209,13 @@ class addColumnsPanel:
 
         self.context.keybinding_specs.append((colName, color, keyBind, dataType))
 
+        # Activate the keybinding live so it works immediately, without needing
+        # to save and reload a config first.
+        if keyBind:
+            manager = self.context.config_manager.get_keybinding_manager(self.context)
+            if manager is not None:
+                manager.register_single(keyBind, colName, dataType, color)
+
         self.update_available_keys()
 
 
@@ -221,9 +228,16 @@ class addColumnsPanel:
         removed_col_name = self.resultsPanel.remove_last_dynamic_column()
 
         if removed_col_name:
+            removed_key = self.column_keybindings.get(removed_col_name)
             self.column_keybindings.pop(removed_col_name, None)
             self.column_data_types.pop(removed_col_name, None)
             self.column_colors.pop(removed_col_name, None)
+
+            # Deactivate the live keybinding for the removed column.
+            if removed_key:
+                manager = self.context.config_manager.get_keybinding_manager(self.context)
+                if manager is not None:
+                    manager.unregister(removed_key)
 
             # Ensure keybinding_specs exists
             if not hasattr(self.context, "keybinding_specs") or self.context.keybinding_specs is None:
