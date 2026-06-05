@@ -10,6 +10,7 @@ handler, and the ``handle_errors`` decorator. The pure file-logging helper
 re-exported here for convenience.
 """
 
+import threading
 import traceback
 import tkinter as tk
 from tkinter import ttk
@@ -21,16 +22,28 @@ def show_error_popup(title, message):
     """
     Displays a custom Tkinter popup window with a scrollable, selectable text area.
 
+    Tkinter is not thread-safe. If this is called from a worker thread, the
+    popup is marshalled onto the main loop via ``root.after`` so it never
+    crashes the interpreter. On the main thread it is built directly.
+
     Args:
         title (str): Title of the popup window.
         message (str): Error message and traceback to display.
     """
-
-
     root = tk._default_root  # Get the default root window
     if root is None:
         root = tk.Tk()  # Create one if it doesn't exist
 
+    # If we're off the main thread, schedule the popup on the GUI thread.
+    if threading.current_thread() is not threading.main_thread():
+        root.after(0, lambda: _build_error_popup(root, title, message))
+        return
+
+    _build_error_popup(root, title, message)
+
+
+def _build_error_popup(root, title, message):
+    """Build and show the error popup. Must run on the Tk main thread."""
     popup = tk.Toplevel(root)
     popup.title(title)
     popup.geometry("600x400")
