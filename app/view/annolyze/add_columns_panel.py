@@ -79,30 +79,27 @@ class addColumnsPanel:
         self.dataTypeDropdown.grid(row=0, column=2, sticky="ew", padx=3, pady=3)
         Tooltip(self.dataTypeDropdown, text=self.dataTypeToolTip, wraplength=200)
 
-        # Color picker container frame for better styling
-        self.colorPickerFrame = ttk.Frame(self.frame)
-        self.colorPickerFrame.grid(row=0, column=3, sticky="ew", padx=(3, 0), pady=3)
-        
-        # Color preview label (shows selected color)
-        self.colorPreviewLabel = tk.Label(
-            self.colorPickerFrame,
-            bg=self.selectedColor,
-            width=3,
+        # Single color element: an editable hex entry that doubles as a color
+        # swatch (its background shows the selected color) and opens the color
+        # picker popup on double-click.
+        self.colorEntry = tk.Entry(
+            self.frame,
+            width=9,
+            justify="center",
             relief=tk.SUNKEN,
             borderwidth=2
         )
-        self.colorPreviewLabel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 2))
-        
-        # Styled button using ttk for consistency
-        self.colorPickerButton = ttk.Button(
-            self.colorPickerFrame,
-            text='Pick Color',
-            command=self.pick_color_ctk,
-            bootstyle="info",
-            width=10
+        self.colorEntry.insert(0, self.selectedColor)
+        self.colorEntry.grid(row=0, column=3, sticky="ew", padx=(3, 0), pady=3)
+        self._apply_color_to_entry(self.selectedColor)
+        self.colorEntry.bind("<Return>", self._on_hex_entered)
+        self.colorEntry.bind("<FocusOut>", self._on_hex_entered)
+        self.colorEntry.bind("<Double-Button-1>", lambda e: self.pick_color_ctk())
+        Tooltip(
+            self.colorEntry,
+            text="Type a hex color (e.g. #FF8800) or double-click to open the color picker.",
+            wraplength=200
         )
-        self.colorPickerButton.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        Tooltip(self.colorPickerButton, text="Choose a color for this column (hex format)", wraplength=200)
 
         self.addColumnAndBindingToTableToolTip = 'Add a new custom column to the results table with the specified name, keybinding, data type, and color. The keybinding allows quick data entry using keyboard shortcuts during image annotation.'
 
@@ -130,15 +127,51 @@ class addColumnsPanel:
         Tooltip(self.removeColumnButton, text="Remove the last added custom column", wraplength=300)
 
     def pick_color_ctk(self):
-        # Disable canvas events
-        pick_color = AskColor()
+        pick_color = AskColor(initial_color=self.selectedColor)
         color = pick_color.get()
         if color:
             self.selectedColor = color
-            # Update the color preview label
-            self.colorPreviewLabel.config(bg=self.selectedColor)
-            # Optionally update button text to show hex value
-            self.colorPickerButton.config(text=self.selectedColor)
+            self._set_entry_text(color)
+            self._apply_color_to_entry(color)
+
+    def _set_entry_text(self, value):
+        self.colorEntry.delete(0, tk.END)
+        self.colorEntry.insert(0, value)
+
+    def _on_hex_entered(self, event=None):
+        candidate = self._normalize_hex(self.colorEntry.get())
+        if candidate:
+            self.selectedColor = candidate
+        # Always reflect the current valid color (reverts invalid input).
+        self._set_entry_text(self.selectedColor)
+        self._apply_color_to_entry(self.selectedColor)
+
+    def _normalize_hex(self, value):
+        value = value.strip()
+        if not value:
+            return None
+        if not value.startswith('#'):
+            value = '#' + value
+        body = value[1:]
+        hex_digits = '0123456789abcdefABCDEF'
+        if len(body) == 3 and all(c in hex_digits for c in body):
+            body = ''.join(c * 2 for c in body)
+        if len(body) == 6 and all(c in hex_digits for c in body):
+            return '#' + body.upper()
+        return None
+
+    def _apply_color_to_entry(self, color):
+        self.colorEntry.configure(
+            bg=color,
+            fg=self._contrast_color(color),
+            insertbackground=self._contrast_color(color)
+        )
+
+    def _contrast_color(self, hex_color):
+        body = hex_color.lstrip('#')
+        r, g, b = int(body[0:2], 16), int(body[2:4], 16), int(body[4:6], 16)
+        luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        return "#000000" if luminance > 140 else "#FFFFFF"
 
 
     def update_available_keys(self):
