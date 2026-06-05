@@ -15,7 +15,7 @@ from app.view.shared.error_handler import handle_errors
 from app.logic.shared.doc_links import open_doc
 from app.logic.shared.app_config import CHANGELOG_URL
 
-SERVER_URL = "https://dentlab.uni-leipzig.de"
+SERVER_URL = "https://dentlab.medizin.uni-leipzig.de"
 GITHUB_URL = "https://github.com/T0bC/OCTooL"
 DOI = "DOI: <placeholder>"
 
@@ -130,7 +130,7 @@ class AboutDialog:
             text_widget.tag_bind(tag, '<Leave>',
                                   lambda e: text_widget.config(cursor=''))
 
-        _add_link("🌐 dentlab.uni-leipzig.de", SERVER_URL)
+        _add_link("🌐 dentlab.medizin.uni-leipzig.de", SERVER_URL)
         _add_link("💻 github.com/T0bC/OCTooL", GITHUB_URL)
         text_widget.insert('end', f"\n  {DOI}", "center")
 
