@@ -5,6 +5,7 @@ Created on Thu Aug 14 11:13:52 2025
 @author: Tobias Meissner
 """
 
+import logging
 import tkinter as tk
 from tkinter import ttk
 from app.view.shared.tool_tip import Tooltip
@@ -16,6 +17,8 @@ from datetime import datetime
 from app.view.shared.base_canvas_panel import BaseCanvasPanel
 from app.logic.annolyze.annotation_service import AnnotationService
 from app.logic.annolyze.data_service import DataService
+
+logger = logging.getLogger(__name__)
 
 class annotatePanel(BaseCanvasPanel):
     @handle_errors("error in annotatePanel")
@@ -574,15 +577,15 @@ class annotatePanel(BaseCanvasPanel):
         """
         # Check if this slice has annotations
         if slice_index not in self.slice_annotations:
-            self.logger.debug(f"Slice {slice_index} not in slice_annotations")
+            logger.debug(f"Slice {slice_index} not in slice_annotations")
             return None
         
         annotations = self.slice_annotations[slice_index]
         if not annotations:
-            self.logger.debug(f"Slice {slice_index} has empty annotations list")
+            logger.debug(f"Slice {slice_index} has empty annotations list")
             return None
         
-        self.logger.info(f"Rendering {len(annotations)} annotation(s) for slice {slice_index}")
+        logger.info(f"Rendering {len(annotations)} annotation(s) for slice {slice_index}")
         
         # Load the original image to get dimensions
         img_path = self.get_image_path(slice_index)
