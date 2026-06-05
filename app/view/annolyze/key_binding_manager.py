@@ -41,12 +41,57 @@ class KeybindingManager:
         self.annotate_panel.window.bind("<Control-u>", lambda e: self.open_undo_panel())
 
     # %% Keybindings
+    def _bind_key(self, key):
+        """Bind a single key on the annotate window to the dispatch handler."""
+        self.annotate_panel.window.bind(
+            f"<{key.lower()}>", lambda e, k=key: self.dispatch_with_length(k)
+        )
+
+    def _unbind_key(self, key):
+        """Remove the binding for a single key (best-effort)."""
+        try:
+            self.annotate_panel.window.unbind(f"<{key.lower()}>")
+        except Exception:
+            pass
+
     @handle_errors("KeybindingManager.register_keybindings")
     def register_keybindings(self):
-        for key, col_info in self.column_map.items():
-            col_name = col_info["col_name"]
-            data_type = col_info["data_type"]
-            self.annotate_panel.window.bind(f"<{key.lower()}>", lambda e, k=key: self.dispatch_with_length(k))
+        for key in self.column_map:
+            self._bind_key(key)
+
+    @handle_errors("KeybindingManager.register_single")
+    def register_single(self, key, col_name, data_type, color="#FFFFFF"):
+        """Activate a single keybinding live (used by the Add Column path)."""
+        if not key:
+            return
+        self.column_map[key] = {
+            "col_name": col_name,
+            "data_type": data_type,
+            "color": color,
+        }
+        self._bind_key(key)
+
+    @handle_errors("KeybindingManager.unregister")
+    def unregister(self, key):
+        """Deactivate a single keybinding (used by the Remove Column path)."""
+        if not key:
+            return
+        self.column_map.pop(key, None)
+        self._unbind_key(key)
+
+    @handle_errors("KeybindingManager.clear_all")
+    def clear_all(self):
+        """Unbind every active keybinding and empty the column map."""
+        for key in list(self.column_map.keys()):
+            self._unbind_key(key)
+        self.column_map.clear()
+
+    @handle_errors("KeybindingManager.set_column_map")
+    def set_column_map(self, column_map):
+        """Replace all active keybindings with those in ``column_map``."""
+        self.clear_all()
+        self.column_map = dict(column_map)
+        self.register_keybindings()
 
     # %% Run the different Data Handlers
     def dispatch_with_length(self, key):
