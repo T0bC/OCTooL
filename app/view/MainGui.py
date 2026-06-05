@@ -398,7 +398,12 @@ class MainGui:
         )
         if info.notes:
             message += f'\n{info.notes}\n'
-        message += '\nOpen the download page now?'
+        message += (
+            '\nInstallation: Download the zip, extract it, close OCTooL and\n'
+            'replace the old folder (or overwrite the existing one).\n'
+            'Create a new desktop shortcut from OCTooL.exe if necessary.\n\n'
+            'Open the download page now?'
+        )
 
         if tk.messagebox.askyesno(title='Update Available', message=message):
             if info.download_url:
