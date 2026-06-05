@@ -113,6 +113,33 @@ class ConfigManager:
     def validate_config(self, config):
         return self.config_service.validate_config(config)
 
+    def get_keybinding_manager(self, context):
+        """
+        Return the single shared :class:`KeybindingManager`, creating it lazily.
+
+        A persistent manager is required so keybindings defined in the GUI
+        (Add Column) and those loaded from a config share the same live
+        bindings on the annotate window. Returns ``None`` if the panels needed
+        to build it are not available yet.
+        """
+        manager = getattr(context, "keybinding_manager", None)
+        if manager is not None:
+            return manager
+
+        annotate_panel = context.get_panel("anno_image", required=False)
+        results_panel = context.get_panel("results", required=False)
+        if annotate_panel is None or results_panel is None:
+            return None
+
+        manager = KeybindingManager(
+            canvas=annotate_panel.canvas,
+            sheet=results_panel.sheet,
+            column_map={},
+            annotate_panel=annotate_panel,
+        )
+        context.keybinding_manager = manager
+        return manager
+
     @handle_errors("ConfigManager.apply_config")
     def apply_config(self, config, context):
         try:
@@ -160,13 +187,9 @@ class ConfigManager:
 
             column_map = self.config_service.build_column_map(config)
 
-            keybinding_manager = KeybindingManager(
-                canvas=annotate_panel.canvas,
-                sheet=results_panel.sheet,
-                column_map=column_map,
-                annotate_panel=annotate_panel
-            )
-            keybinding_manager.register_keybindings()
+            keybinding_manager = self.get_keybinding_manager(context)
+            if keybinding_manager is not None:
+                keybinding_manager.set_column_map(column_map)
 
             # store information for keybinding and show keybind layout purposes
             context.keybinding_specs = [
