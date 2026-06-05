@@ -104,7 +104,7 @@ class loadImagePanel:
 
         if not tmpPathList:
             self.context.safe_status_update("No suitable image files found in the selected folder.", level="error")
-            raise ValueError("No suitable image files found in the selected folder.")
+            return
 
         self.tmpFileList = [{
             'name': os.path.basename(path),
@@ -116,6 +116,14 @@ class loadImagePanel:
 
         self.context.image_list = self.tmpFileList
 
+        # All work below mutates Tkinter widgets and MUST run on the main
+        # thread. getImagePaths runs in a worker thread, so calling Tk widget
+        # methods directly here would trigger a non-catchable Tcl crash (the
+        # app would die silently). Marshal the UI work back to the main loop.
+        self.root.after(0, self._on_images_loaded)
+
+    @handle_errors("Error displaying loaded images")
+    def _on_images_loaded(self):
         # Display first image
         annotate_panel = self.context.get_panel("anno_image")
         if annotate_panel:
