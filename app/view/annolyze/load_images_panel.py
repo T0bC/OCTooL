@@ -124,6 +124,10 @@ class loadImagePanel:
 
     @handle_errors("Error displaying loaded images")
     def _on_images_loaded(self):
+        # Start from a clean slate: a newly loaded folder must not inherit the
+        # previous folder's config, annotations or results.
+        self._reset_state()
+
         # Display first image
         annotate_panel = self.context.get_panel("anno_image")
         if annotate_panel:
@@ -134,4 +138,21 @@ class loadImagePanel:
         loader.load_config()
         loader.load_annotations()
         loader.load_results()
+
+    def _reset_state(self):
+        """Clear config, annotations and results from any previously loaded folder."""
+        # Reset results table and dynamic columns
+        results_panel = self.context.get_panel("results", required=False)
+        if results_panel:
+            results_panel.reset_table()
+
+        # Clear annotations and redraw the (now empty) overlay
+        annotate_panel = self.context.get_panel("anno_image", required=False)
+        if annotate_panel:
+            annotate_panel.slice_annotations.clear()
+
+        # Drop cached config/annotations so stale state can't leak through
+        self.context.loaded_annotations = None
+        if hasattr(self.config_manager, "active_config"):
+            self.config_manager.active_config = self.config_manager.default_config
 
