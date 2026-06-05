@@ -150,6 +150,13 @@ class loadImagePanel:
         annotate_panel = self.context.get_panel("anno_image", required=False)
         if annotate_panel:
             annotate_panel.slice_annotations.clear()
+
+        # Deactivate all live keybindings via the shared manager. Fall back to
+        # spec-based unbinding if the manager hasn't been created yet.
+        manager = getattr(self.context, "keybinding_manager", None)
+        if manager is not None:
+            manager.clear_all()
+        elif annotate_panel is not None:
             window = getattr(annotate_panel, "window", None)
             if window is not None:
                 for spec in getattr(self.context, "keybinding_specs", None) or []:
