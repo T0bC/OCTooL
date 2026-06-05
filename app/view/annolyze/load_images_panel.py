@@ -146,13 +146,41 @@ class loadImagePanel:
         if results_panel:
             results_panel.reset_table()
 
-        # Clear annotations and redraw the (now empty) overlay
+        # Clear annotations and remove any keybindings from a previous config
         annotate_panel = self.context.get_panel("anno_image", required=False)
         if annotate_panel:
             annotate_panel.slice_annotations.clear()
+            window = getattr(annotate_panel, "window", None)
+            if window is not None:
+                for spec in getattr(self.context, "keybinding_specs", None) or []:
+                    key = spec[2]
+                    try:
+                        window.unbind(f"<{key.lower()}>")
+                    except Exception:
+                        pass
 
-        # Drop cached config/annotations so stale state can't leak through
+        # Reset the add-columns panel's keybinding/data-type bookkeeping
+        add_columns_panel = self.context.get_panel("add_columns", required=False)
+        if add_columns_panel:
+            for attr in ("column_keybindings", "column_data_types", "column_colors"):
+                mapping = getattr(add_columns_panel, attr, None)
+                if isinstance(mapping, dict):
+                    mapping.clear()
+
+        # Drop cached config/annotations/keybindings so stale state can't leak through
         self.context.loaded_annotations = None
+        self.context.keybinding_specs = []
         if hasattr(self.config_manager, "active_config"):
             self.config_manager.active_config = self.config_manager.default_config
+
+        # Refresh keyboard-layout highlights and available-key dropdown
+        viewer = getattr(self.context, "keyboard_layout_viewer", None)
+        if viewer is not None and getattr(viewer, "window", None) is not None:
+            try:
+                if viewer.window.winfo_exists():
+                    viewer.update_highlights()
+            except Exception:
+                pass
+        if add_columns_panel and hasattr(add_columns_panel, "update_available_keys"):
+            add_columns_panel.update_available_keys()
 
