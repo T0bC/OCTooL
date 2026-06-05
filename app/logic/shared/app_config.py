@@ -24,7 +24,7 @@ VERSION_DISPLAY = f" [v. {__version__}]"
 # Remote resources (served by nginx on the Ubuntu server)
 # ---------------------------------------------------------------------------
 # Base URL of the OCTooL section on the web server. The trailing slash matters.
-SERVER_BASE_URL = "https://dentlab.uni-leipzig.de/octool/"
+SERVER_BASE_URL = "https://dentlab.medizin.uni-leipzig.de/octool/"
 
 # Live documentation. These always reflect the latest pushed HTML on the server,
 # regardless of which app version the user has installed.
