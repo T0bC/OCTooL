@@ -10,6 +10,40 @@ format:
 editor: visual
 ---
 
+# Version 2026.5 (2026-06-05)
+
+## AnnoLyze Bug Fixes & Stability
+
+### Silent Crash on Folder Load with Config
+
+-   Fixed a silent crash that occurred when loading an image folder containing a `config.json`
+-   Root cause: configuration apply and data loading mutated Tkinter widgets from a background worker thread, triggering a non-catchable Tcl crash that bypassed the error handler
+-   Image gathering now stays on the worker thread, while all UI work (image display, config/annotation/result loading) is marshalled back to the main thread
+-   Real configuration errors now surface as proper error popups and status-bar messages instead of crashing silently
+
+### Thread-Safe Error Popups
+
+-   `show_error_popup` now detects calls from worker threads and schedules the popup on the GUI thread, so error reporting can never itself crash the application
+
+### Logger Fix
+
+-   Fixed an `AttributeError` when switching slices (`annotatePanel` referenced an undefined `self.logger`); replaced with a proper module-level logger
+
+## AnnoLyze User Experience
+
+### Clean Slate on New Folder Load
+
+-   Loading a new folder now resets all previous state: results table, dynamic columns, annotations, cached config, and keybindings
+-   Previously the old config, results, and annotations persisted into the newly loaded folder
+
+### Live Keybinding Activation
+
+-   Keybindings defined in the GUI via **Add Column** are now active immediately, without needing to save and reload a config file first
+-   Removing a column now deactivates its keybinding live
+-   Introduced a single shared `KeybindingManager` per session so GUI-defined and config-loaded keybindings share the same live bindings
+
+------------------------------------------------------------------------
+
 # Version 2026.4 (2026-06-04)
 
 ## User Experience
