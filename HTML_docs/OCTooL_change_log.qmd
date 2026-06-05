@@ -83,7 +83,7 @@ editor: visual
 
 ## Documentation Distribution
 
--   Change log and manuals now served from `denlab.uni-leipzig.de`
+-   Change log and manuals now served from `dentlab.medizin.uni-leipzig.de`
 -   Accessible directly via in-app buttons
 -   Offline availability maintained for cached documentation
 
@@ -92,7 +92,7 @@ editor: visual
 ### About Dialog
 
 -   Fixed bottom action buttons (Changelog / Close) being partially cut off
--   Added clickable links to the lab server (`dentlab.uni-leipzig.de`) and GitHub repository (`github.com/T0bC/OCTooL`)
+-   Added clickable links to the lab server (`dentlab.medizin.uni-leipzig.de`) and GitHub repository (`github.com/T0bC/OCTooL`)
 -   Added a DOI reference entry
 
 ### Header Toolbar
