@@ -1053,4 +1053,4 @@ To install a new version of OCTooL:
 1.  **Download the Update**: Click the download link in the update notification to save the latest `OCTooL_YYYY.N.zip` file to your computer.
 2.  **Remove the Old Version**: Delete the previous OCTooL folder from your hard drive to avoid conflicts.
 3.  **Extract the New Version**: Unzip the downloaded archive to your preferred location.
-4.  **Create a Desktop Shortcut (Optional)**: On Windows, right-click the extracted `OCTooL.exe` (or launch script), select **Send to > Desktop (create shortcut)** to add a new shortcut to your desktop.
+4.  **Create a Desktop Shortcut (Optional)**: On Windows, right-click the extracted `OCTooL.exe` (or launch script), select **Send to \> Desktop (create shortcut)** to add a new shortcut to your desktop.
