@@ -1,18 +1,27 @@
 """
-RexView GUI Adapters
+This file is part of OCTooL.
+OCTooL is an open source software for export, analysis and quantification of
+Optical Coherence Tomography (OCT) images.
+Copyright (C) 2019-2026 Tobias Meissner
 
-Translation layer between tkinter widget state (strings, state tuples such as
-``('selected',)``) and the pure Pydantic models in ``app.logic.rexview.models``.
+OCTooL is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-This module is the *only* place that understands tkinter-specific conventions.
-Keeping it in the view layer means the logic/data layer stays frontend-agnostic:
-if the GUI toolkit ever changes (or a second frontend is added), only these
-functions need to be updated.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
 
-The functions here are deliberately free of tkinter imports: they accept already
-extracted widget values and return validated models, so they remain trivially
-unit-testable without a display.
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
+
+****
+Author: Tobias Meissner
+****
 """
+
 from typing import Optional, Tuple
 
 from app.logic.rexview.models import (

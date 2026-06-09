@@ -1,14 +1,27 @@
 """
-CarlQuant Analysis Runner (view-layer orchestration)
+This file is part of OCTooL.
+OCTooL is an open source software for export, analysis and quantification of
+Optical Coherence Tomography (OCT) images.
+Copyright (C) 2019-2026 Tobias Meissner
 
-Thin UI/threading wrapper around the tkinter-free
-``AnalysisService.analyze_specimen``. This holds everything that the pure logic
-must *not* know about: the modal progress dialog, the worker thread, the
-specimen-table status updates, and status-bar / error-popup messaging.
+OCTooL is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-Per-slice compute, result storage and persistence are delegated to the service;
-this module only translates service callbacks into UI updates.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
+
+****
+Author: Tobias Meissner
+****
 """
+
 import time
 import traceback
 from threading import Thread

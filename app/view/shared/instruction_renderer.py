@@ -1,18 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-Instruction Renderer for OCTooL Application
+This file is part of OCTooL.
+OCTooL is an open source software for export, analysis and quantification of
+Optical Coherence Tomography (OCT) images.
+Copyright (C) 2019-2026 Tobias Meissner
 
-This module provides a data-driven instruction rendering system that displays
-contextual help on canvas widgets. Instructions are loaded from JSON files,
-separating content from presentation logic.
+OCTooL is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-The renderer automatically adapts to different canvas heights by using an
-overflow system: workflow steps fill the first column, overflow to the second
-column, and Quick Tips appear below the overflow content.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
 
-Created on Wed Oct 01 11:48:00 2025
-@author: Tobias Meissner
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
+
+****
+Author: Tobias Meissner
+****
 """
+
 
 import tkinter as tk
 import json
