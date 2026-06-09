@@ -2,7 +2,9 @@
 """
 OCT Processing Functions.
 
-Canonical location for OCT processing logic — pure functions for OCT raw-file processing with no GUI (tkinter) dependencies. Errors are surfaced to callers/services rather than handled here.
+Canonical location for OCT processing logic — pure functions for OCT raw-file
+processing with no GUI (tkinter) dependencies. Errors are surfaced to
+callers/services rather than handled here.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

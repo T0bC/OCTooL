@@ -1,7 +1,10 @@
 """
 AnnoLyze Config Service.
 
-Pure logic for building, validating, and (de)serialising analysis configuration files — no tkinter, no dialogs. Extracted from AnnoLyze/config_manager.py. File I/O methods raise exceptions on failure; the view layer decides how to surface them.
+Pure logic for building, validating, and (de)serialising analysis configuration
+files — no tkinter, no dialogs. Extracted from AnnoLyze/config_manager.py. File
+I/O methods raise exceptions on failure; the view layer decides how to surface
+them.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

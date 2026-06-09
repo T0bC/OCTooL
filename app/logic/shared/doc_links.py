@@ -3,7 +3,11 @@
 """
 Documentation Link Opener.
 
-Opens server-hosted documentation in the default browser, with a graceful fallback to the locally bundled HTML copy when the server is unreachable (offline use, server down, DNS failure, etc.). The server copy is preferred because it stays current; the bundled copy guarantees docs remain available without an internet connection.
+Opens server-hosted documentation in the default browser, with a graceful
+fallback to the locally bundled HTML copy when the server is unreachable
+(offline use, server down, DNS failure, etc.). The server copy is preferred
+because it stays current; the bundled copy guarantees docs remain available
+without an internet connection.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

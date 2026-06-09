@@ -1,7 +1,13 @@
 """
 CarlQuant Analysis Service.
 
-Pure, tkinter-free business logic for the CarlQuant OCT analysis pipeline. Wraps the compute functions in carl_quant_core (surface detection, region extraction, lesion-depth calculation) and exposes the per-slice analysis pipeline previously embedded in the UI. Long-running orchestration accepts progress/cancel callbacks; methods accept/return models, not widget references. File I/O is delegated to DataSaver while the view layer owns dialogs, threading and status-bar updates.
+Pure, tkinter-free business logic for the CarlQuant OCT analysis pipeline.
+Wraps the compute functions in carl_quant_core (surface detection, region
+extraction, lesion-depth calculation) and exposes the per-slice analysis
+pipeline previously embedded in the UI. Long-running orchestration accepts
+progress/cancel callbacks; methods accept/return models, not widget references.
+File I/O is delegated to DataSaver while the view layer owns dialogs, threading
+and status-bar updates.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

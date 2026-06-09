@@ -1,7 +1,11 @@
 """
 RexView Export Worker.
 
-Top-level, picklable worker for process-based parallel export. Contains only module-level functions (no closures, no tkinter, no bound state) so it can be dispatched to a ProcessPoolExecutor on Windows (spawn). Each worker builds its own ExportService, exports a single OCT file, and returns a small, picklable ExportResult.
+Top-level, picklable worker for process-based parallel export. Contains only
+module-level functions (no closures, no tkinter, no bound state) so it can be
+dispatched to a ProcessPoolExecutor on Windows (spawn). Each worker builds its
+own ExportService, exports a single OCT file, and returns a small, picklable
+ExportResult.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

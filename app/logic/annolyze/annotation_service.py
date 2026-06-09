@@ -1,7 +1,9 @@
 """
 AnnoLyze Annotation Service.
 
-Pure annotation geometry, colour, and (de)serialization logic — no tkinter. Extracted from the AnnoLyze annotation panel so it can be unit-tested headlessly.
+Pure annotation geometry, colour, and (de)serialization logic — no tkinter.
+Extracted from the AnnoLyze annotation panel so it can be unit-tested
+headlessly.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

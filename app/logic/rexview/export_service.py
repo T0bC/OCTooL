@@ -1,7 +1,8 @@
 """
 RexView Export Service.
 
-Pure business logic for OCT image export — no tkinter dependencies. Handles the core export pipeline logic extracted from execution_panel.py.
+Pure business logic for OCT image export — no tkinter dependencies. Handles the
+core export pipeline logic extracted from execution_panel.py.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

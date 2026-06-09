@@ -1,7 +1,11 @@
 """
 RexView Shared Validation.
 
-Single source of truth for the core domain invariants used across the RexView logic layer. Pydantic models enforce these invariants strictly (raising on construction), while services reuse the same helper functions to build non-raising ValidationResult objects for the GUI. Keeps the rules defined in one place so both layers stay consistent.
+Single source of truth for the core domain invariants used across the RexView
+logic layer. Pydantic models enforce these invariants strictly (raising on
+construction), while services reuse the same helper functions to build non-
+raising ValidationResult objects for the GUI. Keeps the rules defined in one
+place so both layers stay consistent.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

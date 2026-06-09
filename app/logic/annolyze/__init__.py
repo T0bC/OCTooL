@@ -1,7 +1,8 @@
 """
 AnnoLyze Logic Package.
 
-Contains business logic for OCT image annotation, dynamic results columns, configuration, and measurement data entry. tkinter-free and fully testable.
+Contains business logic for OCT image annotation, dynamic results columns,
+configuration, and measurement data entry. tkinter-free and fully testable.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

@@ -1,7 +1,10 @@
 """
 AnnoLyze Data Service.
 
-Pure file discovery and data (de)serialization for annotations, results, and configs — no tkinter and no context dependency. Extracted from AnnoLyze/data_io.py so the old panel-state-coupled loaders could be replaced with plain-data I/O that is fully testable headlessly.
+Pure file discovery and data (de)serialization for annotations, results, and
+configs — no tkinter and no context dependency. Extracted from
+AnnoLyze/data_io.py so the old panel-state-coupled loaders could be replaced
+with plain-data I/O that is fully testable headlessly.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

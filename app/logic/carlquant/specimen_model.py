@@ -2,7 +2,9 @@
 """
 CarlQuant Specimen Models.
 
-Domain dataclasses for the CarlQuant analysis pipeline: region statistics, detected surfaces, lesion depths, region/AIR configurations, and specimen results.
+Domain dataclasses for the CarlQuant analysis pipeline: region statistics,
+detected surfaces, lesion depths, region/AIR configurations, and specimen
+results.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

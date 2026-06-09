@@ -1,7 +1,10 @@
 """
 CarlQuant Data Service.
 
-Pure, tkinter-free file/Excel/JSON I/O for CarlQuant: discovering image stacks, loading/saving specimen configurations, results, and annotated images. Wraps the loaders/savers in data_io and exposes them from the logic layer's stable import location.
+Pure, tkinter-free file/Excel/JSON I/O for CarlQuant: discovering image stacks,
+loading/saving specimen configurations, results, and annotated images. Wraps
+the loaders/savers in data_io and exposes them from the logic layer's stable
+import location.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

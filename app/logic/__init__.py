@@ -1,7 +1,8 @@
 """
 Business Logic Package for OCTooL.
 
-Contains pure business logic separated from GUI components. All modules in this package are testable without tkinter.
+Contains pure business logic separated from GUI components. All modules in this
+package are testable without tkinter.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

@@ -1,7 +1,9 @@
 """
 AnnoLyze Pydantic Models.
 
-Data models for OCT image annotation, dynamic columns, configuration, and measurement undo history. These are pure data structures (no tkinter) passed across the logic/view boundary.
+Data models for OCT image annotation, dynamic columns, configuration, and
+measurement undo history. These are pure data structures (no tkinter) passed
+across the logic/view boundary.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

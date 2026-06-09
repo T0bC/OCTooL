@@ -1,7 +1,11 @@
 """
 AnnoLyze Measurement Service.
 
-Pure value-transform logic for keybinding-driven data entry — no tkinter, no sheet access. Extracted from AnnoLyze/key_binding_manager.py so the per-type cell computations can be unit-tested headlessly. Each transform takes the current cell value (as stored, a string) and returns the new value to store. Parsing helpers raise ValueError on bad input.
+Pure value-transform logic for keybinding-driven data entry — no tkinter, no
+sheet access. Extracted from AnnoLyze/key_binding_manager.py so the per-type
+cell computations can be unit-tested headlessly. Each transform takes the
+current cell value (as stored, a string) and returns the new value to store.
+Parsing helpers raise ValueError on bad input.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

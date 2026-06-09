@@ -1,7 +1,8 @@
 """
 RexView Image Service.
 
-Pure business logic for OCT image preview display — no tkinter dependencies. Handles the core image processing logic extracted from image_panel.py.
+Pure business logic for OCT image preview display — no tkinter dependencies.
+Handles the core image processing logic extracted from image_panel.py.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

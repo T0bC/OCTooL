@@ -1,7 +1,9 @@
 """
 AnnoLyze Display Service.
 
-Pure presentation math (no tkinter): relative luminance, contrast-aware font colour, and header-based column-width estimation. Deduplicates identical helpers previously copied in results_panel.py and undo_panel.py.
+Pure presentation math (no tkinter): relative luminance, contrast-aware font
+colour, and header-based column-width estimation. Deduplicates identical
+helpers previously copied in results_panel.py and undo_panel.py.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

@@ -3,7 +3,10 @@
 """
 Application Configuration.
 
-Version string and remote resource locations. Single source of truth for the OCTooL version and all server-hosted resources (documentation, changelog, update manifest). Edit the values here on every release or when moving server endpoints.
+Version string and remote resource locations. Single source of truth for the
+OCTooL version and all server-hosted resources (documentation, changelog,
+update manifest). Edit the values here on every release or when moving server
+endpoints.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

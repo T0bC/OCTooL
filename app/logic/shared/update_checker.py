@@ -3,7 +3,11 @@
 """
 Update Checker.
 
-Fetches the version manifest (version.json) from the server and compares the advertised version against the locally installed __version__. Network access runs on a background thread so the GUI never blocks, and any failure is swallowed silently in the automatic path. Provides both non-blocking (startup) and blocking (manual check) entry points.
+Fetches the version manifest (version.json) from the server and compares the
+advertised version against the locally installed __version__. Network access
+runs on a background thread so the GUI never blocks, and any failure is
+swallowed silently in the automatic path. Provides both non-blocking (startup)
+and blocking (manual check) entry points.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

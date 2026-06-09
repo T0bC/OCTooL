@@ -1,7 +1,9 @@
 """
 RexView Settings Service.
 
-Pure business logic for OCT export settings validation and defaults — no tkinter dependencies. Handles the core settings logic extracted from global_settings_panel.py and custom_settings_panel.py.
+Pure business logic for OCT export settings validation and defaults — no
+tkinter dependencies. Handles the core settings logic extracted from
+global_settings_panel.py and custom_settings_panel.py.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

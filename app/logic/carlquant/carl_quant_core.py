@@ -2,7 +2,10 @@
 """
 CarlQuant Core Analysis Engine.
 
-Core compute functions for the CarlQuant OCT analysis pipeline: surface detection, region extraction, lesion-depth calculation, and parallel slice processing. process_slice_parallel lives at module level so it is picklable by ProcessPoolExecutor on Windows.
+Core compute functions for the CarlQuant OCT analysis pipeline: surface
+detection, region extraction, lesion-depth calculation, and parallel slice
+processing. process_slice_parallel lives at module level so it is picklable by
+ProcessPoolExecutor on Windows.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

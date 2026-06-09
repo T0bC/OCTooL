@@ -2,7 +2,10 @@
 """
 Centralized Annotation Color Configuration.
 
-Defines all colours used for annotations throughout the application. Import these constants to ensure consistent colours in both the GUI (Tkinter canvas) and exported images (PIL ImageDraw). All colours are optimised for visibility on grayscale images with a dark UI theme.
+Defines all colours used for annotations throughout the application. Import
+these constants to ensure consistent colours in both the GUI (Tkinter canvas)
+and exported images (PIL ImageDraw). All colours are optimised for visibility
+on grayscale images with a dark UI theme.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

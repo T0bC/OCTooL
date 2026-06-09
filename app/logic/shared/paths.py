@@ -1,7 +1,9 @@
 """
 Resource Path Resolution.
 
-Pure, tkinter-free helper for resolving asset paths in both development and PyInstaller-bundled environments. Provides resource_path, the canonical helper used throughout the application.
+Pure, tkinter-free helper for resolving asset paths in both development and
+PyInstaller-bundled environments. Provides resource_path, the canonical helper
+used throughout the application.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

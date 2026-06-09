@@ -1,7 +1,12 @@
 """
 RexView Parallel Export Coordinator.
 
-Pure business logic (no tkinter) that distributes per-file OCT exports across multiple processes using a ProcessPoolExecutor. Each file is an independent unit of CPU-bound work, so file-level parallelism scales well with low overhead. The coordinator is fully unit-testable: the executor factory and the worker function are injectable, so tests can run synchronously without spawning real processes.
+Pure business logic (no tkinter) that distributes per-file OCT exports across
+multiple processes using a ProcessPoolExecutor. Each file is an independent
+unit of CPU-bound work, so file-level parallelism scales well with low
+overhead. The coordinator is fully unit-testable: the executor factory and the
+worker function are injectable, so tests can run synchronously without spawning
+real processes.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

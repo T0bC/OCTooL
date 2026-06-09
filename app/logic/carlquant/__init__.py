@@ -1,7 +1,10 @@
 """
 CarlQuant Logic Package.
 
-Pure, tkinter-free business logic for the CarlQuant OCT lesion-quantification module: surface detection, region extraction, lesion-depth calculation, keyframe interpolation, and data I/O. Fully importable and unit-testable headlessly.
+Pure, tkinter-free business logic for the CarlQuant OCT lesion-quantification
+module: surface detection, region extraction, lesion-depth calculation,
+keyframe interpolation, and data I/O. Fully importable and unit-testable
+headlessly.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

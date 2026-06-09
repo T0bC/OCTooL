@@ -1,7 +1,9 @@
 """
 RexView Queue Service.
 
-Pure business logic for export queue management — no tkinter dependencies. Handles queue item validation, manipulation, and calculations extracted from tree_view_panel.py.
+Pure business logic for export queue management — no tkinter dependencies.
+Handles queue item validation, manipulation, and calculations extracted from
+tree_view_panel.py.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

@@ -1,7 +1,10 @@
 """
 CarlQuant Interpolation Service.
 
-Pure, tkinter-free keyframe interpolation for coordinate configurations (regions and AIR reference areas) across an image stack. Wraps the generic interpolation engine and exposes it from the logic layer's stable import location.
+Pure, tkinter-free keyframe interpolation for coordinate configurations
+(regions and AIR reference areas) across an image stack. Wraps the generic
+interpolation engine and exposes it from the logic layer's stable import
+location.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

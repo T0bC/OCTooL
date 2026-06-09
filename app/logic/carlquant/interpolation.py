@@ -2,7 +2,9 @@
 """
 Generic Keyframe Interpolation System.
 
-Keyframe-based interpolation for coordinate configurations across image stacks. Provides a unified framework that eliminates code duplication and makes it easy to add new coordinate types.
+Keyframe-based interpolation for coordinate configurations across image stacks.
+Provides a unified framework that eliminates code duplication and makes it easy
+to add new coordinate types.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

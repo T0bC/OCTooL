@@ -2,7 +2,9 @@
 """
 CarlQuant Data I/O.
 
-Data I/O for CarlQuant: loading specimen configurations, saving results (Excel, JSON, PNG), discovering image stacks, and JSON-serialization helpers for numpy types.
+Data I/O for CarlQuant: loading specimen configurations, saving results (Excel,
+JSON, PNG), discovering image stacks, and JSON-serialization helpers for numpy
+types.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

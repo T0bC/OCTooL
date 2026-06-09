@@ -1,7 +1,9 @@
 """
 RexView File Discovery Service.
 
-Pure business logic for OCT file discovery and metadata extraction — no tkinter dependencies. Handles file scanning, metadata parsing, and queue entry creation extracted from pick_files_panel.py.
+Pure business logic for OCT file discovery and metadata extraction — no tkinter
+dependencies. Handles file scanning, metadata parsing, and queue entry creation
+extracted from pick_files_panel.py.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

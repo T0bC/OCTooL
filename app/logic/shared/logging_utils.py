@@ -1,7 +1,8 @@
 """
 Error Logging Utilities.
 
-Pure file I/O, tkinter-free. Provides log_error_to_file, which writes error details to a daily log file under the project-root logs/ directory.
+Pure file I/O, tkinter-free. Provides log_error_to_file, which writes error
+details to a daily log file under the project-root logs/ directory.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

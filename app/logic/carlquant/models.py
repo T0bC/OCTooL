@@ -1,7 +1,10 @@
 """
 CarlQuant Logic Models.
 
-Boundary data structures for the CarlQuant analysis pipeline — the tkinter-free domain models that cross the view/logic boundary. Surfaces canonical definitions from specimen_model and carl_quant_core so consumers have a single, stable import location.
+Boundary data structures for the CarlQuant analysis pipeline — the tkinter-free
+domain models that cross the view/logic boundary. Surfaces canonical
+definitions from specimen_model and carl_quant_core so consumers have a single,
+stable import location.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
