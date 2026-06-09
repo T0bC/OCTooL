@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from app.logic.shared import oct_functions as octF
 from app.logic.rexview import QueueService, QueueItem
+from app.view.rexview.gui_adapters import queue_item_from_treeview_values
 from app.view.shared import dialogs
 
 
@@ -303,7 +304,7 @@ class treeViewPanel:
         QueueItem
             Model containing row data
         """
-        return QueueItem.from_treeview_values(
+        return queue_item_from_treeview_values(
             name=self.treeView.set(item_id, 'Name'),
             first=self.treeView.set(item_id, 'First'),
             last=self.treeView.set(item_id, 'Last'),
