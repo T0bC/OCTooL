@@ -28,6 +28,3 @@ HTML_docs/forPublication/
 build/
 dist/
 *.spec.bak
-
-# codeboarding
-#.codeboarding/
