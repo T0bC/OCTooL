@@ -46,7 +46,7 @@ Author: Tobias Meissner
 # ---------------------------------------------------------------------------
 # Bump this on every release. Keep it as a plain comparable string, e.g.
 # "2026.2" or "2026.10". This is the canonical version used everywhere.
-__version__ = "2026.5"
+__version__ = "2026.6"
 
 # Human-readable form shown in the window title / About dialog.
 VERSION_DISPLAY = f" [v. {__version__}]"
