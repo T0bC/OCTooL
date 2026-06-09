@@ -5,26 +5,25 @@ Pure business logic for OCT export settings validation and defaults - no tkinter
 This service handles the core settings logic extracted from global_settings_panel.py and custom_settings_panel.py.
 """
 from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
 
 from app.logic.rexview.models import SettingsConfig
+from app.logic.rexview.validation import ValidationResult, db_range_error, slice_order_error
 
-
-@dataclass
-class ValidationResult:
-    """Result of a validation operation."""
-    is_valid: bool
-    errors: List[str]
-    warnings: List[str]
+__all__ = ['SettingsService', 'ValidationResult']
 
 
 class SettingsService:
     """
-    Pure business logic for OCT export settings operations.
+    Stateless utility for OCT export settings operations.
     
     This service encapsulates all settings validation and defaults logic
-    without any GUI dependencies. It can be fully tested with pytest
-    without requiring tkinter.
+    without any GUI dependencies. It holds no mutable state, so a single
+    instance can be shared and its methods called freely. It can be fully
+    tested with pytest without requiring tkinter.
+
+    Note: unlike :class:`~app.logic.rexview.image_service.ImageService` (which
+    holds a loaded OCT archive), this is a stateless "utility bag" - construct
+    once and call methods; no internal state is mutated.
     """
     
     # Default values matching the GUI defaults
@@ -116,14 +115,15 @@ class SettingsService:
         errors = []
         warnings = []
         
-        # Validate dB range
-        if config.db_min >= config.db_max:
-            errors.append(f"db_min ({config.db_min}) must be less than db_max ({config.db_max})")
+        # Validate dB range (shared invariant - see validation.db_range_error)
+        db_error = db_range_error(config.db_min, config.db_max)
+        if db_error:
+            errors.append(db_error)
         
-        # Validate slice range if both are set
-        if config.first_slice is not None and config.last_slice is not None:
-            if config.first_slice > config.last_slice:
-                errors.append(f"first_slice ({config.first_slice}) must be <= last_slice ({config.last_slice})")
+        # Validate slice range if both are set (shared invariant)
+        slice_error = slice_order_error(config.first_slice, config.last_slice)
+        if slice_error:
+            errors.append(slice_error)
         
         # Validate scale settings when scale is enabled
         if config.scale_enabled:
@@ -296,8 +296,10 @@ class SettingsService:
         if not (max_range[0] <= db_max <= max_range[1]):
             errors.append(f"db_max ({db_max}) must be between {max_range[0]} and {max_range[1]}")
         
-        if db_min >= db_max:
-            errors.append(f"db_min ({db_min}) must be less than db_max ({db_max})")
+        # Ordering invariant (shared - see validation.db_range_error)
+        order_error = db_range_error(db_min, db_max)
+        if order_error:
+            errors.append(order_error)
         
         # Warnings for extreme values
         if db_max - db_min < 20:
