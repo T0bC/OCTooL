@@ -16,6 +16,7 @@ from app.view.shared.error_handler import handle_errors
 from app.view.shared.instruction_renderer import InstructionRenderer
 from app.logic.rexview.image_service import ImageService
 from app.logic.rexview.models import ImageDisplayConfig
+from app.view.rexview.gui_adapters import image_display_config_from_gui_state
 
 class imagePanel:
     def __init__(self, context):
@@ -105,7 +106,7 @@ class imagePanel:
         This method collects all display-related settings from the UI widgets
         and returns a configuration object for the ImageService.
         """
-        return ImageDisplayConfig.from_gui_state(
+        return image_display_config_from_gui_state(
             slice_index=max(0, int(self.scale.get() - 1)),
             slice_direction=self.treeView.getValue(column='Img. Slice Dir.'),
             db_min=self.treeView.getValue(column='dB min'),
