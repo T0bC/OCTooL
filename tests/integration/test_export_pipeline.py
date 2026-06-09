@@ -10,6 +10,10 @@ from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch
 
 from app.logic.rexview import ExportConfig, SliceExportParams, ExportService
+from app.view.rexview.gui_adapters import (
+    export_config_from_gui_state,
+    slice_export_params_from_treeview_row,
+)
 from app.logic.shared import OCTMetadata
 
 
@@ -201,7 +205,7 @@ class TestConfigCollectionIntegration:
 
     def test_export_config_from_gui_state(self):
         """Verify ExportConfig.from_gui_state creates valid config."""
-        config = ExportConfig.from_gui_state(
+        config = export_config_from_gui_state(
             resize_state='selected',
             prefer_raw_state=('selected',),
             advanced_filter_state='',
@@ -225,7 +229,7 @@ class TestConfigCollectionIntegration:
 
     def test_slice_params_from_treeview_row(self):
         """Verify SliceExportParams.from_treeview_row creates valid params."""
-        params = SliceExportParams.from_treeview_row(
+        params = slice_export_params_from_treeview_row(
             path='/test/file.oct',
             name='TestScan',
             first='1',
