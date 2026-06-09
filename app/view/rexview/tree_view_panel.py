@@ -104,6 +104,7 @@ class treeViewPanel:
             self.treeView.set(item, column=column, value=entryedit.get("1.0","end-1c"))
             entryedit.destroy()
             okb.destroy()
+            self.context.safe_status_update("Cell value updated.", level="info")
 
         okb = ttk.Button(self.frame, text='OK', width=4, command=saveedit)
         okb.place(x=90 + (cn - 1) * 242, y=2 + rn * 20)
@@ -140,6 +141,9 @@ class treeViewPanel:
 
         '''
         self.selectedItemList = self.treeView.selection()
+        count = len(self.selectedItemList)
+        if count:
+            self.context.safe_status_update(f"Removed {count} item(s) from queue.", level="info")
         for item in self.selectedItemList:
             self.treeView.delete(item)
 
@@ -172,6 +176,7 @@ class treeViewPanel:
         self.treeView.set(self.treeView.focus(), 'First', value=(str(self.firstEntry)))
         self.treeView.set(self.treeView.focus(), 'Last', value=(str(self.lastEntry)))
         self.treeView.set(self.treeView.focus(), 'NumSlices', value=(str(self.numOfSlices)))
+        self.context.safe_status_update("Slice range updated.", level="info")
 
     #setdBVal
 
@@ -199,6 +204,7 @@ class treeViewPanel:
         else:
             self.treeView.set(self.treeView.focus(), 'dB min', value=(str(self.scaleMdB)))
             self.treeView.set(self.treeView.focus(), 'dB max', value=(str(self.scaleAdB)))
+            self.context.safe_status_update("dB range updated.", level="info")
 
     def getChildren(self)->list:
         '''
@@ -382,10 +388,12 @@ class treeViewPanel:
                 dialogs.show_error(self.root, 'Value Error', validation.errors[0])
             else:
                 self.treeView.set(self.treeView.focus(), 'NumSlices', value=numSlices)
+                self.context.safe_status_update("Equidistant slices set for selection.", level="info")
 
         else:
             for item in enumerate(self.treeView.get_children()):
                 self.treeView.set(item[1], 'NumSlices', value=numSlices)
+            self.context.safe_status_update("Equidistant slices set for all entries.", level="info")
 
     def addToMultipleColsnRows(self, colNames: list, values: list):
         '''
@@ -432,6 +440,7 @@ class treeViewPanel:
             self.newLastSliceToExport = octF.getXMLvalue(path, dim_key)
             self.setValue('Last', self.newLastSliceToExport)
             self.setValue('NumSlices', self.newLastSliceToExport)
+        self.context.safe_status_update("Slice direction updated.", level="info")
 
 
 
@@ -470,3 +479,5 @@ class treeViewPanel:
 
         if items_updated == 0:
             dialogs.show_warning(self.root, "No Entries Updated", "No entries had a valid path to apply the slice direction.")
+        else:
+            self.context.safe_status_update(f"Slice direction updated for {items_updated} entries.", level="success")

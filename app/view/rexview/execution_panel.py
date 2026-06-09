@@ -40,6 +40,7 @@ Author: Tobias Meissner
 import tkinter as tk
 from tkinter import ttk
 from concurrent import futures
+from pathlib import Path
 from app.view.shared.tool_tip import Tooltip
 from app.view.shared.error_handler import handle_errors
 
@@ -136,6 +137,12 @@ class executionPanel:
             self._items_by_path.setdefault(file_path, []).append(item)
             self.treeView.setValueFromRow(item, 'Status', 'queued')
 
+        if not tasks:
+            self.context.safe_status_update("Export queue is empty. Nothing to export.", level="warning")
+            return
+
+        self.context.safe_status_update(f"Starting export of {len(tasks)} file(s)...", level="info", duration=3000)
+
         # Run the pool from a single helper thread so the UI stays responsive.
         threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
         threadPoolExecutor.submit(self.mainRoutines, tasks, config.worker_count)
@@ -160,6 +167,7 @@ class executionPanel:
         self.export_coordinator.run(
             tasks, worker_count=worker_count, progress_callback=on_result
         )
+        self.context.safe_status_update("Export completed.", level="success", duration=3000)
 
     def _apply_result_status(self, result):
         """Translate an ExportResult into a TreeView status (UI thread only)."""
@@ -167,12 +175,15 @@ class executionPanel:
         if not items:
             return
         item = items.pop(0)
+        file_name = Path(result.file_path).name
         if result.error:
             self.treeView.setValueFromRow(item, 'Status', 'Error')
+            self.context.safe_status_update(f"Export failed for {file_name}", level="error", duration=4000)
         elif result.failed_count > 0:
             self.treeView.setValueFromRow(
                 item, 'Status', f'Done ({result.failed_count} failed)'
             )
+            self.context.safe_status_update(f"Partial failure: {file_name} ({result.failed_count} slices failed)", level="warning", duration=3000)
         else:
             self.treeView.setValueFromRow(item, 'Status', 'Done')
 
@@ -189,6 +200,7 @@ class executionPanel:
         self.export_coordinator.cancel()
         self.export_service.cancel()
         self.running = 1
+        self.context.safe_status_update("Export cancelled by user.", level="warning")
 
     def endProgram(self):
         '''

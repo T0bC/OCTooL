@@ -165,6 +165,7 @@ class pickFilesPanel:
                     "No OCT Files Found",
                     f"No OCT files were found in:\n{self.folderPath}\n\nPlease choose another folder."
                 )
+                self.context.safe_status_update("No OCT files found in selected folder.", level="warning")
                 return
 
             self.tmpFileList = []
@@ -200,6 +201,7 @@ class pickFilesPanel:
                     "File Not Found",
                     f"The selected file could not be located:\n{self.filePath}"
                 )
+                self.context.safe_status_update("Selected file not found.", level="error")
                 return
 
             self.tmpFileList = self._build_entries_for_file(self.filePath)
@@ -208,6 +210,8 @@ class pickFilesPanel:
             return
 
         self.treeView.setMultipleValues(self.tmpFileList)
+        count = len(self.tmpFileList)
+        self.context.safe_status_update(f"Added {count} item(s) to export queue.", level="success")
         self.root.destroy
 
 
@@ -324,4 +328,5 @@ class pickFilesPanel:
 
         '''
         self.running = 1
+        self.context.safe_status_update("File scan cancelled.", level="warning")
         self.popup.destroy()
