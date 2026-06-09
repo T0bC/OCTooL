@@ -18,6 +18,8 @@ Thumbs.db
 testData/
 logs/
 *.log
+version.json
+scripts/build_and_deploy.ps1
 
 # Generated HTML assets (bundled libraries, not source)
 HTML_docs/OCTooL_change_log_files/
