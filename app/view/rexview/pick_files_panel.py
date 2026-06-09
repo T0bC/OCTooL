@@ -27,7 +27,7 @@ class pickFilesPanel:
         self.globalSettings = self.context.get_panel("global_settings")
 
         # Initialize FileDiscoveryService with XML reader
-        self._file_discovery_service = FileDiscoveryService(xml_dict_reader=octF.getXMLDict)
+        self._file_discovery_service = FileDiscoveryService(xml_dict_reader=octF.getXMLDiscoveryInfo)
 
         # Add buttons and instructions here
         self.pickFolderToolTip = 'Choose a folder whichs contains at least one OCT file. ' \
@@ -200,6 +200,8 @@ class pickFilesPanel:
 
     def _create_progress_popup(self, total_files: int):
         self.running = 0
+        self._progress_total = total_files
+        self._progress_step = max(1, total_files // 100)
         self.popup = tk.Toplevel(self.root)
         tk.Label(self.popup, text="Searching for OCT files in selected folder. This might take a while.").grid(row=0, column=0)
         self.progress_var = tk.DoubleVar(value=0)
@@ -217,6 +219,12 @@ class pickFilesPanel:
     def _update_progress_popup(self, value: int):
         if hasattr(self, 'progress_var'):
             self.progress_var.set(value)
+        # A full Tk redraw per file is expensive and dominates the loop for
+        # large folders. Throttle to every Nth file (and always the last one).
+        total = getattr(self, '_progress_total', None)
+        step = getattr(self, '_progress_step', 1)
+        if value % step != 0 and value != total:
+            return
         if hasattr(self, 'popup') and self.popup.winfo_exists():
             self.popup.update()
 
