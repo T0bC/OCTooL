@@ -401,7 +401,7 @@ class customSettingsPanel:
         Returns
         -------
         dict
-            Dictionary with custom settings values ready for SettingsConfig.from_gui_state().
+            Dictionary with custom settings values ready for gui_adapters.settings_config_from_gui_state().
 
         '''
         disp_type, disp_coeff = self.getDispersion()
