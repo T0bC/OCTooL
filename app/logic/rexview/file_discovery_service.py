@@ -12,14 +12,7 @@ import os
 from fnmatch import fnmatch
 
 from app.logic.rexview.models import QueueItem, FileMetadata, ExportSettings
-
-
-@dataclass
-class ValidationResult:
-    """Result of a validation operation."""
-    is_valid: bool
-    errors: List[str]
-    warnings: List[str]
+from app.logic.rexview.validation import ValidationResult
 
 
 @dataclass
