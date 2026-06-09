@@ -7,6 +7,12 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Literal, Optional, Tuple, List
 from pathlib import Path
 
+from app.logic.rexview.validation import (
+    db_range_error,
+    slice_order_error,
+    num_slices_error,
+)
+
 
 class SettingsConfig(BaseModel):
     """
@@ -78,83 +84,19 @@ class SettingsConfig(BaseModel):
     
     @model_validator(mode='after')
     def validate_db_range(self) -> 'SettingsConfig':
-        """Ensure db_min < db_max."""
-        if self.db_min >= self.db_max:
-            raise ValueError(f"db_min ({self.db_min}) must be < db_max ({self.db_max})")
+        """Ensure db_min < db_max (see validation.db_range_error)."""
+        error = db_range_error(self.db_min, self.db_max)
+        if error:
+            raise ValueError(error)
         return self
     
     @model_validator(mode='after')
     def validate_slice_range(self) -> 'SettingsConfig':
         """Ensure first_slice <= last_slice when both are set."""
-        if self.first_slice is not None and self.last_slice is not None:
-            if self.first_slice > self.last_slice:
-                raise ValueError(f"first_slice ({self.first_slice}) must be <= last_slice ({self.last_slice})")
+        error = slice_order_error(self.first_slice, self.last_slice)
+        if error:
+            raise ValueError(error)
         return self
-    
-    @classmethod
-    def from_gui_state(
-        cls,
-        resize_state: str,
-        prefer_raw_state: tuple,
-        advanced_filter_state: str,
-        export_format: str,
-        averaging: str,
-        tukey_size: str,
-        error_state: str,
-        scale_state: tuple,
-        scale_length: str,
-        scale_font_size: str,
-        first_slice: Optional[str] = None,
-        last_slice: Optional[str] = None,
-        num_equidistant_slices: str = '25',
-        db_min: int = 30,
-        db_max: int = 100,
-        dispersion_type: str = 'Quadratic',
-        dispersion_coefficient: str = '-100',
-        slice_direction: str = 'XZ',
-        refractive_index: str = '1.0',
-    ) -> 'SettingsConfig':
-        """
-        Create SettingsConfig from GUI widget states.
-        
-        This factory method handles the conversion from tkinter widget
-        state strings to proper Python types.
-        """
-        # Parse optional slice values
-        first = None
-        last = None
-        if first_slice and first_slice not in ('First', ''):
-            try:
-                first = int(first_slice)
-            except ValueError:
-                pass
-        if last_slice and last_slice not in ('Last', ''):
-            try:
-                last = int(last_slice)
-            except ValueError:
-                pass
-        
-        return cls(
-            resize_enabled=resize_state == 'selected',
-            prefer_raw=prefer_raw_state == ('selected',),
-            advanced_filter=advanced_filter_state == 'selected',
-            export_format=export_format,
-            averaging=averaging,
-            tukey_window_size=float(tukey_size),
-            show_error=error_state == 'selected',
-            scale_enabled=scale_state == ('selected',),
-            scale_length_um=int(scale_length),
-            scale_font_size=int(scale_font_size),
-            first_slice=first,
-            last_slice=last,
-            num_equidistant_slices=int(num_equidistant_slices),
-            db_min=db_min,
-            db_max=db_max,
-            dispersion_type=dispersion_type,
-            dispersion_coefficient=int(dispersion_coefficient),
-            slice_direction=slice_direction,
-            refractive_index=float(refractive_index),
-        )
     
     @property
     def dispersion(self) -> Tuple[str, str]:
@@ -207,39 +149,6 @@ class ExportConfig(BaseModel):
         'validate_assignment': True,
     }
     
-    @classmethod
-    def from_gui_state(
-        cls,
-        resize_state: str,
-        prefer_raw_state: tuple,
-        advanced_filter_state: str,
-        export_format: str,
-        averaging: str,
-        tukey_size: str,
-        scale_state: tuple,
-        scale_length: str,
-        scale_font_size: str,
-        worker_count: Optional[int] = None,
-    ) -> 'ExportConfig':
-        """
-        Create ExportConfig from GUI widget states.
-        
-        This factory method handles the conversion from tkinter widget
-        state strings to proper Python types.
-        """
-        return cls(
-            resize_enabled=resize_state == 'selected',
-            prefer_raw=prefer_raw_state == ('selected',),
-            advanced_filter=advanced_filter_state == 'selected',
-            export_format=export_format,
-            averaging=averaging,
-            tukey_window_size=float(tukey_size),
-            scale_enabled=scale_state == ('selected',),
-            scale_length_um=int(scale_length),
-            scale_font_size=int(scale_font_size),
-            worker_count=worker_count,
-        )
-
 
 class SliceExportParams(BaseModel):
     """
@@ -288,45 +197,13 @@ class SliceExportParams(BaseModel):
     @model_validator(mode='after')
     def validate_slice_range(self) -> 'SliceExportParams':
         """Ensure first_slice <= last_slice and num_slices is valid."""
-        if self.first_slice > self.last_slice:
-            raise ValueError(f"first_slice ({self.first_slice}) must be <= last_slice ({self.last_slice})")
-        max_possible = self.last_slice - self.first_slice + 1
-        if self.num_slices > max_possible:
-            raise ValueError(f"num_slices ({self.num_slices}) exceeds available range ({max_possible})")
+        error = slice_order_error(self.first_slice, self.last_slice)
+        if error:
+            raise ValueError(error)
+        error = num_slices_error(self.first_slice, self.last_slice, self.num_slices)
+        if error:
+            raise ValueError(error)
         return self
-    
-    @classmethod
-    def from_treeview_row(
-        cls,
-        path: str,
-        name: str,
-        first: str,
-        last: str,
-        num_slices: str,
-        slice_dir: str,
-        db_min: str,
-        db_max: str,
-        refr_ind: str,
-        dispersion: Tuple[str, str],
-    ) -> 'SliceExportParams':
-        """
-        Create SliceExportParams from TreeView row values.
-        
-        This factory method handles the conversion from string values
-        to proper Python types.
-        """
-        return cls(
-            file_path=path,
-            name=name,
-            first_slice=int(first),
-            last_slice=int(last),
-            num_slices=int(num_slices),
-            slice_direction=slice_dir,
-            db_min=int(db_min),
-            db_max=int(db_max),
-            refractive_index=float(refr_ind),
-            dispersion=dispersion,
-        )
     
     @property
     def export_dir_name(self) -> str:
@@ -389,48 +266,18 @@ class QueueItem(BaseModel):
     @model_validator(mode='after')
     def validate_slice_range(self) -> 'QueueItem':
         """Ensure first_slice <= last_slice."""
-        if self.first_slice > self.last_slice:
-            raise ValueError(f"first_slice ({self.first_slice}) must be <= last_slice ({self.last_slice})")
+        error = slice_order_error(self.first_slice, self.last_slice)
+        if error:
+            raise ValueError(error)
         return self
     
     @model_validator(mode='after')
     def validate_db_range(self) -> 'QueueItem':
         """Ensure db_min < db_max."""
-        if self.db_min >= self.db_max:
-            raise ValueError(f"db_min ({self.db_min}) must be < db_max ({self.db_max})")
+        error = db_range_error(self.db_min, self.db_max)
+        if error:
+            raise ValueError(error)
         return self
-    
-    @classmethod
-    def from_treeview_values(
-        cls,
-        name: str,
-        first: str,
-        last: str,
-        db_min: str,
-        db_max: str,
-        num_slices: str,
-        refr_ind: str,
-        disp_coeff: str,
-        slice_dir: str,
-        data_type: str,
-        status: str,
-        path: str,
-    ) -> 'QueueItem':
-        """Create QueueItem from TreeView row string values."""
-        return cls(
-            name=name,
-            first_slice=int(first),
-            last_slice=int(last),
-            db_min=int(db_min),
-            db_max=int(db_max),
-            num_slices=int(num_slices),
-            refractive_index=float(refr_ind),
-            dispersion_coefficient=int(disp_coeff),
-            slice_direction=slice_dir,
-            data_type=data_type,
-            status=status,
-            file_path=path,
-        )
     
     def to_treeview_values(self) -> tuple:
         """Convert to tuple for TreeView insertion."""
@@ -587,47 +434,3 @@ class ImageDisplayConfig(BaseModel):
         'validate_assignment': True,
     }
     
-    @classmethod
-    def from_gui_state(
-        cls,
-        slice_index: int,
-        slice_direction: str,
-        db_min: str,
-        db_max: str,
-        resize_state: str,
-        refractive_index: str,
-        scale_state: tuple,
-        scale_length: str,
-        scale_font_size: str,
-        data_type: str,
-        averaging: str,
-        tukey_size: str,
-        advanced_filter_state: str,
-        dispersion: Tuple[str, str],
-        canvas_width: int,
-        canvas_height: int,
-    ) -> 'ImageDisplayConfig':
-        """
-        Create ImageDisplayConfig from GUI widget states.
-        
-        This factory method handles the conversion from tkinter widget
-        state strings to proper Python types.
-        """
-        return cls(
-            slice_index=slice_index,
-            slice_direction=slice_direction,
-            db_min=int(db_min),
-            db_max=int(db_max),
-            resize_enabled=resize_state == 'selected',
-            refractive_index=float(refractive_index),
-            scale_enabled=scale_state == ('selected',),
-            scale_length_um=int(scale_length),
-            scale_font_size=int(scale_font_size),
-            data_type=data_type,
-            averaging=averaging,
-            tukey_window_size=float(tukey_size),
-            advanced_filter=advanced_filter_state == 'selected',
-            dispersion=dispersion,
-            canvas_width=canvas_width,
-            canvas_height=canvas_height,
-        )
