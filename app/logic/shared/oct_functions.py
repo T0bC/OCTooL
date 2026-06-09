@@ -15,8 +15,6 @@ from bs4 import BeautifulSoup
 import lxml
 import numpy as np
 import math
-from scipy import signal
-from scipy.ndimage import median_filter
 from PIL import ImageDraw, ImageFont
 from datetime import datetime
 from app.logic.shared.paths import resource_path
@@ -506,6 +504,7 @@ def createImageFromRaw(xmlDict: dict, archive: None, dBmin: int, dBmax: int, sel
         nftm = np.exp(np.float32(2) * math.pi * 1j * np.float32(M) * np.float32(K) / xmlDict['Nline'])
         
         # Pre-compute Tukey window ONCE (not per slice) - significant speed improvement for multi-slice exports
+        from scipy import signal
         tukey_win = np.float32(signal.windows.tukey(xmlDict['Nline'], tukeySize))[..., np.newaxis]
 
         # Determine output dimensions
@@ -679,6 +678,7 @@ def octToGV(cBscan, dBmin: int, dBmax: int, advancedFilter: str):
         
         # Apply 1D median filter along axis 0 (vertical/depth direction only)
         # size=(3,1) means 3 pixels vertically, 1 pixel horizontally (no horizontal smoothing)
+        from scipy.ndimage import median_filter
         filtered = median_filter(temp, size=(5, 1), mode='reflect')
         
         # Only replace pixels where mask is True (dark speckles)
