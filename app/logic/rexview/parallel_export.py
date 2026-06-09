@@ -1,15 +1,32 @@
 """
-RexView Parallel Export Coordinator
+RexView Parallel Export Coordinator.
 
-Pure business logic (no tkinter) that distributes per-file OCT exports across
-multiple processes using a ``ProcessPoolExecutor``. Each file is an independent
-unit of CPU-bound work, so file-level parallelism scales well with low overhead
-(workers receive only small picklable args and write images directly to disk).
+Pure business logic (no tkinter) that distributes per-file OCT exports across multiple processes using a ProcessPoolExecutor. Each file is an independent unit of CPU-bound work, so file-level parallelism scales well with low overhead. The coordinator is fully unit-testable: the executor factory and the worker function are injectable, so tests can run synchronously without spawning real processes.
 
-The coordinator is fully unit-testable: the executor factory and the worker
-function are injectable, so tests can run synchronously without spawning real
-processes.
+This file is part of OCTooL.
+OCTooL is an open source software for export, analysis and quantification of
+Optical Coherence Tomography (OCT) images.
+Copyright (C) 2019-2026 Tobias Meissner
+
+OCTooL is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
+
+****
+Author: Tobias Meissner
+****
 """
+
+
 from __future__ import annotations
 
 import os

@@ -1,21 +1,34 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Update checker.
+Update Checker.
 
-Fetches the version manifest (``version.json``) from the server and compares the
-advertised version against the locally installed ``__version__``. Network access
-runs on a background thread so the GUI never blocks, and any failure (offline,
-DNS, timeout, malformed JSON) is swallowed silently in the automatic path.
+Fetches the version manifest (version.json) from the server and compares the advertised version against the locally installed __version__. Network access runs on a background thread so the GUI never blocks, and any failure is swallowed silently in the automatic path. Provides both non-blocking (startup) and blocking (manual check) entry points.
 
-Two entry points:
-    * ``check_for_updates_async`` - non-blocking, used on startup. Calls back into
-      the GUI thread only when a newer version is found.
-    * ``check_for_updates_sync`` - blocking, used by the manual "Check for updates"
-      button so the user always gets feedback (including "up to date" / errors).
+This file is part of OCTooL.
+OCTooL is an open source software for export, analysis and quantification of
+Optical Coherence Tomography (OCT) images.
+Copyright (C) 2019-2026 Tobias Meissner
 
-@author: Tobias Meissner
+OCTooL is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
+
+****
+Author: Tobias Meissner
+****
 """
+
+
 
 import json
 import threading

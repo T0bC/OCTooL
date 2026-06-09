@@ -1,19 +1,32 @@
 """
-CarlQuant Analysis Service
+CarlQuant Analysis Service.
 
-Pure, tkinter-free business logic for the CarlQuant OCT analysis pipeline.
+Pure, tkinter-free business logic for the CarlQuant OCT analysis pipeline. Wraps the compute functions in carl_quant_core (surface detection, region extraction, lesion-depth calculation) and exposes the per-slice analysis pipeline previously embedded in the UI. Long-running orchestration accepts progress/cancel callbacks; methods accept/return models, not widget references. File I/O is delegated to DataSaver while the view layer owns dialogs, threading and status-bar updates.
 
-This service wraps the pure compute functions in ``app.logic.carlquant.carl_quant_core``
-(surface detection, region extraction, lesion-depth calculation) and exposes the
-per-slice analysis pipeline that was previously embedded inside the UI/threading
-orchestration of ``run_carl_quant``.
+This file is part of OCTooL.
+OCTooL is an open source software for export, analysis and quantification of
+Optical Coherence Tomography (OCT) images.
+Copyright (C) 2019-2026 Tobias Meissner
 
-Layer rules (see REFACTOR-PLAN.md):
-- No tkinter here. Long-running orchestration accepts progress/cancel callbacks.
-- Methods accept/return models, not widget references.
-- File I/O (Excel/JSON/PNG) is delegated to the tkinter-free DataSaver; the view
-  layer owns dialogs, threading and status-bar updates.
+OCTooL is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
+
+****
+Author: Tobias Meissner
+****
 """
+
+
 from __future__ import annotations
 
 import gc

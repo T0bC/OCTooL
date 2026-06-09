@@ -1,16 +1,33 @@
 # -*- coding: utf-8 -*-
 """
-Centralized Annotation Color Configuration
+Centralized Annotation Color Configuration.
 
-This module defines all colors used for annotations throughout the application.
-Import these constants to ensure consistent colors in both the GUI (Tkinter canvas)
-and exported images (PIL ImageDraw).
+Defines all colours used for annotations throughout the application. Import these constants to ensure consistent colours in both the GUI (Tkinter canvas) and exported images (PIL ImageDraw). All colours are optimised for visibility on grayscale images with a dark UI theme.
 
-All colors are optimized for visibility on grayscale images with a dark UI theme.
+This file is part of OCTooL.
+OCTooL is an open source software for export, analysis and quantification of
+Optical Coherence Tomography (OCT) images.
+Copyright (C) 2019-2026 Tobias Meissner
 
-Created on Thu Oct 21 2025
-@author: Tobias Meissner
+OCTooL is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/.
+
+****
+Author: Tobias Meissner
+****
 """
+
+
 
 # ============================================================================
 # ANNOTATION COLOR SCHEME - Centralized color definitions
