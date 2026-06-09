@@ -324,7 +324,7 @@ class globalSettingsPanel:
         Returns
         -------
         dict
-            Dictionary with global settings values ready for SettingsConfig.from_gui_state().
+            Dictionary with global settings values ready for gui_adapters.settings_config_from_gui_state().
 
         '''
         return {
