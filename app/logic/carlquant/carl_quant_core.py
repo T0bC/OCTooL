@@ -13,10 +13,6 @@ import random
 import numpy as np
 from PIL import Image
 from typing import List, Tuple, Dict, Optional
-from sklearn.cluster import DBSCAN
-from scipy.interpolate import splrep, splev
-from scipy.optimize import curve_fit
-from scipy.signal import medfilt
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import time
@@ -160,6 +156,7 @@ def cluster_surface_points(raw_points: List[Tuple[int, int]],
                           min_samples: int = 10,
                           min_cluster_size: int = 180) -> Tuple[List[Tuple[int, int]], Optional[List[int]]]:
     """Apply DBSCAN clustering to surface points to remove speckles."""
+    from sklearn.cluster import DBSCAN
     if len(raw_points) == 0:
         return raw_points, None
     
@@ -193,6 +190,7 @@ def fit_surface_curve(surface_points: List[Tuple[int, int]],
                      spline_degree: int = 5,
                      curve_name: str = "actual_surface") -> Dict[str, List[Tuple[int, int]]]:
     """Fit a smooth spline curve to surface points."""
+    from scipy.interpolate import splrep, splev
     if len(surface_points) < 4:
         return {}
     
@@ -249,6 +247,8 @@ def fit_lesion_depth_curve_robust(depth_points: List[Tuple[int, int]],
     Returns:
         Dictionary with curve_name as key and list of (x, y) tuples as fitted curve
     """
+    from scipy.interpolate import splrep, splev
+    from scipy.signal import medfilt
     if len(depth_points) < 4:
         return {}
     
@@ -759,6 +759,7 @@ def fit_exp2_to_profile(intensity_profile: np.ndarray, depth_indices: np.ndarray
     Returns:
         Tuple of (fitted_curve, params_dict) or None if fitting fails
     """
+    from scipy.optimize import curve_fit
     try:
         # Initial guess for parameters
         max_intensity = np.max(intensity_profile)
@@ -826,6 +827,7 @@ def detect_depth_sigmoid_fit(intensity_profile: np.ndarray, depth_indices: np.nd
     Returns:
         Tuple of (depth_value, depth_index, metadata_dict)
     """
+    from scipy.optimize import curve_fit
     if len(intensity_profile) < 5:
         return np.nan, -1, {'success': False, 'reason': 'insufficient_data'}
     
