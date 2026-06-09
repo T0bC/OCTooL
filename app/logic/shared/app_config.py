@@ -57,17 +57,21 @@ VERSION_DISPLAY = f" [v. {__version__}]"
 # Base URL of the OCTooL section on the web server. The trailing slash matters.
 SERVER_BASE_URL = "https://dentlab.medizin.uni-leipzig.de/octool/"
 
-# Live documentation. These always reflect the latest pushed HTML on the server,
-# regardless of which app version the user has installed.
-MANUAL_URL = SERVER_BASE_URL + "OCTooL_MANUAL.html"
-CHANGELOG_URL = SERVER_BASE_URL + "OCTooL_change_log.html"
+# Live documentation. These are hosted on GitHub Pages and always reflect the
+# latest pushed HTML, regardless of which app version the user has installed.
+# The app tries these first and falls back to the locally bundled HTML copies
+# when GitHub is unreachable (see doc_links.open_doc).
+DOCS_BASE_URL = "https://t0bc.github.io/OCTooL/HTML_docs/"
+MANUAL_URL = DOCS_BASE_URL + "OCTooL_MANUAL.html"
+CHANGELOG_URL = DOCS_BASE_URL + "OCTooL_change_log.html"
 
 # Update manifest. A small JSON file the app polls to detect newer releases.
 # Expected shape:
 #   {
-#     "version": "2026.3",
-#     "download_url": "https://.../octool/downloads/OCTooL_2026.3.zip",
-#     "changelog_url": "https://.../octool/OCTooL_change_log.html",
+#     "version": "2026.6",
+#     "download_url": "https://.../octool/downloads/OCTooL_2026.6.zip",
+#     "manual_url": "https://t0bc.github.io/OCTooL/HTML_docs/OCTooL_MANUAL.html",
+#     "changelog_url": "https://t0bc.github.io/OCTooL/HTML_docs/OCTooL_change_log.html",
 #     "notes": "Optional short message."
 #   }
 VERSION_MANIFEST_URL = SERVER_BASE_URL + "version.json"
