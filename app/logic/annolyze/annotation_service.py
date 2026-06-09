@@ -7,7 +7,6 @@ Extracted from AnnoLyze/annotate_images_panel.py so it can be unit-tested headle
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-from scipy.interpolate import splprep, splev
 
 from app.logic.annolyze.models import Annotation
 
@@ -42,6 +41,7 @@ class AnnotationService:
         if len(points) < MIN_SPLINE_POINTS:
             return [tuple(p) for p in points]
         try:
+            from scipy.interpolate import splprep, splev
             pts_np = np.asarray(points, dtype=float)
             tck, _ = splprep([pts_np[:, 0], pts_np[:, 1]], s=0, k=3)
             u = np.linspace(0, 1, num)
@@ -62,6 +62,7 @@ class AnnotationService:
         if mode == "line" or len(points) < MIN_SPLINE_POINTS:
             return self.polyline_length(points)
         try:
+            from scipy.interpolate import splprep, splev
             pts = np.asarray(points, dtype=float)
             tck, _ = splprep([pts[:, 0], pts[:, 1]], s=0, k=3)
             u = np.linspace(0, 1, 1000)
