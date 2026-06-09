@@ -1,6 +1,6 @@
 ---
 title: "OCTooL User Manual"
-subtitle: "Version 2026.4 (2026-06-04)"
+subtitle: "Version 2026.6 (2026-06-09)"
 author: "Tobias Meißner"
 format:
   html:
