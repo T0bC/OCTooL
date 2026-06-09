@@ -86,6 +86,64 @@ def unzipOCTData(path):
     archive = zipfile.ZipFile(path, 'r')
     return archive
 
+
+def getXMLDiscoveryInfo(path: str) -> dict:
+    '''
+    Fast, minimal header read for file-discovery only.
+
+    Extracts just the handful of fields the discovery/queue stage needs
+    (dataType, Serialnumber, dimX/Y/Z) using lxml directly, instead of building
+    a full BeautifulSoup tree and computing the ~30-field metadata dict via
+    getXMLAttributes. This avoids re-parsing every header for values that are
+    discarded, which dominates the scan time for large folders.
+
+    The returned dict is key-compatible with the subset of getXMLDict consumed
+    by FileDiscoveryService.extract_metadata.
+
+    Parameters
+    ----------
+    path : str
+        Path to the .oct archive.
+
+    Returns
+    -------
+    dict
+        {'dataType', 'Serialnumber', 'dimX', 'dimY', 'dimZ'}
+    '''
+    from lxml import etree
+
+    with zipfile.ZipFile(path, 'r') as archive:
+        xmlData = archive.read('Header.xml')
+
+    root = etree.fromstring(xmlData)
+
+    image = root.find('.//Image')
+    data_type = image.get('Type') if image is not None else None
+
+    serial_el = root.find('.//Serial')
+    serial = serial_el.text.strip() if serial_el is not None and serial_el.text else None
+
+    dim_z = dim_x = dim_y = 1
+    size_el = root.find('.//SizePixel')
+    if size_el is not None and size_el.text:
+        parts = [p.strip() for p in size_el.text.split('\n') if p.strip()]
+        def _as_int(idx, default=1):
+            try:
+                return int(parts[idx])
+            except (IndexError, ValueError):
+                return default
+        dim_z = _as_int(0)
+        dim_x = _as_int(1)
+        dim_y = _as_int(2)
+
+    return {
+        'dataType': data_type,
+        'Serialnumber': serial,
+        'dimX': dim_x,
+        'dimY': dim_y,
+        'dimZ': dim_z,
+    }
+
 #%%
 def getXMLvalue(path: str, value: str)-> str:
     '''
