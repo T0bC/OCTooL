@@ -6,25 +6,25 @@ This service handles queue item validation, manipulation, and calculations
 extracted from tree_view_panel.py.
 """
 from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
 
 from app.logic.rexview.models import QueueItem
+from app.logic.rexview.validation import (
+    ValidationResult,
+    db_range_error,
+    slice_order_error,
+    num_slices_error,
+)
 
-
-@dataclass
-class ValidationResult:
-    """Result of a validation operation."""
-    is_valid: bool
-    errors: List[str]
-    warnings: List[str]
+__all__ = ['QueueService', 'ValidationResult']
 
 
 class QueueService:
     """
-    Pure business logic for export queue operations.
+    Stateless utility for export queue operations.
     
     This service encapsulates all queue management logic without any GUI
-    dependencies. It can be fully tested with pytest without requiring tkinter.
+    dependencies. It holds no mutable state (construct once, call methods)
+    and can be fully tested with pytest without requiring tkinter.
     """
     
     # Direction to dimension mapping
@@ -53,20 +53,20 @@ class QueueService:
         errors = []
         warnings = []
         
-        # Validate slice range
-        if item.first_slice > item.last_slice:
-            errors.append(f"first_slice ({item.first_slice}) must be <= last_slice ({item.last_slice})")
+        # Validate slice range (shared invariants - see app.logic.rexview.validation)
+        slice_error = slice_order_error(item.first_slice, item.last_slice)
+        if slice_error:
+            errors.append(slice_error)
         
         # Validate dB range
-        if item.db_min >= item.db_max:
-            errors.append(f"db_min ({item.db_min}) must be < db_max ({item.db_max})")
+        db_error = db_range_error(item.db_min, item.db_max)
+        if db_error:
+            errors.append(db_error)
         
         # Validate num_slices against range
-        available_range = item.last_slice - item.first_slice + 1
-        if item.num_slices > available_range:
-            errors.append(
-                f"num_slices ({item.num_slices}) exceeds available range ({available_range})"
-            )
+        slices_error = num_slices_error(item.first_slice, item.last_slice, item.num_slices)
+        if slices_error:
+            errors.append(slices_error)
         
         # Validate slice direction
         if item.slice_direction not in self.VALID_DIRECTIONS:
