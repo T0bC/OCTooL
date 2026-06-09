@@ -14,11 +14,12 @@ from app.logic.rexview.models import (
     ExportSettings,
     ExportResult,
 )
+from app.logic.rexview.validation import ValidationResult
 from app.logic.rexview.export_service import ExportService
 from app.logic.rexview.export_worker import export_one_file
 from app.logic.rexview.parallel_export import ParallelExportCoordinator
 from app.logic.rexview.image_service import ImageService
-from app.logic.rexview.settings_service import SettingsService, ValidationResult
+from app.logic.rexview.settings_service import SettingsService
 from app.logic.rexview.queue_service import QueueService
 from app.logic.rexview.file_discovery_service import FileDiscoveryService, DiscoveryResult
 
