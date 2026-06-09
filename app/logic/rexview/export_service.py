@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Callable, Optional, List, Tuple
 import numpy as np
 from PIL import Image
-from scipy import ndimage
 import gc
 import traceback
 
@@ -163,6 +162,7 @@ class ExportService:
         
         # Apply resize if enabled
         if config.resize_enabled:
+            from scipy import ndimage
             resize_x = metadata.img_resize_factor_x
             resize_y = metadata.img_resize_factor_y
             
@@ -175,6 +175,7 @@ class ExportService:
         
         # Apply refractive index correction
         if params.refractive_index != 1.0:
+            from scipy import ndimage
             img = ndimage.zoom(img, zoom=(params.refractive_index, 1), order=0)
         
         # Convert to PIL Image
