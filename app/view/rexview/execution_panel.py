@@ -19,6 +19,10 @@ from app.logic.rexview import (
     ExportService,
     ParallelExportCoordinator,
 )
+from app.view.rexview.gui_adapters import (
+    export_config_from_gui_state,
+    slice_export_params_from_treeview_row,
+)
 
 
 # %% To Prevent GUI Freezing during a long loop or function we need to set up
@@ -175,7 +179,7 @@ class executionPanel:
         
         This method bridges the GUI widgets to the pure logic layer.
         """
-        return ExportConfig.from_gui_state(
+        return export_config_from_gui_state(
             resize_state=self.globalSettingsFrame.getResizeState(),
             prefer_raw_state=self.globalSettingsFrame.prefRawBox.state(),
             advanced_filter_state=self.globalSettingsFrame.getAdvancedFilter(),
@@ -197,7 +201,7 @@ class executionPanel:
         Returns:
             SliceExportParams with values from the TreeView row
         """
-        return SliceExportParams.from_treeview_row(
+        return slice_export_params_from_treeview_row(
             path=self.treeView.getValueFromRow(item_id, column='Path'),
             name=self.treeView.getValueFromRow(item_id, 'Name'),
             first=self.treeView.getValueFromRow(item_id, 'First'),
