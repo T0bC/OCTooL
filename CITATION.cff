@@ -38,8 +38,8 @@ keywords:
   - Python
   - tkinter
 repository-code: "https://github.com/T0bC/OCTooL.git"
-version: 2026.2
-date-released: 2026-06-01
+version: 2026.6
+date-released: 2026-06-09
 license: GPL-3.0-or-later
 notes: >-
   Author contributions by module:
