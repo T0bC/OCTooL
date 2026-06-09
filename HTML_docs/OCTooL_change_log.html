@@ -46,232 +46,255 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#version-2026.5-2026-06-05" id="toc-version-2026.5-2026-06-05" class="nav-link active" data-scroll-target="#version-2026.5-2026-06-05"><span class="header-section-number">1</span> Version 2026.5 (2026-06-05)</a>
+  <li><a href="#version-2026.6-2026-06-09" id="toc-version-2026.6-2026-06-09" class="nav-link active" data-scroll-target="#version-2026.6-2026-06-09"><span class="header-section-number">1</span> Version 2026.6 (2026-06-09)</a>
   <ul class="collapse">
-  <li><a href="#annolyze-bug-fixes-stability" id="toc-annolyze-bug-fixes-stability" class="nav-link" data-scroll-target="#annolyze-bug-fixes-stability"><span class="header-section-number">1.1</span> AnnoLyze Bug Fixes &amp; Stability</a>
+  <li><a href="#architecture-refactoring" id="toc-architecture-refactoring" class="nav-link" data-scroll-target="#architecture-refactoring"><span class="header-section-number">1.1</span> Architecture &amp; Refactoring</a>
   <ul class="collapse">
-  <li><a href="#silent-crash-on-folder-load-with-config" id="toc-silent-crash-on-folder-load-with-config" class="nav-link" data-scroll-target="#silent-crash-on-folder-load-with-config"><span class="header-section-number">1.1.1</span> Silent Crash on Folder Load with Config</a></li>
-  <li><a href="#thread-safe-error-popups" id="toc-thread-safe-error-popups" class="nav-link" data-scroll-target="#thread-safe-error-popups"><span class="header-section-number">1.1.2</span> Thread-Safe Error Popups</a></li>
-  <li><a href="#logger-fix" id="toc-logger-fix" class="nav-link" data-scroll-target="#logger-fix"><span class="header-section-number">1.1.3</span> Logger Fix</a></li>
+  <li><a href="#gui-adapters" id="toc-gui-adapters" class="nav-link" data-scroll-target="#gui-adapters"><span class="header-section-number">1.1.1</span> GUI Adapters</a></li>
+  <li><a href="#shared-validation-module" id="toc-shared-validation-module" class="nav-link" data-scroll-target="#shared-validation-module"><span class="header-section-number">1.1.2</span> Shared Validation Module</a></li>
   </ul></li>
-  <li><a href="#annolyze-user-experience" id="toc-annolyze-user-experience" class="nav-link" data-scroll-target="#annolyze-user-experience"><span class="header-section-number">1.2</span> AnnoLyze User Experience</a>
+  <li><a href="#performance-improvements" id="toc-performance-improvements" class="nav-link" data-scroll-target="#performance-improvements"><span class="header-section-number">1.2</span> Performance Improvements</a>
   <ul class="collapse">
-  <li><a href="#clean-slate-on-new-folder-load" id="toc-clean-slate-on-new-folder-load" class="nav-link" data-scroll-target="#clean-slate-on-new-folder-load"><span class="header-section-number">1.2.1</span> Clean Slate on New Folder Load</a></li>
-  <li><a href="#live-keybinding-activation" id="toc-live-keybinding-activation" class="nav-link" data-scroll-target="#live-keybinding-activation"><span class="header-section-number">1.2.2</span> Live Keybinding Activation</a></li>
+  <li><a href="#lazy-loading" id="toc-lazy-loading" class="nav-link" data-scroll-target="#lazy-loading"><span class="header-section-number">1.2.1</span> Lazy Loading</a></li>
+  <li><a href="#file-discovery-rexview" id="toc-file-discovery-rexview" class="nav-link" data-scroll-target="#file-discovery-rexview"><span class="header-section-number">1.2.2</span> File Discovery (RexView)</a></li>
   </ul></li>
+  <li><a href="#user-experience" id="toc-user-experience" class="nav-link" data-scroll-target="#user-experience"><span class="header-section-number">1.3</span> User Experience</a>
+  <ul class="collapse">
+  <li><a href="#status-bar-feedback-rexview" id="toc-status-bar-feedback-rexview" class="nav-link" data-scroll-target="#status-bar-feedback-rexview"><span class="header-section-number">1.3.1</span> Status Bar Feedback (RexView)</a></li>
+  <li><a href="#single-specimen-directories-carlquant" id="toc-single-specimen-directories-carlquant" class="nav-link" data-scroll-target="#single-specimen-directories-carlquant"><span class="header-section-number">1.3.2</span> Single-Specimen Directories (CarLQuant)</a></li>
   </ul></li>
-  <li><a href="#version-2026.4-2026-06-04" id="toc-version-2026.4-2026-06-04" class="nav-link" data-scroll-target="#version-2026.4-2026-06-04"><span class="header-section-number">2</span> Version 2026.4 (2026-06-04)</a>
+  <li><a href="#server-documentation" id="toc-server-documentation" class="nav-link" data-scroll-target="#server-documentation"><span class="header-section-number">1.4</span> Server &amp; Documentation</a>
   <ul class="collapse">
-  <li><a href="#user-experience" id="toc-user-experience" class="nav-link" data-scroll-target="#user-experience"><span class="header-section-number">2.1</span> User Experience</a>
-  <ul class="collapse">
-  <li><a href="#help-dialog" id="toc-help-dialog" class="nav-link" data-scroll-target="#help-dialog"><span class="header-section-number">2.1.1</span> Help Dialog</a></li>
-  <li><a href="#github-issue-templates" id="toc-github-issue-templates" class="nav-link" data-scroll-target="#github-issue-templates"><span class="header-section-number">2.1.2</span> GitHub Issue Templates</a></li>
-  </ul></li>
-  </ul></li>
-  <li><a href="#version-2026.3-2026-06-04" id="toc-version-2026.3-2026-06-04" class="nav-link" data-scroll-target="#version-2026.3-2026-06-04"><span class="header-section-number">3</span> Version 2026.3 (2026-06-04)</a>
-  <ul class="collapse">
-  <li><a href="#major-refactor-architecture-restructure" id="toc-major-refactor-architecture-restructure" class="nav-link" data-scroll-target="#major-refactor-architecture-restructure"><span class="header-section-number">3.1</span> Major Refactor &amp; Architecture Restructure</a>
-  <ul class="collapse">
-  <li><a href="#codebase-refactor" id="toc-codebase-refactor" class="nav-link" data-scroll-target="#codebase-refactor"><span class="header-section-number">3.1.1</span> Codebase Refactor</a></li>
-  <li><a href="#submodule-renames" id="toc-submodule-renames" class="nav-link" data-scroll-target="#submodule-renames"><span class="header-section-number">3.1.2</span> Submodule Renames</a></li>
-  </ul></li>
-  <li><a href="#automatic-update-mechanism" id="toc-automatic-update-mechanism" class="nav-link" data-scroll-target="#automatic-update-mechanism"><span class="header-section-number">3.2</span> Automatic Update Mechanism</a></li>
-  <li><a href="#documentation-distribution" id="toc-documentation-distribution" class="nav-link" data-scroll-target="#documentation-distribution"><span class="header-section-number">3.3</span> Documentation Distribution</a></li>
-  <li><a href="#user-interface-fixes" id="toc-user-interface-fixes" class="nav-link" data-scroll-target="#user-interface-fixes"><span class="header-section-number">3.4</span> User Interface Fixes</a>
-  <ul class="collapse">
-  <li><a href="#about-dialog" id="toc-about-dialog" class="nav-link" data-scroll-target="#about-dialog"><span class="header-section-number">3.4.1</span> About Dialog</a></li>
-  <li><a href="#header-toolbar" id="toc-header-toolbar" class="nav-link" data-scroll-target="#header-toolbar"><span class="header-section-number">3.4.2</span> Header Toolbar</a></li>
-  </ul></li>
-  <li><a href="#performance-improvements" id="toc-performance-improvements" class="nav-link" data-scroll-target="#performance-improvements"><span class="header-section-number">3.5</span> Performance Improvements</a>
-  <ul class="collapse">
-  <li><a href="#faster-oct-file-detection-rexview" id="toc-faster-oct-file-detection-rexview" class="nav-link" data-scroll-target="#faster-oct-file-detection-rexview"><span class="header-section-number">3.5.1</span> Faster OCT File Detection (RexView)</a></li>
-  <li><a href="#parallel-export-rexview" id="toc-parallel-export-rexview" class="nav-link" data-scroll-target="#parallel-export-rexview"><span class="header-section-number">3.5.2</span> Parallel Export (RexView)</a></li>
+  <li><a href="#server-migration" id="toc-server-migration" class="nav-link" data-scroll-target="#server-migration"><span class="header-section-number">1.4.1</span> Server Migration</a></li>
+  <li><a href="#documentation" id="toc-documentation" class="nav-link" data-scroll-target="#documentation"><span class="header-section-number">1.4.2</span> Documentation</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#version-2026.2-2026-04-01" id="toc-version-2026.2-2026-04-01" class="nav-link" data-scroll-target="#version-2026.2-2026-04-01"><span class="header-section-number">4</span> Version 2026.2 (2026-04-01)</a>
+  <li><a href="#version-2026.5-2026-06-05" id="toc-version-2026.5-2026-06-05" class="nav-link" data-scroll-target="#version-2026.5-2026-06-05"><span class="header-section-number">2</span> Version 2026.5 (2026-06-05)</a>
   <ul class="collapse">
-  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes"><span class="header-section-number">4.1</span> Bug Fixes</a>
+  <li><a href="#annolyze-bug-fixes-stability" id="toc-annolyze-bug-fixes-stability" class="nav-link" data-scroll-target="#annolyze-bug-fixes-stability"><span class="header-section-number">2.1</span> AnnoLyze Bug Fixes &amp; Stability</a>
   <ul class="collapse">
-  <li><a href="#xml-error-for-oct-rexview" id="toc-xml-error-for-oct-rexview" class="nav-link" data-scroll-target="#xml-error-for-oct-rexview"><span class="header-section-number">4.1.1</span> XML Error for OCT RexView</a></li>
+  <li><a href="#silent-crash-on-folder-load-with-config" id="toc-silent-crash-on-folder-load-with-config" class="nav-link" data-scroll-target="#silent-crash-on-folder-load-with-config"><span class="header-section-number">2.1.1</span> Silent Crash on Folder Load with Config</a></li>
+  <li><a href="#thread-safe-error-popups" id="toc-thread-safe-error-popups" class="nav-link" data-scroll-target="#thread-safe-error-popups"><span class="header-section-number">2.1.2</span> Thread-Safe Error Popups</a></li>
+  <li><a href="#logger-fix" id="toc-logger-fix" class="nav-link" data-scroll-target="#logger-fix"><span class="header-section-number">2.1.3</span> Logger Fix</a></li>
+  </ul></li>
+  <li><a href="#annolyze-user-experience" id="toc-annolyze-user-experience" class="nav-link" data-scroll-target="#annolyze-user-experience"><span class="header-section-number">2.2</span> AnnoLyze User Experience</a>
+  <ul class="collapse">
+  <li><a href="#clean-slate-on-new-folder-load" id="toc-clean-slate-on-new-folder-load" class="nav-link" data-scroll-target="#clean-slate-on-new-folder-load"><span class="header-section-number">2.2.1</span> Clean Slate on New Folder Load</a></li>
+  <li><a href="#live-keybinding-activation" id="toc-live-keybinding-activation" class="nav-link" data-scroll-target="#live-keybinding-activation"><span class="header-section-number">2.2.2</span> Live Keybinding Activation</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#version-2026.1-2026-03-12" id="toc-version-2026.1-2026-03-12" class="nav-link" data-scroll-target="#version-2026.1-2026-03-12"><span class="header-section-number">5</span> Version 2026.1 (2026-03-12)</a>
+  <li><a href="#version-2026.4-2026-06-04" id="toc-version-2026.4-2026-06-04" class="nav-link" data-scroll-target="#version-2026.4-2026-06-04"><span class="header-section-number">3</span> Version 2026.4 (2026-06-04)</a>
   <ul class="collapse">
-  <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1"><span class="header-section-number">5.1</span> Bug Fixes</a>
+  <li><a href="#user-experience-1" id="toc-user-experience-1" class="nav-link" data-scroll-target="#user-experience-1"><span class="header-section-number">3.1</span> User Experience</a>
   <ul class="collapse">
-  <li><a href="#refractive-index-correction-for-combined_mean" id="toc-refractive-index-correction-for-combined_mean" class="nav-link" data-scroll-target="#refractive-index-correction-for-combined_mean"><span class="header-section-number">5.1.1</span> Refractive Index Correction for COMBINED_MEAN</a></li>
+  <li><a href="#help-dialog" id="toc-help-dialog" class="nav-link" data-scroll-target="#help-dialog"><span class="header-section-number">3.1.1</span> Help Dialog</a></li>
+  <li><a href="#github-issue-templates" id="toc-github-issue-templates" class="nav-link" data-scroll-target="#github-issue-templates"><span class="header-section-number">3.1.2</span> GitHub Issue Templates</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#version-2025.6-2025-12" id="toc-version-2025.6-2025-12" class="nav-link" data-scroll-target="#version-2025.6-2025-12"><span class="header-section-number">6</span> Version 2025.6 (2025-12)</a>
+  <li><a href="#version-2026.3-2026-06-04" id="toc-version-2026.3-2026-06-04" class="nav-link" data-scroll-target="#version-2026.3-2026-06-04"><span class="header-section-number">4</span> Version 2026.3 (2026-06-04)</a>
   <ul class="collapse">
-  <li><a href="#carl-quant-module---algorithm-improvements" id="toc-carl-quant-module---algorithm-improvements" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements"><span class="header-section-number">6.1</span> Carl Quant Module - Algorithm Improvements</a>
+  <li><a href="#major-refactor-architecture-restructure" id="toc-major-refactor-architecture-restructure" class="nav-link" data-scroll-target="#major-refactor-architecture-restructure"><span class="header-section-number">4.1</span> Major Refactor &amp; Architecture Restructure</a>
   <ul class="collapse">
-  <li><a href="#refractive-index-correction" id="toc-refractive-index-correction" class="nav-link" data-scroll-target="#refractive-index-correction"><span class="header-section-number">6.1.1</span> Refractive Index Correction</a></li>
-  <li><a href="#lesion-depth-detection" id="toc-lesion-depth-detection" class="nav-link" data-scroll-target="#lesion-depth-detection"><span class="header-section-number">6.1.2</span> Lesion Depth Detection</a></li>
+  <li><a href="#codebase-refactor" id="toc-codebase-refactor" class="nav-link" data-scroll-target="#codebase-refactor"><span class="header-section-number">4.1.1</span> Codebase Refactor</a></li>
+  <li><a href="#submodule-renames" id="toc-submodule-renames" class="nav-link" data-scroll-target="#submodule-renames"><span class="header-section-number">4.1.2</span> Submodule Renames</a></li>
   </ul></li>
-  <li><a href="#bug-fixes-stability" id="toc-bug-fixes-stability" class="nav-link" data-scroll-target="#bug-fixes-stability"><span class="header-section-number">6.2</span> Bug Fixes &amp; Stability</a>
+  <li><a href="#automatic-update-mechanism" id="toc-automatic-update-mechanism" class="nav-link" data-scroll-target="#automatic-update-mechanism"><span class="header-section-number">4.2</span> Automatic Update Mechanism</a></li>
+  <li><a href="#documentation-distribution" id="toc-documentation-distribution" class="nav-link" data-scroll-target="#documentation-distribution"><span class="header-section-number">4.3</span> Documentation Distribution</a></li>
+  <li><a href="#user-interface-fixes" id="toc-user-interface-fixes" class="nav-link" data-scroll-target="#user-interface-fixes"><span class="header-section-number">4.4</span> User Interface Fixes</a>
   <ul class="collapse">
-  <li><a href="#thread-safety" id="toc-thread-safety" class="nav-link" data-scroll-target="#thread-safety"><span class="header-section-number">6.2.1</span> Thread Safety</a></li>
-  <li><a href="#image-processing" id="toc-image-processing" class="nav-link" data-scroll-target="#image-processing"><span class="header-section-number">6.2.2</span> Image Processing</a></li>
+  <li><a href="#about-dialog" id="toc-about-dialog" class="nav-link" data-scroll-target="#about-dialog"><span class="header-section-number">4.4.1</span> About Dialog</a></li>
+  <li><a href="#header-toolbar" id="toc-header-toolbar" class="nav-link" data-scroll-target="#header-toolbar"><span class="header-section-number">4.4.2</span> Header Toolbar</a></li>
   </ul></li>
-  <li><a href="#code-quality-refactoring" id="toc-code-quality-refactoring" class="nav-link" data-scroll-target="#code-quality-refactoring"><span class="header-section-number">6.3</span> Code Quality &amp; Refactoring</a>
+  <li><a href="#performance-improvements-1" id="toc-performance-improvements-1" class="nav-link" data-scroll-target="#performance-improvements-1"><span class="header-section-number">4.5</span> Performance Improvements</a>
   <ul class="collapse">
-  <li><a href="#color-management" id="toc-color-management" class="nav-link" data-scroll-target="#color-management"><span class="header-section-number">6.3.1</span> Color Management</a></li>
-  <li><a href="#resource-organization" id="toc-resource-organization" class="nav-link" data-scroll-target="#resource-organization"><span class="header-section-number">6.3.2</span> Resource Organization</a></li>
-  <li><a href="#code-cleanup" id="toc-code-cleanup" class="nav-link" data-scroll-target="#code-cleanup"><span class="header-section-number">6.3.3</span> Code Cleanup</a></li>
-  </ul></li>
-  <li><a href="#documentation" id="toc-documentation" class="nav-link" data-scroll-target="#documentation"><span class="header-section-number">6.4</span> Documentation</a>
-  <ul class="collapse">
-  <li><a href="#user-documentation" id="toc-user-documentation" class="nav-link" data-scroll-target="#user-documentation"><span class="header-section-number">6.4.1</span> User Documentation</a></li>
+  <li><a href="#faster-oct-file-detection-rexview" id="toc-faster-oct-file-detection-rexview" class="nav-link" data-scroll-target="#faster-oct-file-detection-rexview"><span class="header-section-number">4.5.1</span> Faster OCT File Detection (RexView)</a></li>
+  <li><a href="#parallel-export-rexview" id="toc-parallel-export-rexview" class="nav-link" data-scroll-target="#parallel-export-rexview"><span class="header-section-number">4.5.2</span> Parallel Export (RexView)</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#version-2025.5-2025-11-12" id="toc-version-2025.5-2025-11-12" class="nav-link" data-scroll-target="#version-2025.5-2025-11-12"><span class="header-section-number">7</span> Version 2025.5 (2025-11-12)</a>
+  <li><a href="#version-2026.2-2026-04-01" id="toc-version-2026.2-2026-04-01" class="nav-link" data-scroll-target="#version-2026.2-2026-04-01"><span class="header-section-number">5</span> Version 2026.2 (2026-04-01)</a>
   <ul class="collapse">
-  <li><a href="#distribution-deployment" id="toc-distribution-deployment" class="nav-link" data-scroll-target="#distribution-deployment"><span class="header-section-number">7.1</span> Distribution &amp; Deployment</a>
+  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes"><span class="header-section-number">5.1</span> Bug Fixes</a>
   <ul class="collapse">
-  <li><a href="#pyinstaller-executable-build" id="toc-pyinstaller-executable-build" class="nav-link" data-scroll-target="#pyinstaller-executable-build"><span class="header-section-number">7.1.1</span> PyInstaller Executable Build</a></li>
-  <li><a href="#build-optimization" id="toc-build-optimization" class="nav-link" data-scroll-target="#build-optimization"><span class="header-section-number">7.1.2</span> Build Optimization</a></li>
-  </ul></li>
-  <li><a href="#user-interface-enhancements" id="toc-user-interface-enhancements" class="nav-link" data-scroll-target="#user-interface-enhancements"><span class="header-section-number">7.2</span> User Interface Enhancements</a>
-  <ul class="collapse">
-  <li><a href="#tab-configuration-system" id="toc-tab-configuration-system" class="nav-link" data-scroll-target="#tab-configuration-system"><span class="header-section-number">7.2.1</span> Tab Configuration System</a></li>
-  </ul></li>
-  <li><a href="#carl-quant-module---algorithm-improvements-1" id="toc-carl-quant-module---algorithm-improvements-1" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements-1"><span class="header-section-number">7.3</span> Carl Quant Module - Algorithm Improvements</a>
-  <ul class="collapse">
-  <li><a href="#lesion-depth-detection-1" id="toc-lesion-depth-detection-1" class="nav-link" data-scroll-target="#lesion-depth-detection-1"><span class="header-section-number">7.3.1</span> Lesion Depth Detection</a></li>
-  <li><a href="#coordinate-management" id="toc-coordinate-management" class="nav-link" data-scroll-target="#coordinate-management"><span class="header-section-number">7.3.2</span> Coordinate Management</a></li>
-  </ul></li>
-  <li><a href="#code-quality-refactoring-1" id="toc-code-quality-refactoring-1" class="nav-link" data-scroll-target="#code-quality-refactoring-1"><span class="header-section-number">7.4</span> Code Quality &amp; Refactoring</a>
-  <ul class="collapse">
-  <li><a href="#color-management-1" id="toc-color-management-1" class="nav-link" data-scroll-target="#color-management-1"><span class="header-section-number">7.4.1</span> Color Management</a></li>
-  <li><a href="#resource-organization-1" id="toc-resource-organization-1" class="nav-link" data-scroll-target="#resource-organization-1"><span class="header-section-number">7.4.2</span> Resource Organization</a></li>
-  <li><a href="#code-cleanup-1" id="toc-code-cleanup-1" class="nav-link" data-scroll-target="#code-cleanup-1"><span class="header-section-number">7.4.3</span> Code Cleanup</a></li>
-  </ul></li>
-  <li><a href="#documentation-1" id="toc-documentation-1" class="nav-link" data-scroll-target="#documentation-1"><span class="header-section-number">7.5</span> Documentation</a>
-  <ul class="collapse">
-  <li><a href="#user-documentation-1" id="toc-user-documentation-1" class="nav-link" data-scroll-target="#user-documentation-1"><span class="header-section-number">7.5.1</span> User Documentation</a></li>
-  </ul></li>
-  <li><a href="#dependencies-environment" id="toc-dependencies-environment" class="nav-link" data-scroll-target="#dependencies-environment"><span class="header-section-number">7.6</span> Dependencies &amp; Environment</a>
-  <ul class="collapse">
-  <li><a href="#package-management" id="toc-package-management" class="nav-link" data-scroll-target="#package-management"><span class="header-section-number">7.6.1</span> Package Management</a></li>
+  <li><a href="#xml-error-for-oct-rexview" id="toc-xml-error-for-oct-rexview" class="nav-link" data-scroll-target="#xml-error-for-oct-rexview"><span class="header-section-number">5.1.1</span> XML Error for OCT RexView</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#version-2025.4-2025-10-21" id="toc-version-2025.4-2025-10-21" class="nav-link" data-scroll-target="#version-2025.4-2025-10-21"><span class="header-section-number">8</span> Version 2025.4 (2025-10-21)</a>
+  <li><a href="#version-2026.1-2026-03-12" id="toc-version-2026.1-2026-03-12" class="nav-link" data-scroll-target="#version-2026.1-2026-03-12"><span class="header-section-number">6</span> Version 2026.1 (2026-03-12)</a>
   <ul class="collapse">
-  <li><a href="#carl-quant-module---algorithm-improvements-2" id="toc-carl-quant-module---algorithm-improvements-2" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements-2"><span class="header-section-number">8.1</span> Carl Quant Module - Algorithm Improvements</a>
+  <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1"><span class="header-section-number">6.1</span> Bug Fixes</a>
   <ul class="collapse">
-  <li><a href="#buffer-zone-system-for-transition-areas" id="toc-buffer-zone-system-for-transition-areas" class="nav-link" data-scroll-target="#buffer-zone-system-for-transition-areas"><span class="header-section-number">8.1.1</span> Buffer Zone System for Transition Areas</a></li>
-  </ul></li>
-  <li><a href="#carl-quant-module---uiux-enhancements" id="toc-carl-quant-module---uiux-enhancements" class="nav-link" data-scroll-target="#carl-quant-module---uiux-enhancements"><span class="header-section-number">8.2</span> Carl Quant Module - UI/UX Enhancements</a>
-  <ul class="collapse">
-  <li><a href="#visualization-color-scheme" id="toc-visualization-color-scheme" class="nav-link" data-scroll-target="#visualization-color-scheme"><span class="header-section-number">8.2.1</span> Visualization &amp; Color Scheme</a></li>
-  <li><a href="#interactive-features" id="toc-interactive-features" class="nav-link" data-scroll-target="#interactive-features"><span class="header-section-number">8.2.2</span> Interactive Features</a></li>
-  <li><a href="#coordinate-management-1" id="toc-coordinate-management-1" class="nav-link" data-scroll-target="#coordinate-management-1"><span class="header-section-number">8.2.3</span> Coordinate Management</a></li>
-  </ul></li>
-  <li><a href="#performance-optimizations" id="toc-performance-optimizations" class="nav-link" data-scroll-target="#performance-optimizations"><span class="header-section-number">8.3</span> Performance Optimizations</a>
-  <ul class="collapse">
-  <li><a href="#image-viewer" id="toc-image-viewer" class="nav-link" data-scroll-target="#image-viewer"><span class="header-section-number">8.3.1</span> Image Viewer</a></li>
-  </ul></li>
-  <li><a href="#carl-quant-module---progress-tracking" id="toc-carl-quant-module---progress-tracking" class="nav-link" data-scroll-target="#carl-quant-module---progress-tracking"><span class="header-section-number">8.4</span> Carl Quant Module - Progress Tracking</a>
-  <ul class="collapse">
-  <li><a href="#progress-dialog" id="toc-progress-dialog" class="nav-link" data-scroll-target="#progress-dialog"><span class="header-section-number">8.4.1</span> Progress Dialog</a></li>
-  </ul></li>
-  <li><a href="#bug-fixes-2" id="toc-bug-fixes-2" class="nav-link" data-scroll-target="#bug-fixes-2"><span class="header-section-number">8.5</span> Bug Fixes</a>
-  <ul class="collapse">
-  <li><a href="#specimen-panel" id="toc-specimen-panel" class="nav-link" data-scroll-target="#specimen-panel"><span class="header-section-number">8.5.1</span> Specimen Panel</a></li>
-  </ul></li>
-  <li><a href="#documentation-2" id="toc-documentation-2" class="nav-link" data-scroll-target="#documentation-2"><span class="header-section-number">8.6</span> Documentation</a>
-  <ul class="collapse">
-  <li><a href="#clarifications" id="toc-clarifications" class="nav-link" data-scroll-target="#clarifications"><span class="header-section-number">8.6.1</span> Clarifications</a></li>
-  </ul></li>
-  <li><a href="#code-quality" id="toc-code-quality" class="nav-link" data-scroll-target="#code-quality"><span class="header-section-number">8.7</span> Code Quality</a>
-  <ul class="collapse">
-  <li><a href="#refactoring" id="toc-refactoring" class="nav-link" data-scroll-target="#refactoring"><span class="header-section-number">8.7.1</span> Refactoring</a></li>
+  <li><a href="#refractive-index-correction-for-combined_mean" id="toc-refractive-index-correction-for-combined_mean" class="nav-link" data-scroll-target="#refractive-index-correction-for-combined_mean"><span class="header-section-number">6.1.1</span> Refractive Index Correction for COMBINED_MEAN</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#version-2025.3-2025-10-16" id="toc-version-2025.3-2025-10-16" class="nav-link" data-scroll-target="#version-2025.3-2025-10-16"><span class="header-section-number">9</span> Version 2025.3 (2025-10-16)</a>
+  <li><a href="#version-2025.6-2025-12" id="toc-version-2025.6-2025-12" class="nav-link" data-scroll-target="#version-2025.6-2025-12"><span class="header-section-number">7</span> Version 2025.6 (2025-12)</a>
   <ul class="collapse">
-  <li><a href="#documentation-3" id="toc-documentation-3" class="nav-link" data-scroll-target="#documentation-3"><span class="header-section-number">9.1</span> Documentation</a>
+  <li><a href="#carl-quant-module---algorithm-improvements" id="toc-carl-quant-module---algorithm-improvements" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements"><span class="header-section-number">7.1</span> Carl Quant Module - Algorithm Improvements</a>
   <ul class="collapse">
-  <li><a href="#manual-updates" id="toc-manual-updates" class="nav-link" data-scroll-target="#manual-updates"><span class="header-section-number">9.1.1</span> Manual Updates</a></li>
+  <li><a href="#refractive-index-correction" id="toc-refractive-index-correction" class="nav-link" data-scroll-target="#refractive-index-correction"><span class="header-section-number">7.1.1</span> Refractive Index Correction</a></li>
+  <li><a href="#lesion-depth-detection" id="toc-lesion-depth-detection" class="nav-link" data-scroll-target="#lesion-depth-detection"><span class="header-section-number">7.1.2</span> Lesion Depth Detection</a></li>
   </ul></li>
-  <li><a href="#performance-optimizations-1" id="toc-performance-optimizations-1" class="nav-link" data-scroll-target="#performance-optimizations-1"><span class="header-section-number">9.2</span> Performance Optimizations</a>
+  <li><a href="#bug-fixes-stability" id="toc-bug-fixes-stability" class="nav-link" data-scroll-target="#bug-fixes-stability"><span class="header-section-number">7.2</span> Bug Fixes &amp; Stability</a>
   <ul class="collapse">
-  <li><a href="#oct-image-processing" id="toc-oct-image-processing" class="nav-link" data-scroll-target="#oct-image-processing"><span class="header-section-number">9.2.1</span> OCT Image Processing</a></li>
+  <li><a href="#thread-safety" id="toc-thread-safety" class="nav-link" data-scroll-target="#thread-safety"><span class="header-section-number">7.2.1</span> Thread Safety</a></li>
+  <li><a href="#image-processing" id="toc-image-processing" class="nav-link" data-scroll-target="#image-processing"><span class="header-section-number">7.2.2</span> Image Processing</a></li>
   </ul></li>
-  <li><a href="#code-refactoring" id="toc-code-refactoring" class="nav-link" data-scroll-target="#code-refactoring"><span class="header-section-number">9.3</span> Code Refactoring</a>
+  <li><a href="#code-quality-refactoring" id="toc-code-quality-refactoring" class="nav-link" data-scroll-target="#code-quality-refactoring"><span class="header-section-number">7.3</span> Code Quality &amp; Refactoring</a>
   <ul class="collapse">
-  <li><a href="#rexview-module" id="toc-rexview-module" class="nav-link" data-scroll-target="#rexview-module"><span class="header-section-number">9.3.1</span> RexView Module</a></li>
+  <li><a href="#color-management" id="toc-color-management" class="nav-link" data-scroll-target="#color-management"><span class="header-section-number">7.3.1</span> Color Management</a></li>
+  <li><a href="#resource-organization" id="toc-resource-organization" class="nav-link" data-scroll-target="#resource-organization"><span class="header-section-number">7.3.2</span> Resource Organization</a></li>
+  <li><a href="#code-cleanup" id="toc-code-cleanup" class="nav-link" data-scroll-target="#code-cleanup"><span class="header-section-number">7.3.3</span> Code Cleanup</a></li>
   </ul></li>
-  <li><a href="#carl-quant-module---a-scan-viewer" id="toc-carl-quant-module---a-scan-viewer" class="nav-link" data-scroll-target="#carl-quant-module---a-scan-viewer"><span class="header-section-number">9.4</span> Carl Quant Module - A-Scan Viewer</a>
+  <li><a href="#documentation-1" id="toc-documentation-1" class="nav-link" data-scroll-target="#documentation-1"><span class="header-section-number">7.4</span> Documentation</a>
   <ul class="collapse">
-  <li><a href="#interactive-visualization" id="toc-interactive-visualization" class="nav-link" data-scroll-target="#interactive-visualization"><span class="header-section-number">9.4.1</span> Interactive Visualization</a></li>
-  </ul></li>
-  <li><a href="#carl-quant-module---algorithm-improvements-3" id="toc-carl-quant-module---algorithm-improvements-3" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements-3"><span class="header-section-number">9.5</span> Carl Quant Module - Algorithm Improvements</a>
-  <ul class="collapse">
-  <li><a href="#lesion-depth-detection-2" id="toc-lesion-depth-detection-2" class="nav-link" data-scroll-target="#lesion-depth-detection-2"><span class="header-section-number">9.5.1</span> Lesion Depth Detection</a></li>
-  <li><a href="#cavitation-detection" id="toc-cavitation-detection" class="nav-link" data-scroll-target="#cavitation-detection"><span class="header-section-number">9.5.2</span> Cavitation Detection</a></li>
-  </ul></li>
-  <li><a href="#carl-quant-module---data-management" id="toc-carl-quant-module---data-management" class="nav-link" data-scroll-target="#carl-quant-module---data-management"><span class="header-section-number">9.6</span> Carl Quant Module - Data Management</a>
-  <ul class="collapse">
-  <li><a href="#results-rexview" id="toc-results-rexview" class="nav-link" data-scroll-target="#results-rexview"><span class="header-section-number">9.6.1</span> Results &amp; RexView</a></li>
-  <li><a href="#image-rexview" id="toc-image-rexview" class="nav-link" data-scroll-target="#image-rexview"><span class="header-section-number">9.6.2</span> Image RexView</a></li>
-  </ul></li>
-  <li><a href="#code-refactoring-cleanup" id="toc-code-refactoring-cleanup" class="nav-link" data-scroll-target="#code-refactoring-cleanup"><span class="header-section-number">9.7</span> Code Refactoring &amp; Cleanup</a>
-  <ul class="collapse">
-  <li><a href="#naming-clarity" id="toc-naming-clarity" class="nav-link" data-scroll-target="#naming-clarity"><span class="header-section-number">9.7.1</span> Naming &amp; Clarity</a></li>
-  <li><a href="#performance-maintenance" id="toc-performance-maintenance" class="nav-link" data-scroll-target="#performance-maintenance"><span class="header-section-number">9.7.2</span> Performance &amp; Maintenance</a></li>
+  <li><a href="#user-documentation" id="toc-user-documentation" class="nav-link" data-scroll-target="#user-documentation"><span class="header-section-number">7.4.1</span> User Documentation</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#version-2025.2-2025-10-10" id="toc-version-2025.2-2025-10-10" class="nav-link" data-scroll-target="#version-2025.2-2025-10-10"><span class="header-section-number">10</span> Version 2025.2 (2025-10-10)</a>
+  <li><a href="#version-2025.5-2025-11-12" id="toc-version-2025.5-2025-11-12" class="nav-link" data-scroll-target="#version-2025.5-2025-11-12"><span class="header-section-number">8</span> Version 2025.5 (2025-11-12)</a>
   <ul class="collapse">
-  <li><a href="#carl-quant-module---core-algorithm-enhancements" id="toc-carl-quant-module---core-algorithm-enhancements" class="nav-link" data-scroll-target="#carl-quant-module---core-algorithm-enhancements"><span class="header-section-number">10.1</span> Carl Quant Module - Core Algorithm Enhancements</a>
+  <li><a href="#distribution-deployment" id="toc-distribution-deployment" class="nav-link" data-scroll-target="#distribution-deployment"><span class="header-section-number">8.1</span> Distribution &amp; Deployment</a>
   <ul class="collapse">
-  <li><a href="#lesion-depth-detection-methods" id="toc-lesion-depth-detection-methods" class="nav-link" data-scroll-target="#lesion-depth-detection-methods"><span class="header-section-number">10.1.1</span> Lesion Depth Detection Methods</a></li>
-  <li><a href="#surface-detection-analysis" id="toc-surface-detection-analysis" class="nav-link" data-scroll-target="#surface-detection-analysis"><span class="header-section-number">10.1.2</span> Surface Detection &amp; Analysis</a></li>
-  <li><a href="#region-analysis-data-extraction" id="toc-region-analysis-data-extraction" class="nav-link" data-scroll-target="#region-analysis-data-extraction"><span class="header-section-number">10.1.3</span> Region Analysis &amp; Data Extraction</a></li>
-  <li><a href="#performance-optimizations-2" id="toc-performance-optimizations-2" class="nav-link" data-scroll-target="#performance-optimizations-2"><span class="header-section-number">10.1.4</span> Performance Optimizations</a></li>
+  <li><a href="#pyinstaller-executable-build" id="toc-pyinstaller-executable-build" class="nav-link" data-scroll-target="#pyinstaller-executable-build"><span class="header-section-number">8.1.1</span> PyInstaller Executable Build</a></li>
+  <li><a href="#build-optimization" id="toc-build-optimization" class="nav-link" data-scroll-target="#build-optimization"><span class="header-section-number">8.1.2</span> Build Optimization</a></li>
   </ul></li>
-  <li><a href="#carl-quant-module---user-interface-workflow" id="toc-carl-quant-module---user-interface-workflow" class="nav-link" data-scroll-target="#carl-quant-module---user-interface-workflow"><span class="header-section-number">10.2</span> Carl Quant Module - User Interface &amp; Workflow</a>
+  <li><a href="#user-interface-enhancements" id="toc-user-interface-enhancements" class="nav-link" data-scroll-target="#user-interface-enhancements"><span class="header-section-number">8.2</span> User Interface Enhancements</a>
   <ul class="collapse">
-  <li><a href="#image-viewer-visualization" id="toc-image-viewer-visualization" class="nav-link" data-scroll-target="#image-viewer-visualization"><span class="header-section-number">10.2.1</span> Image Viewer &amp; Visualization</a></li>
-  <li><a href="#settings-configuration" id="toc-settings-configuration" class="nav-link" data-scroll-target="#settings-configuration"><span class="header-section-number">10.2.2</span> Settings &amp; Configuration</a></li>
-  <li><a href="#data-management" id="toc-data-management" class="nav-link" data-scroll-target="#data-management"><span class="header-section-number">10.2.3</span> Data Management</a></li>
-  <li><a href="#results-reporting" id="toc-results-reporting" class="nav-link" data-scroll-target="#results-reporting"><span class="header-section-number">10.2.4</span> Results &amp; Reporting</a></li>
+  <li><a href="#tab-configuration-system" id="toc-tab-configuration-system" class="nav-link" data-scroll-target="#tab-configuration-system"><span class="header-section-number">8.2.1</span> Tab Configuration System</a></li>
   </ul></li>
-  <li><a href="#application-wide-improvements" id="toc-application-wide-improvements" class="nav-link" data-scroll-target="#application-wide-improvements"><span class="header-section-number">10.3</span> Application-Wide Improvements</a>
+  <li><a href="#carl-quant-module---algorithm-improvements-1" id="toc-carl-quant-module---algorithm-improvements-1" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements-1"><span class="header-section-number">8.3</span> Carl Quant Module - Algorithm Improvements</a>
   <ul class="collapse">
-  <li><a href="#status-bar-error-handling" id="toc-status-bar-error-handling" class="nav-link" data-scroll-target="#status-bar-error-handling"><span class="header-section-number">10.3.1</span> Status Bar &amp; Error Handling</a></li>
-  <li><a href="#architecture-code-quality" id="toc-architecture-code-quality" class="nav-link" data-scroll-target="#architecture-code-quality"><span class="header-section-number">10.3.2</span> Architecture &amp; Code Quality</a></li>
-  <li><a href="#uiux-enhancements" id="toc-uiux-enhancements" class="nav-link" data-scroll-target="#uiux-enhancements"><span class="header-section-number">10.3.3</span> UI/UX Enhancements</a></li>
-  <li><a href="#documentation-help-system" id="toc-documentation-help-system" class="nav-link" data-scroll-target="#documentation-help-system"><span class="header-section-number">10.3.4</span> Documentation &amp; Help System</a></li>
+  <li><a href="#lesion-depth-detection-1" id="toc-lesion-depth-detection-1" class="nav-link" data-scroll-target="#lesion-depth-detection-1"><span class="header-section-number">8.3.1</span> Lesion Depth Detection</a></li>
+  <li><a href="#coordinate-management" id="toc-coordinate-management" class="nav-link" data-scroll-target="#coordinate-management"><span class="header-section-number">8.3.2</span> Coordinate Management</a></li>
   </ul></li>
-  <li><a href="#analysis-tab-enhancements" id="toc-analysis-tab-enhancements" class="nav-link" data-scroll-target="#analysis-tab-enhancements"><span class="header-section-number">10.4</span> Analysis Tab Enhancements</a>
+  <li><a href="#code-quality-refactoring-1" id="toc-code-quality-refactoring-1" class="nav-link" data-scroll-target="#code-quality-refactoring-1"><span class="header-section-number">8.4</span> Code Quality &amp; Refactoring</a>
   <ul class="collapse">
-  <li><a href="#configuration-management" id="toc-configuration-management" class="nav-link" data-scroll-target="#configuration-management"><span class="header-section-number">10.4.1</span> Configuration Management</a></li>
-  <li><a href="#data-handling" id="toc-data-handling" class="nav-link" data-scroll-target="#data-handling"><span class="header-section-number">10.4.2</span> Data Handling</a></li>
-  <li><a href="#column-management" id="toc-column-management" class="nav-link" data-scroll-target="#column-management"><span class="header-section-number">10.4.3</span> Column Management</a></li>
+  <li><a href="#color-management-1" id="toc-color-management-1" class="nav-link" data-scroll-target="#color-management-1"><span class="header-section-number">8.4.1</span> Color Management</a></li>
+  <li><a href="#resource-organization-1" id="toc-resource-organization-1" class="nav-link" data-scroll-target="#resource-organization-1"><span class="header-section-number">8.4.2</span> Resource Organization</a></li>
+  <li><a href="#code-cleanup-1" id="toc-code-cleanup-1" class="nav-link" data-scroll-target="#code-cleanup-1"><span class="header-section-number">8.4.3</span> Code Cleanup</a></li>
   </ul></li>
-  <li><a href="#rexview-tab" id="toc-rexview-tab" class="nav-link" data-scroll-target="#rexview-tab"><span class="header-section-number">10.5</span> RexView Tab</a>
+  <li><a href="#documentation-2" id="toc-documentation-2" class="nav-link" data-scroll-target="#documentation-2"><span class="header-section-number">8.5</span> Documentation</a>
   <ul class="collapse">
-  <li><a href="#bug-fixes-stability-1" id="toc-bug-fixes-stability-1" class="nav-link" data-scroll-target="#bug-fixes-stability-1"><span class="header-section-number">10.5.1</span> Bug Fixes &amp; Stability</a></li>
+  <li><a href="#user-documentation-1" id="toc-user-documentation-1" class="nav-link" data-scroll-target="#user-documentation-1"><span class="header-section-number">8.5.1</span> User Documentation</a></li>
   </ul></li>
-  <li><a href="#general-maintenance" id="toc-general-maintenance" class="nav-link" data-scroll-target="#general-maintenance"><span class="header-section-number">10.6</span> General Maintenance</a>
+  <li><a href="#dependencies-environment" id="toc-dependencies-environment" class="nav-link" data-scroll-target="#dependencies-environment"><span class="header-section-number">8.6</span> Dependencies &amp; Environment</a>
   <ul class="collapse">
-  <li><a href="#code-cleanup-2" id="toc-code-cleanup-2" class="nav-link" data-scroll-target="#code-cleanup-2"><span class="header-section-number">10.6.1</span> Code Cleanup</a></li>
-  <li><a href="#development-infrastructure" id="toc-development-infrastructure" class="nav-link" data-scroll-target="#development-infrastructure"><span class="header-section-number">10.6.2</span> Development Infrastructure</a></li>
+  <li><a href="#package-management" id="toc-package-management" class="nav-link" data-scroll-target="#package-management"><span class="header-section-number">8.6.1</span> Package Management</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#version-2025.1-2025-09-22" id="toc-version-2025.1-2025-09-22" class="nav-link" data-scroll-target="#version-2025.1-2025-09-22"><span class="header-section-number">11</span> Version 2025.1 (2025-09-22)</a>
+  <li><a href="#version-2025.4-2025-10-21" id="toc-version-2025.4-2025-10-21" class="nav-link" data-scroll-target="#version-2025.4-2025-10-21"><span class="header-section-number">9</span> Version 2025.4 (2025-10-21)</a>
   <ul class="collapse">
-  <li><a href="#initial-release" id="toc-initial-release" class="nav-link" data-scroll-target="#initial-release"><span class="header-section-number">11.1</span> Initial Release</a>
+  <li><a href="#carl-quant-module---algorithm-improvements-2" id="toc-carl-quant-module---algorithm-improvements-2" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements-2"><span class="header-section-number">9.1</span> Carl Quant Module - Algorithm Improvements</a>
   <ul class="collapse">
-  <li><a href="#core-features" id="toc-core-features" class="nav-link" data-scroll-target="#core-features"><span class="header-section-number">11.1.1</span> Core Features</a></li>
-  <li><a href="#user-interface" id="toc-user-interface" class="nav-link" data-scroll-target="#user-interface"><span class="header-section-number">11.1.2</span> User Interface</a></li>
-  <li><a href="#foundation" id="toc-foundation" class="nav-link" data-scroll-target="#foundation"><span class="header-section-number">11.1.3</span> Foundation</a></li>
+  <li><a href="#buffer-zone-system-for-transition-areas" id="toc-buffer-zone-system-for-transition-areas" class="nav-link" data-scroll-target="#buffer-zone-system-for-transition-areas"><span class="header-section-number">9.1.1</span> Buffer Zone System for Transition Areas</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---uiux-enhancements" id="toc-carl-quant-module---uiux-enhancements" class="nav-link" data-scroll-target="#carl-quant-module---uiux-enhancements"><span class="header-section-number">9.2</span> Carl Quant Module - UI/UX Enhancements</a>
+  <ul class="collapse">
+  <li><a href="#visualization-color-scheme" id="toc-visualization-color-scheme" class="nav-link" data-scroll-target="#visualization-color-scheme"><span class="header-section-number">9.2.1</span> Visualization &amp; Color Scheme</a></li>
+  <li><a href="#interactive-features" id="toc-interactive-features" class="nav-link" data-scroll-target="#interactive-features"><span class="header-section-number">9.2.2</span> Interactive Features</a></li>
+  <li><a href="#coordinate-management-1" id="toc-coordinate-management-1" class="nav-link" data-scroll-target="#coordinate-management-1"><span class="header-section-number">9.2.3</span> Coordinate Management</a></li>
+  </ul></li>
+  <li><a href="#performance-optimizations" id="toc-performance-optimizations" class="nav-link" data-scroll-target="#performance-optimizations"><span class="header-section-number">9.3</span> Performance Optimizations</a>
+  <ul class="collapse">
+  <li><a href="#image-viewer" id="toc-image-viewer" class="nav-link" data-scroll-target="#image-viewer"><span class="header-section-number">9.3.1</span> Image Viewer</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---progress-tracking" id="toc-carl-quant-module---progress-tracking" class="nav-link" data-scroll-target="#carl-quant-module---progress-tracking"><span class="header-section-number">9.4</span> Carl Quant Module - Progress Tracking</a>
+  <ul class="collapse">
+  <li><a href="#progress-dialog" id="toc-progress-dialog" class="nav-link" data-scroll-target="#progress-dialog"><span class="header-section-number">9.4.1</span> Progress Dialog</a></li>
+  </ul></li>
+  <li><a href="#bug-fixes-2" id="toc-bug-fixes-2" class="nav-link" data-scroll-target="#bug-fixes-2"><span class="header-section-number">9.5</span> Bug Fixes</a>
+  <ul class="collapse">
+  <li><a href="#specimen-panel" id="toc-specimen-panel" class="nav-link" data-scroll-target="#specimen-panel"><span class="header-section-number">9.5.1</span> Specimen Panel</a></li>
+  </ul></li>
+  <li><a href="#documentation-3" id="toc-documentation-3" class="nav-link" data-scroll-target="#documentation-3"><span class="header-section-number">9.6</span> Documentation</a>
+  <ul class="collapse">
+  <li><a href="#clarifications" id="toc-clarifications" class="nav-link" data-scroll-target="#clarifications"><span class="header-section-number">9.6.1</span> Clarifications</a></li>
+  </ul></li>
+  <li><a href="#code-quality" id="toc-code-quality" class="nav-link" data-scroll-target="#code-quality"><span class="header-section-number">9.7</span> Code Quality</a>
+  <ul class="collapse">
+  <li><a href="#refactoring" id="toc-refactoring" class="nav-link" data-scroll-target="#refactoring"><span class="header-section-number">9.7.1</span> Refactoring</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#development-notes" id="toc-development-notes" class="nav-link" data-scroll-target="#development-notes"><span class="header-section-number">12</span> Development Notes</a></li>
+  <li><a href="#version-2025.3-2025-10-16" id="toc-version-2025.3-2025-10-16" class="nav-link" data-scroll-target="#version-2025.3-2025-10-16"><span class="header-section-number">10</span> Version 2025.3 (2025-10-16)</a>
+  <ul class="collapse">
+  <li><a href="#documentation-4" id="toc-documentation-4" class="nav-link" data-scroll-target="#documentation-4"><span class="header-section-number">10.1</span> Documentation</a>
+  <ul class="collapse">
+  <li><a href="#manual-updates" id="toc-manual-updates" class="nav-link" data-scroll-target="#manual-updates"><span class="header-section-number">10.1.1</span> Manual Updates</a></li>
+  </ul></li>
+  <li><a href="#performance-optimizations-1" id="toc-performance-optimizations-1" class="nav-link" data-scroll-target="#performance-optimizations-1"><span class="header-section-number">10.2</span> Performance Optimizations</a>
+  <ul class="collapse">
+  <li><a href="#oct-image-processing" id="toc-oct-image-processing" class="nav-link" data-scroll-target="#oct-image-processing"><span class="header-section-number">10.2.1</span> OCT Image Processing</a></li>
+  </ul></li>
+  <li><a href="#code-refactoring" id="toc-code-refactoring" class="nav-link" data-scroll-target="#code-refactoring"><span class="header-section-number">10.3</span> Code Refactoring</a>
+  <ul class="collapse">
+  <li><a href="#rexview-module" id="toc-rexview-module" class="nav-link" data-scroll-target="#rexview-module"><span class="header-section-number">10.3.1</span> RexView Module</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---a-scan-viewer" id="toc-carl-quant-module---a-scan-viewer" class="nav-link" data-scroll-target="#carl-quant-module---a-scan-viewer"><span class="header-section-number">10.4</span> Carl Quant Module - A-Scan Viewer</a>
+  <ul class="collapse">
+  <li><a href="#interactive-visualization" id="toc-interactive-visualization" class="nav-link" data-scroll-target="#interactive-visualization"><span class="header-section-number">10.4.1</span> Interactive Visualization</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---algorithm-improvements-3" id="toc-carl-quant-module---algorithm-improvements-3" class="nav-link" data-scroll-target="#carl-quant-module---algorithm-improvements-3"><span class="header-section-number">10.5</span> Carl Quant Module - Algorithm Improvements</a>
+  <ul class="collapse">
+  <li><a href="#lesion-depth-detection-2" id="toc-lesion-depth-detection-2" class="nav-link" data-scroll-target="#lesion-depth-detection-2"><span class="header-section-number">10.5.1</span> Lesion Depth Detection</a></li>
+  <li><a href="#cavitation-detection" id="toc-cavitation-detection" class="nav-link" data-scroll-target="#cavitation-detection"><span class="header-section-number">10.5.2</span> Cavitation Detection</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---data-management" id="toc-carl-quant-module---data-management" class="nav-link" data-scroll-target="#carl-quant-module---data-management"><span class="header-section-number">10.6</span> Carl Quant Module - Data Management</a>
+  <ul class="collapse">
+  <li><a href="#results-rexview" id="toc-results-rexview" class="nav-link" data-scroll-target="#results-rexview"><span class="header-section-number">10.6.1</span> Results &amp; RexView</a></li>
+  <li><a href="#image-rexview" id="toc-image-rexview" class="nav-link" data-scroll-target="#image-rexview"><span class="header-section-number">10.6.2</span> Image RexView</a></li>
+  </ul></li>
+  <li><a href="#code-refactoring-cleanup" id="toc-code-refactoring-cleanup" class="nav-link" data-scroll-target="#code-refactoring-cleanup"><span class="header-section-number">10.7</span> Code Refactoring &amp; Cleanup</a>
+  <ul class="collapse">
+  <li><a href="#naming-clarity" id="toc-naming-clarity" class="nav-link" data-scroll-target="#naming-clarity"><span class="header-section-number">10.7.1</span> Naming &amp; Clarity</a></li>
+  <li><a href="#performance-maintenance" id="toc-performance-maintenance" class="nav-link" data-scroll-target="#performance-maintenance"><span class="header-section-number">10.7.2</span> Performance &amp; Maintenance</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#version-2025.2-2025-10-10" id="toc-version-2025.2-2025-10-10" class="nav-link" data-scroll-target="#version-2025.2-2025-10-10"><span class="header-section-number">11</span> Version 2025.2 (2025-10-10)</a>
+  <ul class="collapse">
+  <li><a href="#carl-quant-module---core-algorithm-enhancements" id="toc-carl-quant-module---core-algorithm-enhancements" class="nav-link" data-scroll-target="#carl-quant-module---core-algorithm-enhancements"><span class="header-section-number">11.1</span> Carl Quant Module - Core Algorithm Enhancements</a>
+  <ul class="collapse">
+  <li><a href="#lesion-depth-detection-methods" id="toc-lesion-depth-detection-methods" class="nav-link" data-scroll-target="#lesion-depth-detection-methods"><span class="header-section-number">11.1.1</span> Lesion Depth Detection Methods</a></li>
+  <li><a href="#surface-detection-analysis" id="toc-surface-detection-analysis" class="nav-link" data-scroll-target="#surface-detection-analysis"><span class="header-section-number">11.1.2</span> Surface Detection &amp; Analysis</a></li>
+  <li><a href="#region-analysis-data-extraction" id="toc-region-analysis-data-extraction" class="nav-link" data-scroll-target="#region-analysis-data-extraction"><span class="header-section-number">11.1.3</span> Region Analysis &amp; Data Extraction</a></li>
+  <li><a href="#performance-optimizations-2" id="toc-performance-optimizations-2" class="nav-link" data-scroll-target="#performance-optimizations-2"><span class="header-section-number">11.1.4</span> Performance Optimizations</a></li>
+  </ul></li>
+  <li><a href="#carl-quant-module---user-interface-workflow" id="toc-carl-quant-module---user-interface-workflow" class="nav-link" data-scroll-target="#carl-quant-module---user-interface-workflow"><span class="header-section-number">11.2</span> Carl Quant Module - User Interface &amp; Workflow</a>
+  <ul class="collapse">
+  <li><a href="#image-viewer-visualization" id="toc-image-viewer-visualization" class="nav-link" data-scroll-target="#image-viewer-visualization"><span class="header-section-number">11.2.1</span> Image Viewer &amp; Visualization</a></li>
+  <li><a href="#settings-configuration" id="toc-settings-configuration" class="nav-link" data-scroll-target="#settings-configuration"><span class="header-section-number">11.2.2</span> Settings &amp; Configuration</a></li>
+  <li><a href="#data-management" id="toc-data-management" class="nav-link" data-scroll-target="#data-management"><span class="header-section-number">11.2.3</span> Data Management</a></li>
+  <li><a href="#results-reporting" id="toc-results-reporting" class="nav-link" data-scroll-target="#results-reporting"><span class="header-section-number">11.2.4</span> Results &amp; Reporting</a></li>
+  </ul></li>
+  <li><a href="#application-wide-improvements" id="toc-application-wide-improvements" class="nav-link" data-scroll-target="#application-wide-improvements"><span class="header-section-number">11.3</span> Application-Wide Improvements</a>
+  <ul class="collapse">
+  <li><a href="#status-bar-error-handling" id="toc-status-bar-error-handling" class="nav-link" data-scroll-target="#status-bar-error-handling"><span class="header-section-number">11.3.1</span> Status Bar &amp; Error Handling</a></li>
+  <li><a href="#architecture-code-quality" id="toc-architecture-code-quality" class="nav-link" data-scroll-target="#architecture-code-quality"><span class="header-section-number">11.3.2</span> Architecture &amp; Code Quality</a></li>
+  <li><a href="#uiux-enhancements" id="toc-uiux-enhancements" class="nav-link" data-scroll-target="#uiux-enhancements"><span class="header-section-number">11.3.3</span> UI/UX Enhancements</a></li>
+  <li><a href="#documentation-help-system" id="toc-documentation-help-system" class="nav-link" data-scroll-target="#documentation-help-system"><span class="header-section-number">11.3.4</span> Documentation &amp; Help System</a></li>
+  </ul></li>
+  <li><a href="#analysis-tab-enhancements" id="toc-analysis-tab-enhancements" class="nav-link" data-scroll-target="#analysis-tab-enhancements"><span class="header-section-number">11.4</span> Analysis Tab Enhancements</a>
+  <ul class="collapse">
+  <li><a href="#configuration-management" id="toc-configuration-management" class="nav-link" data-scroll-target="#configuration-management"><span class="header-section-number">11.4.1</span> Configuration Management</a></li>
+  <li><a href="#data-handling" id="toc-data-handling" class="nav-link" data-scroll-target="#data-handling"><span class="header-section-number">11.4.2</span> Data Handling</a></li>
+  <li><a href="#column-management" id="toc-column-management" class="nav-link" data-scroll-target="#column-management"><span class="header-section-number">11.4.3</span> Column Management</a></li>
+  </ul></li>
+  <li><a href="#rexview-tab" id="toc-rexview-tab" class="nav-link" data-scroll-target="#rexview-tab"><span class="header-section-number">11.5</span> RexView Tab</a>
+  <ul class="collapse">
+  <li><a href="#bug-fixes-stability-1" id="toc-bug-fixes-stability-1" class="nav-link" data-scroll-target="#bug-fixes-stability-1"><span class="header-section-number">11.5.1</span> Bug Fixes &amp; Stability</a></li>
+  </ul></li>
+  <li><a href="#general-maintenance" id="toc-general-maintenance" class="nav-link" data-scroll-target="#general-maintenance"><span class="header-section-number">11.6</span> General Maintenance</a>
+  <ul class="collapse">
+  <li><a href="#code-cleanup-2" id="toc-code-cleanup-2" class="nav-link" data-scroll-target="#code-cleanup-2"><span class="header-section-number">11.6.1</span> Code Cleanup</a></li>
+  <li><a href="#development-infrastructure" id="toc-development-infrastructure" class="nav-link" data-scroll-target="#development-infrastructure"><span class="header-section-number">11.6.2</span> Development Infrastructure</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#version-2025.1-2025-09-22" id="toc-version-2025.1-2025-09-22" class="nav-link" data-scroll-target="#version-2025.1-2025-09-22"><span class="header-section-number">12</span> Version 2025.1 (2025-09-22)</a>
+  <ul class="collapse">
+  <li><a href="#initial-release" id="toc-initial-release" class="nav-link" data-scroll-target="#initial-release"><span class="header-section-number">12.1</span> Initial Release</a>
+  <ul class="collapse">
+  <li><a href="#core-features" id="toc-core-features" class="nav-link" data-scroll-target="#core-features"><span class="header-section-number">12.1.1</span> Core Features</a></li>
+  <li><a href="#user-interface" id="toc-user-interface" class="nav-link" data-scroll-target="#user-interface"><span class="header-section-number">12.1.2</span> User Interface</a></li>
+  <li><a href="#foundation" id="toc-foundation" class="nav-link" data-scroll-target="#foundation"><span class="header-section-number">12.1.3</span> Foundation</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#development-notes" id="toc-development-notes" class="nav-link" data-scroll-target="#development-notes"><span class="header-section-number">13</span> Development Notes</a></li>
   </ul>
 </nav>
 </div>
@@ -302,12 +325,84 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="version-2026.5-2026-06-05" class="level1" data-number="1">
-<h1 data-number="1"><span class="header-section-number">1</span> Version 2026.5 (2026-06-05)</h1>
-<section id="annolyze-bug-fixes-stability" class="level2" data-number="1.1">
-<h2 data-number="1.1" class="anchored" data-anchor-id="annolyze-bug-fixes-stability"><span class="header-section-number">1.1</span> AnnoLyze Bug Fixes &amp; Stability</h2>
-<section id="silent-crash-on-folder-load-with-config" class="level3" data-number="1.1.1">
-<h3 data-number="1.1.1" class="anchored" data-anchor-id="silent-crash-on-folder-load-with-config"><span class="header-section-number">1.1.1</span> Silent Crash on Folder Load with Config</h3>
+<section id="version-2026.6-2026-06-09" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Version 2026.6 (2026-06-09)</h1>
+<section id="architecture-refactoring" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="architecture-refactoring"><span class="header-section-number">1.1</span> Architecture &amp; Refactoring</h2>
+<section id="gui-adapters" class="level3" data-number="1.1.1">
+<h3 data-number="1.1.1" class="anchored" data-anchor-id="gui-adapters"><span class="header-section-number">1.1.1</span> GUI Adapters</h3>
+<ul>
+<li>Introduced a dedicated <code>gui_adapters</code> module to translate Tkinter widget state into Pydantic models</li>
+<li>GUI-specific logic is now isolated from the domain layer; models no longer depend on Tkinter</li>
+<li>Replaced deprecated <code>from_gui_state</code> factory methods on models with adapter functions for <code>ExportConfig</code>, <code>SliceExportParams</code>, <code>ImageDisplayConfig</code>, and <code>QueueItem</code></li>
+<li>Updated integration and unit tests to use the new adapter functions</li>
+</ul>
+</section>
+<section id="shared-validation-module" class="level3" data-number="1.1.2">
+<h3 data-number="1.1.2" class="anchored" data-anchor-id="shared-validation-module"><span class="header-section-number">1.1.2</span> Shared Validation Module</h3>
+<ul>
+<li>Introduced a centralized <code>validation</code> module with core domain invariant helpers</li>
+<li>Moved validation logic out of <code>models</code>, <code>queue_service</code>, <code>file_discovery_service</code>, and <code>settings_service</code> into the shared module</li>
+<li>Consistent validation of dB ranges and slice orders across the application</li>
+</ul>
+</section>
+</section>
+<section id="performance-improvements" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="performance-improvements"><span class="header-section-number">1.2</span> Performance Improvements</h2>
+<section id="lazy-loading" class="level3" data-number="1.2.1">
+<h3 data-number="1.2.1" class="anchored" data-anchor-id="lazy-loading"><span class="header-section-number">1.2.1</span> Lazy Loading</h3>
+<ul>
+<li>Moved heavy third-party imports (<code>scipy</code>, <code>sklearn</code>, <code>openpyxl</code>, <code>matplotlib</code>, <code>BeautifulSoup</code>) to function scope across multiple modules</li>
+<li>Reduces module-level dependencies and improves startup time</li>
+</ul>
+</section>
+<section id="file-discovery-rexview" class="level3" data-number="1.2.2">
+<h3 data-number="1.2.2" class="anchored" data-anchor-id="file-discovery-rexview"><span class="header-section-number">1.2.2</span> File Discovery (RexView)</h3>
+<ul>
+<li>Introduced <code>getXMLDiscoveryInfo()</code> for fast minimal header parsing during file discovery, avoiding re-parsing full metadata</li>
+<li>Throttled progress popup updates during file discovery to reduce UI overhead in large folders</li>
+</ul>
+</section>
+</section>
+<section id="user-experience" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="user-experience"><span class="header-section-number">1.3</span> User Experience</h2>
+<section id="status-bar-feedback-rexview" class="level3" data-number="1.3.1">
+<h3 data-number="1.3.1" class="anchored" data-anchor-id="status-bar-feedback-rexview"><span class="header-section-number">1.3.1</span> Status Bar Feedback (RexView)</h3>
+<ul>
+<li>Added status bar feedback messages across the execution, file picker, and tree view panels for improved user awareness of operations</li>
+</ul>
+</section>
+<section id="single-specimen-directories-carlquant" class="level3" data-number="1.3.2">
+<h3 data-number="1.3.2" class="anchored" data-anchor-id="single-specimen-directories-carlquant"><span class="header-section-number">1.3.2</span> Single-Specimen Directories (CarLQuant)</h3>
+<ul>
+<li>Root folder is now included in image stack searches, supporting single-specimen directories</li>
+</ul>
+</section>
+</section>
+<section id="server-documentation" class="level2" data-number="1.4">
+<h2 data-number="1.4" class="anchored" data-anchor-id="server-documentation"><span class="header-section-number">1.4</span> Server &amp; Documentation</h2>
+<section id="server-migration" class="level3" data-number="1.4.1">
+<h3 data-number="1.4.1" class="anchored" data-anchor-id="server-migration"><span class="header-section-number">1.4.1</span> Server Migration</h3>
+<ul>
+<li>Updated server base URL and display text to the new <code>dentlab.medizin.uni-leipzig.de</code> domain</li>
+</ul>
+</section>
+<section id="documentation" class="level3" data-number="1.4.2">
+<h3 data-number="1.4.2" class="anchored" data-anchor-id="documentation"><span class="header-section-number">1.4.2</span> Documentation</h3>
+<ul>
+<li>Added “Key contents” summaries to all <code>app/logic</code> module docstrings for improved discoverability</li>
+<li>Escaped a greater-than symbol in desktop shortcut instructions to prevent markdown rendering issues</li>
+</ul>
+<hr>
+</section>
+</section>
+</section>
+<section id="version-2026.5-2026-06-05" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Version 2026.5 (2026-06-05)</h1>
+<section id="annolyze-bug-fixes-stability" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="annolyze-bug-fixes-stability"><span class="header-section-number">2.1</span> AnnoLyze Bug Fixes &amp; Stability</h2>
+<section id="silent-crash-on-folder-load-with-config" class="level3" data-number="2.1.1">
+<h3 data-number="2.1.1" class="anchored" data-anchor-id="silent-crash-on-folder-load-with-config"><span class="header-section-number">2.1.1</span> Silent Crash on Folder Load with Config</h3>
 <ul>
 <li>Fixed a silent crash that occurred when loading an image folder containing a <code>config.json</code></li>
 <li>Root cause: configuration apply and data loading mutated Tkinter widgets from a background worker thread, triggering a non-catchable Tcl crash that bypassed the error handler</li>
@@ -315,30 +410,30 @@ ul.task-list li input[type="checkbox"] {
 <li>Real configuration errors now surface as proper error popups and status-bar messages instead of crashing silently</li>
 </ul>
 </section>
-<section id="thread-safe-error-popups" class="level3" data-number="1.1.2">
-<h3 data-number="1.1.2" class="anchored" data-anchor-id="thread-safe-error-popups"><span class="header-section-number">1.1.2</span> Thread-Safe Error Popups</h3>
+<section id="thread-safe-error-popups" class="level3" data-number="2.1.2">
+<h3 data-number="2.1.2" class="anchored" data-anchor-id="thread-safe-error-popups"><span class="header-section-number">2.1.2</span> Thread-Safe Error Popups</h3>
 <ul>
 <li><code>show_error_popup</code> now detects calls from worker threads and schedules the popup on the GUI thread, so error reporting can never itself crash the application</li>
 </ul>
 </section>
-<section id="logger-fix" class="level3" data-number="1.1.3">
-<h3 data-number="1.1.3" class="anchored" data-anchor-id="logger-fix"><span class="header-section-number">1.1.3</span> Logger Fix</h3>
+<section id="logger-fix" class="level3" data-number="2.1.3">
+<h3 data-number="2.1.3" class="anchored" data-anchor-id="logger-fix"><span class="header-section-number">2.1.3</span> Logger Fix</h3>
 <ul>
 <li>Fixed an <code>AttributeError</code> when switching slices (<code>annotatePanel</code> referenced an undefined <code>self.logger</code>); replaced with a proper module-level logger</li>
 </ul>
 </section>
 </section>
-<section id="annolyze-user-experience" class="level2" data-number="1.2">
-<h2 data-number="1.2" class="anchored" data-anchor-id="annolyze-user-experience"><span class="header-section-number">1.2</span> AnnoLyze User Experience</h2>
-<section id="clean-slate-on-new-folder-load" class="level3" data-number="1.2.1">
-<h3 data-number="1.2.1" class="anchored" data-anchor-id="clean-slate-on-new-folder-load"><span class="header-section-number">1.2.1</span> Clean Slate on New Folder Load</h3>
+<section id="annolyze-user-experience" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="annolyze-user-experience"><span class="header-section-number">2.2</span> AnnoLyze User Experience</h2>
+<section id="clean-slate-on-new-folder-load" class="level3" data-number="2.2.1">
+<h3 data-number="2.2.1" class="anchored" data-anchor-id="clean-slate-on-new-folder-load"><span class="header-section-number">2.2.1</span> Clean Slate on New Folder Load</h3>
 <ul>
 <li>Loading a new folder now resets all previous state: results table, dynamic columns, annotations, cached config, and keybindings</li>
 <li>Previously the old config, results, and annotations persisted into the newly loaded folder</li>
 </ul>
 </section>
-<section id="live-keybinding-activation" class="level3" data-number="1.2.2">
-<h3 data-number="1.2.2" class="anchored" data-anchor-id="live-keybinding-activation"><span class="header-section-number">1.2.2</span> Live Keybinding Activation</h3>
+<section id="live-keybinding-activation" class="level3" data-number="2.2.2">
+<h3 data-number="2.2.2" class="anchored" data-anchor-id="live-keybinding-activation"><span class="header-section-number">2.2.2</span> Live Keybinding Activation</h3>
 <ul>
 <li>Keybindings defined in the GUI via <strong>Add Column</strong> are now active immediately, without needing to save and reload a config file first</li>
 <li>Removing a column now deactivates its keybinding live</li>
@@ -348,18 +443,18 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2026.4-2026-06-04" class="level1" data-number="2">
-<h1 data-number="2"><span class="header-section-number">2</span> Version 2026.4 (2026-06-04)</h1>
-<section id="user-experience" class="level2" data-number="2.1">
-<h2 data-number="2.1" class="anchored" data-anchor-id="user-experience"><span class="header-section-number">2.1</span> User Experience</h2>
-<section id="help-dialog" class="level3" data-number="2.1.1">
-<h3 data-number="2.1.1" class="anchored" data-anchor-id="help-dialog"><span class="header-section-number">2.1.1</span> Help Dialog</h3>
+<section id="version-2026.4-2026-06-04" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Version 2026.4 (2026-06-04)</h1>
+<section id="user-experience-1" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="user-experience-1"><span class="header-section-number">3.1</span> User Experience</h2>
+<section id="help-dialog" class="level3" data-number="3.1.1">
+<h3 data-number="3.1.1" class="anchored" data-anchor-id="help-dialog"><span class="header-section-number">3.1.1</span> Help Dialog</h3>
 <ul>
 <li>Added “Report an Issue” button to the help dialog, linking directly to the GitHub issues page</li>
 </ul>
 </section>
-<section id="github-issue-templates" class="level3" data-number="2.1.2">
-<h3 data-number="2.1.2" class="anchored" data-anchor-id="github-issue-templates"><span class="header-section-number">2.1.2</span> GitHub Issue Templates</h3>
+<section id="github-issue-templates" class="level3" data-number="3.1.2">
+<h3 data-number="3.1.2" class="anchored" data-anchor-id="github-issue-templates"><span class="header-section-number">3.1.2</span> GitHub Issue Templates</h3>
 <ul>
 <li>Updated bug report and feature request templates to reference OCTooL instead of AnStatR</li>
 <li>Added Windows version dropdown to bug reports</li>
@@ -370,19 +465,19 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2026.3-2026-06-04" class="level1" data-number="3">
-<h1 data-number="3"><span class="header-section-number">3</span> Version 2026.3 (2026-06-04)</h1>
-<section id="major-refactor-architecture-restructure" class="level2" data-number="3.1">
-<h2 data-number="3.1" class="anchored" data-anchor-id="major-refactor-architecture-restructure"><span class="header-section-number">3.1</span> Major Refactor &amp; Architecture Restructure</h2>
-<section id="codebase-refactor" class="level3" data-number="3.1.1">
-<h3 data-number="3.1.1" class="anchored" data-anchor-id="codebase-refactor"><span class="header-section-number">3.1.1</span> Codebase Refactor</h3>
+<section id="version-2026.3-2026-06-04" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Version 2026.3 (2026-06-04)</h1>
+<section id="major-refactor-architecture-restructure" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="major-refactor-architecture-restructure"><span class="header-section-number">4.1</span> Major Refactor &amp; Architecture Restructure</h2>
+<section id="codebase-refactor" class="level3" data-number="4.1.1">
+<h3 data-number="4.1.1" class="anchored" data-anchor-id="codebase-refactor"><span class="header-section-number">4.1.1</span> Codebase Refactor</h3>
 <ul>
 <li>Entire codebase restructured to a new modular architecture</li>
 <li>Improved separation of concerns and maintainability</li>
 </ul>
 </section>
-<section id="submodule-renames" class="level3" data-number="3.1.2">
-<h3 data-number="3.1.2" class="anchored" data-anchor-id="submodule-renames"><span class="header-section-number">3.1.2</span> Submodule Renames</h3>
+<section id="submodule-renames" class="level3" data-number="4.1.2">
+<h3 data-number="4.1.2" class="anchored" data-anchor-id="submodule-renames"><span class="header-section-number">4.1.2</span> Submodule Renames</h3>
 <ul>
 <li><strong>Export</strong> renamed to <strong>RexView</strong></li>
 <li><strong>Analyse</strong> renamed to <strong>AnnoLyze</strong></li>
@@ -390,43 +485,43 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="automatic-update-mechanism" class="level2" data-number="3.2">
-<h2 data-number="3.2" class="anchored" data-anchor-id="automatic-update-mechanism"><span class="header-section-number">3.2</span> Automatic Update Mechanism</h2>
+<section id="automatic-update-mechanism" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="automatic-update-mechanism"><span class="header-section-number">4.2</span> Automatic Update Mechanism</h2>
 <ul>
 <li>Implemented automatic update availability tracking</li>
 <li>Application now checks if a new version is available</li>
 </ul>
 </section>
-<section id="documentation-distribution" class="level2" data-number="3.3">
-<h2 data-number="3.3" class="anchored" data-anchor-id="documentation-distribution"><span class="header-section-number">3.3</span> Documentation Distribution</h2>
+<section id="documentation-distribution" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="documentation-distribution"><span class="header-section-number">4.3</span> Documentation Distribution</h2>
 <ul>
 <li>Change log and manuals now served from <code>dentlab.medizin.uni-leipzig.de</code></li>
 <li>Accessible directly via in-app buttons</li>
 <li>Offline availability maintained for cached documentation</li>
 </ul>
 </section>
-<section id="user-interface-fixes" class="level2" data-number="3.4">
-<h2 data-number="3.4" class="anchored" data-anchor-id="user-interface-fixes"><span class="header-section-number">3.4</span> User Interface Fixes</h2>
-<section id="about-dialog" class="level3" data-number="3.4.1">
-<h3 data-number="3.4.1" class="anchored" data-anchor-id="about-dialog"><span class="header-section-number">3.4.1</span> About Dialog</h3>
+<section id="user-interface-fixes" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="user-interface-fixes"><span class="header-section-number">4.4</span> User Interface Fixes</h2>
+<section id="about-dialog" class="level3" data-number="4.4.1">
+<h3 data-number="4.4.1" class="anchored" data-anchor-id="about-dialog"><span class="header-section-number">4.4.1</span> About Dialog</h3>
 <ul>
 <li>Fixed bottom action buttons (Changelog / Close) being partially cut off</li>
 <li>Added clickable links to the lab server (<code>dentlab.medizin.uni-leipzig.de</code>) and GitHub repository (<code>github.com/T0bC/OCTooL</code>)</li>
 <li>Added a DOI reference entry</li>
 </ul>
 </section>
-<section id="header-toolbar" class="level3" data-number="3.4.2">
-<h3 data-number="3.4.2" class="anchored" data-anchor-id="header-toolbar"><span class="header-section-number">3.4.2</span> Header Toolbar</h3>
+<section id="header-toolbar" class="level3" data-number="4.4.2">
+<h3 data-number="4.4.2" class="anchored" data-anchor-id="header-toolbar"><span class="header-section-number">4.4.2</span> Header Toolbar</h3>
 <ul>
 <li>Harmonized the Updates / Help / About buttons to use a consistent emoji font</li>
 <li>Enlarged and aligned the icons (including the About “i” symbol) for a uniform look across the header</li>
 </ul>
 </section>
 </section>
-<section id="performance-improvements" class="level2" data-number="3.5">
-<h2 data-number="3.5" class="anchored" data-anchor-id="performance-improvements"><span class="header-section-number">3.5</span> Performance Improvements</h2>
-<section id="faster-oct-file-detection-rexview" class="level3" data-number="3.5.1">
-<h3 data-number="3.5.1" class="anchored" data-anchor-id="faster-oct-file-detection-rexview"><span class="header-section-number">3.5.1</span> Faster OCT File Detection (RexView)</h3>
+<section id="performance-improvements-1" class="level2" data-number="4.5">
+<h2 data-number="4.5" class="anchored" data-anchor-id="performance-improvements-1"><span class="header-section-number">4.5</span> Performance Improvements</h2>
+<section id="faster-oct-file-detection-rexview" class="level3" data-number="4.5.1">
+<h3 data-number="4.5.1" class="anchored" data-anchor-id="faster-oct-file-detection-rexview"><span class="header-section-number">4.5.1</span> Faster OCT File Detection (RexView)</h3>
 <ul>
 <li>Sped up OCT file detection by parsing each scan’s XML header only <strong>once per file</strong> instead of once per metadata field</li>
 <li>Previously, metadata extraction re-opened the OCT archive and re-parsed the entire <code>Header.xml</code> five times per file (one per value: <code>dataType</code>, <code>Serialnumber</code>, <code>dimX</code>, <code>dimY</code>, <code>dimZ</code>)</li>
@@ -434,8 +529,8 @@ ul.task-list li input[type="checkbox"] {
 <li><code>FileDiscoveryService</code> now uses a single-pass <code>xml_dict_reader</code>, dramatically reducing detection time for folders with many OCT files</li>
 </ul>
 </section>
-<section id="parallel-export-rexview" class="level3" data-number="3.5.2">
-<h3 data-number="3.5.2" class="anchored" data-anchor-id="parallel-export-rexview"><span class="header-section-number">3.5.2</span> Parallel Export (RexView)</h3>
+<section id="parallel-export-rexview" class="level3" data-number="4.5.2">
+<h3 data-number="4.5.2" class="anchored" data-anchor-id="parallel-export-rexview"><span class="header-section-number">4.5.2</span> Parallel Export (RexView)</h3>
 <ul>
 <li>Export now processes multiple OCT files <strong>in parallel across CPU cores</strong> instead of strictly one after another</li>
 <li>Each file is exported in its own worker process, which is well suited to the CPU-bound raw-spectral reconstruction (FFT, noise-floor, filtering)</li>
@@ -447,12 +542,12 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2026.2-2026-04-01" class="level1" data-number="4">
-<h1 data-number="4"><span class="header-section-number">4</span> Version 2026.2 (2026-04-01)</h1>
-<section id="bug-fixes" class="level2" data-number="4.1">
-<h2 data-number="4.1" class="anchored" data-anchor-id="bug-fixes"><span class="header-section-number">4.1</span> Bug Fixes</h2>
-<section id="xml-error-for-oct-rexview" class="level3" data-number="4.1.1">
-<h3 data-number="4.1.1" class="anchored" data-anchor-id="xml-error-for-oct-rexview"><span class="header-section-number">4.1.1</span> XML Error for OCT RexView</h3>
+<section id="version-2026.2-2026-04-01" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Version 2026.2 (2026-04-01)</h1>
+<section id="bug-fixes" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="bug-fixes"><span class="header-section-number">5.1</span> Bug Fixes</h2>
+<section id="xml-error-for-oct-rexview" class="level3" data-number="5.1.1">
+<h3 data-number="5.1.1" class="anchored" data-anchor-id="xml-error-for-oct-rexview"><span class="header-section-number">5.1.1</span> XML Error for OCT RexView</h3>
 <ul>
 <li><p>In some cases the order of elements in the XML sidecar file is different, this produced an error when parsing that file into an python dict (argument not found)</p></li>
 <li><p>Fix: Added <code>find_datafile_by_type()</code> helper that finds <strong><code>DataFile</code></strong> elements by their <strong><code>Type</code></strong> attribute instead of position</p></li>
@@ -463,12 +558,12 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2026.1-2026-03-12" class="level1" data-number="5">
-<h1 data-number="5"><span class="header-section-number">5</span> Version 2026.1 (2026-03-12)</h1>
-<section id="bug-fixes-1" class="level2" data-number="5.1">
-<h2 data-number="5.1" class="anchored" data-anchor-id="bug-fixes-1"><span class="header-section-number">5.1</span> Bug Fixes</h2>
-<section id="refractive-index-correction-for-combined_mean" class="level3" data-number="5.1.1">
-<h3 data-number="5.1.1" class="anchored" data-anchor-id="refractive-index-correction-for-combined_mean"><span class="header-section-number">5.1.1</span> Refractive Index Correction for COMBINED_MEAN</h3>
+<section id="version-2026.1-2026-03-12" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Version 2026.1 (2026-03-12)</h1>
+<section id="bug-fixes-1" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="bug-fixes-1"><span class="header-section-number">6.1</span> Bug Fixes</h2>
+<section id="refractive-index-correction-for-combined_mean" class="level3" data-number="6.1.1">
+<h3 data-number="6.1.1" class="anchored" data-anchor-id="refractive-index-correction-for-combined_mean"><span class="header-section-number">6.1.1</span> Refractive Index Correction for COMBINED_MEAN</h3>
 <ul>
 <li>Fixed missing refractive index correction in the COMBINED_MEAN detection method path</li>
 <li>The COMBINED_MEAN recomputation block was using raw optical pixel depths instead of applying the cavitation-aware refractive index correction (air gap at n=1 + subsurface at n=1.5)</li>
@@ -479,12 +574,12 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2025.6-2025-12" class="level1" data-number="6">
-<h1 data-number="6"><span class="header-section-number">6</span> Version 2025.6 (2025-12)</h1>
-<section id="carl-quant-module---algorithm-improvements" class="level2" data-number="6.1">
-<h2 data-number="6.1" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements"><span class="header-section-number">6.1</span> Carl Quant Module - Algorithm Improvements</h2>
-<section id="refractive-index-correction" class="level3" data-number="6.1.1">
-<h3 data-number="6.1.1" class="anchored" data-anchor-id="refractive-index-correction"><span class="header-section-number">6.1.1</span> Refractive Index Correction</h3>
+<section id="version-2025.6-2025-12" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Version 2025.6 (2025-12)</h1>
+<section id="carl-quant-module---algorithm-improvements" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements"><span class="header-section-number">7.1</span> Carl Quant Module - Algorithm Improvements</h2>
+<section id="refractive-index-correction" class="level3" data-number="7.1.1">
+<h3 data-number="7.1.1" class="anchored" data-anchor-id="refractive-index-correction"><span class="header-section-number">7.1.1</span> Refractive Index Correction</h3>
 <ul>
 <li>Added <code>TOOTH_REFRACTIVE_INDEX</code> constant (1.5) for enamel/dentin optical properties</li>
 <li>Implemented cavitation-aware depth correction splitting measurements into air gap (n=1) and subsurface (n=1.5) components</li>
@@ -492,8 +587,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Added <code>refractive_index</code> parameter to <code>calculate_lesion_depth</code> function with comprehensive documentation</li>
 </ul>
 </section>
-<section id="lesion-depth-detection" class="level3" data-number="6.1.2">
-<h3 data-number="6.1.2" class="anchored" data-anchor-id="lesion-depth-detection"><span class="header-section-number">6.1.2</span> Lesion Depth Detection</h3>
+<section id="lesion-depth-detection" class="level3" data-number="7.1.2">
+<h3 data-number="7.1.2" class="anchored" data-anchor-id="lesion-depth-detection"><span class="header-section-number">7.1.2</span> Lesion Depth Detection</h3>
 <ul>
 <li>Improved lesion depth detection for no-lesion cases</li>
 <li>Changed inflection-only case to trust stable inflection point directly instead of averaging with unstable methods</li>
@@ -501,35 +596,35 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="bug-fixes-stability" class="level2" data-number="6.2">
-<h2 data-number="6.2" class="anchored" data-anchor-id="bug-fixes-stability"><span class="header-section-number">6.2</span> Bug Fixes &amp; Stability</h2>
-<section id="thread-safety" class="level3" data-number="6.2.1">
-<h3 data-number="6.2.1" class="anchored" data-anchor-id="thread-safety"><span class="header-section-number">6.2.1</span> Thread Safety</h3>
+<section id="bug-fixes-stability" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="bug-fixes-stability"><span class="header-section-number">7.2</span> Bug Fixes &amp; Stability</h2>
+<section id="thread-safety" class="level3" data-number="7.2.1">
+<h3 data-number="7.2.1" class="anchored" data-anchor-id="thread-safety"><span class="header-section-number">7.2.1</span> Thread Safety</h3>
 <ul>
 <li>Wrapped specimen status updates in <code>context.root.after()</code> calls to execute on main thread</li>
 <li>Moved region dropdown locking into GUI update callback for thread safety</li>
 <li>Added top-level exception handler in worker thread with traceback logging and error popup</li>
 </ul>
 </section>
-<section id="image-processing" class="level3" data-number="6.2.2">
-<h3 data-number="6.2.2" class="anchored" data-anchor-id="image-processing"><span class="header-section-number">6.2.2</span> Image Processing</h3>
+<section id="image-processing" class="level3" data-number="7.2.2">
+<h3 data-number="7.2.2" class="anchored" data-anchor-id="image-processing"><span class="header-section-number">7.2.2</span> Image Processing</h3>
 <ul>
 <li>Removed jpg from <code>IMAGE_EXTENSIONS</code> list as color video images are not needed for analysis</li>
 </ul>
 </section>
 </section>
-<section id="code-quality-refactoring" class="level2" data-number="6.3">
-<h2 data-number="6.3" class="anchored" data-anchor-id="code-quality-refactoring"><span class="header-section-number">6.3</span> Code Quality &amp; Refactoring</h2>
-<section id="color-management" class="level3" data-number="6.3.1">
-<h3 data-number="6.3.1" class="anchored" data-anchor-id="color-management"><span class="header-section-number">6.3.1</span> Color Management</h3>
+<section id="code-quality-refactoring" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="code-quality-refactoring"><span class="header-section-number">7.3</span> Code Quality &amp; Refactoring</h2>
+<section id="color-management" class="level3" data-number="7.3.1">
+<h3 data-number="7.3.1" class="anchored" data-anchor-id="color-management"><span class="header-section-number">7.3.1</span> Color Management</h3>
 <ul>
 <li>Centralized annotation color definitions across all modules</li>
 <li>Replaced hardcoded color values with named constants from <code>annotation_colors</code> module</li>
 <li>Applied consistent color scheme across surface, knee, inflection, shoulder, and depth markers</li>
 </ul>
 </section>
-<section id="resource-organization" class="level3" data-number="6.3.2">
-<h3 data-number="6.3.2" class="anchored" data-anchor-id="resource-organization"><span class="header-section-number">6.3.2</span> Resource Organization</h3>
+<section id="resource-organization" class="level3" data-number="7.3.2">
+<h3 data-number="7.3.2" class="anchored" data-anchor-id="resource-organization"><span class="header-section-number">7.3.2</span> Resource Organization</h3>
 <ul>
 <li>Consolidated font resources to centralized <code>utils/fonts</code> directory</li>
 <li>Removed duplicate LSANS font files from multiple locations (<code>fonts/</code>, <code>RexView/fonts/</code>)</li>
@@ -537,8 +632,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Simplified PyInstaller spec to reference single font location</li>
 </ul>
 </section>
-<section id="code-cleanup" class="level3" data-number="6.3.3">
-<h3 data-number="6.3.3" class="anchored" data-anchor-id="code-cleanup"><span class="header-section-number">6.3.3</span> Code Cleanup</h3>
+<section id="code-cleanup" class="level3" data-number="7.3.3">
+<h3 data-number="7.3.3" class="anchored" data-anchor-id="code-cleanup"><span class="header-section-number">7.3.3</span> Code Cleanup</h3>
 <ul>
 <li>Removed obsolete documentation files (ReadMe.txt with outdated setup instructions)</li>
 <li>Removed unused breeze-dark and equilux theme files from icons directory</li>
@@ -546,10 +641,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="documentation" class="level2" data-number="6.4">
-<h2 data-number="6.4" class="anchored" data-anchor-id="documentation"><span class="header-section-number">6.4</span> Documentation</h2>
-<section id="user-documentation" class="level3" data-number="6.4.1">
-<h3 data-number="6.4.1" class="anchored" data-anchor-id="user-documentation"><span class="header-section-number">6.4.1</span> User Documentation</h3>
+<section id="documentation-1" class="level2" data-number="7.4">
+<h2 data-number="7.4" class="anchored" data-anchor-id="documentation-1"><span class="header-section-number">7.4</span> Documentation</h2>
+<section id="user-documentation" class="level3" data-number="7.4.1">
+<h3 data-number="7.4.1" class="anchored" data-anchor-id="user-documentation"><span class="header-section-number">7.4.1</span> User Documentation</h3>
 <ul>
 <li>Added comprehensive README with installation and usage guide</li>
 <li>Created detailed documentation covering all three main sections (RexView, AnnoLyze, CarlQuant)</li>
@@ -560,12 +655,12 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2025.5-2025-11-12" class="level1" data-number="7">
-<h1 data-number="7"><span class="header-section-number">7</span> Version 2025.5 (2025-11-12)</h1>
-<section id="distribution-deployment" class="level2" data-number="7.1">
-<h2 data-number="7.1" class="anchored" data-anchor-id="distribution-deployment"><span class="header-section-number">7.1</span> Distribution &amp; Deployment</h2>
-<section id="pyinstaller-executable-build" class="level3" data-number="7.1.1">
-<h3 data-number="7.1.1" class="anchored" data-anchor-id="pyinstaller-executable-build"><span class="header-section-number">7.1.1</span> PyInstaller Executable Build</h3>
+<section id="version-2025.5-2025-11-12" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Version 2025.5 (2025-11-12)</h1>
+<section id="distribution-deployment" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="distribution-deployment"><span class="header-section-number">8.1</span> Distribution &amp; Deployment</h2>
+<section id="pyinstaller-executable-build" class="level3" data-number="8.1.1">
+<h3 data-number="8.1.1" class="anchored" data-anchor-id="pyinstaller-executable-build"><span class="header-section-number">8.1.1</span> PyInstaller Executable Build</h3>
 <ul>
 <li>Implemented PyInstaller support for Windows executable distribution</li>
 <li>Added <code>resource_path()</code> utility to resolve file paths for both development and frozen executables</li>
@@ -577,8 +672,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Simplified PyInstaller spec file by removing unused dependencies and explicit hiddenimports</li>
 </ul>
 </section>
-<section id="build-optimization" class="level3" data-number="7.1.2">
-<h3 data-number="7.1.2" class="anchored" data-anchor-id="build-optimization"><span class="header-section-number">7.1.2</span> Build Optimization</h3>
+<section id="build-optimization" class="level3" data-number="8.1.2">
+<h3 data-number="8.1.2" class="anchored" data-anchor-id="build-optimization"><span class="header-section-number">8.1.2</span> Build Optimization</h3>
 <ul>
 <li>Removed ttkbootstrap data files and submodules collection to reduce executable size</li>
 <li>Documented rationale for pip-only installation to minimize bundle size</li>
@@ -590,10 +685,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="user-interface-enhancements" class="level2" data-number="7.2">
-<h2 data-number="7.2" class="anchored" data-anchor-id="user-interface-enhancements"><span class="header-section-number">7.2</span> User Interface Enhancements</h2>
-<section id="tab-configuration-system" class="level3" data-number="7.2.1">
-<h3 data-number="7.2.1" class="anchored" data-anchor-id="tab-configuration-system"><span class="header-section-number">7.2.1</span> Tab Configuration System</h3>
+<section id="user-interface-enhancements" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="user-interface-enhancements"><span class="header-section-number">8.2</span> User Interface Enhancements</h2>
+<section id="tab-configuration-system" class="level3" data-number="8.2.1">
+<h3 data-number="8.2.1" class="anchored" data-anchor-id="tab-configuration-system"><span class="header-section-number">8.2.1</span> Tab Configuration System</h3>
 <ul>
 <li>Introduced configurable tab visibility system with distribution flags</li>
 <li>Added ENABLE_REXVIEW, ENABLE_ANNOLYZE, and ENABLE_CARLQUANT instance variables for selective tab control</li>
@@ -607,10 +702,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="carl-quant-module---algorithm-improvements-1" class="level2" data-number="7.3">
-<h2 data-number="7.3" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements-1"><span class="header-section-number">7.3</span> Carl Quant Module - Algorithm Improvements</h2>
-<section id="lesion-depth-detection-1" class="level3" data-number="7.3.1">
-<h3 data-number="7.3.1" class="anchored" data-anchor-id="lesion-depth-detection-1"><span class="header-section-number">7.3.1</span> Lesion Depth Detection</h3>
+<section id="carl-quant-module---algorithm-improvements-1" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements-1"><span class="header-section-number">8.3</span> Carl Quant Module - Algorithm Improvements</h2>
+<section id="lesion-depth-detection-1" class="level3" data-number="8.3.1">
+<h3 data-number="8.3.1" class="anchored" data-anchor-id="lesion-depth-detection-1"><span class="header-section-number">8.3.1</span> Lesion Depth Detection</h3>
 <ul>
 <li>Improved depth calculation stability when shape methods are unstable</li>
 <li>Prevents over-reliance on inflection as standalone measurement when designed as correction anchor</li>
@@ -620,8 +715,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Prevents misleading depth calculations when knee/shoulder instability indicates absence of lesion signature</li>
 </ul>
 </section>
-<section id="coordinate-management" class="level3" data-number="7.3.2">
-<h3 data-number="7.3.2" class="anchored" data-anchor-id="coordinate-management"><span class="header-section-number">7.3.2</span> Coordinate Management</h3>
+<section id="coordinate-management" class="level3" data-number="8.3.2">
+<h3 data-number="8.3.2" class="anchored" data-anchor-id="coordinate-management"><span class="header-section-number">8.3.2</span> Coordinate Management</h3>
 <ul>
 <li>Added coordinate validation for specimen annotations</li>
 <li>Implemented lazy loading of specimen annotations for better performance</li>
@@ -630,18 +725,18 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="code-quality-refactoring-1" class="level2" data-number="7.4">
-<h2 data-number="7.4" class="anchored" data-anchor-id="code-quality-refactoring-1"><span class="header-section-number">7.4</span> Code Quality &amp; Refactoring</h2>
-<section id="color-management-1" class="level3" data-number="7.4.1">
-<h3 data-number="7.4.1" class="anchored" data-anchor-id="color-management-1"><span class="header-section-number">7.4.1</span> Color Management</h3>
+<section id="code-quality-refactoring-1" class="level2" data-number="8.4">
+<h2 data-number="8.4" class="anchored" data-anchor-id="code-quality-refactoring-1"><span class="header-section-number">8.4</span> Code Quality &amp; Refactoring</h2>
+<section id="color-management-1" class="level3" data-number="8.4.1">
+<h3 data-number="8.4.1" class="anchored" data-anchor-id="color-management-1"><span class="header-section-number">8.4.1</span> Color Management</h3>
 <ul>
 <li>Centralized annotation color definitions across all modules</li>
 <li>Replaced hardcoded color values with named constants from annotation_colors module</li>
 <li>Applied consistent color scheme across surface, knee, inflection, shoulder, and depth markers</li>
 </ul>
 </section>
-<section id="resource-organization-1" class="level3" data-number="7.4.2">
-<h3 data-number="7.4.2" class="anchored" data-anchor-id="resource-organization-1"><span class="header-section-number">7.4.2</span> Resource Organization</h3>
+<section id="resource-organization-1" class="level3" data-number="8.4.2">
+<h3 data-number="8.4.2" class="anchored" data-anchor-id="resource-organization-1"><span class="header-section-number">8.4.2</span> Resource Organization</h3>
 <ul>
 <li>Consolidated font resources to centralized utils/fonts directory</li>
 <li>Removed duplicate LSANS font files from multiple locations (fonts/, RexView/fonts/)</li>
@@ -649,18 +744,18 @@ ul.task-list li input[type="checkbox"] {
 <li>Simplified PyInstaller spec to reference single font location</li>
 </ul>
 </section>
-<section id="code-cleanup-1" class="level3" data-number="7.4.3">
-<h3 data-number="7.4.3" class="anchored" data-anchor-id="code-cleanup-1"><span class="header-section-number">7.4.3</span> Code Cleanup</h3>
+<section id="code-cleanup-1" class="level3" data-number="8.4.3">
+<h3 data-number="8.4.3" class="anchored" data-anchor-id="code-cleanup-1"><span class="header-section-number">8.4.3</span> Code Cleanup</h3>
 <ul>
 <li>Removed obsolete documentation files (ReadMe.txt with outdated setup instructions)</li>
 <li>Removed unused breeze-dark and equilux theme files from icons directory</li>
 </ul>
 </section>
 </section>
-<section id="documentation-1" class="level2" data-number="7.5">
-<h2 data-number="7.5" class="anchored" data-anchor-id="documentation-1"><span class="header-section-number">7.5</span> Documentation</h2>
-<section id="user-documentation-1" class="level3" data-number="7.5.1">
-<h3 data-number="7.5.1" class="anchored" data-anchor-id="user-documentation-1"><span class="header-section-number">7.5.1</span> User Documentation</h3>
+<section id="documentation-2" class="level2" data-number="8.5">
+<h2 data-number="8.5" class="anchored" data-anchor-id="documentation-2"><span class="header-section-number">8.5</span> Documentation</h2>
+<section id="user-documentation-1" class="level3" data-number="8.5.1">
+<h3 data-number="8.5.1" class="anchored" data-anchor-id="user-documentation-1"><span class="header-section-number">8.5.1</span> User Documentation</h3>
 <ul>
 <li>Added comprehensive README with installation and usage guide</li>
 <li>Created detailed documentation covering all three main sections (RexView, AnnoLyze, CarlQuant)</li>
@@ -669,10 +764,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="dependencies-environment" class="level2" data-number="7.6">
-<h2 data-number="7.6" class="anchored" data-anchor-id="dependencies-environment"><span class="header-section-number">7.6</span> Dependencies &amp; Environment</h2>
-<section id="package-management" class="level3" data-number="7.6.1">
-<h3 data-number="7.6.1" class="anchored" data-anchor-id="package-management"><span class="header-section-number">7.6.1</span> Package Management</h3>
+<section id="dependencies-environment" class="level2" data-number="8.6">
+<h2 data-number="8.6" class="anchored" data-anchor-id="dependencies-environment"><span class="header-section-number">8.6</span> Dependencies &amp; Environment</h2>
+<section id="package-management" class="level3" data-number="8.6.1">
+<h3 data-number="8.6.1" class="anchored" data-anchor-id="package-management"><span class="header-section-number">8.6.1</span> Package Management</h3>
 <ul>
 <li>Relaxed version constraints on core dependencies to allow more flexible updates</li>
 <li>Added customtkinter and CTkColorPicker for enhanced UI capabilities</li>
@@ -682,12 +777,12 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2025.4-2025-10-21" class="level1" data-number="8">
-<h1 data-number="8"><span class="header-section-number">8</span> Version 2025.4 (2025-10-21)</h1>
-<section id="carl-quant-module---algorithm-improvements-2" class="level2" data-number="8.1">
-<h2 data-number="8.1" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements-2"><span class="header-section-number">8.1</span> Carl Quant Module - Algorithm Improvements</h2>
-<section id="buffer-zone-system-for-transition-areas" class="level3" data-number="8.1.1">
-<h3 data-number="8.1.1" class="anchored" data-anchor-id="buffer-zone-system-for-transition-areas"><span class="header-section-number">8.1.1</span> Buffer Zone System for Transition Areas</h3>
+<section id="version-2025.4-2025-10-21" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Version 2025.4 (2025-10-21)</h1>
+<section id="carl-quant-module---algorithm-improvements-2" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements-2"><span class="header-section-number">9.1</span> Carl Quant Module - Algorithm Improvements</h2>
+<section id="buffer-zone-system-for-transition-areas" class="level3" data-number="9.1.1">
+<h3 data-number="9.1.1" class="anchored" data-anchor-id="buffer-zone-system-for-transition-areas"><span class="header-section-number">9.1.1</span> Buffer Zone System for Transition Areas</h3>
 <ul>
 <li>Implemented 10-pixel buffer zone around lesion boundaries to avoid transition artifacts</li>
 <li>Added <code>buffer_pixels</code> field (default 10) to <code>RegionConfig</code> data model</li>
@@ -710,10 +805,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="carl-quant-module---uiux-enhancements" class="level2" data-number="8.2">
-<h2 data-number="8.2" class="anchored" data-anchor-id="carl-quant-module---uiux-enhancements"><span class="header-section-number">8.2</span> Carl Quant Module - UI/UX Enhancements</h2>
-<section id="visualization-color-scheme" class="level3" data-number="8.2.1">
-<h3 data-number="8.2.1" class="anchored" data-anchor-id="visualization-color-scheme"><span class="header-section-number">8.2.1</span> Visualization &amp; Color Scheme</h3>
+<section id="carl-quant-module---uiux-enhancements" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="carl-quant-module---uiux-enhancements"><span class="header-section-number">9.2</span> Carl Quant Module - UI/UX Enhancements</h2>
+<section id="visualization-color-scheme" class="level3" data-number="9.2.1">
+<h3 data-number="9.2.1" class="anchored" data-anchor-id="visualization-color-scheme"><span class="header-section-number">9.2.1</span> Visualization &amp; Color Scheme</h3>
 <ul>
 <li>Centralized color scheme with individual component method visualization controls</li>
 <li>Updated color scheme for improved surface and region boundary visualization</li>
@@ -721,16 +816,16 @@ ul.task-list li input[type="checkbox"] {
 <li>Updated annotation colors for better contrast and consistency across backgrounds</li>
 </ul>
 </section>
-<section id="interactive-features" class="level3" data-number="8.2.2">
-<h3 data-number="8.2.2" class="anchored" data-anchor-id="interactive-features"><span class="header-section-number">8.2.2</span> Interactive Features</h3>
+<section id="interactive-features" class="level3" data-number="9.2.2">
+<h3 data-number="9.2.2" class="anchored" data-anchor-id="interactive-features"><span class="header-section-number">9.2.2</span> Interactive Features</h3>
 <ul>
 <li>Added synchronized row highlighting with distinct colors for navigation and A-Scan modes</li>
 <li>Implemented row highlighting and adjusted pane proportions in results panel</li>
 <li>Added clear coordinates button to remove specimen boundaries and air coordinates</li>
 </ul>
 </section>
-<section id="coordinate-management-1" class="level3" data-number="8.2.3">
-<h3 data-number="8.2.3" class="anchored" data-anchor-id="coordinate-management-1"><span class="header-section-number">8.2.3</span> Coordinate Management</h3>
+<section id="coordinate-management-1" class="level3" data-number="9.2.3">
+<h3 data-number="9.2.3" class="anchored" data-anchor-id="coordinate-management-1"><span class="header-section-number">9.2.3</span> Coordinate Management</h3>
 <ul>
 <li>Implemented keyframe-based coordinate interpolation for region and AIR boundaries</li>
 <li>Linear interpolation between user-defined keyframes across image stacks</li>
@@ -738,48 +833,48 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="performance-optimizations" class="level2" data-number="8.3">
-<h2 data-number="8.3" class="anchored" data-anchor-id="performance-optimizations"><span class="header-section-number">8.3</span> Performance Optimizations</h2>
-<section id="image-viewer" class="level3" data-number="8.3.1">
-<h3 data-number="8.3.1" class="anchored" data-anchor-id="image-viewer"><span class="header-section-number">8.3.1</span> Image Viewer</h3>
+<section id="performance-optimizations" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="performance-optimizations"><span class="header-section-number">9.3</span> Performance Optimizations</h2>
+<section id="image-viewer" class="level3" data-number="9.3.1">
+<h3 data-number="9.3.1" class="anchored" data-anchor-id="image-viewer"><span class="header-section-number">9.3.1</span> Image Viewer</h3>
 <ul>
 <li>Optimized image viewer synchronization by skipping redraws during slider drag</li>
 <li>Improved responsiveness during navigation</li>
 </ul>
 </section>
 </section>
-<section id="carl-quant-module---progress-tracking" class="level2" data-number="8.4">
-<h2 data-number="8.4" class="anchored" data-anchor-id="carl-quant-module---progress-tracking"><span class="header-section-number">8.4</span> Carl Quant Module - Progress Tracking</h2>
-<section id="progress-dialog" class="level3" data-number="8.4.1">
-<h3 data-number="8.4.1" class="anchored" data-anchor-id="progress-dialog"><span class="header-section-number">8.4.1</span> Progress Dialog</h3>
+<section id="carl-quant-module---progress-tracking" class="level2" data-number="9.4">
+<h2 data-number="9.4" class="anchored" data-anchor-id="carl-quant-module---progress-tracking"><span class="header-section-number">9.4</span> Carl Quant Module - Progress Tracking</h2>
+<section id="progress-dialog" class="level3" data-number="9.4.1">
+<h3 data-number="9.4.1" class="anchored" data-anchor-id="progress-dialog"><span class="header-section-number">9.4.1</span> Progress Dialog</h3>
 <ul>
 <li>Enhanced progress UI with processing mode indicator</li>
 <li>Added completed row highlighting for better visual feedback</li>
 </ul>
 </section>
 </section>
-<section id="bug-fixes-2" class="level2" data-number="8.5">
-<h2 data-number="8.5" class="anchored" data-anchor-id="bug-fixes-2"><span class="header-section-number">8.5</span> Bug Fixes</h2>
-<section id="specimen-panel" class="level3" data-number="8.5.1">
-<h3 data-number="8.5.1" class="anchored" data-anchor-id="specimen-panel"><span class="header-section-number">8.5.1</span> Specimen Panel</h3>
+<section id="bug-fixes-2" class="level2" data-number="9.5">
+<h2 data-number="9.5" class="anchored" data-anchor-id="bug-fixes-2"><span class="header-section-number">9.5</span> Bug Fixes</h2>
+<section id="specimen-panel" class="level3" data-number="9.5.1">
+<h3 data-number="9.5.1" class="anchored" data-anchor-id="specimen-panel"><span class="header-section-number">9.5.1</span> Specimen Panel</h3>
 <ul>
 <li>Fixed specimen panel column indices after removing REGIONS and AIR columns</li>
 </ul>
 </section>
 </section>
-<section id="documentation-2" class="level2" data-number="8.6">
-<h2 data-number="8.6" class="anchored" data-anchor-id="documentation-2"><span class="header-section-number">8.6</span> Documentation</h2>
-<section id="clarifications" class="level3" data-number="8.6.1">
-<h3 data-number="8.6.1" class="anchored" data-anchor-id="clarifications"><span class="header-section-number">8.6.1</span> Clarifications</h3>
+<section id="documentation-3" class="level2" data-number="9.6">
+<h2 data-number="9.6" class="anchored" data-anchor-id="documentation-3"><span class="header-section-number">9.6</span> Documentation</h2>
+<section id="clarifications" class="level3" data-number="9.6.1">
+<h3 data-number="9.6.1" class="anchored" data-anchor-id="clarifications"><span class="header-section-number">9.6.1</span> Clarifications</h3>
 <ul>
 <li>Clarified AIR as Air Reference region for empty space normalization</li>
 </ul>
 </section>
 </section>
-<section id="code-quality" class="level2" data-number="8.7">
-<h2 data-number="8.7" class="anchored" data-anchor-id="code-quality"><span class="header-section-number">8.7</span> Code Quality</h2>
-<section id="refactoring" class="level3" data-number="8.7.1">
-<h3 data-number="8.7.1" class="anchored" data-anchor-id="refactoring"><span class="header-section-number">8.7.1</span> Refactoring</h3>
+<section id="code-quality" class="level2" data-number="9.7">
+<h2 data-number="9.7" class="anchored" data-anchor-id="code-quality"><span class="header-section-number">9.7</span> Code Quality</h2>
+<section id="refactoring" class="level3" data-number="9.7.1">
+<h3 data-number="9.7.1" class="anchored" data-anchor-id="refactoring"><span class="header-section-number">9.7.1</span> Refactoring</h3>
 <ul>
 <li>Removed print statements in favor of status bar and error handling</li>
 <li>Improved code maintainability and debugging capabilities</li>
@@ -788,12 +883,12 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2025.3-2025-10-16" class="level1" data-number="9">
-<h1 data-number="9"><span class="header-section-number">9</span> Version 2025.3 (2025-10-16)</h1>
-<section id="documentation-3" class="level2" data-number="9.1">
-<h2 data-number="9.1" class="anchored" data-anchor-id="documentation-3"><span class="header-section-number">9.1</span> Documentation</h2>
-<section id="manual-updates" class="level3" data-number="9.1.1">
-<h3 data-number="9.1.1" class="anchored" data-anchor-id="manual-updates"><span class="header-section-number">9.1.1</span> Manual Updates</h3>
+<section id="version-2025.3-2025-10-16" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Version 2025.3 (2025-10-16)</h1>
+<section id="documentation-4" class="level2" data-number="10.1">
+<h2 data-number="10.1" class="anchored" data-anchor-id="documentation-4"><span class="header-section-number">10.1</span> Documentation</h2>
+<section id="manual-updates" class="level3" data-number="10.1.1">
+<h3 data-number="10.1.1" class="anchored" data-anchor-id="manual-updates"><span class="header-section-number">10.1.1</span> Manual Updates</h3>
 <ul>
 <li>Added PyInstaller build optimization guide and quick reference</li>
 <li>Moved typical workflow sections to beginning of each chapter for better accessibility</li>
@@ -804,10 +899,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="performance-optimizations-1" class="level2" data-number="9.2">
-<h2 data-number="9.2" class="anchored" data-anchor-id="performance-optimizations-1"><span class="header-section-number">9.2</span> Performance Optimizations</h2>
-<section id="oct-image-processing" class="level3" data-number="9.2.1">
-<h3 data-number="9.2.1" class="anchored" data-anchor-id="oct-image-processing"><span class="header-section-number">9.2.1</span> OCT Image Processing</h3>
+<section id="performance-optimizations-1" class="level2" data-number="10.2">
+<h2 data-number="10.2" class="anchored" data-anchor-id="performance-optimizations-1"><span class="header-section-number">10.2</span> Performance Optimizations</h2>
+<section id="oct-image-processing" class="level3" data-number="10.2.1">
+<h3 data-number="10.2.1" class="anchored" data-anchor-id="oct-image-processing"><span class="header-section-number">10.2.1</span> OCT Image Processing</h3>
 <ul>
 <li>Optimized OCT image processing with noise floor subtraction for improved image quality</li>
 <li>Implemented vectorized median filter for faster image filtering</li>
@@ -815,19 +910,19 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="code-refactoring" class="level2" data-number="9.3">
-<h2 data-number="9.3" class="anchored" data-anchor-id="code-refactoring"><span class="header-section-number">9.3</span> Code Refactoring</h2>
-<section id="rexview-module" class="level3" data-number="9.3.1">
-<h3 data-number="9.3.1" class="anchored" data-anchor-id="rexview-module"><span class="header-section-number">9.3.1</span> RexView Module</h3>
+<section id="code-refactoring" class="level2" data-number="10.3">
+<h2 data-number="10.3" class="anchored" data-anchor-id="code-refactoring"><span class="header-section-number">10.3</span> Code Refactoring</h2>
+<section id="rexview-module" class="level3" data-number="10.3.1">
+<h3 data-number="10.3.1" class="anchored" data-anchor-id="rexview-module"><span class="header-section-number">10.3.1</span> RexView Module</h3>
 <ul>
 <li>Optimized grid layout in export panel for better UI responsiveness</li>
 </ul>
 </section>
 </section>
-<section id="carl-quant-module---a-scan-viewer" class="level2" data-number="9.4">
-<h2 data-number="9.4" class="anchored" data-anchor-id="carl-quant-module---a-scan-viewer"><span class="header-section-number">9.4</span> Carl Quant Module - A-Scan Viewer</h2>
-<section id="interactive-visualization" class="level3" data-number="9.4.1">
-<h3 data-number="9.4.1" class="anchored" data-anchor-id="interactive-visualization"><span class="header-section-number">9.4.1</span> Interactive Visualization</h3>
+<section id="carl-quant-module---a-scan-viewer" class="level2" data-number="10.4">
+<h2 data-number="10.4" class="anchored" data-anchor-id="carl-quant-module---a-scan-viewer"><span class="header-section-number">10.4</span> Carl Quant Module - A-Scan Viewer</h2>
+<section id="interactive-visualization" class="level3" data-number="10.4.1">
+<h3 data-number="10.4.1" class="anchored" data-anchor-id="interactive-visualization"><span class="header-section-number">10.4.1</span> Interactive Visualization</h3>
 <ul>
 <li>Implemented dedicated A-Scan viewer with double-click activation from results panel</li>
 <li>Added intensity profile visualization with interactive column selection</li>
@@ -837,10 +932,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="carl-quant-module---algorithm-improvements-3" class="level2" data-number="9.5">
-<h2 data-number="9.5" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements-3"><span class="header-section-number">9.5</span> Carl Quant Module - Algorithm Improvements</h2>
-<section id="lesion-depth-detection-2" class="level3" data-number="9.5.1">
-<h3 data-number="9.5.1" class="anchored" data-anchor-id="lesion-depth-detection-2"><span class="header-section-number">9.5.1</span> Lesion Depth Detection</h3>
+<section id="carl-quant-module---algorithm-improvements-3" class="level2" data-number="10.5">
+<h2 data-number="10.5" class="anchored" data-anchor-id="carl-quant-module---algorithm-improvements-3"><span class="header-section-number">10.5</span> Carl Quant Module - Algorithm Improvements</h2>
+<section id="lesion-depth-detection-2" class="level3" data-number="10.5.1">
+<h3 data-number="10.5.1" class="anchored" data-anchor-id="lesion-depth-detection-2"><span class="header-section-number">10.5.1</span> Lesion Depth Detection</h3>
 <ul>
 <li>Implemented offset-based depth correction with adaptive weighting</li>
 <li>Added robust lesion depth curve fitting with spike removal and outlier detection</li>
@@ -849,18 +944,18 @@ ul.task-list li input[type="checkbox"] {
 <li>Optimized stability analysis by collecting raw points during A-scan processing</li>
 </ul>
 </section>
-<section id="cavitation-detection" class="level3" data-number="9.5.2">
-<h3 data-number="9.5.2" class="anchored" data-anchor-id="cavitation-detection"><span class="header-section-number">9.5.2</span> Cavitation Detection</h3>
+<section id="cavitation-detection" class="level3" data-number="10.5.2">
+<h3 data-number="10.5.2" class="anchored" data-anchor-id="cavitation-detection"><span class="header-section-number">10.5.2</span> Cavitation Detection</h3>
 <ul>
 <li>Implemented cavitation-aware lesion depth measurement</li>
 <li>Standardized cavitation status output to TRUE/FALSE strings with blank fallback</li>
 </ul>
 </section>
 </section>
-<section id="carl-quant-module---data-management" class="level2" data-number="9.6">
-<h2 data-number="9.6" class="anchored" data-anchor-id="carl-quant-module---data-management"><span class="header-section-number">9.6</span> Carl Quant Module - Data Management</h2>
-<section id="results-rexview" class="level3" data-number="9.6.1">
-<h3 data-number="9.6.1" class="anchored" data-anchor-id="results-rexview"><span class="header-section-number">9.6.1</span> Results &amp; RexView</h3>
+<section id="carl-quant-module---data-management" class="level2" data-number="10.6">
+<h2 data-number="10.6" class="anchored" data-anchor-id="carl-quant-module---data-management"><span class="header-section-number">10.6</span> Carl Quant Module - Data Management</h2>
+<section id="results-rexview" class="level3" data-number="10.6.1">
+<h3 data-number="10.6.1" class="anchored" data-anchor-id="results-rexview"><span class="header-section-number">10.6.1</span> Results &amp; RexView</h3>
 <ul>
 <li>Fixed slice indices conversion from 0-based internal to 1-based Excel representation</li>
 <li>Implemented metadata-based result loading with improved folder skipping for annotations</li>
@@ -869,17 +964,17 @@ ul.task-list li input[type="checkbox"] {
 <li>Implemented lock feature to avoid conflicts when results table exists</li>
 </ul>
 </section>
-<section id="image-rexview" class="level3" data-number="9.6.2">
-<h3 data-number="9.6.2" class="anchored" data-anchor-id="image-rexview"><span class="header-section-number">9.6.2</span> Image RexView</h3>
+<section id="image-rexview" class="level3" data-number="10.6.2">
+<h3 data-number="10.6.2" class="anchored" data-anchor-id="image-rexview"><span class="header-section-number">10.6.2</span> Image RexView</h3>
 <ul>
 <li>Implemented image saving routines with annotation overlays</li>
 </ul>
 </section>
 </section>
-<section id="code-refactoring-cleanup" class="level2" data-number="9.7">
-<h2 data-number="9.7" class="anchored" data-anchor-id="code-refactoring-cleanup"><span class="header-section-number">9.7</span> Code Refactoring &amp; Cleanup</h2>
-<section id="naming-clarity" class="level3" data-number="9.7.1">
-<h3 data-number="9.7.1" class="anchored" data-anchor-id="naming-clarity"><span class="header-section-number">9.7.1</span> Naming &amp; Clarity</h3>
+<section id="code-refactoring-cleanup" class="level2" data-number="10.7">
+<h2 data-number="10.7" class="anchored" data-anchor-id="code-refactoring-cleanup"><span class="header-section-number">10.7</span> Code Refactoring &amp; Cleanup</h2>
+<section id="naming-clarity" class="level3" data-number="10.7.1">
+<h3 data-number="10.7.1" class="anchored" data-anchor-id="naming-clarity"><span class="header-section-number">10.7.1</span> Naming &amp; Clarity</h3>
 <ul>
 <li>Renamed <code>knee_data</code> to <code>lesion_detection_data</code> for consistency</li>
 <li>Renamed surface curve types from spline/reference to actual/interpolated</li>
@@ -887,8 +982,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Simplified knee point detection logic by removing redundant profile handling</li>
 </ul>
 </section>
-<section id="performance-maintenance" class="level3" data-number="9.7.2">
-<h3 data-number="9.7.2" class="anchored" data-anchor-id="performance-maintenance"><span class="header-section-number">9.7.2</span> Performance &amp; Maintenance</h3>
+<section id="performance-maintenance" class="level3" data-number="10.7.2">
+<h3 data-number="10.7.2" class="anchored" data-anchor-id="performance-maintenance"><span class="header-section-number">10.7.2</span> Performance &amp; Maintenance</h3>
 <ul>
 <li>Optimized memory usage in lesion depth calculations</li>
 <li>Removed unused <code>surface_offset</code> parameter</li>
@@ -899,12 +994,12 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2025.2-2025-10-10" class="level1" data-number="10">
-<h1 data-number="10"><span class="header-section-number">10</span> Version 2025.2 (2025-10-10)</h1>
-<section id="carl-quant-module---core-algorithm-enhancements" class="level2" data-number="10.1">
-<h2 data-number="10.1" class="anchored" data-anchor-id="carl-quant-module---core-algorithm-enhancements"><span class="header-section-number">10.1</span> Carl Quant Module - Core Algorithm Enhancements</h2>
-<section id="lesion-depth-detection-methods" class="level3" data-number="10.1.1">
-<h3 data-number="10.1.1" class="anchored" data-anchor-id="lesion-depth-detection-methods"><span class="header-section-number">10.1.1</span> Lesion Depth Detection Methods</h3>
+<section id="version-2025.2-2025-10-10" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Version 2025.2 (2025-10-10)</h1>
+<section id="carl-quant-module---core-algorithm-enhancements" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="carl-quant-module---core-algorithm-enhancements"><span class="header-section-number">11.1</span> Carl Quant Module - Core Algorithm Enhancements</h2>
+<section id="lesion-depth-detection-methods" class="level3" data-number="11.1.1">
+<h3 data-number="11.1.1" class="anchored" data-anchor-id="lesion-depth-detection-methods"><span class="header-section-number">11.1.1</span> Lesion Depth Detection Methods</h3>
 <ul>
 <li>Implemented multiple lesion depth detection algorithms:
 <ul>
@@ -918,8 +1013,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Integrated spline smoothing for raw lesion depth data refinement</li>
 </ul>
 </section>
-<section id="surface-detection-analysis" class="level3" data-number="10.1.2">
-<h3 data-number="10.1.2" class="anchored" data-anchor-id="surface-detection-analysis"><span class="header-section-number">10.1.2</span> Surface Detection &amp; Analysis</h3>
+<section id="surface-detection-analysis" class="level3" data-number="11.1.2">
+<h3 data-number="11.1.2" class="anchored" data-anchor-id="surface-detection-analysis"><span class="header-section-number">11.1.2</span> Surface Detection &amp; Analysis</h3>
 <ul>
 <li>Enhanced surface detection using spline fitting techniques</li>
 <li>Implemented 95th percentile-based surface peak detection</li>
@@ -928,8 +1023,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Implemented cavitated surface detection for damaged enamel analysis</li>
 </ul>
 </section>
-<section id="region-analysis-data-extraction" class="level3" data-number="10.1.3">
-<h3 data-number="10.1.3" class="anchored" data-anchor-id="region-analysis-data-extraction"><span class="header-section-number">10.1.3</span> Region Analysis &amp; Data Extraction</h3>
+<section id="region-analysis-data-extraction" class="level3" data-number="11.1.3">
+<h3 data-number="11.1.3" class="anchored" data-anchor-id="region-analysis-data-extraction"><span class="header-section-number">11.1.3</span> Region Analysis &amp; Data Extraction</h3>
 <ul>
 <li>Implemented region gray value extraction from OCT images</li>
 <li>Added rotation matrix support for region orientation</li>
@@ -938,8 +1033,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Implemented text annotations inside region markers</li>
 </ul>
 </section>
-<section id="performance-optimizations-2" class="level3" data-number="10.1.4">
-<h3 data-number="10.1.4" class="anchored" data-anchor-id="performance-optimizations-2"><span class="header-section-number">10.1.4</span> Performance Optimizations</h3>
+<section id="performance-optimizations-2" class="level3" data-number="11.1.4">
+<h3 data-number="11.1.4" class="anchored" data-anchor-id="performance-optimizations-2"><span class="header-section-number">11.1.4</span> Performance Optimizations</h3>
 <ul>
 <li>Implemented parallel processing for slice-by-slice lesion depth calculation</li>
 <li>Automatic selection of parallel mode based on slice count</li>
@@ -948,10 +1043,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="carl-quant-module---user-interface-workflow" class="level2" data-number="10.2">
-<h2 data-number="10.2" class="anchored" data-anchor-id="carl-quant-module---user-interface-workflow"><span class="header-section-number">10.2</span> Carl Quant Module - User Interface &amp; Workflow</h2>
-<section id="image-viewer-visualization" class="level3" data-number="10.2.1">
-<h3 data-number="10.2.1" class="anchored" data-anchor-id="image-viewer-visualization"><span class="header-section-number">10.2.1</span> Image Viewer &amp; Visualization</h3>
+<section id="carl-quant-module---user-interface-workflow" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="carl-quant-module---user-interface-workflow"><span class="header-section-number">11.2</span> Carl Quant Module - User Interface &amp; Workflow</h2>
+<section id="image-viewer-visualization" class="level3" data-number="11.2.1">
+<h3 data-number="11.2.1" class="anchored" data-anchor-id="image-viewer-visualization"><span class="header-section-number">11.2.1</span> Image Viewer &amp; Visualization</h3>
 <ul>
 <li>Developed dedicated image viewer panel with zoom and pan capabilities</li>
 <li>Improved visibility for specimen start/end and lesion region markers</li>
@@ -961,8 +1056,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Fixed image skipping issue on mouse wheel navigation</li>
 </ul>
 </section>
-<section id="settings-configuration" class="level3" data-number="10.2.2">
-<h3 data-number="10.2.2" class="anchored" data-anchor-id="settings-configuration"><span class="header-section-number">10.2.2</span> Settings &amp; Configuration</h3>
+<section id="settings-configuration" class="level3" data-number="11.2.2">
+<h3 data-number="11.2.2" class="anchored" data-anchor-id="settings-configuration"><span class="header-section-number">11.2.2</span> Settings &amp; Configuration</h3>
 <ul>
 <li>Comprehensive UI improvements for Settings panel adapted to dark theme</li>
 <li>Removed unused checkboxes and streamlined settings interface</li>
@@ -971,8 +1066,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Enhanced feedback mechanisms in specimen panel</li>
 </ul>
 </section>
-<section id="data-management" class="level3" data-number="10.2.3">
-<h3 data-number="10.2.3" class="anchored" data-anchor-id="data-management"><span class="header-section-number">10.2.3</span> Data Management</h3>
+<section id="data-management" class="level3" data-number="11.2.3">
+<h3 data-number="11.2.3" class="anchored" data-anchor-id="data-management"><span class="header-section-number">11.2.3</span> Data Management</h3>
 <ul>
 <li>Implemented annotation saving to JSON (surface, regions, lesion depth)</li>
 <li>Enhanced logic for reloading annotations and results</li>
@@ -981,8 +1076,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Added operator and measurement metadata fields</li>
 </ul>
 </section>
-<section id="results-reporting" class="level3" data-number="10.2.4">
-<h3 data-number="10.2.4" class="anchored" data-anchor-id="results-reporting"><span class="header-section-number">10.2.4</span> Results &amp; Reporting</h3>
+<section id="results-reporting" class="level3" data-number="11.2.4">
+<h3 data-number="11.2.4" class="anchored" data-anchor-id="results-reporting"><span class="header-section-number">11.2.4</span> Results &amp; Reporting</h3>
 <ul>
 <li>Implemented “Compare All Methods” visualization for lesion depth algorithms</li>
 <li>Improved plotting behavior when comparing detection methods</li>
@@ -991,10 +1086,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="application-wide-improvements" class="level2" data-number="10.3">
-<h2 data-number="10.3" class="anchored" data-anchor-id="application-wide-improvements"><span class="header-section-number">10.3</span> Application-Wide Improvements</h2>
-<section id="status-bar-error-handling" class="level3" data-number="10.3.1">
-<h3 data-number="10.3.1" class="anchored" data-anchor-id="status-bar-error-handling"><span class="header-section-number">10.3.1</span> Status Bar &amp; Error Handling</h3>
+<section id="application-wide-improvements" class="level2" data-number="11.3">
+<h2 data-number="11.3" class="anchored" data-anchor-id="application-wide-improvements"><span class="header-section-number">11.3</span> Application-Wide Improvements</h2>
+<section id="status-bar-error-handling" class="level3" data-number="11.3.1">
+<h3 data-number="11.3.1" class="anchored" data-anchor-id="status-bar-error-handling"><span class="header-section-number">11.3.1</span> Status Bar &amp; Error Handling</h3>
 <ul>
 <li>Replaced console prints with centralized status bar messaging system</li>
 <li>Implemented thread-safe status bar updates</li>
@@ -1004,8 +1099,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Integrated comprehensive error handler across all modules</li>
 </ul>
 </section>
-<section id="architecture-code-quality" class="level3" data-number="10.3.2">
-<h3 data-number="10.3.2" class="anchored" data-anchor-id="architecture-code-quality"><span class="header-section-number">10.3.2</span> Architecture &amp; Code Quality</h3>
+<section id="architecture-code-quality" class="level3" data-number="11.3.2">
+<h3 data-number="11.3.2" class="anchored" data-anchor-id="architecture-code-quality"><span class="header-section-number">11.3.2</span> Architecture &amp; Code Quality</h3>
 <ul>
 <li>Moved App context to top-level for centralized inter-app communication</li>
 <li>Implemented context manager for better resource management</li>
@@ -1015,8 +1110,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Reorganized utility functions into dedicated utils directory</li>
 </ul>
 </section>
-<section id="uiux-enhancements" class="level3" data-number="10.3.3">
-<h3 data-number="10.3.3" class="anchored" data-anchor-id="uiux-enhancements"><span class="header-section-number">10.3.3</span> UI/UX Enhancements</h3>
+<section id="uiux-enhancements" class="level3" data-number="11.3.3">
+<h3 data-number="11.3.3" class="anchored" data-anchor-id="uiux-enhancements"><span class="header-section-number">11.3.3</span> UI/UX Enhancements</h3>
 <ul>
 <li>Adapted entire UI for dark theme compatibility</li>
 <li>Improved tab styling throughout the application</li>
@@ -1026,8 +1121,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Improved row and column configuration for better responsiveness</li>
 </ul>
 </section>
-<section id="documentation-help-system" class="level3" data-number="10.3.4">
-<h3 data-number="10.3.4" class="anchored" data-anchor-id="documentation-help-system"><span class="header-section-number">10.3.4</span> Documentation &amp; Help System</h3>
+<section id="documentation-help-system" class="level3" data-number="11.3.4">
+<h3 data-number="11.3.4" class="anchored" data-anchor-id="documentation-help-system"><span class="header-section-number">11.3.4</span> Documentation &amp; Help System</h3>
 <ul>
 <li>Updated help dialog and instructions for every application section</li>
 <li>Improved help and about dialog boxes with app-aware content</li>
@@ -1037,10 +1132,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="analysis-tab-enhancements" class="level2" data-number="10.4">
-<h2 data-number="10.4" class="anchored" data-anchor-id="analysis-tab-enhancements"><span class="header-section-number">10.4</span> Analysis Tab Enhancements</h2>
-<section id="configuration-management" class="level3" data-number="10.4.1">
-<h3 data-number="10.4.1" class="anchored" data-anchor-id="configuration-management"><span class="header-section-number">10.4.1</span> Configuration Management</h3>
+<section id="analysis-tab-enhancements" class="level2" data-number="11.4">
+<h2 data-number="11.4" class="anchored" data-anchor-id="analysis-tab-enhancements"><span class="header-section-number">11.4</span> Analysis Tab Enhancements</h2>
+<section id="configuration-management" class="level3" data-number="11.4.1">
+<h3 data-number="11.4.1" class="anchored" data-anchor-id="configuration-management"><span class="header-section-number">11.4.1</span> Configuration Management</h3>
 <ul>
 <li>Implemented layout viewer showing selected key bindings</li>
 <li>Added configuration display button</li>
@@ -1050,8 +1145,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Improved dropdown menu updates when config is loaded</li>
 </ul>
 </section>
-<section id="data-handling" class="level3" data-number="10.4.2">
-<h3 data-number="10.4.2" class="anchored" data-anchor-id="data-handling"><span class="header-section-number">10.4.2</span> Data Handling</h3>
+<section id="data-handling" class="level3" data-number="11.4.2">
+<h3 data-number="11.4.2" class="anchored" data-anchor-id="data-handling"><span class="header-section-number">11.4.2</span> Data Handling</h3>
 <ul>
 <li>Implemented save-all functionality for annotations, configs, and results</li>
 <li>Refactored loading/saving logic into dedicated data_io module</li>
@@ -1060,8 +1155,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Fixed annotation toggling issues</li>
 </ul>
 </section>
-<section id="column-management" class="level3" data-number="10.4.3">
-<h3 data-number="10.4.3" class="anchored" data-anchor-id="column-management"><span class="header-section-number">10.4.3</span> Column Management</h3>
+<section id="column-management" class="level3" data-number="11.4.3">
+<h3 data-number="11.4.3" class="anchored" data-anchor-id="column-management"><span class="header-section-number">11.4.3</span> Column Management</h3>
 <ul>
 <li>Implemented dynamic column addition with key binding support</li>
 <li>Added remove last dynamic column functionality</li>
@@ -1070,10 +1165,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="rexview-tab" class="level2" data-number="10.5">
-<h2 data-number="10.5" class="anchored" data-anchor-id="rexview-tab"><span class="header-section-number">10.5</span> RexView Tab</h2>
-<section id="bug-fixes-stability-1" class="level3" data-number="10.5.1">
-<h3 data-number="10.5.1" class="anchored" data-anchor-id="bug-fixes-stability-1"><span class="header-section-number">10.5.1</span> Bug Fixes &amp; Stability</h3>
+<section id="rexview-tab" class="level2" data-number="11.5">
+<h2 data-number="11.5" class="anchored" data-anchor-id="rexview-tab"><span class="header-section-number">11.5</span> RexView Tab</h2>
+<section id="bug-fixes-stability-1" class="level3" data-number="11.5.1">
+<h3 data-number="11.5.1" class="anchored" data-anchor-id="bug-fixes-stability-1"><span class="header-section-number">11.5.1</span> Bug Fixes &amp; Stability</h3>
 <ul>
 <li>Fixed critical bugs in export functionality</li>
 <li>Resolved error handler issues in oct_functions module</li>
@@ -1081,10 +1176,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="general-maintenance" class="level2" data-number="10.6">
-<h2 data-number="10.6" class="anchored" data-anchor-id="general-maintenance"><span class="header-section-number">10.6</span> General Maintenance</h2>
-<section id="code-cleanup-2" class="level3" data-number="10.6.1">
-<h3 data-number="10.6.1" class="anchored" data-anchor-id="code-cleanup-2"><span class="header-section-number">10.6.1</span> Code Cleanup</h3>
+<section id="general-maintenance" class="level2" data-number="11.6">
+<h2 data-number="11.6" class="anchored" data-anchor-id="general-maintenance"><span class="header-section-number">11.6</span> General Maintenance</h2>
+<section id="code-cleanup-2" class="level3" data-number="11.6.1">
+<h3 data-number="11.6.1" class="anchored" data-anchor-id="code-cleanup-2"><span class="header-section-number">11.6.1</span> Code Cleanup</h3>
 <ul>
 <li>Removed commented-out code blocks</li>
 <li>Cleaned up unused imports throughout codebase</li>
@@ -1093,8 +1188,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Updated .gitignore to exclude test data, logs, and cache files</li>
 </ul>
 </section>
-<section id="development-infrastructure" class="level3" data-number="10.6.2">
-<h3 data-number="10.6.2" class="anchored" data-anchor-id="development-infrastructure"><span class="header-section-number">10.6.2</span> Development Infrastructure</h3>
+<section id="development-infrastructure" class="level3" data-number="11.6.2">
+<h3 data-number="11.6.2" class="anchored" data-anchor-id="development-infrastructure"><span class="header-section-number">11.6.2</span> Development Infrastructure</h3>
 <ul>
 <li>Included .gitignore for pycache and .pyc files</li>
 <li>Added error logging system</li>
@@ -1104,12 +1199,12 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="version-2025.1-2025-09-22" class="level1" data-number="11">
-<h1 data-number="11"><span class="header-section-number">11</span> Version 2025.1 (2025-09-22)</h1>
-<section id="initial-release" class="level2" data-number="11.1">
-<h2 data-number="11.1" class="anchored" data-anchor-id="initial-release"><span class="header-section-number">11.1</span> Initial Release</h2>
-<section id="core-features" class="level3" data-number="11.1.1">
-<h3 data-number="11.1.1" class="anchored" data-anchor-id="core-features"><span class="header-section-number">11.1.1</span> Core Features</h3>
+<section id="version-2025.1-2025-09-22" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Version 2025.1 (2025-09-22)</h1>
+<section id="initial-release" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="initial-release"><span class="header-section-number">12.1</span> Initial Release</h2>
+<section id="core-features" class="level3" data-number="12.1.1">
+<h3 data-number="12.1.1" class="anchored" data-anchor-id="core-features"><span class="header-section-number">12.1.1</span> Core Features</h3>
 <ul>
 <li><strong>Analysis Tab</strong>: Complete implementation for OCT image analysis</li>
 <li><strong>RexView Tab</strong>: Basic export functionality for processed data</li>
@@ -1118,16 +1213,16 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Key Binding System</strong>: Customizable keyboard shortcuts for data entry</li>
 </ul>
 </section>
-<section id="user-interface" class="level3" data-number="11.1.2">
-<h3 data-number="11.1.2" class="anchored" data-anchor-id="user-interface"><span class="header-section-number">11.1.2</span> User Interface</h3>
+<section id="user-interface" class="level3" data-number="12.1.2">
+<h3 data-number="12.1.2" class="anchored" data-anchor-id="user-interface"><span class="header-section-number">12.1.2</span> User Interface</h3>
 <ul>
 <li>Modern tkinter-based GUI with ttkbootstrap styling</li>
 <li>Multi-tab interface (Analysis, Carl Quant, RexView)</li>
 <li>Responsive layout with grid-based design</li>
 </ul>
 </section>
-<section id="foundation" class="level3" data-number="11.1.3">
-<h3 data-number="11.1.3" class="anchored" data-anchor-id="foundation"><span class="header-section-number">11.1.3</span> Foundation</h3>
+<section id="foundation" class="level3" data-number="12.1.3">
+<h3 data-number="12.1.3" class="anchored" data-anchor-id="foundation"><span class="header-section-number">12.1.3</span> Foundation</h3>
 <ul>
 <li>Initial project structure and architecture</li>
 <li>Error handling framework</li>
@@ -1137,8 +1232,8 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 </section>
-<section id="development-notes" class="level1" data-number="12">
-<h1 data-number="12"><span class="header-section-number">12</span> Development Notes</h1>
+<section id="development-notes" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Development Notes</h1>
 <p>This change log summarizes major feature additions, improvements, and bug fixes. Minor commits such as whitespace cleanup, typo fixes, and internal refactoring are consolidated into broader categories. Test script updates are excluded as they are development-internal and do not affect the main application functionality.</p>
 </section>
 

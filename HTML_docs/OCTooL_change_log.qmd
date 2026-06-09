@@ -10,6 +10,58 @@ format:
 editor: visual
 ---
 
+# Version 2026.6 (2026-06-09)
+
+## Architecture & Refactoring
+
+### GUI Adapters
+
+-   Introduced a dedicated `gui_adapters` module to translate Tkinter widget state into Pydantic models
+-   GUI-specific logic is now isolated from the domain layer; models no longer depend on Tkinter
+-   Replaced deprecated `from_gui_state` factory methods on models with adapter functions for `ExportConfig`, `SliceExportParams`, `ImageDisplayConfig`, and `QueueItem`
+-   Updated integration and unit tests to use the new adapter functions
+
+### Shared Validation Module
+
+-   Introduced a centralized `validation` module with core domain invariant helpers
+-   Moved validation logic out of `models`, `queue_service`, `file_discovery_service`, and `settings_service` into the shared module
+-   Consistent validation of dB ranges and slice orders across the application
+
+## Performance Improvements
+
+### Lazy Loading
+
+-   Moved heavy third-party imports (`scipy`, `sklearn`, `openpyxl`, `matplotlib`, `BeautifulSoup`) to function scope across multiple modules
+-   Reduces module-level dependencies and improves startup time
+
+### File Discovery (RexView)
+
+-   Introduced `getXMLDiscoveryInfo()` for fast minimal header parsing during file discovery, avoiding re-parsing full metadata
+-   Throttled progress popup updates during file discovery to reduce UI overhead in large folders
+
+## User Experience
+
+### Status Bar Feedback (RexView)
+
+-   Added status bar feedback messages across the execution, file picker, and tree view panels for improved user awareness of operations
+
+### Single-Specimen Directories (CarLQuant)
+
+-   Root folder is now included in image stack searches, supporting single-specimen directories
+
+## Server & Documentation
+
+### Server Migration
+
+-   Updated server base URL and display text to the new `dentlab.medizin.uni-leipzig.de` domain
+
+### Documentation
+
+-   Added "Key contents" summaries to all `app/logic` module docstrings for improved discoverability
+-   Escaped a greater-than symbol in desktop shortcut instructions to prevent markdown rendering issues
+
+------------------------------------------------------------------------
+
 # Version 2026.5 (2026-06-05)
 
 ## AnnoLyze Bug Fixes & Stability
