@@ -16,6 +16,7 @@ from app.logic.rexview.image_service import ImageService
 from app.logic.rexview.queue_service import QueueService
 from app.logic.rexview.settings_service import SettingsService
 from app.logic.rexview.file_discovery_service import FileDiscoveryService
+from app.view.rexview.gui_adapters import settings_config_from_gui_state
 from app.logic.rexview.models import (
     ExportConfig,
     SliceExportParams,
@@ -589,7 +590,7 @@ class TestModelsUncovered:
 
     @pytest.mark.unit
     def test_settings_config_from_gui_state_invalid_slices_ignored(self):
-        config = SettingsConfig.from_gui_state(
+        config = settings_config_from_gui_state(
             resize_state='selected',
             prefer_raw_state=('selected',),
             advanced_filter_state='!selected',

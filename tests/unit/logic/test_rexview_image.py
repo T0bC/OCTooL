@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch, MagicMock
 
 from app.logic.rexview.image_service import ImageService
 from app.logic.rexview.models import ImageDisplayConfig
+from app.view.rexview.gui_adapters import image_display_config_from_gui_state
 from app.logic.shared.models import OCTMetadata
 
 
@@ -331,7 +332,7 @@ class TestImageDisplayConfig:
     @pytest.mark.unit
     def test_from_gui_state(self):
         """GIVEN GUI state values, WHEN from_gui_state, THEN creates correct config."""
-        config = ImageDisplayConfig.from_gui_state(
+        config = image_display_config_from_gui_state(
             slice_index=50,
             slice_direction='YZ',
             db_min='30',
@@ -370,7 +371,7 @@ class TestImageDisplayConfig:
     @pytest.mark.unit
     def test_from_gui_state_unselected(self):
         """GIVEN unselected GUI states, WHEN from_gui_state, THEN booleans are False."""
-        config = ImageDisplayConfig.from_gui_state(
+        config = image_display_config_from_gui_state(
             slice_index=0,
             slice_direction='XZ',
             db_min='20',

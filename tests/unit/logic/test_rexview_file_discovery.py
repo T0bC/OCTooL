@@ -15,6 +15,7 @@ from app.logic.rexview.file_discovery_service import (
     DiscoveryResult,
 )
 from app.logic.rexview.models import QueueItem, FileMetadata, ExportSettings
+from app.view.rexview.gui_adapters import queue_item_from_treeview_values
 
 
 class TestFileDiscoveryServiceInit:
@@ -733,7 +734,7 @@ class TestQueueItemModel:
     @pytest.mark.unit
     def test_from_treeview_values(self):
         """GIVEN string values, WHEN from_treeview_values, THEN creates QueueItem."""
-        item = QueueItem.from_treeview_values(
+        item = queue_item_from_treeview_values(
             name="test",
             first="1",
             last="100",

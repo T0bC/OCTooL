@@ -7,6 +7,10 @@ import pytest
 from pydantic import ValidationError
 
 from app.logic.rexview.models import ExportConfig, SliceExportParams, ExportProgress
+from app.view.rexview.gui_adapters import (
+    export_config_from_gui_state,
+    slice_export_params_from_treeview_row,
+)
 from app.logic.shared.models import OCTMetadata
 
 
@@ -84,7 +88,7 @@ class TestExportConfig:
     @pytest.mark.unit
     def test_from_gui_state(self):
         """GIVEN GUI widget states, WHEN from_gui_state is called, THEN config is created correctly."""
-        config = ExportConfig.from_gui_state(
+        config = export_config_from_gui_state(
             resize_state='selected',
             prefer_raw_state=('selected',),
             advanced_filter_state='',
@@ -199,7 +203,7 @@ class TestSliceExportParams:
     @pytest.mark.unit
     def test_from_treeview_row(self):
         """GIVEN TreeView row values, WHEN from_treeview_row is called, THEN params are created correctly."""
-        params = SliceExportParams.from_treeview_row(
+        params = slice_export_params_from_treeview_row(
             path='C:/data/scan.oct',
             name='Scan001',
             first='5',

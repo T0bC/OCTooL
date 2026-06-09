@@ -6,6 +6,7 @@ Tests the SettingsService business logic without GUI dependencies.
 import pytest
 from app.logic.rexview.settings_service import SettingsService, ValidationResult
 from app.logic.rexview.models import SettingsConfig
+from app.view.rexview.gui_adapters import settings_config_from_gui_state
 
 
 class TestSettingsServiceInit:
@@ -448,7 +449,7 @@ class TestSettingsConfigModel:
     @pytest.mark.unit
     def test_from_gui_state_basic(self):
         """GIVEN GUI state values, WHEN from_gui_state, THEN creates correct config."""
-        config = SettingsConfig.from_gui_state(
+        config = settings_config_from_gui_state(
             resize_state='selected',
             prefer_raw_state=('selected',),
             advanced_filter_state='',
@@ -493,7 +494,7 @@ class TestSettingsConfigModel:
     @pytest.mark.unit
     def test_from_gui_state_placeholder_values(self):
         """GIVEN placeholder slice values, WHEN from_gui_state, THEN parses as None."""
-        config = SettingsConfig.from_gui_state(
+        config = settings_config_from_gui_state(
             resize_state='selected',
             prefer_raw_state=('selected',),
             advanced_filter_state='',
@@ -514,7 +515,7 @@ class TestSettingsConfigModel:
     @pytest.mark.unit
     def test_from_gui_state_unselected_states(self):
         """GIVEN unselected GUI states, WHEN from_gui_state, THEN booleans are False."""
-        config = SettingsConfig.from_gui_state(
+        config = settings_config_from_gui_state(
             resize_state='',
             prefer_raw_state=(),
             advanced_filter_state='',
