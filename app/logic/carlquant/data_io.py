@@ -100,7 +100,10 @@ class DataLoader:
     @staticmethod
     def find_image_stacks(root_folder: Path) -> dict[str, Specimen]:
         specimen_data = {}
-        for subdir in root_folder.rglob("*"):
+        # Include the selected folder itself so that selecting a folder which
+        # directly contains images (a single specimen) works, not only parent
+        # folders that contain specimen subfolders.
+        for subdir in [root_folder, *root_folder.rglob("*")]:
             if subdir.is_dir():
                 # Skip 'annotations' folders - they contain processed images with overlays
                 if subdir.name.lower() == "annotations":
