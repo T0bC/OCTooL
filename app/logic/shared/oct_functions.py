@@ -11,7 +11,6 @@ pure functions for OCT file processing with no GUI (tkinter) dependencies.
 Errors are surfaced to callers/services rather than handled here.
 """
 import zipfile
-from bs4 import BeautifulSoup
 import lxml
 import numpy as np
 import math
@@ -203,6 +202,7 @@ def readXMLContent(archive, nameOfXMLFile, fileExtension):
     Contents of XML File.
 
     """
+    from bs4 import BeautifulSoup
     xmlData = archive.read(nameOfXMLFile)
     xmlContent = BeautifulSoup(xmlData, fileExtension)
     return xmlContent
