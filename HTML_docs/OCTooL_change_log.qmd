@@ -1,8 +1,9 @@
 ---
 title: "OCTooL Change Log"
 author: "Tobias Meißner"
-format: 
+format:
   html:
+    embed-resources: true
     toc: true
     toc-depth: 3
     number-sections: true

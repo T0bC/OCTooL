@@ -4,6 +4,7 @@ subtitle: "Version 2026.6 (2026-06-09)"
 author: "Tobias Meißner"
 format:
   html:
+    embed-resources: true
     theme: cosmo
     toc: true
     toc-depth: 3
