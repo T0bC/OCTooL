@@ -13,8 +13,6 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image
 import numpy as np
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from app.view.shared.error_handler import handle_errors
 from app.logic.carlquant.carl_quant_core import fit_exp2_to_profile, detect_depth_sigmoid_fit
 from app.logic.carlquant.annotation_colors import (
@@ -290,6 +288,8 @@ class AScanViewer:
     @handle_errors("AScanViewer._create_plot")
     def _create_plot(self, parent_frame):
         """Create the matplotlib plot for A-Scan visualization."""
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
         # Create figure with dark background (smaller width for narrow window)
         self.figure = Figure(figsize=(5, 6), facecolor='#2b2b2b')
         self.ax = self.figure.add_subplot(111)
