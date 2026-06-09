@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+CarlQuant Settings Panel.
+
+Analysis configuration UI: number of sound/lesion regions, lesion-depth detection
+method, and display toggles (show AIR, show component methods). Settings are
+stored in the application context for use by the analysis pipeline.
+
+Key contents:
+- settingsPanel: Compact settings panel with dropdowns and checkboxes.
+- regionDropdown: Selects the number of extraction regions (2-10, even).
+- methodDropdown: Chooses the depth-detection algorithm.
+- showAIR / showMethods checkboxes: Toggle overlay visibility in the viewer.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

@@ -5,6 +5,12 @@ Pure business logic for export queue management — no tkinter dependencies.
 Handles queue item validation, manipulation, and calculations extracted from
 tree_view_panel.py.
 
+Key contents:
+- QueueService: Stateless utility for export queue validation and manipulation.
+- validate_item: Validates slice ranges, dB, direction, and refractive index.
+- get_dimension_for_direction: Maps a slice direction to the correct metadata dimension.
+- update_item_field: Safely updates a single field on a QueueItem with validation.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

@@ -1,5 +1,19 @@
 # -*- coding: utf-8 -*-
 """
+CarlQuant Annotation Renderer.
+
+Canvas drawing helpers for rendering analysis overlays (surface curves, lesion
+depth, extraction regions, boundaries, AIR areas) onto the OCT image viewer.
+Includes a CoordinateConverter for zoom/pan-aware coordinate transformation.
+
+Key contents:
+- CoordinateConverter: Transforms image coordinates to canvas coordinates with zoom/pan.
+- SurfaceAnnotationRenderer: Draws actual and interpolated surface curves.
+- LesionDepthAnnotationRenderer: Draws lesion depth detection lines.
+- ExtractionRegionAnnotationRenderer: Draws sound/lesion extraction rectangles.
+- RegionBoundaryAnnotationRenderer: Draws specimen and lesion boundary lines.
+- AIRAnnotationRenderer: Draws the AIR reference area rectangle.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

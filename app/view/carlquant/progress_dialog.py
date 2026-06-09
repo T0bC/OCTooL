@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+CarlQuant Progress Dialog.
+
+Modal progress dialog displayed during CarlQuant analysis. Shows the current
+specimen, slice progress within that specimen, and overall progress across all
+specimens. Provides a Cancel button for graceful interruption.
+
+Key contents:
+- ProgressDialog: Thread-safe modal dialog with per-specimen and overall progress.
+- update_progress: Called from the worker thread to advance bars and labels.
+- request_cancel: Sets the cancellation flag checked by the worker.
+- on_complete: Finalises the dialog when analysis finishes or is cancelled.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

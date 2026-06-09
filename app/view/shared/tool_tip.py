@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 """
+Tooltip Widget.
+
+Hover tooltip for any Tkinter widget with configurable delay, background color,
+wrap length, and padding. Binds to Enter/Leave/ButtonPress events.
+
+Key contents:
+- Tooltip: Self-contained tooltip class for arbitrary Tk widgets.
+- onEnter / onLeave: Event handlers that manage the tooltip lifecycle.
+- tipwindow: The floating Toplevel that displays the tooltip text.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

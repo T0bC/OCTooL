@@ -6,6 +6,10 @@ loading/saving specimen configurations, results, and annotated images. Wraps
 the loaders/savers in data_io and exposes them from the logic layer's stable
 import location.
 
+Key contents:
+- Re-exports DataLoader, DataSaver, convert_to_json_serializable, natural_key,
+  and IMAGE_EXTENSIONS from data_io as the stable logic-layer import location.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

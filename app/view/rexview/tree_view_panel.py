@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+RexView Tree View Panel.
+
+Export queue displayed as a ttk.Treeview with columns for slice range, dB,
+direction, refractive index, dispersion, and status. Integrates with QueueService
+for validation when cells are edited.
+
+Key contents:
+- treeViewPanel: Treeview panel managing the export queue.
+- add_item / remove_item / clear_all: Queue manipulation methods.
+- update_item: Refreshes a row after validation via QueueService.
+- get_selected_item / get_all_items: Data accessors for the execution panel.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

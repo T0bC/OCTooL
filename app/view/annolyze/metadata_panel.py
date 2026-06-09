@@ -1,5 +1,16 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Metadata Panel.
+
+Input panel for operator, measurement, and system identifiers. Also hosts the
+Keyboard Layout Viewer button so users can inspect current keybindings at any
+time.
+
+Key contents:
+- metadataPanel: Entry fields for operator, measurement, and system metadata.
+- setup: Builds and lays out the metadata widgets and keyboard viewer button.
+- KeyboardLayoutViewer integration: Opens the visual keybinding map.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

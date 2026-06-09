@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+RexView Execution Panel.
+
+Export orchestration UI with Start and Cancel buttons, a progress bar, and
+integration with ParallelExportCoordinator. Bridges the queue and settings
+panels to the logic-layer export pipeline.
+
+Key contents:
+- executionPanel: Panel that drives the export workflow.
+- start_export: Builds ExportConfig / SliceExportParams and launches the coordinator.
+- cancel_export: Signals the running export to stop gracefully.
+- progress callback: Updates the UI progress bar during export.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

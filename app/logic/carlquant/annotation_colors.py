@@ -7,6 +7,14 @@ these constants to ensure consistent colours in both the GUI (Tkinter canvas)
 and exported images (PIL ImageDraw). All colours are optimised for visibility
 on grayscale images with a dark UI theme.
 
+Key contents:
+- INTERPOLATED_SURFACE_COLOR / ACTUAL_SURFACE_COLOR: Surface detection line colors.
+- LESION_DEPTH_PRIMARY_COLOR: Main lesion depth result color.
+- EXTRACTION_REGION_COLOR / EXTRACTION_REGION_LESION_COLOR: Sound and lesion boundary colors.
+- SPECIMEN_BOUNDARY_COLOR / LESION_BOUNDARY_COLOR: Vertical line colors for region definition.
+- AIR_REGION_COLOR: AIR reference area color.
+- hex_to_rgb: Converts hex color strings to RGB tuples.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

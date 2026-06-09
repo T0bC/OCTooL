@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Config Manager.
+
+View-side coordinator for building, saving, and loading analysis configuration
+files. Bridges widget state (metadata entries, column definitions) to the typed
+logic-layer ConfigService and models.
+
+Key contents:
+- ConfigManager: Orchestrates config build/save/load via ConfigService.
+- _collect_metadata: Reads operator/measurement/system widget state into MetadataConfig.
+- _collect_columns: Reads dynamic column widget state into ColumnSpec models.
+- save_config / load_config / apply_config: File I/O and UI state restoration.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

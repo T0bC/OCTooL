@@ -6,6 +6,14 @@ Data I/O for CarlQuant: loading specimen configurations, saving results (Excel,
 JSON, PNG), discovering image stacks, and JSON-serialization helpers for numpy
 types.
 
+Key contents:
+- convert_to_json_serializable: Recursively converts numpy types to native Python for JSON.
+- DataLoader: Discovers image stacks and loads specimen configurations.
+  - find_image_stacks: Recursively finds PNG/TIFF image folders under a root.
+  - load_specimen_config: Loads region and AIR settings from JSON with backward compatibility.
+- DataSaver: Saves analysis results as Excel, JSON, and annotated PNG images.
+- natural_key: Human-friendly sort key that handles embedded numbers in filenames.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

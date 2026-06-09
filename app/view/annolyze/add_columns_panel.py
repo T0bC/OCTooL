@@ -1,5 +1,16 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Add Columns Panel.
+
+UI for defining dynamic measurement columns: name, keybinding, data type, and
+color. New columns are inserted into the results sheet and registered with the
+keybinding manager so they can be populated during annotation.
+
+Key contents:
+- addColumnsPanel: Panel for creating and registering dynamic columns.
+- columnNameEntry / keyBindCombo / dataTypeCombo: Input widgets for column spec.
+- addColumnBtn: Validates inputs and appends the column to the results sheet.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

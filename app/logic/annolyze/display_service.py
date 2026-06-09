@@ -5,6 +5,12 @@ Pure presentation math (no tkinter): relative luminance, contrast-aware font
 colour, and header-based column-width estimation. Deduplicates identical
 helpers previously copied in results_panel.py and undo_panel.py.
 
+Key contents:
+- DisplayService: Pure presentation math for colors, luminance, and column widths.
+- luminance: Computes WCAG relative luminance of a hex color in [0, 1].
+- choose_font_color: Returns black or white for best contrast against a background.
+- calculate_column_width: Estimates pixel width from header text length.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

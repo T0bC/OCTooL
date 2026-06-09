@@ -1,7 +1,15 @@
 """
 Shared Pydantic Models.
 
-Common data models used across OCTooL modules.
+Common data models used across OCTooL modules. OCTMetadata is the canonical
+representation of Header.xml fields, providing validation, alias mapping,
+and convenience properties for raw / processed data availability.
+
+Key contents:
+- OCTMetadata: Pydantic model that validates and structures OCT file metadata.
+- from_xml_dict: Class method to build OCTMetadata from getXMLAttributes output.
+- to_xml_dict: Converts the model back to the original xmlDict alias format.
+- has_raw_data / has_processed_data: Properties indicating available data types.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

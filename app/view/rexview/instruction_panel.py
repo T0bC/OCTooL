@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+RexView Instruction Panel.
+
+Simple introductory label panel displayed at the top of the RexView tab before
+any files are loaded. Provides a brief hint to the user on how to begin.
+
+Key contents:
+- instructionPanel: Lightweight label panel with introductory text.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

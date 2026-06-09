@@ -8,6 +8,11 @@ overhead. The coordinator is fully unit-testable: the executor factory and the
 worker function are injectable, so tests can run synchronously without spawning
 real processes.
 
+Key contents:
+- ParallelExportCoordinator: Distributes per-file exports across a process pool.
+- compute_worker_count: Determines workers capped by CPU, queue length, and RAM.
+- run: Submits tasks to the executor and collects ExportResults with progress.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

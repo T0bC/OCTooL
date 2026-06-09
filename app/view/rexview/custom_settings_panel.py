@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+RexView Custom Settings Panel.
+
+Per-file export settings UI: slice range, dB range, slice direction, dispersion,
+and refractive index. Users can apply values to the selected queue item or to all
+items at once.
+
+Key contents:
+- customSettingsPanel: Tkinter panel for per-file export parameters.
+- firstEntry / lastEntry: Slice range input fields.
+- Apply to Selected / Apply to All buttons: Propagate settings into the queue.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

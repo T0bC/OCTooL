@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Help Dialog.
+
+Context-aware help dialog that loads tab-specific instructions from a JSON file
+and formats them into a dark-themed modal. Also provides a direct link to the
+online manual.
+
+Key contents:
+- HelpDialog: Builds and shows the help modal.
+- _load_instructions: Loads instructions.json from bundled assets.
+- _format_help_content: Formats instruction steps into dialog content.
+- show: Displays the dialog for the currently active tab.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

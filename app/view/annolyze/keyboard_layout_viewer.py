@@ -1,5 +1,16 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Keyboard Layout Viewer.
+
+Floating window that visualises the current key-to-column bindings. Shows a
+keyboard grid with coloured keys and a detail table of bound columns, data types,
+and activation status.
+
+Key contents:
+- KeyboardLayoutViewer: Toplevel window displaying bound keys and column metadata.
+- update_bindings: Refreshes the keyboard grid when columns change.
+- on_close: Hides the window so it can be reopened later.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

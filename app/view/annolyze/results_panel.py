@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Results Panel.
+
+Spreadsheet panel (tksheet) for recording per-slice measurement data. Combines
+static columns (specimen, slice, operator, etc.) with user-defined dynamic columns.
+Integrates with DisplayService for contrast-aware column colouring.
+
+Key contents:
+- resultsPanel: tksheet-based results grid with static and dynamic columns.
+- _setup_sheet: Initialises the sheet widget and column headers.
+- add_dynamic_column: Inserts a new column with a chosen colour.
+- reset_table: Clears all data and restores default columns.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

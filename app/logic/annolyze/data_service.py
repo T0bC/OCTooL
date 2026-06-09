@@ -6,6 +6,14 @@ configs — no tkinter and no context dependency. Extracted from
 AnnoLyze/data_io.py so the old panel-state-coupled loaders could be replaced
 with plain-data I/O that is fully testable headlessly.
 
+Key contents:
+- DataService: Pure file discovery and I/O for annotations, results, and configs.
+- find_file: Recursively locates a file matching a pattern under a base folder.
+- build_data_folder: Builds the Data_<operator>_<measurement> output path.
+- load_annotations / save_annotations: Reads/writes slice-indexed annotation JSON.
+- load_results / save_results: Reads/writes results CSV as (headers, rows) tuples.
+- save_config: Writes a config dict to JSON.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

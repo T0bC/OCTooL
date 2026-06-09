@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
 """
+CarlQuant Image Viewer Panel.
+
+Interactive canvas viewer (extends BaseCanvasPanel) for OCT image stacks. Lets
+the user define region boundaries (4-point) and AIR reference areas (2-point)
+via click and drag. Renders analysis overlays via AnnotationRenderer.
+
+Key contents:
+- image_viewer_panel: Canvas viewer with region and AIR annotation tools.
+- setup_specialized_bindings: Mouse bindings for region/AIR drawing modes.
+- draw_specialized_overlays: Renders surfaces, depths, regions, and boundaries.
+- save_region_config / save_air_config: Persists coordinates to the specimen config.
+- Interpolation integration: Propagates keyframe coordinates across the stack.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

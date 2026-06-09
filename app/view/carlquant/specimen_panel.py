@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
 """
+CarlQuant Specimen Panel.
+
+Spreadsheet panel (tksheet) listing all loaded specimens with ID, slice count,
+and analysis state. Supports multi-row selection, status colouring (new,
+completed, invalid), and keyboard navigation.
+
+Key contents:
+- specimenPanel: tksheet grid for specimen management and selection.
+- _setup_sheet: Configures the sheet with ID, SLICES, and STATE columns.
+- add_specimen / remove_specimen: Modify the specimen list.
+- update_state: Changes the status colour (green for completed, red for invalid).
+- Selection tracking: Supports range selection with Shift and Ctrl.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

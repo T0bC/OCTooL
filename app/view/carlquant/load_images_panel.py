@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+CarlQuant Load Images Panel.
+
+Folder picker and image loader for the CarlQuant tab. Discovers image stacks,
+populates the specimen list, and triggers analysis. Supports removing individual
+specimens and clearing all coordinates.
+
+Key contents:
+- loadImagePanel: Panel with Select Folder, Remove, and Clear Coords buttons.
+- selectFolder: Opens a folder dialog and loads discovered specimens.
+- run_analysis: Launches the analysis pipeline via run_carl_quant.
+- remove_selected: Removes the selected specimen from the list.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

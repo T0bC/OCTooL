@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+Base Canvas Panel.
+
+Abstract base class for canvas-based image viewers used across AnnoLyze and
+CarlQuant. Centralises zoom, pan, navigation, coordinate conversion, and
+instruction rendering to eliminate duplicate code in derived panels.
+
+Key contents:
+- BaseCanvasPanel: Abstract canvas viewer with zoom (Ctrl+wheel), pan, and navigation.
+- setup_specialized_bindings / draw_specialized_overlays: Hook methods for subclasses.
+- get_instruction_key / get_image_list / get_image_path: Data hooks for rendering.
+- Coordinate conversion helpers (canvas <-> image) and aspect-ratio-preserving resize.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Main GUI.
+
+Top-level application window orchestrator. Creates the themed Tkinter root,
+installs global exception handling, sets up the custom coloured tab bar, and
+assembles the three main tabs (RexView, AnnoLyze, CarlQuant). Also hosts the
+shared status bar and silent background update checker.
+
+Key contents:
+- MainGui: Root window builder and tab orchestrator.
+- __init__: Builds the root, style, tab container, status bar, and all tabs.
+- create_colored_tab_buttons / switch_tab: Custom tab-bar UI with theme-aware colours.
+- _setup_tab_styles / _apply_tab_colors: ttkbootstrap style overrides.
+- _on_update_available: Callback that shows the update-available notification.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

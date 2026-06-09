@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
 """
+CarlQuant Results Panel.
+
+Spreadsheet panel (tksheet) showing per-slice analysis results: sound and lesion
+region statistics, lesion depth, and cavitation flag. Supports A-Scan viewer
+launch and row highlighting for navigation.
+
+Key contents:
+- resultsPanel: tksheet grid with dynamic headers based on region counts.
+- generate_headers: Builds column headers from the current sound/lesion config.
+- _setup_sheet: Initialises the sheet widget and binds selection events.
+- highlight_row: Colour-codes rows for navigation and A-Scan viewer state.
+- AScanViewer integration: Opens the intensity-profile popup for a selected row.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

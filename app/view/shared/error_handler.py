@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+Error Handler.
+
+Global error handling infrastructure: thread-safe popup windows, Tk callback
+exception interception, and the @handle_errors decorator. Ensures no exception
+fails silently, even in PyInstaller windowed builds where stderr is hidden.
+
+Key contents:
+- show_error_popup: Thread-safe popup that marshals onto the Tk main loop.
+- _build_error_popup: Constructs the scrollable error dialog.
+- install_tk_exception_handler: Hooks Tk's report_callback_exception globally.
+- handle_errors: Decorator that catches, displays, and logs exceptions.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

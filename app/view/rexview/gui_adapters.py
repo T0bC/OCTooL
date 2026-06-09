@@ -1,4 +1,17 @@
 """
+RexView GUI Adapters.
+
+Pure conversion functions that bridge Tkinter widget states (strings, tuples,
+checkbutton states) to typed logic-layer models. Keeps the view layer decoupled
+from model construction details.
+
+Key contents:
+- settings_config_from_gui_state: Builds SettingsConfig from global/custom panel states.
+- export_config_from_gui_state: Builds ExportConfig from global panel states.
+- slice_export_params_from_treeview_row: Builds SliceExportParams from a TreeView row.
+- queue_item_from_treeview_values: Builds QueueItem from raw TreeView cell values.
+- image_display_config_from_gui_state: Builds ImageDisplayConfig for the preview canvas.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

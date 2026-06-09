@@ -1,5 +1,16 @@
 # -*- coding: utf-8 -*-
 """
+RexView Tab.
+
+Composes all RexView sub-panels (pick files, global settings, custom settings,
+queue tree, image preview, and execution) into a single ttk.Frame tab. Registers
+frames and panels with AppContext so they can discover each other.
+
+Key contents:
+- rexViewTab: Top-level RexView tab assembly.
+- addContent: Lays out all sub-panels and registers them in the AppContext.
+- attach_status_bar: Connects the shared status bar to the tab.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

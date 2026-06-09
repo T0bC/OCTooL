@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+About Dialog.
+
+Modal dialog displaying OCTooL version, authors, affiliations, and external
+links (email, GitHub, server). Also provides a button to open the changelog.
+
+Key contents:
+- AboutDialog: Builds and shows a dark-themed About modal.
+- show: Renders the dialog with formatted content.
+- _create_dialog: Low-level dialog construction and centering logic.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

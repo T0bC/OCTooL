@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+Status Bar.
+
+Themed status bar with message queueing, color-coded severity levels, and a
+click-to-view full log. Integrates with AppContext so any panel can post status
+updates thread-safely.
+
+Key contents:
+- StatusBar: Themed status bar with queued message display.
+- update: Public entry point to post a message (thread-safe via after).
+- attach_context: Registers the status bar with the application context.
+- _enqueue_message / _display_next: FIFO queue with timed auto-advance.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

@@ -1,4 +1,15 @@
 """
+CarlQuant Analysis Runner.
+
+Background-thread orchestrator that runs the CarlQuant analysis pipeline across
+all loaded specimens. Displays a modal ProgressDialog and supports cancellation.
+Delegates per-specimen computation to AnalysisService.analyze_specimen.
+
+Key contents:
+- run_carl_quant: Entry point that spawns the analysis worker thread.
+- worker: Iterates specimens, updates progress, and handles cancellation.
+- ProgressDialog integration: Thread-safe UI updates for specimen and slice progress.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

@@ -6,6 +6,15 @@ Canonical location for OCT processing logic — pure functions for OCT raw-file
 processing with no GUI (tkinter) dependencies. Errors are surfaced to
 callers/services rather than handled here.
 
+Key contents:
+- insertScale: Draws a micron scale bar onto a Pillow image slice.
+- unzipOCTData: Opens a .oct archive in read-only mode.
+- getXMLDiscoveryInfo: Fast, minimal Header.xml parse for file discovery.
+- getXMLAttributes: Full metadata extraction from Header.xml into a dict.
+- createImageFromRaw: Builds uint8 image arrays from processed or raw spectral data.
+- octToGV: Converts complex FFT output to greyvalue uint8 arrays.
+- smooth: MATLAB-style moving-average smoothing for 1-D arrays.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

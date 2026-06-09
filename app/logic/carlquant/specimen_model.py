@@ -6,6 +6,16 @@ Domain dataclasses for the CarlQuant analysis pipeline: region statistics,
 detected surfaces, lesion depths, region/AIR configurations, and specimen
 results.
 
+Key contents:
+- RegionStats: Statistics (mean, median, SD, SE) for a sound or lesion region.
+- Surface: Detected surface points, fitted curves, and cavitation flag.
+- LesionDepth: Lesion depth points, mean/median/SD/SE, and per-column detection data.
+- RegionConfig: 4-point region boundary configuration with buffered accessors.
+- AirConfig: 2-point AIR reference area configuration.
+- SpecimenConfig: Container for per-slice RegionConfig and AirConfig maps.
+- SliceResult: Per-slice aggregation of region_stats, surface, and lesion_depth.
+- Specimen: Top-level container for a specimen's images, config, and analysis results.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

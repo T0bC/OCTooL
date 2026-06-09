@@ -6,6 +6,11 @@ domain models that cross the view/logic boundary. Surfaces canonical
 definitions from specimen_model and carl_quant_core so consumers have a single,
 stable import location.
 
+Key contents:
+- Re-exports RegionStats, Surface, LesionDepth, RegionConfig, AirConfig,
+  SpecimenConfig, SliceResult, Specimen, and DepthDetectionMethod as the
+  single stable import location for CarlQuant boundary models.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

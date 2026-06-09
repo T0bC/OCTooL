@@ -9,6 +9,11 @@ fallback to the locally bundled HTML copy when the server is unreachable
 because it stays current; the bundled copy guarantees docs remain available
 without an internet connection.
 
+Key contents:
+- _url_reachable: Quick HEAD probe to test remote URL reachability.
+- _open_local: Opens the first existing bundled HTML alternative.
+- open_doc: Preferred entry point that tries remote first, then falls back.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

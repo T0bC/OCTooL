@@ -1,6 +1,10 @@
 """
 RexView Export Worker.
 
+Key contents:
+- export_one_file: Top-level picklable worker that builds an ExportService and
+  exports a single OCT file, capturing any failure into ExportResult.
+
 Top-level, picklable worker for process-based parallel export. Contains only
 module-level functions (no closures, no tkinter, no bound state) so it can be
 dispatched to a ProcessPoolExecutor on Windows (spawn). Each worker builds its

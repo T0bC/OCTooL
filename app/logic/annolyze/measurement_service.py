@@ -7,6 +7,15 @@ cell computations can be unit-tested headlessly. Each transform takes the
 current cell value (as stored, a string) and returns the new value to store.
 Parsing helpers raise ValueError on bad input.
 
+Key contents:
+- MeasurementService: Pure per-data-type cell value transforms and keybinding helpers.
+- apply_continuous: Adds a measured value to the current numeric cell value.
+- toggle_boolean: Toggles a YES/NO boolean cell.
+- increment_percentage / increment_categorical / increment_ordinal: Step-wise counters
+  for percentage, categorical, and ordinal data types.
+- parse_integer / parse_float / parse_text: Manual-entry parsing with strict validation.
+- available_keys: Returns unassigned lowercase letters for new keybindings.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

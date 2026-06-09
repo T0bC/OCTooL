@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Load Images Panel.
+
+Folder picker and image loader for the AnnoLyze tab. Discovers PNG/JPG/TIFF
+image stacks, populates the annotation canvas, and loads any existing
+annotations, results, or config files from the sample folder.
+
+Key contents:
+- loadImagePanel: Panel with Select Folder and Load Config buttons.
+- globalPickerThread: Background thread for recursive image discovery.
+- load_images: Populates the canvas and results sheet from discovered files.
+- DataLoader integration: Loads config, annotations, and results on demand.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

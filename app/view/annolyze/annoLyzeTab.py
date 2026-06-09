@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Tab.
+
+Composes all AnnoLyze sub-panels (load images, annotate, results, add columns,
+metadata, config, undo) into a single ttk.Frame tab. Initializes ConfigManager
+and registers all frames and panels with AppContext.
+
+Key contents:
+- addContent: Lays out the AnnoLyze tab and wires all sub-panels together.
+- attach_status_bar: Connects the shared status bar to the tab.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

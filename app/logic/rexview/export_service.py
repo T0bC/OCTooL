@@ -4,6 +4,14 @@ RexView Export Service.
 Pure business logic for OCT image export — no tkinter dependencies. Handles the
 core export pipeline logic extracted from execution_panel.py.
 
+Key contents:
+- ExportService: Pure business logic for OCT export operations.
+- prepare_export: Validates parameters and determines slices, data type, and output dir.
+- load_image_stack: Loads and processes the image stack from the OCT archive.
+- process_slice: Extracts, resizes, corrects, and optionally adds a scale bar.
+- export_single_slice: Saves a processed slice to disk with EXIF metadata.
+- export_video_image: Exports the bundled video/preview image from the OCT file.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

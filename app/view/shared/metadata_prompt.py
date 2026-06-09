@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 """
+Metadata Prompt.
+
+Modal dialog to prompt for operator and measurement metadata before running an
+analysis. Centers itself over the parent window and stores the result in the
+application context.
+
+Key contents:
+- prompt_for_metadata: Creates and shows the modal metadata entry dialog.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

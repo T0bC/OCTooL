@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 """
+CarlQuant Tab.
+
+Composes all CarlQuant sub-panels (load images, settings, specimen list, results
+sheet, and image viewer) into a single ttk.Frame tab. Uses a PanedWindow layout
+so the specimen table and results table share horizontal space.
+
+Key contents:
+- addContent: Lays out all CarlQuant sub-panels and registers frames in AppContext.
+- attach_status_bar: Connects the shared status bar to the tab.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

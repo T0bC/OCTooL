@@ -7,6 +7,12 @@ construction), while services reuse the same helper functions to build non-
 raising ValidationResult objects for the GUI. Keeps the rules defined in one
 place so both layers stay consistent.
 
+Key contents:
+- ValidationResult: Dataclass for non-raising validation outcomes.
+- db_range_error: Checks that db_min is strictly less than db_max.
+- slice_order_error: Checks that first_slice <= last_slice.
+- num_slices_error: Checks that num_slices does not exceed the available range.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

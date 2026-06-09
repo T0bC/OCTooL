@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Undo Panel.
+
+Modal window displaying the full undo history as a tksheet grid. Each row shows
+timestamp, slice, column, old/new values, feature, and annotation ID. Allows the
+user to step back through recorded changes.
+
+Key contents:
+- UndoPanel: Toplevel undo-history viewer.
+- _setup_sheet: Configures the tksheet with undo history columns.
+- _setup_controls: Adds navigation and revert buttons.
+- refresh: Reloads the sheet from the current undo stack.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

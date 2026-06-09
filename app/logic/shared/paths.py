@@ -5,6 +5,10 @@ Pure, tkinter-free helper for resolving asset paths in both development and
 PyInstaller-bundled environments. Provides resource_path, the canonical helper
 used throughout the application.
 
+Key contents:
+- resource_path: Resolves a project-relative path to an absolute path,
+  switching between sys._MEIPASS (PyInstaller) and the normal project root.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

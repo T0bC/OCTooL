@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+RexView Pick Files Panel.
+
+Folder and file picker that discovers OCT archives and populates the export
+queue. Supports recursive folder scanning and optional text-file import of
+pre-defined slice ranges. Uses FileDiscoveryService for headless scanning.
+
+Key contents:
+- pickFilesPanel: Panel with Select Folder / Select File(s) buttons.
+- globalPickerThread: Background thread for recursive OCT discovery.
+- populate_queue: Adds discovered files to the TreeView queue with default settings.
+- Text file import: Parses companion .txt files for slice range hints.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

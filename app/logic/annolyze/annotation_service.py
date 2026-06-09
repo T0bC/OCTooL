@@ -5,6 +5,14 @@ Pure annotation geometry, colour, and (de)serialization logic — no tkinter.
 Extracted from the AnnoLyze annotation panel so it can be unit-tested
 headlessly.
 
+Key contents:
+- AnnotationService: Pure logic for annotation geometry, color, and serialization.
+- polyline_length / annotation_length: Computes Euclidean length of line/spline annotations.
+- spline_points: Samples a cubic spline through a point set (fallback to lines).
+- hex_to_rgba: Converts hex color strings to RGBA tuples.
+- serialize_slice_annotations / deserialize_annotations: Converts between in-memory
+  slice-indexed maps and the on-disk JSON format.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

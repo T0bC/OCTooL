@@ -4,6 +4,11 @@ Error Logging Utilities.
 Pure file I/O, tkinter-free. Provides log_error_to_file, which writes error
 details to a daily log file under the project-root logs/ directory.
 
+Key contents:
+- _project_root: Resolves the project root from this module's location.
+- log_error_to_file: Writes timestamped error details (function, args,
+  traceback) to a daily rotating text file.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+Application Context.
+
+Central registry for panels, frames, and the status bar. Provides safe,
+thread-aware status updates so background workers can post messages without
+calling Tkinter directly.
+
+Key contents:
+- AppContext: Registry holding references to panels, frames, and config manager.
+- register_panel / get_panel: Named panel registration and lookup.
+- register_frame / get_frame: Named frame registration and lookup.
+- safe_status_update: Thread-safe status-bar message dispatch.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

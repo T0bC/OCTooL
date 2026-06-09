@@ -5,6 +5,13 @@ Pure business logic for OCT export settings validation and defaults — no
 tkinter dependencies. Handles the core settings logic extracted from
 global_settings_panel.py and custom_settings_panel.py.
 
+Key contents:
+- SettingsService: Stateless utility for export settings validation and defaults.
+- get_defaults: Returns a SettingsConfig populated with all default values.
+- validate_export_config: Checks ranges, combinations, and setting dependencies.
+- parse_dispersion: Converts the GUI tuple format into a validated (type, coeff) pair.
+- calculate_equidistant_indices: Computes evenly spaced slice indices for export.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

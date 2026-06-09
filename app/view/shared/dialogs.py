@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Shared Dialog Helpers.
+
+Thin, parent-anchored wrappers around tkinter.messagebox for consistent error,
+info, and warning dialogs across the application.
+
+Key contents:
+- show_error: Parent-anchored error message box.
+- show_info: Parent-anchored information message box.
+- show_warning: Parent-anchored warning message box.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

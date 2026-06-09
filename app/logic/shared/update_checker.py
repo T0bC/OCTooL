@@ -9,6 +9,12 @@ runs on a background thread so the GUI never blocks, and any failure is
 swallowed silently in the automatic path. Provides both non-blocking (startup)
 and blocking (manual check) entry points.
 
+Key contents:
+- UpdateInfo: Simple data class holding the result of an update check.
+- _fetch_manifest: Downloads and parses the remote version.json manifest.
+- check_for_updates_sync: Blocking check suitable for manual "Check now" use.
+- check_for_updates_async: Non-blocking background-thread check for startup.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

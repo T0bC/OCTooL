@@ -6,6 +6,13 @@ Keyframe-based interpolation for coordinate configurations across image stacks.
 Provides a unified framework that eliminates code duplication and makes it easy
 to add new coordinate types.
 
+Key contents:
+- InterpolatableConfig: Protocol defining the interface for keyframe-interpolatable configs.
+- CoordinateDescriptor: Dataclass describing which fields to interpolate for a config type.
+- REGION_DESCRIPTOR / AIR_DESCRIPTOR: Pre-defined descriptors for region (4 points) and AIR (2 points).
+- interpolate_coordinates: Generic keyframe interpolation engine for any coordinate-based config.
+- interpolate_region_coordinates / interpolate_air_coordinates: Convenience wrappers.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

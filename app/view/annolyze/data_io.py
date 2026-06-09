@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze View Data I/O.
+
+View-layer wrappers around logic-layer DataService for discovering and loading
+annotation, result, and config files within a sample folder. Provides
+convenience methods that pass the application context for status updates.
+
+Key contents:
+- DataLoader: Finds and loads config, annotations, and results for a sample.
+- DataSaver: Saves annotations, results CSV, and config JSON.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

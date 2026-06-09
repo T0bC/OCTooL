@@ -4,6 +4,13 @@ RexView Image Service.
 Pure business logic for OCT image preview display — no tkinter dependencies.
 Handles the core image processing logic extracted from image_panel.py.
 
+Key contents:
+- ImageService: Pure business logic for OCT image preview operations.
+- load_oct_file: Opens the archive and parses Header.xml into OCTMetadata.
+- load_processed_stack: Loads the full processed image stack into memory.
+- get_slice_image: Returns a specific slice as a PIL Image for display.
+- get_metadata_summary: Provides a human-readable summary of loaded metadata.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+CarlQuant A-Scan Viewer.
+
+Popup window showing the intensity profile (A-Scan) for a selected column in
+an OCT slice. Overlays knee-point, inflection-point, shoulder-point, and
+lesion-depth detection markers for visual inspection of the algorithm's decisions.
+
+Key contents:
+- AScanViewer: Modal popup with intensity plot and column selection.
+- draw_intensity_profile: Renders the grayscale profile with detection overlays.
+- show_knee / show_inflection / show_shoulder: Toggle individual method markers.
+- synchronize_with_row: Links the viewer to the selected results-panel row.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

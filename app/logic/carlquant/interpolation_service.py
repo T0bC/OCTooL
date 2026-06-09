@@ -6,6 +6,12 @@ Pure, tkinter-free keyframe interpolation for coordinate configurations
 interpolation engine and exposes it from the logic layer's stable import
 location.
 
+Key contents:
+- InterpolationService: Stateless service wrapping the generic keyframe interpolation engine.
+- interpolate: Interpolates any coordinate-based config dict using a CoordinateDescriptor.
+- interpolate_regions: Convenience wrapper for region coordinates (4 points) across a stack.
+- interpolate_air: Convenience wrapper for AIR reference coordinates (2 points) across a stack.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

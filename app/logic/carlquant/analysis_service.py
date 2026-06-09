@@ -9,6 +9,14 @@ progress/cancel callbacks; methods accept/return models, not widget references.
 File I/O is delegated to DataSaver while the view layer owns dialogs, threading
 and status-bar updates.
 
+Key contents:
+- SliceAnalysis: Dataclass for per-slice results (regions, surface, lesion depth).
+- SpecimenAnalysisResult: Dataclass for whole-specimen analysis outcomes.
+- AnalysisService: Stateless service exposing the full CarlQuant compute pipeline.
+- detect_surface / extract_regions / calculate_lesion_depth: Thin static delegators to core.
+- analyze_slice: Runs the full per-slice pipeline on an in-memory image array.
+- analyze_specimen: Orchestrates parallel analysis of all slices with progress/cancel support.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

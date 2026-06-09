@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Instruction Panel.
+
+Placeholder panel shown before a sample is loaded. Displays a brief message
+indicating that the annotation feature is available once images are loaded.
+
+Key contents:
+- instructionPanel: Simple label panel with placeholder instructions.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

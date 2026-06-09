@@ -5,6 +5,13 @@ Data models for OCT image annotation, dynamic columns, configuration, and
 measurement undo history. These are pure data structures (no tkinter) passed
 across the logic/view boundary.
 
+Key contents:
+- Annotation: A single poly-line or spline annotation on one image slice.
+- MetadataConfig: Operator, measurement, and system metadata for a sample.
+- ColumnSpec: Specification for a dynamic results column (name, keybinding, type, color).
+- AnnotationConfig: Full analysis configuration combining metadata and column list.
+- UndoAction: A single recorded cell change for undo/redo history.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

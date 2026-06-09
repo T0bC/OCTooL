@@ -7,6 +7,15 @@ detection, region extraction, lesion-depth calculation, and parallel slice
 processing. process_slice_parallel lives at module level so it is picklable by
 ProcessPoolExecutor on Windows.
 
+Key contents:
+- process_slice_parallel: Picklable module-level worker that loads an image and runs the full pipeline.
+- detect_surface: Finds the specimen surface using intensity peaks and AIR thresholding.
+- extract_regions: Extracts sound/lesion regions and computes statistics.
+- calculate_lesion_depth: Calculates lesion depth with knee-point, sigmoid, and combined methods.
+- find_surface_peak: Locates the first significant intensity peak after threshold crossing.
+- cluster_surface_points: Applies DBSCAN to remove speckle noise from raw surface points.
+- fit_surface_curve: Fits a smooth spline curve to detected surface points.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

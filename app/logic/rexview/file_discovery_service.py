@@ -5,6 +5,13 @@ Pure business logic for OCT file discovery and metadata extraction — no tkinte
 dependencies. Handles file scanning, metadata parsing, and queue entry creation
 extracted from pick_files_panel.py.
 
+Key contents:
+- DiscoveryResult: Dataclass holding discovered files, count, and errors.
+- FileDiscoveryService: Scans folders for .oct files and extracts metadata.
+- scan_directory: Recursively searches a directory for OCT archives.
+- extract_metadata: Parses Header.xml and returns FileMetadata with default settings.
+- create_queue_item: Builds a QueueItem from discovered file metadata.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

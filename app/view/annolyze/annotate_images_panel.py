@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Annotate Images Panel.
+
+Canvas-based image viewer (extends BaseCanvasPanel) for drawing poly-line and
+spline annotations on OCT slices. Integrates with AnnotationService for geometry
+and serialization, and with DataService for loading/saving annotation JSON.
+
+Key contents:
+- annotatePanel: Canvas viewer with annotation drawing, editing, and navigation.
+- setup_specialized_bindings: Binds mouse events for drawing and point dragging.
+- draw_specialized_overlays: Renders annotations, curves, and text overlays.
+- save_annotations / load_annotations: Persists slice-indexed annotation JSON.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

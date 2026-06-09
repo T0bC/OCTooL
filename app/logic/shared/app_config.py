@@ -8,6 +8,14 @@ OCTooL version and all server-hosted resources (documentation, changelog,
 update manifest). Edit the values here on every release or when moving server
 endpoints.
 
+Key contents:
+- __version__: Canonical version string bumped on every release.
+- VERSION_DISPLAY: Human-readable version shown in window titles.
+- SERVER_BASE_URL: Root URL for all remote resources.
+- MANUAL_URL / CHANGELOG_URL: Live documentation links.
+- VERSION_MANIFEST_URL: JSON endpoint polled for update detection.
+- NETWORK_TIMEOUT: Seconds to wait for remote reachability probes.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

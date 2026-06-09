@@ -6,6 +6,14 @@ files — no tkinter, no dialogs. Extracted from AnnoLyze/config_manager.py. Fil
 I/O methods raise exceptions on failure; the view layer decides how to surface
 them.
 
+Key contents:
+- ConfigService: Pure logic for building, validating, and serialising analysis configs.
+- default_config: Returns the default on-disk config dictionary.
+- build_config: Assembles an AnnotationConfig from metadata and ordered column specs.
+- validate_config: Checks that a loaded dict contains all required top-level keys.
+- parse_config: Converts a raw config dict into typed AnnotationConfig models.
+- build_column_map: Creates a {keybinding: column_info} map for the annotation canvas.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+RexView Global Settings Panel.
+
+Global export settings UI: aspect-ratio correction, raw-data preference,
+advanced filter, output format, averaging, Tukey window, scale bar, and
+parallel worker count. These values apply to every item in the queue.
+
+Key contents:
+- globalSettingsPanel: Panel for global export configuration.
+- resizeBox / prefRawBox / advancedFilterBox: Toggle processing options.
+- exportFormatCombo / averagingCombo / tukeyCombo: Format and algorithm selectors.
+- scaleBar controls: Enable/disable scale bar and set length/font size.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

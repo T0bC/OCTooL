@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+Instruction Renderer.
+
+Data-driven instruction renderer that draws structured help text (headers,
+steps, hints, keyboard symbols) onto a Tkinter canvas from a JSON file. Adapts
+layout automatically to available vertical space with multi-column overflow.
+
+Key contents:
+- InstructionRenderer: Loads and renders instruction JSON onto a canvas.
+- _load_instructions: Reads the bundled instructions.json with UTF-8 encoding.
+- set_logo: Loads and resizes the application logo for display.
+- render: Draws instruction content for a given context key.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

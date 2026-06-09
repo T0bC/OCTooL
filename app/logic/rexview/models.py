@@ -1,7 +1,16 @@
 """
 RexView Pydantic Models.
 
-Data models for OCT export configuration and parameters.
+Data models for OCT export configuration and parameters. SettingsConfig,
+ExportConfig, and SliceExportParams are validated Pydantic models that enforce
+the same invariants as the GUI input fields.
+
+Key contents:
+- SettingsConfig: Combines global and per-file export settings with validation.
+- ExportConfig: Global export settings (format, averaging, scale, parallel workers).
+- SliceExportParams: Per-file slice range, dB, direction, and dispersion.
+- QueueItem: Represents a single export queue entry with validation.
+- ExportProgress / ExportResult: Progress tracking and export outcome dataclasses.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of

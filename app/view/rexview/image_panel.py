@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+RexView Image Panel.
+
+OCT image preview panel with a canvas, slice slider, and metadata display.
+Delegates image loading and processing to ImageService so the panel remains
+focused on presentation and user interaction.
+
+Key contents:
+- imagePanel: Canvas-based preview with slice navigation.
+- load_image: Opens the selected OCT file and renders the current slice.
+- update_slice: Refreshes the canvas when the slice slider or settings change.
+- show_metadata: Displays Header.xml metadata (dimensions, data type, etc.).
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.

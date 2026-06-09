@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
 """
+AnnoLyze Keybinding Manager.
+
+Maps keyboard keys to dynamic columns and dispatches the appropriate cell-value
+transform based on the column's data type. Supports undo (Ctrl+Z) and undo-panel
+(Ctrl+U). Integrates with MeasurementService for pure value-transform logic.
+
+Key contents:
+- KeybindingManager: Registers key handlers per data type on the annotation canvas.
+- handle_continuous / handle_boolean / handle_percentage / etc.: Per-type dispatchers.
+- undo_last: Reverses the most recent cell change.
+- open_undo_panel: Opens the UndoPanel window for detailed history.
+
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
 Optical Coherence Tomography (OCT) images.
