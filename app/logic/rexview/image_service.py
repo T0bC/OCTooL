@@ -7,7 +7,6 @@ This service handles the core image processing logic extracted from image_panel.
 from typing import Optional, Tuple, Any
 import numpy as np
 from PIL import Image
-from scipy import ndimage
 
 from app.logic.rexview.models import ImageDisplayConfig
 from app.logic.shared.models import OCTMetadata
@@ -171,6 +170,7 @@ class ImageService:
         Returns:
             Resized 2D numpy array
         """
+        from scipy import ndimage
         if slice_direction == 'XZ':
             return ndimage.zoom(img, zoom=(1, resize_factor_x), order=0)
         elif slice_direction == 'YZ':
@@ -194,6 +194,7 @@ class ImageService:
         Returns:
             Corrected 2D numpy array
         """
+        from scipy import ndimage
         if refractive_index == 1.0:
             return img
         return ndimage.zoom(img, zoom=(refractive_index, 1), order=0)
