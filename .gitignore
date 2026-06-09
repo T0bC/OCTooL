@@ -30,4 +30,4 @@ dist/
 *.spec.bak
 
 # codeboarding
-.codeboarding/
+#.codeboarding/
