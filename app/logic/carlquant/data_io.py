@@ -11,9 +11,6 @@ from datetime import datetime
 import re
 import os
 import json
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl import load_workbook
 from app.logic.carlquant.specimen_model import (
     Specimen, SliceResult, RegionStats, LesionDepth, Surface,
     SpecimenConfig, RegionConfig, AirConfig
@@ -327,6 +324,7 @@ class DataLoader:
             if not result_file.exists():
                 return
 
+            from openpyxl import load_workbook
             wb = load_workbook(result_file)
             if "Summary" not in wb.sheetnames:
                 return
@@ -386,6 +384,8 @@ class DataSaver:
 
     @staticmethod
     def save_results(specimen: Specimen):
+        from openpyxl import Workbook
+        from openpyxl.utils import get_column_letter
         wb = Workbook()
 
         # === Sheet 1: Summary ===
