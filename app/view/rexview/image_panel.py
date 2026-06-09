@@ -9,7 +9,6 @@ Created on Sat Oct 10 18:55:08 2020
 import tkinter as tk
 from tkinter import ttk
 from app.logic.shared import oct_functions as octF
-from scipy import ndimage
 from PIL import Image, ImageTk
 from app.view.shared.tool_tip import Tooltip
 from app.view.shared.error_handler import handle_errors
