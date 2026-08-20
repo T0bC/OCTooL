@@ -63,9 +63,14 @@ class pickFilesPanel:
         # Add buttons and instructions here
         self.pickFolderToolTip = 'Choose a folder whichs contains at least one OCT file. ' \
             'All OCT Files inside this folder and subfolders are detected and added to the queue. \n\n' \
-            'If you supply a plain text file within a OCT-File directory [*.txt] with information about export range ' \
-            'and equidistant slices, those parameters are imported. \n\n' \
-            'Format example: \n 33-444 \n 25'
+            'To supply export range, equidistant slices and refractive index for an OCT file, place a ' \
+            'text file with the exact same name (e.g. scan.oct -> scan.txt) in the same folder. \n\n' \
+            'Each line defines one export direction as VIEW:START-END:COUNT:RI (all parts but the range ' \
+            'are optional): \n' \
+            ' 33-444\n' \
+            ' 33-444:25\n' \
+            ' XZ:33-444:25\n' \
+            ' XZ:33-444:25:1.35'
         self.pickFolderBtn = ttk.Button(self.frame,
                                         text='Select Folder',
                                         width=14,
