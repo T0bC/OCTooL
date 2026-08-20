@@ -11,6 +11,24 @@ format:
 editor: visual
 ---
 
+# Version 2026.7 (2026-08-20)
+
+## Documentation
+
+-   Migrated documentation URLs from the university server to GitHub Pages, and added a `manual_url` field to the version manifest schema
+-   Inlined external JavaScript libraries in `OCTooL_MANUAL.html` to make the manual a self-contained file
+-   Removed obsolete knee point and sigmoid detection method documentation
+
+## RexView Module
+
+-   Corrected the sidecar metadata file tooltip to document the actual `VIEW:START-END:COUNT:RI` line format expected by the parser, including the requirement that the `.txt` file name matches the OCT file name exactly
+-   Added a dedicated "Sidecar Metadata File" step and quick tip to the RexView Getting Started guide
+
+## UI Polish
+
+-   Tightened spacing in the Getting Started guide layout so workflow steps and Quick Tips no longer overflow the canvas
+-   Removed the redundant panel-location line from each workflow step, since the step title already names the panel
+
 # Version 2026.6 (2026-06-09)
 
 ## Architecture & Refactoring
