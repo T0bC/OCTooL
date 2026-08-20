@@ -33,3 +33,4 @@ dist/
 
 # tempImplementation
 toImplement
+.claude/settings.local.json
