@@ -175,8 +175,6 @@ class InstructionRenderer:
         if 'workflow_steps' in data:
             for step in data['workflow_steps']:
                 height += line_spacing  # Step number and title
-                if 'panel' in step:
-                    height += line_spacing - 2  # Panel location
                 if 'actions' in step:
                     height += len(step['actions']) * (line_spacing - 4)  # Actions
                 height += section_spacing  # Space between steps
@@ -192,9 +190,9 @@ class InstructionRenderer:
         """
         # Layout configuration
         left_margin = 15
-        start_y = 50
-        line_spacing = 19
-        section_spacing = 10
+        start_y = 32
+        line_spacing = 17
+        section_spacing = 7
         
         # Calculate required height for workflow steps
         workflow_height = self._calculate_workflow_height(data, line_spacing, section_spacing)
@@ -204,7 +202,7 @@ class InstructionRenderer:
         if 'title' in data:
             title = data['title']
             color = self.COLORS.get(title.get('color', 'text_primary'))
-            self.canvas.create_text(canvas_width // 2, 20, fill=color,
+            self.canvas.create_text(canvas_width // 2, 6, fill=color,
                                    font=self.FONTS['header'],
                                    text=title['text'], anchor=tk.N, tags="Text")
         
@@ -233,8 +231,6 @@ class InstructionRenderer:
                 
                 # Calculate height needed for this step
                 step_height = line_spacing  # Title
-                if 'panel' in step:
-                    step_height += line_spacing - 2
                 if 'actions' in step:
                     step_height += len(step['actions']) * (line_spacing - 4)
                 step_height += section_spacing
@@ -263,14 +259,7 @@ class InstructionRenderer:
                                        font=self.FONTS['step_title'],
                                        text=title, anchor=tk.NW, tags="Text")
                 y += line_spacing
-                
-                # Panel location
-                if 'panel' in step:
-                    self.canvas.create_text(col_x + 5, y, fill=self.COLORS['text_tertiary'],
-                                           font=self.FONTS['small'],
-                                           text=f"📍 {step['panel']}", anchor=tk.NW, tags="Text")
-                    y += line_spacing - 2
-                
+
                 # Actions
                 if 'actions' in step:
                     for action in step['actions']:
