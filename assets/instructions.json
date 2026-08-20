@@ -169,6 +169,16 @@
       },
       {
         "number": "4",
+        "title": "Sidecar Metadata File (optional)",
+        "panel": "Load Panel",
+        "actions": [
+          "▸ Name a .txt file exactly like the OCT file: scan.oct → scan.txt",
+          "▸ Place it in the same folder to auto-import its settings",
+          "▸ One line per view: VIEW:START-END:COUNT:RI (e.g. XZ:33-444:25:1.35)"
+        ]
+      },
+      {
+        "number": "5",
         "title": "Execute RexView",
         "panel": "Execution Panel",
         "actions": [
@@ -186,7 +196,8 @@
         "📁 Batch process folders",
         "⚙️ Save settings presets",
         "📊 Add scale bars",
-        "🎨 Customize overlays"
+        "🎨 Customize overlays",
+        "📝 Sidecar .txt must match OCT filename exactly"
       ]
     }
   }
