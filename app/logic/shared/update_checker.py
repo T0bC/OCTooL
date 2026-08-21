@@ -139,7 +139,7 @@ def check_for_updates_async(tk_widget, on_update_available, on_error=None):
         try:
             tk_widget.after(0, dispatch)
         except Exception:
-            # Widget destroyed before the check finished; ignore.
+            # Window closed while the network call was in flight.
             pass
 
     threading.Thread(target=worker, daemon=True).start()
