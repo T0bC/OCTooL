@@ -276,5 +276,8 @@ class executionPanel:
             db_min=self.treeView.getValueFromRow(item_id, column='dB min'),
             db_max=self.treeView.getValueFromRow(item_id, column='dB max'),
             refr_ind=self.treeView.getValueFromRow(item_id, 'Refr. Ind.'),
-            dispersion=self.customSettingsFrame.getDispersion(),
+            dispersion=(
+                self.customSettingsFrame.getDispersion()[0],
+                self.treeView.getValueFromRow(item_id, 'Disp. Coeff'),
+            ),
         )
