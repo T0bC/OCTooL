@@ -43,6 +43,7 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 from ttkbootstrap import Style
+from ttkbootstrap.publisher import Publisher
 from app.view.rexview import rexViewTab
 from app.view.annolyze import annoLyzeTab
 from app.view.carlquant import carlQuantTab
@@ -54,6 +55,17 @@ from app.view.shared.help_dialog import HelpDialog
 from app.view.shared.about_dialog import AboutDialog
 from app.logic.shared.app_config import VERSION_DISPLAY, SERVER_BASE_URL
 from app.logic.shared.update_checker import check_for_updates_async, check_for_updates_sync
+
+
+def _reset_ttkbootstrap_state():
+    """Clear ttkbootstrap's class-level Style/Publisher singletons before
+    building a new root, so a same-interpreter relaunch (IPython %run) doesn't
+    inherit callbacks bound to the previous, now-destroyed root and raise
+    TclError. Only call this right before creating a root, never on teardown
+    -- a host console (Positron/Spyder) owns its own Style and this would
+    break it."""
+    Style.instance = None
+    Publisher.clear_subscribers()
 
 
 class MainGui:
@@ -68,15 +80,30 @@ class MainGui:
         self.ENABLE_CARLQUANT = True
         # ========================================
 
+        _reset_ttkbootstrap_state()
+
         self.mainWin = tk.Tk()
         self.mainWin.withdraw()
+
+        # Point Tkinter's default root at our window: a host console
+        # (Positron/Spyder) may already have one, and ttkbootstrap's
+        # Style() would otherwise attach to that stale root/theme.
+        self._prev_default_root = tk._default_root
+        tk._default_root = self.mainWin
 
         # Route every uncaught Tk callback exception to a user-visible popup + log,
         # so the app never fails silently (critical for windowed PyInstaller builds).
         install_tk_exception_handler(self.mainWin)
 
+        # Ensure closing via the window's "X" stops tracked background work too
+        # (see on_close), not just destroys the widgets.
+        self.mainWin.protocol("WM_DELETE_WINDOW", self.on_close)
+
         self.context = AppContext()
         self.context.root = self.mainWin
+        # Lets panels (e.g. RexView's Quit button) reuse on_close() instead of
+        # duplicating teardown.
+        self.context.main_gui = self
 
         self.version = VERSION_DISPLAY
         self.mainWin.title(str('OCTooL' + self.version))
@@ -374,6 +401,36 @@ class MainGui:
     @handle_errors("MainGui.start")
     def start(self):
         self.mainWin.mainloop() #start monitoring and updating the GUI
+
+    @handle_errors("MainGui.on_close")
+    def on_close(self):
+        """Handle the window's "X" button: stop background work, then exit.
+        Guarded so it's safe to call twice, or mid-construction."""
+        if getattr(self, "_closing", False):
+            return
+        self._closing = True
+
+        context = getattr(self, "context", None)
+        if context is not None:
+            context.shutdown()
+            context.silence_tcl_background_errors()
+
+        try:
+            # quit() before destroy(): with another Tk root in the process
+            # (a Positron/Spyder kernel's own), destroy() alone wouldn't make
+            # mainloop() return, so %run would never finish.
+            self.mainWin.quit()
+        except tk.TclError:
+            pass
+
+        try:
+            self.mainWin.destroy()
+        except tk.TclError:
+            pass  # Already torn down.
+
+        prev = getattr(self, "_prev_default_root", None)
+        if prev is not None and prev is not self.mainWin:
+            tk._default_root = prev
 
     @handle_errors("MainGui.onHelp")
     def onHelp(self):
