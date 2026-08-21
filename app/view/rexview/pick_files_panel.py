@@ -71,6 +71,12 @@ class pickFilesPanel:
             'All OCT Files inside this folder and subfolders are detected and added to the queue. \n\n' \
             'To supply export range, equidistant slices and refractive index for an OCT file, place a ' \
             'text file with the exact same name (e.g. scan.oct -> scan.txt) in the same folder. \n\n' \
+            'If no exact match exists, a text file named after the specimen base name (the file name ' \
+            'without a trailing run-counter/mode suffix, e.g. scan_0002_Mode3D.oct -> scan.txt) is used ' \
+            'instead, as long as it is unambiguous. If several scans in the folder share that base name ' \
+            'and none of them has its own exact-named text file, the base-name text file is applied only ' \
+            'to the scan with the highest run counter (the newest kept attempt); the others fall back to ' \
+            'default settings. \n\n' \
             'Each line defines one export direction as VIEW:START-END:COUNT:RI (all parts but the range ' \
             'are optional): \n' \
             ' 33-444\n' \
@@ -182,11 +188,7 @@ class pickFilesPanel:
             self._create_progress_popup(len(tmpPathList))
 
             try:
-                for index, file_path in enumerate(tmpPathList, start=1):
-                    if self.running == 1:
-                        break
-                    self.tmpFileList.extend(self._build_entries_for_file(Path(file_path)))
-                    self._update_progress_popup(index)
+                self.tmpFileList = self._process_files_parallel(tmpPathList)
             finally:
                 self._destroy_progress_popup()
 
@@ -282,6 +284,55 @@ class pickFilesPanel:
                 pass
             finally:
                 self.popup = None
+
+    def _process_files_parallel(self, file_paths):
+        """
+        Extract metadata and sidecar settings for multiple OCT files concurrently.
+
+        Each file's zip/XML read and sidecar resolution (FileDiscoveryService
+        .process_file, pure logic with no Tk calls) is dispatched to a small
+        worker pool so their I/O overlaps instead of serializing, which
+        matters most on network drives. Error dialogs and TreeView value
+        conversion happen back on this (background picker) thread, since
+        they must not run concurrently from multiple threads.
+
+        Parameters
+        ----------
+        file_paths : list
+            OCT file paths to process, in the desired result order.
+
+        Returns
+        -------
+        list
+            Flattened list of entry tuples for TreeView, in file_paths order.
+        """
+        show_errors = self.globalSettings.getErrorState() == "selected"
+        max_workers = min(8, max(1, len(file_paths)))
+
+        results = [None] * len(file_paths)
+        with futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+            future_to_index = {
+                pool.submit(self._file_discovery_service.process_file, Path(fp), show_errors): i
+                for i, fp in enumerate(file_paths)
+            }
+            completed = 0
+            for future in futures.as_completed(future_to_index):
+                index = future_to_index[future]
+                if self.running == 1:
+                    break
+                results[index] = future.result()
+                completed += 1
+                self._update_progress_popup(completed)
+
+        entries = []
+        for result in results:
+            if result is None:
+                continue
+            items, error_msg = result
+            if error_msg:
+                dialogs.show_error(self.root, "Metadata File Issue", error_msg)
+            entries.extend(list(item.to_treeview_values()) for item in items)
+        return entries
 
     def _build_entries_for_file(self, file_path: Path):
         """
