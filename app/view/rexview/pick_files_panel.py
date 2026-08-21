@@ -60,6 +60,12 @@ class pickFilesPanel:
         # Initialize FileDiscoveryService with XML reader
         self._file_discovery_service = FileDiscoveryService(xml_dict_reader=octF.getXMLDiscoveryInfo)
 
+        # Reused single-worker executor for the picker background thread.
+        # max_workers=1 already serializes runs, so one long-lived executor
+        # avoids leaking a fresh non-daemon thread pool on every click.
+        self._picker_executor = futures.ThreadPoolExecutor(max_workers=1)
+        self.context.register_executor(self._picker_executor)
+
         # Add buttons and instructions here
         self.pickFolderToolTip = 'Choose a folder whichs contains at least one OCT file. ' \
             'All OCT Files inside this folder and subfolders are detected and added to the queue. \n\n' \
@@ -131,9 +137,8 @@ class pickFilesPanel:
         '''
         #print('starting')
         self.running = 0
-        # create a thread to keep UI responsive
-        threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
-        threadPoolExecutor.submit(self.globalPicker, var)
+        # run on the shared background executor to keep UI responsive
+        self._picker_executor.submit(self.globalPicker, var)
 
 
     @handle_errors("pickFilesPanel")
