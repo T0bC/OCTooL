@@ -150,7 +150,7 @@ class imagePanel:
             averaging=self.globalSettingsFrame.averagingMenu.get(),
             tukey_size=self.globalSettingsFrame.getTukeyWinSize(),
             advanced_filter_state=self.globalSettingsFrame.getAdvancedFilter(),
-            dispersion=self.customSettingsFrame.getDispersion(),
+            dispersion=(self.customSettingsFrame.getDispersion()[0], self.treeView.getValue(column='Disp. Coeff')),
             canvas_width=self.canvas.winfo_width(),
             canvas_height=self.canvas.winfo_height(),
         )
