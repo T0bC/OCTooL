@@ -67,6 +67,11 @@ class KeybindingManager:
         }
         self.save_timer = None
 
+        # Reused single-worker executor for background saves triggered by
+        # debounce_save/_save_all, tracked so it can be shut down on exit.
+        self._save_executor = ThreadPoolExecutor(max_workers=1)
+        self.annotate_panel.context.register_executor(self._save_executor)
+
         self.undo_stack = []
         self.annotate_panel.window.bind("<Control-z>", lambda e: self.undo_last())
         self.annotate_panel.window.bind("<Control-u>", lambda e: self.open_undo_panel())
@@ -166,9 +171,7 @@ class KeybindingManager:
      # %% Save Measurements, Annotations and Config
     def _save_all(self):
         saver = DataSaver(self.annotate_panel.context)
-
-        executor = ThreadPoolExecutor(max_workers=1)
-        executor.submit(saver.save_all)
+        self._save_executor.submit(saver.save_all)
 
 
     def debounce_save(self, delay=1.5):
@@ -176,6 +179,7 @@ class KeybindingManager:
             self.save_timer.cancel()
 
         self.save_timer = threading.Timer(delay, self._save_all)
+        self.annotate_panel.context.register_timer(self.save_timer, on_pending=self._save_all)
         self.save_timer.start()
 
 
