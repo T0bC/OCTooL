@@ -40,6 +40,7 @@ from typing import Dict, List, Optional, Callable, Any
 from dataclasses import dataclass
 from pathlib import Path
 import os
+import re
 from fnmatch import fnmatch
 
 from app.logic.rexview.models import QueueItem, FileMetadata, ExportSettings
@@ -80,7 +81,17 @@ class FileDiscoveryService:
     
     # Default dispersion coefficient
     DEFAULT_DISPERSION = 20
-    
+
+    # Matches a trailing run-counter/mode suffix on an OCT scan stem, e.g.
+    # "SBU_t7_P02_14_0001_Mode3D" -> base "SBU_t7_P02_14", run counter 1.
+    RUN_COUNTER_SUFFIX_PATTERN = re.compile(r'^(?P<base>.*?)_(?P<counter>\d+)_[A-Za-z0-9]+$')
+
+    # Matches export-output folder names created by RexView itself, e.g.
+    # "01_scan_25_Slices_XZ". These never contain .oct files, so pruning
+    # them from os.walk avoids descending into (often large) previous
+    # export results, which is expensive on network drives.
+    EXPORT_FOLDER_PATTERN = re.compile(r'^\d+_.+_Slices_(XZ|YZ|XY)$')
+
     def __init__(
         self,
         xml_reader: Optional[Callable[[str, str], str]] = None,
@@ -132,7 +143,12 @@ class FileDiscoveryService:
                 return DiscoveryResult(files=[], total_found=0, errors=errors)
             
             if recursive:
-                for root, _, files in os.walk(folder_path):
+                for root, dirs, files in os.walk(folder_path):
+                    # Prune RexView's own export-output folders in place so
+                    # os.walk never descends into them — they never contain
+                    # .oct files, and skipping them avoids costly extra
+                    # listdir round-trips on network drives.
+                    dirs[:] = [d for d in dirs if not self.EXPORT_FOLDER_PATTERN.match(d)]
                     for file in files:
                         if fnmatch(file, self.OCT_PATTERN):
                             oct_files.append(Path(root) / file)
@@ -372,7 +388,91 @@ class FileDiscoveryService:
         """
         oct_file_path = Path(oct_file_path)
         return oct_file_path.parent / (oct_file_path.stem + ".txt")
-    
+
+    def _derive_scan_base_name(self, stem: str) -> tuple:
+        """
+        Split an OCT scan stem into (base_name, run_counter).
+
+        Strips a trailing "_<digits>_<Mode>" suffix (e.g. "_0001_Mode3D") to
+        recover the specimen base name shared across repeated scan attempts.
+        run_counter is None when the stem doesn't match that pattern, so it
+        never wins a "highest counter" comparison against a stem that does.
+
+        Args:
+            stem: OCT file stem (filename without extension)
+
+        Returns:
+            Tuple of (base_name, run_counter or None)
+        """
+        match = self.RUN_COUNTER_SUFFIX_PATTERN.match(stem)
+        if not match:
+            return stem, None
+        return match.group('base'), int(match.group('counter'))
+
+    def resolve_sidecar_path(
+        self,
+        oct_file_path: Path,
+        all_oct_files_in_dir: Optional[List[Path]] = None,
+    ) -> Optional[Path]:
+        """
+        Resolve the sidecar metadata file for an OCT file, tolerating sidecars
+        named after the specimen base name rather than the exact scan stem.
+
+        Resolution order:
+        1. Exact stem match (see get_sidecar_path) always wins when present —
+           it unambiguously names one specific scan, regardless of how many
+           sibling scans exist in the directory.
+        2. Otherwise, a sidecar named after the specimen base name (stem with
+           the trailing "_<digits>_<Mode>" run-counter/mode suffix stripped)
+           is used, but only for .oct files in the directory that share that
+           base name and have no exact-named sidecar of their own. If more
+           than one such file remains, the base-name sidecar is applied only
+           to the one with the highest run counter (assumed to be the scan
+           the user kept as final/best); the rest fall back to defaults.
+
+        Args:
+            oct_file_path: Path to OCT file
+            all_oct_files_in_dir: Sibling .oct files in the same directory,
+                used for base-name disambiguation. If not provided, siblings
+                are discovered via Path.glob('*.oct').
+
+        Returns:
+            Path to the resolved sidecar .txt file, or None if no exact or
+            base-name sidecar applies to this file.
+        """
+        oct_file_path = Path(oct_file_path)
+
+        exact_path = self.get_sidecar_path(oct_file_path)
+        if exact_path.exists():
+            return exact_path
+
+        if all_oct_files_in_dir is None:
+            all_oct_files_in_dir = sorted(oct_file_path.parent.glob('*.oct'))
+
+        base_name, _ = self._derive_scan_base_name(oct_file_path.stem)
+        base_sidecar = oct_file_path.parent / f"{base_name}.txt"
+        if not base_sidecar.exists():
+            return None
+
+        # Only .oct siblings that share this base name AND have no exact
+        # sidecar of their own compete for the base-name sidecar.
+        competitors = []
+        for candidate in all_oct_files_in_dir:
+            cand_base, cand_counter = self._derive_scan_base_name(candidate.stem)
+            if cand_base != base_name:
+                continue
+            if self.get_sidecar_path(candidate).exists():
+                continue
+            competitors.append((candidate, cand_counter))
+
+        if len(competitors) <= 1:
+            return base_sidecar
+
+        highest = max(competitors, key=lambda c: (c[1] is not None, c[1] or 0))
+        if highest[0] == oct_file_path:
+            return base_sidecar
+        return None
+
     def get_default_export_settings(self, dim_y: int) -> Dict[str, ExportSettings]:
         """
         Get default export settings when no sidecar file exists.
@@ -425,10 +525,10 @@ class FileDiscoveryService:
             if show_errors:
                 error_msg = f"Error parsing metadata file:\n{ve}\n\nUsing default range as fallback."
             return self.get_default_export_settings(dim_y), error_msg
-        except RuntimeError as re:
+        except RuntimeError as runtime_err:
             error_msg = None
             if show_errors:
-                error_msg = f"Unable to read metadata file:\n{re}\n\nUsing default range as fallback."
+                error_msg = f"Unable to read metadata file:\n{runtime_err}\n\nUsing default range as fallback."
             return self.get_default_export_settings(dim_y), error_msg
     
     def build_queue_items_for_file(
@@ -498,9 +598,10 @@ class FileDiscoveryService:
         
         # Extract metadata
         metadata = self.extract_metadata(file_path)
-        
-        # Get sidecar path and parse
-        sidecar_path = self.get_sidecar_path(file_path)
+
+        # Resolve sidecar path (exact stem match, or an unambiguous
+        # base-name match) and parse it
+        sidecar_path = self.resolve_sidecar_path(file_path) or self.get_sidecar_path(file_path)
         export_settings, error_msg = self.handle_metadata_parsing(
             sidecar_path,
             metadata.dim_y,
