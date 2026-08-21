@@ -57,6 +57,10 @@ class loadImagePanel:
         self.frame = context.get_frame("load")
         self.config_manager = context.config_manager
 
+        # Reused single-worker executor for the picker background thread.
+        self._picker_executor = futures.ThreadPoolExecutor(max_workers=1)
+        self.context.register_executor(self._picker_executor)
+
 
         self.frame.columnconfigure(0, weight=1)
         self.frame.columnconfigure(1, weight=1)
@@ -100,8 +104,7 @@ class loadImagePanel:
     # %% Threaded Image Picker
     def globalPickerThread(self):
         self.running = 0
-        threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
-        threadPoolExecutor.submit(self.getImagePaths)
+        self._picker_executor.submit(self.getImagePaths)
 
 
     @handle_errors("Error in getImagePaths")
