@@ -117,6 +117,23 @@ class TestScanDirectory:
             assert result.total_found == 0
             assert len(result.errors) == 0
 
+    @pytest.mark.unit
+    def test_scan_prunes_export_output_folders(self, service):
+        """GIVEN a previous export-output folder alongside a source .oct
+        file, WHEN scan_directory, THEN the export folder is not descended
+        into (its .oct-named contents, if any, are not returned)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            (Path(tmpdir) / "scan_0001_Mode3D.oct").touch()
+
+            export_dir = Path(tmpdir) / "01_scan_25_Slices_XZ"
+            export_dir.mkdir()
+            # Something that would be found if the walk didn't prune this dir.
+            (export_dir / "decoy.oct").touch()
+
+            result = service.scan_directory(Path(tmpdir), recursive=True)
+            assert result.total_found == 1
+            assert result.files[0].name == "scan_0001_Mode3D.oct"
+
 
 class TestValidateFile:
     """Tests for FileDiscoveryService.validate_file method."""
@@ -414,6 +431,114 @@ class TestGetSidecarPath:
         """GIVEN OCT path with complex name, WHEN get_sidecar_path, THEN preserves name."""
         result = service.get_sidecar_path(Path("/data/my_complex_scan_001.oct"))
         assert result.name == "my_complex_scan_001.txt"
+
+
+class TestResolveSidecarPath:
+    """Tests for FileDiscoveryService.resolve_sidecar_path method."""
+
+    @pytest.fixture
+    def service(self):
+        return FileDiscoveryService()
+
+    @pytest.mark.unit
+    def test_exact_match_used_when_present(self, service):
+        """GIVEN exact-named sidecar, WHEN resolve, THEN it is used."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            oct_path = Path(tmpdir) / "scan_0001_Mode3D.oct"
+            oct_path.touch()
+            (Path(tmpdir) / "scan_0001_Mode3D.txt").touch()
+
+            result = service.resolve_sidecar_path(oct_path)
+            assert result == Path(tmpdir) / "scan_0001_Mode3D.txt"
+
+    @pytest.mark.unit
+    def test_exact_match_wins_over_higher_numbered_sibling(self, service):
+        """GIVEN exact sidecar AND a base-name sidecar with a higher-numbered
+        sibling present, WHEN resolve, THEN the exact match is still used
+        (never overridden by the "highest counter wins" heuristic)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            low = Path(tmpdir) / "scan_0001_Mode3D.oct"
+            high = Path(tmpdir) / "scan_0002_Mode3D.oct"
+            low.touch()
+            high.touch()
+            (Path(tmpdir) / "scan_0001_Mode3D.txt").touch()  # exact match for `low`
+            (Path(tmpdir) / "scan.txt").touch()  # base-name sidecar
+
+            result = service.resolve_sidecar_path(low, [low, high])
+            assert result == Path(tmpdir) / "scan_0001_Mode3D.txt"
+
+    @pytest.mark.unit
+    def test_base_name_fallback_single_file(self, service):
+        """GIVEN only a base-name sidecar and a single .oct file, WHEN
+        resolve, THEN the base-name sidecar is used."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            oct_path = Path(tmpdir) / "scan_0001_Mode3D.oct"
+            oct_path.touch()
+            (Path(tmpdir) / "scan.txt").touch()
+
+            result = service.resolve_sidecar_path(oct_path)
+            assert result == Path(tmpdir) / "scan.txt"
+
+    @pytest.mark.unit
+    def test_base_name_fallback_applies_to_highest_counter_only(self, service):
+        """GIVEN multiple .oct files sharing a base name and only a
+        base-name sidecar, WHEN resolve, THEN only the highest run-counter
+        file gets it; lower-numbered siblings get None."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            first = Path(tmpdir) / "scan_0001_Mode3D.oct"
+            second = Path(tmpdir) / "scan_0002_Mode3D.oct"
+            third = Path(tmpdir) / "scan_0003_Mode3D.oct"
+            for f in (first, second, third):
+                f.touch()
+            (Path(tmpdir) / "scan.txt").touch()
+
+            siblings = [first, second, third]
+            assert service.resolve_sidecar_path(third, siblings) == Path(tmpdir) / "scan.txt"
+            assert service.resolve_sidecar_path(second, siblings) is None
+            assert service.resolve_sidecar_path(first, siblings) is None
+
+    @pytest.mark.unit
+    def test_mixed_exact_and_base_name_fallback(self, service):
+        """GIVEN three scans where the middle one has its own exact sidecar
+        and a base-name sidecar also exists, WHEN resolve, THEN the middle
+        scan uses its exact sidecar and the base-name sidecar applies to the
+        highest-numbered *remaining* scan, not the one with the exact match."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            first = Path(tmpdir) / "scan_0001_Mode3D.oct"
+            second = Path(tmpdir) / "scan_0002_Mode3D.oct"
+            third = Path(tmpdir) / "scan_0003_Mode3D.oct"
+            for f in (first, second, third):
+                f.touch()
+            (Path(tmpdir) / "scan_0002_Mode3D.txt").touch()  # exact match for `second`
+            (Path(tmpdir) / "scan.txt").touch()  # base-name sidecar
+
+            siblings = [first, second, third]
+            assert service.resolve_sidecar_path(second, siblings) == Path(tmpdir) / "scan_0002_Mode3D.txt"
+            assert service.resolve_sidecar_path(third, siblings) == Path(tmpdir) / "scan.txt"
+            assert service.resolve_sidecar_path(first, siblings) is None
+
+    @pytest.mark.unit
+    def test_no_sidecar_at_all_returns_none(self, service):
+        """GIVEN no exact or base-name sidecar, WHEN resolve, THEN None."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            oct_path = Path(tmpdir) / "scan_0001_Mode3D.oct"
+            oct_path.touch()
+
+            result = service.resolve_sidecar_path(oct_path)
+            assert result is None
+
+    @pytest.mark.unit
+    def test_stem_without_run_counter_pattern_uses_own_stem_as_base(self, service):
+        """GIVEN a stem that doesn't match the run-counter/mode pattern,
+        WHEN resolve, THEN the base name falls back to the full stem
+        (equivalent to an exact-name lookup)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            oct_path = Path(tmpdir) / "plainscan.oct"
+            oct_path.touch()
+            (Path(tmpdir) / "plainscan.txt").touch()
+
+            result = service.resolve_sidecar_path(oct_path)
+            assert result == Path(tmpdir) / "plainscan.txt"
 
 
 class TestGetDefaultExportSettings:
