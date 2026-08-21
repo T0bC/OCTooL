@@ -79,6 +79,12 @@ class executionPanel:
         # Maps a file path to the queued TreeView item ids awaiting a result.
         self._items_by_path = {}
 
+        # Reused single-worker executor that drives the export coordinator
+        # off the UI thread. One long-lived executor avoids leaking a fresh
+        # non-daemon thread pool on every export run.
+        self._export_executor = futures.ThreadPoolExecutor(max_workers=1)
+        self.context.register_executor(self._export_executor)
+
         self.executeBtn = ttk.Button(self.frame, text='RexView!', width=10,
                                      command=self.mainRoutine,
                                      bootstyle="success")
@@ -143,9 +149,8 @@ class executionPanel:
 
         self.context.safe_status_update(f"Starting export of {len(tasks)} file(s)...", level="info", duration=3000)
 
-        # Run the pool from a single helper thread so the UI stays responsive.
-        threadPoolExecutor = futures.ThreadPoolExecutor(max_workers=1)
-        threadPoolExecutor.submit(self.mainRoutines, tasks, config.worker_count)
+        # Run the pool from the shared helper thread so the UI stays responsive.
+        self._export_executor.submit(self.mainRoutines, tasks, config.worker_count)
 
     @handle_errors("executionPanel")
     def mainRoutines(self, tasks, worker_count=None):
@@ -204,17 +209,34 @@ class executionPanel:
 
     def endProgram(self):
         '''
-        terminates the programm.
+        Terminates the program.
 
         Returns
         -------
         None.
 
         '''
-        #print('Exit - Nothing Happend!')
         self.endStatus = 1
-        self.mainWin.quit()
-        self.mainWin.destroy()
+        self.export_coordinator.cancel()
+        self.export_service.cancel()
+
+        # Delegate teardown to the same on_close() the window's "X" uses.
+        try:
+            self.mainWin.quit()
+        except tk.TclError:
+            pass
+
+        main_gui = getattr(self.context, "main_gui", None)
+        if main_gui is not None:
+            main_gui.on_close()
+            return
+
+        self.context.shutdown()
+        self.context.silence_tcl_background_errors()
+        try:
+            self.mainWin.destroy()
+        except tk.TclError:
+            pass
 
     def _collect_export_config(self) -> ExportConfig:
         """
