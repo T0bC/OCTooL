@@ -174,6 +174,8 @@
         "actions": [
           "▸ Name a .txt file exactly like the OCT file: scan.oct → scan.txt",
           "▸ Place it in the same folder to auto-import its settings",
+          "▸ No exact match? A base-name .txt (e.g. scan_0002_Mode3D.oct → scan.txt) is used instead when unambiguous",
+          "▸ Multiple scans share that base name? It applies to the highest-numbered one only",
           "▸ One line per view: VIEW:START-END:COUNT:RI (e.g. XZ:33-444:25:1.35)"
         ]
       },
@@ -197,7 +199,7 @@
         "⚙️ Save settings presets",
         "📊 Add scale bars",
         "🎨 Customize overlays",
-        "📝 Sidecar .txt must match OCT filename exactly"
+        "📝 Sidecar .txt: exact name preferred, base-name fallback if unambiguous"
       ]
     }
   }
