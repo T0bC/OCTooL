@@ -23,6 +23,10 @@ editor: visual
 
 -   Corrected the sidecar metadata file tooltip to document the actual `VIEW:START-END:COUNT:RI` line format expected by the parser, including the requirement that the `.txt` file name matches the OCT file name exactly
 -   Added a dedicated "Sidecar Metadata File" step and quick tip to the RexView Getting Started guide
+-   Sidecar metadata resolution now falls back to a specimen base-name `.txt` file (stripping the trailing run-counter/mode suffix, e.g. `scan_0002_Mode3D.oct` → `scan.txt`) when no exact-named sidecar exists, resolved per-directory so it never guesses across an unrelated ambiguous match
+-   When multiple scans in a folder share a base name and only a base-name sidecar exists, it is now applied to the highest run-counter scan only; an exact-named sidecar always takes priority over this fallback for its own scan
+-   Folder scanning now prunes RexView's own previous export-output folders (`NN_..._Slices_XZ/YZ/XY`) from the directory walk, and per-file metadata/sidecar extraction during folder scans now runs in parallel across a small worker pool, both reducing scan time on large or network-drive folders
+-   Fixed the per-file dispersion coefficient (derived from the OCT device serial number) being silently overridden by the global Custom Settings panel value when previewing ("Show") or exporting a queued file; both paths now correctly use the per-row `Disp. Coeff` value shown in the queue
 
 ## UI Polish
 
