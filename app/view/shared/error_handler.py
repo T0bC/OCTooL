@@ -62,7 +62,12 @@ def show_error_popup(title, message):
 
     # If we're off the main thread, schedule the popup on the GUI thread.
     if threading.current_thread() is not threading.main_thread():
-        root.after(0, lambda: _build_error_popup(root, title, message))
+        # The window may have been closed between the error occurring and
+        # this callback being scheduled.
+        try:
+            root.after(0, lambda: _build_error_popup(root, title, message))
+        except Exception:
+            pass
         return
 
     _build_error_popup(root, title, message)
