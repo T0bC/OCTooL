@@ -10,10 +10,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# IDE
-.idea/
-.vscode/
-
 # Local development data & logs
 testData/
 logs/
@@ -30,7 +26,3 @@ HTML_docs/forPublication/
 build/
 dist/
 *.spec.bak
-
-# tempImplementation
-toImplement
-.claude/settings.local.json
