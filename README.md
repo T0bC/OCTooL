@@ -1,6 +1,6 @@
 # OCTooL
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22128111.svg)](https://doi.org/10.5281/zenodo.22128111)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22128110.svg)](https://doi.org/10.5281/zenodo.22128110)
 
 **OCTooL** is a software application designed for the export, analysis, and quantification of Optical Coherence Tomography (OCT) images. Developed specifically for dental and medical research applications, OCTooL provides researchers and clinicians with powerful tools to extract quantitative data from OCT imaging studies.
 
