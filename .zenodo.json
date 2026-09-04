@@ -6,13 +6,18 @@
       "orcid": "0009-0007-4050-8182"
     },
     {
-      "name": "Bemmann, Maximilian",
+      "name": "Schneider, Hartmut",
       "affiliation": "Leipzig University, Department of Cariology, Endodontology and Periodontology"
     },
     {
-      "name": "Golde, Jonas",
-      "affiliation": "Fraunhofer Institute for Material and Beam Technology (IWS), Technische Universität Dresden",
-      "orcid": "0000-0002-8160-3000"
+      "name": "Haak, Rainer",
+      "affiliation": "Leipzig University, Department of Cariology, Endodontology and Periodontology",
+      "orcid": "0000-0002-3716-4231"
+    },
+    {
+      "name": "Schulz-Kornas, Ellen",
+      "affiliation": "Leipzig University, Department of Cariology, Endodontology and Periodontology",
+      "orcid": "0000-0003-1657-8256"
     }
   ],
   "title": "OCTooL: Optical Coherence Tomography Tool",
@@ -33,5 +38,5 @@
   "version": "2026.7",
   "publication_date": "2026-08-20",
   "access_right": "open",
-  "notes": "Author contributions by module:\n\n- Tobias Meißner: Main developer and maintainer of OCTooL. Led architecture and development across all modules (RexView, AnnoLyze, CarlQuant), GUI design, error handling, documentation, and release management.\n\n- Maximilian Bemmann: Co-developed the prototype for the CarlQuant quantitative analysis module (lesion depth detection algorithms) during his affiliation at Leipzig University.\n\n- Jonas Golde: Provided the foundational OCT spectral-to-grayvalue conversion algorithm (originally implemented in MATLAB) that underpins the RexView module's image reconstruction logic.\n\nGenerative AI tools were used to assist with code generation, debugging, and documentation drafting during the development of this software. The authors reviewed all AI-generated content for correctness, functionality, and scientific accuracy and take full responsibility for the final published work. The following model(s) or application(s) were used: Claude Sonnet 4.6, Claude Opus 4.5, Kimi 2.5."
+  "notes": "Tobias Meißner is the main developer and maintainer of OCTooL, and led architecture and development across all modules (RexView, AnnoLyze, CarlQuant), GUI design, error handling, documentation, and release management. Hartmut Schneider, Rainer Haak, and Ellen Schulz-Kornas contributed to the study conception, dental research context, and manuscript preparation underlying the associated publication.\n\nAcknowledgments: Maximilian Bemmann (former member of the Leipzig University working group) implemented the initial CarlQuant prototype in MATLAB. Jonas Golde (Fraunhofer Institute for Material and Beam Technology (IWS), Technische Universität Dresden) provided the foundational OCT spectral-to-grayvalue conversion algorithm (originally implemented in MATLAB) that underpins the RexView module's image reconstruction logic, developed during the joint Inno-Fill project.\n\nGenerative AI tools were used to assist with code generation, debugging, and documentation drafting during the development of this software. The authors reviewed all AI-generated content for correctness, functionality, and scientific accuracy and take full responsibility for the final published work. The following model(s) or application(s) were used: Claude Sonnet 4.6, Claude Opus 4.5, Kimi 2.5."
 }
