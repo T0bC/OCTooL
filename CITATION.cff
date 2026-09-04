@@ -9,17 +9,23 @@ authors:
     affiliation: >-
       Leipzig University, Department of Cariology,
       Endodontology and Periodontology
-  - family-names: "Bemmann"
-    given-names: "Maximilian"
+  - family-names: "Schneider"
+    given-names: "Hartmut"
     affiliation: >-
       Leipzig University, Department of Cariology,
       Endodontology and Periodontology
-  - family-names: "Golde"
-    given-names: "Jonas"
-    orcid: "https://orcid.org/0000-0002-8160-3000"
+  - family-names: "Haak"
+    given-names: "Rainer"
+    orcid: "https://orcid.org/0000-0002-3716-4231"
     affiliation: >-
-      Fraunhofer Institute for Material and Beam Technology (IWS),
-      Technische Universität Dresden
+      Leipzig University, Department of Cariology,
+      Endodontology and Periodontology
+  - family-names: "Schulz-Kornas"
+    given-names: "Ellen"
+    orcid: "https://orcid.org/0000-0003-1657-8256"
+    affiliation: >-
+      Leipzig University, Department of Cariology,
+      Endodontology and Periodontology
 abstract: >-
   OCTooL is a comprehensive software application designed for the export,
   analysis, and quantification of Optical Coherence Tomography (OCT)
@@ -42,20 +48,21 @@ version: 2026.7
 date-released: 2026-08-20
 license: GPL-3.0-or-later
 notes: >-
-  Author contributions by module:
+  Tobias Meißner is the main developer and maintainer of OCTooL, and led
+  architecture and development across all modules (RexView, AnnoLyze,
+  CarlQuant), GUI design, error handling, documentation, and release
+  management. Hartmut Schneider, Rainer Haak, and Ellen Schulz-Kornas
+  contributed to the study conception, dental research context, and
+  manuscript preparation underlying the associated publication.
 
-  - Tobias Meißner: Main developer and maintainer of OCTooL. Led
-    architecture and development across all modules (Export, Analyze,
-    CarlQuant), GUI design, error handling, documentation, and release
-    management.
-
-  - Maximilian Bemmann: Co-developed the prototype for the CarlQuant
-    quantitative analysis module (lesion depth detection algorithms)
-    during his affiliation at Leipzig University.
-
-  - Jonas Golde: Provided the foundational OCT spectral-to-grayvalue
-    conversion algorithm (originally implemented in MATLAB) that
-    underpins the Export module's image reconstruction logic.
+  Acknowledgments: Maximilian Bemmann (former member of the Leipzig
+  University working group) implemented the initial CarlQuant prototype
+  in MATLAB. Jonas Golde (Fraunhofer Institute for Material and Beam
+  Technology (IWS), Technische Universität Dresden) provided the
+  foundational OCT spectral-to-grayvalue conversion algorithm
+  (originally implemented in MATLAB) that underpins the RexView module's
+  image reconstruction logic, developed during the joint Inno-Fill
+  project.
 
   Generative AI tools were used to assist with code generation,
   debugging, and documentation drafting during the development of this
