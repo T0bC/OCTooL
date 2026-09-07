@@ -219,3 +219,87 @@ def test_mismatched_ground_truth_file_is_refused(tmp_path):
 
     assert panel.ground_truth_marks == {}
     assert messages and messages[0][1] == "error"
+
+
+# ============================================================================
+# B-scan display follows the A-Scan viewer's toggle, not validation mode
+# ============================================================================
+
+
+class FakeDialog:
+    def winfo_exists(self):
+        return True
+
+
+class FakeToggle:
+    def __init__(self, value):
+        self.value = value
+
+    def get(self):
+        return self.value
+
+
+class FakeAScanViewer:
+    def __init__(self, show_ground_truth):
+        self.dialog = FakeDialog()
+        self.show_ground_truth = FakeToggle(show_ground_truth)
+
+
+def attach_ascan_viewer(panel, viewer):
+    """Give the panel a results panel exposing an active A-Scan viewer."""
+    results_panel = SimpleNamespace(active_ascan_viewer=viewer)
+    panel.context.get_panel = lambda name: (
+        results_panel if name == "carl_results" else None)
+
+
+@pytest.mark.unit
+def test_ground_truth_shows_while_marking(tmp_path):
+    """GIVEN validation mode on, WHEN checking, THEN ground truth is shown."""
+    panel, _ = make_panel(tmp_path)
+    attach_ascan_viewer(panel, None)
+
+    assert panel.should_show_ground_truth() is True
+
+
+@pytest.mark.unit
+def test_ground_truth_shows_when_the_ascan_toggle_is_on(tmp_path):
+    """GIVEN the A-Scan toggle on, WHEN validation mode is off, THEN it still shows.
+
+    Reading a disagreement means looking at both views, so the B-scan follows
+    the A-Scan viewer rather than requiring validation mode as well.
+    """
+    panel, _ = make_panel(tmp_path)
+    panel.validation_mode = False
+    attach_ascan_viewer(panel, FakeAScanViewer(show_ground_truth=True))
+
+    assert panel.should_show_ground_truth() is True
+
+
+@pytest.mark.unit
+def test_ground_truth_hidden_when_both_are_off(tmp_path):
+    """GIVEN both off, WHEN checking, THEN nothing is drawn."""
+    panel, _ = make_panel(tmp_path)
+    panel.validation_mode = False
+    attach_ascan_viewer(panel, FakeAScanViewer(show_ground_truth=False))
+
+    assert panel.should_show_ground_truth() is False
+
+
+@pytest.mark.unit
+def test_ground_truth_hidden_with_no_ascan_viewer_open(tmp_path):
+    """GIVEN no A-Scan viewer, WHEN validation mode is off, THEN nothing is drawn."""
+    panel, _ = make_panel(tmp_path)
+    panel.validation_mode = False
+    attach_ascan_viewer(panel, None)
+
+    assert panel.should_show_ground_truth() is False
+
+
+@pytest.mark.unit
+def test_ground_truth_hidden_when_no_results_panel(tmp_path):
+    """GIVEN no results panel, WHEN checking, THEN it fails closed rather than raising."""
+    panel, _ = make_panel(tmp_path)
+    panel.validation_mode = False
+    panel.context.get_panel = lambda name: None
+
+    assert panel.should_show_ground_truth() is False
