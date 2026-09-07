@@ -244,3 +244,149 @@ def test_all_methods_are_readable_from_a_column():
     column = make_column()
     for method in val.METHODS:
         assert np.isfinite(val.method_depth(column, method))
+
+
+# ============================================================================
+# Interpolation between marks -- display only, never scored
+# ============================================================================
+
+
+@pytest.mark.unit
+def test_interpolation_passes_through_the_marks():
+    """GIVEN marks, WHEN interpolating, THEN the curve hits them exactly.
+
+    Marks are deliberate operator judgements, so a smoothing fit that moved
+    them would misrepresent what was clicked.
+    """
+    marks = [(100.0, 50.0), (120.0, 60.0), (140.0, 55.0), (160.0, 70.0)]
+    x_values, y_values = val.interpolate_marks(marks)
+
+    for mark_x, mark_y in marks:
+        index = int(np.argmin(np.abs(x_values - mark_x)))
+        assert y_values[index] == pytest.approx(mark_y, abs=0.5)
+
+
+@pytest.mark.unit
+def test_interpolation_fills_the_gaps_between_marks():
+    """GIVEN marks ~20px apart, WHEN interpolating, THEN every column is covered.
+
+    An operator places ~18 marks over ~375px, so most columns have no mark of
+    their own; filling them is the point of this function.
+    """
+    marks = [(100.0, 50.0), (122.0, 60.0), (145.0, 58.0)]
+    x_values, _ = val.interpolate_marks(marks)
+
+    assert x_values[0] == 100
+    assert x_values[-1] == 145
+    # 1 px spacing across the marked range.
+    assert len(x_values) == 46
+
+
+@pytest.mark.unit
+def test_interpolation_is_clipped_to_the_marked_range():
+    """GIVEN a column outside the marks, WHEN asking, THEN None is returned.
+
+    Beyond the outermost mark there is no operator judgement to infer from.
+    """
+    marks = [(100.0, 50.0), (150.0, 60.0)]
+
+    assert val.interpolated_mark_at(marks, 99) is None
+    assert val.interpolated_mark_at(marks, 151) is None
+    assert val.interpolated_mark_at(marks, 125) is not None
+
+
+@pytest.mark.unit
+def test_interpolated_value_between_two_marks_is_between_them():
+    """GIVEN two marks, WHEN interpolating midway, THEN the value lies between."""
+    marks = [(100.0, 50.0), (150.0, 60.0)]
+    midpoint = val.interpolated_mark_at(marks, 125)
+
+    assert 50.0 <= midpoint <= 60.0
+
+
+@pytest.mark.unit
+def test_interpolation_needs_at_least_two_marks():
+    """GIVEN fewer than two marks, WHEN interpolating, THEN None comes back."""
+    assert val.interpolate_marks([]) is None
+    assert val.interpolate_marks([(100.0, 50.0)]) is None
+    assert val.interpolated_mark_at([(100.0, 50.0)], 100) is None
+
+
+@pytest.mark.unit
+def test_interpolation_handles_duplicate_columns():
+    """GIVEN two marks on one column, WHEN interpolating, THEN it averages them."""
+    marks = [(100.0, 50.0), (100.0, 60.0), (150.0, 80.0)]
+    result = val.interpolate_marks(marks)
+
+    assert result is not None
+    assert val.interpolated_mark_at(marks, 100) == pytest.approx(55.0, abs=1.0)
+
+
+@pytest.mark.unit
+def test_interpolation_falls_back_to_linear_for_two_marks():
+    """GIVEN only two marks, WHEN interpolating, THEN a straight join is used.
+
+    A cubic spline needs more points; degree is reduced rather than failing.
+    """
+    marks = [(100.0, 50.0), (200.0, 150.0)]
+    assert val.interpolated_mark_at(marks, 150) == pytest.approx(100.0, abs=1.0)
+
+
+@pytest.mark.unit
+def test_interpolation_does_not_affect_scoring():
+    """GIVEN a column between marks, WHEN scoring, THEN it is still not counted.
+
+    Interpolation is display only; an inferred value must never reach a
+    reported error.
+    """
+    data = {
+        100: make_column(surface_y=100.0, combined=20.0),
+        125: make_column(surface_y=100.0, combined=20.0),
+        150: make_column(surface_y=100.0, combined=20.0),
+    }
+    marks = [(100.0, 115.0), (150.0, 115.0)]
+
+    result = val.score_slice(data, marks)
+    # Two marks scored -- the interpolated column 125 is not one of them.
+    assert result["methods"]["combined"]["n"] == 2
+
+
+@pytest.mark.unit
+def test_interpolation_never_overshoots_between_marks():
+    """GIVEN a step between marks, WHEN interpolating, THEN the curve stays between.
+
+    A plain cubic spline overshot by 35 px on real data across a 29 px gap --
+    deeper than the lesions being measured. The shape-preserving curve must
+    not invent a lesion end no operator marked.
+    """
+    marks = [(100.0, 50.0), (129.0, 50.0), (158.0, 85.0), (187.0, 85.0),
+             (216.0, 85.0)]
+    _, y_values = val.interpolate_marks(marks)
+
+    assert y_values.min() >= 50.0 - 0.01
+    assert y_values.max() <= 85.0 + 0.01
+
+
+@pytest.mark.unit
+def test_interpolation_handles_fractional_mark_coordinates():
+    """GIVEN fractional x, WHEN interpolating, THEN no NaN appears in the curve.
+
+    Real marks are clicked at fractional pixels; rounding the grid outwards
+    put points beyond the marked range, where the curve is undefined.
+    """
+    marks = [(429.13, 74.8), (460.46, 80.2), (500.70, 85.0), (540.90, 88.0)]
+    x_values, y_values = val.interpolate_marks(marks)
+
+    assert not np.isnan(y_values).any()
+    assert x_values[0] >= marks[0][0]
+    assert x_values[-1] <= marks[-1][0]
+
+
+@pytest.mark.unit
+def test_outermost_fractional_marks_are_still_in_range():
+    """GIVEN a mark at a fractional x, WHEN asking at that x, THEN a value comes back."""
+    marks = [(429.13, 74.8), (460.46, 80.2), (540.90, 88.0)]
+
+    assert val.interpolated_mark_at(marks, 429.13) is not None
+    assert val.interpolated_mark_at(marks, 540.90) is not None
+    assert val.interpolated_mark_at(marks, 541.5) is None
