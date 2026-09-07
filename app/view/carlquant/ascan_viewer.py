@@ -50,6 +50,7 @@ from app.logic.carlquant.annotation_colors import (
     KNEE_POINT_COLOR,
     INFLECTION_POINT_COLOR,
     SHOULDER_POINT_COLOR,
+    HALF_SPAN_POINT_COLOR,
     LESION_DEPTH_PRIMARY_COLOR
 )
 
@@ -87,6 +88,7 @@ class AScanViewer:
         self.show_knee_point = tk.BooleanVar(value=False)
         self.show_sigmoid_inflection = tk.BooleanVar(value=False)
         self.show_sigmoid_shoulder = tk.BooleanVar(value=False)
+        self.show_half_span = tk.BooleanVar(value=False)
         self.show_combined_depth = tk.BooleanVar(value=True)
         self.show_exp2_fit = tk.BooleanVar(value=False)
         self.show_sigmoid_fit = tk.BooleanVar(value=False)
@@ -170,10 +172,13 @@ class AScanViewer:
         ttk.Checkbutton(toggles_frame, text="Exp2 Fit Curve", variable=self.show_exp2_fit, 
                        command=lambda: self._update_plot(force_image_sync=True)).grid(row=2, column=1, sticky='w', padx=5, pady=2)
         
-        ttk.Checkbutton(toggles_frame, text="Sigmoid Fit Curve", variable=self.show_sigmoid_fit, 
+        ttk.Checkbutton(toggles_frame, text="Sigmoid Fit Curve", variable=self.show_sigmoid_fit,
                        command=lambda: self._update_plot(force_image_sync=True)).grid(row=3, column=0, sticky='w', padx=5, pady=2)
-        ttk.Checkbutton(toggles_frame, text="Zoom to Analysis", variable=self.zoom_to_analysis, 
+        ttk.Checkbutton(toggles_frame, text="Zoom to Analysis", variable=self.zoom_to_analysis,
                        command=lambda: self._update_plot(force_image_sync=True)).grid(row=3, column=1, sticky='w', padx=5, pady=2)
+
+        ttk.Checkbutton(toggles_frame, text="Half-Span Crossing", variable=self.show_half_span,
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=4, column=0, sticky='w', padx=5, pady=2)
         
         # Slider frame with label above
         slider_container = ttk.Frame(main_frame)
@@ -542,6 +547,21 @@ class AScanViewer:
                             f'Sigmoid Shoulder\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {shoulder_depth:.1f}px',
                             'Sigmoid Shoulder',
                             'd', SHOULDER_POINT_COLOR, 10, 4)
+
+            # Half-span crossing (relative to surface)
+            if self.show_half_span.get() and 'half_span_depth' in metadata:
+                half_span_depth = metadata['half_span_depth']
+                if half_span_depth is not None and not np.isnan(half_span_depth):
+                    absolute_depth = surface_y + half_span_depth
+                    if int(absolute_depth) < len(column_data):
+                        intensity = column_data[int(absolute_depth)]
+                        fraction = metadata.get('half_span_fraction', float('nan'))
+                        self._plot_point_with_hover(
+                            intensity, absolute_depth,
+                            f'Half-Span Crossing\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\n'
+                            f'Depth: {half_span_depth:.1f}px\nFraction: {fraction:.2f}',
+                            'Half-Span Crossing',
+                            'o', HALF_SPAN_POINT_COLOR, 10, 4)
             
             # Combined depth (final result, relative to surface)
             if self.show_combined_depth.get():
