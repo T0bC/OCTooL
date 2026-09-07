@@ -46,6 +46,12 @@ from app.view.shared.instruction_renderer import InstructionRenderer
 from app.view.shared.metadata_prompt import ensure_metadata_set
 from app.logic.carlquant import DataSaver
 from app.logic.carlquant.interpolation import interpolate_region_coordinates, interpolate_air_coordinates
+from app.logic.carlquant.annotation_colors import GROUND_TRUTH_MARK_COLOR
+from app.logic.carlquant.ground_truth import (
+    GroundTruthMismatchError,
+    load_ground_truth,
+    save_ground_truth,
+)
 from app.view.carlquant.annotation_renderer import (
     CoordinateConverter,
     SurfaceAnnotationRenderer,
@@ -116,7 +122,16 @@ class image_viewer_panel(BaseCanvasPanel):
         
         # A-Scan viewer callback (for synchronization)
         self.ascan_viewer_callback = None  # Callback to notify A-Scan viewer of slice changes
-        
+
+        # Validation mode state (ground-truth annotation of the true lesion end).
+        # Off by default: this is a measurement tool and must never be able to
+        # change a reported depth.
+        self.validation_mode = False
+        self.ground_truth_marks = {}        # {slice_index: [(x, y), ...]} image px
+        self.ground_truth_dirty = False     # Unsaved marks pending for this specimen
+        self.ground_truth_specimen_id = None  # Specimen the loaded marks belong to
+        self.validation_changed_callback = None  # Notifies the results panel of edits
+
         # Initialize base class (sets up canvas, zoom, pan, navigation, etc.)
         super().__init__(context, "carl_image", canvas_bg='#505050')
     
@@ -135,6 +150,13 @@ class image_viewer_panel(BaseCanvasPanel):
         self.canvas.bind("<ButtonPress-1>", self.on_canvas_mouse_down, add=True)
         self.canvas.bind("<B1-Motion>", self.on_canvas_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_mouse_up)
+
+        # Validation mode: right-click deletes a mark; 'u' undoes, 'c' clears.
+        # Left-click marking is dispatched from the existing click handler rather
+        # than a competing <ButtonPress-1> binding. Overlay hiding stays on 'h'.
+        self.canvas.bind("<ButtonPress-3>", self.on_validation_right_click, add=True)
+        self.canvas.bind("<u>", self.undo_last_ground_truth_mark)
+        self.canvas.bind("<c>", self.clear_ground_truth_marks_on_slice)
     
     def get_instruction_key(self):
         """Return instruction key for carlquant panel."""
@@ -158,9 +180,14 @@ class image_viewer_panel(BaseCanvasPanel):
     
     def draw_specialized_overlays(self):
         """Draw region boundaries and AIR reference areas after image rendering."""
+        # Ground-truth marks are drawn before the overlay check: marking is done
+        # with the detection overlay hidden ('h'), so the operator's own marks
+        # have to stay visible in exactly that state.
+        self.draw_ground_truth_marks()
+
         if not self.overlays_visible:
             return
-        
+
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
             return
@@ -224,10 +251,19 @@ class image_viewer_panel(BaseCanvasPanel):
             return
         
         # Auto-save previous slice if it has unsaved changes
-        if (self.last_displayed_slice is not None and 
-            self.last_displayed_slice != index and 
+        if (self.last_displayed_slice is not None and
+            self.last_displayed_slice != index and
             self.current_slice_modified):
             self._auto_save_slice(self.last_displayed_slice)
+
+        # Flush ground-truth marks on slice change rather than on every click,
+        # which would feel sluggish while marking.
+        if self.last_displayed_slice is not None and self.last_displayed_slice != index:
+            self.save_ground_truth_marks()
+
+        # Picking up a specimen switch here keeps one specimen's marks from
+        # being displayed -- or saved -- against another.
+        self.sync_ground_truth_to_specimen()
 
         try:
             img_path = image_list[index]
@@ -380,6 +416,12 @@ class image_viewer_panel(BaseCanvasPanel):
         Args:
             event: Mouse button release event
         """
+        # In validation mode a click marks the true lesion end instead of a
+        # region boundary. Region selection is left untouched when it is off.
+        if self.validation_mode:
+            self.add_ground_truth_mark(event)
+            return
+
         # Get current specimen and slice
         specimen_id = getattr(self.context, "current_specimen_id", None)
         if not specimen_id:
@@ -1055,7 +1097,228 @@ class image_viewer_panel(BaseCanvasPanel):
                      show_inflection=show_inflection,
                      show_shoulder=show_shoulder,
                      show_half_span=show_half_span)
-    
+
+    # ============================================================================
+    # VALIDATION MODE (GROUND-TRUTH ANNOTATION)
+    # ============================================================================
+
+    #: How close (image px) a right-click must be to delete a mark.
+    GROUND_TRUTH_DELETE_RADIUS = 10
+
+    @handle_errors("imageViewerPanel.set_validation_mode")
+    def set_validation_mode(self, enabled):
+        """Enable or disable ground-truth marking.
+
+        Loads the specimen's existing marks on activation and flushes any
+        pending ones on deactivation, so marks are never lost by toggling.
+        """
+        enabled = bool(enabled)
+        if enabled == self.validation_mode:
+            return
+
+        self.validation_mode = enabled
+        if enabled:
+            self.load_ground_truth_marks()
+            # Region selection is click-driven too; drop any half-finished one
+            # so a stray boundary is not committed from a marking session.
+            self.region_points = []
+        else:
+            self.save_ground_truth_marks()
+
+        self.render_zoomed_image()
+
+    @handle_errors("imageViewerPanel.load_ground_truth_marks")
+    def load_ground_truth_marks(self):
+        """Load the current specimen's operator marks from disk."""
+        specimen = self._current_specimen()
+        if specimen is None:
+            self.ground_truth_marks = {}
+            return
+
+        try:
+            self.ground_truth_marks = load_ground_truth(specimen)
+        except GroundTruthMismatchError as error:
+            # Marks recorded on another specimen would score as plausible
+            # nonsense, so refuse them and say why rather than loading anyway.
+            self.ground_truth_marks = {}
+            if getattr(self.context, 'status_bar', None):
+                self.context.status_bar.update(str(error), level="error")
+        self.ground_truth_specimen_id = specimen.specimen_id
+        self.ground_truth_dirty = False
+
+    def sync_ground_truth_to_specimen(self):
+        """Reload marks if the displayed specimen changed since they were loaded.
+
+        Marks are absolute pixels into one image stack, so carrying them across
+        a specimen switch would write one specimen's marks into another's file.
+        """
+        specimen = self._current_specimen()
+        specimen_id = specimen.specimen_id if specimen is not None else None
+        if specimen_id == self.ground_truth_specimen_id:
+            return
+
+        # Flush the outgoing specimen's marks before dropping them.
+        self.save_ground_truth_marks()
+        self.ground_truth_marks = {}
+        self.ground_truth_specimen_id = specimen_id
+        self.ground_truth_dirty = False
+        if specimen is not None and self.validation_mode:
+            self.load_ground_truth_marks()
+
+    @handle_errors("imageViewerPanel.save_ground_truth_marks")
+    def save_ground_truth_marks(self, force=False):
+        """Write pending marks to disk.
+
+        Saving happens on slice change, on leaving validation mode and on
+        specimen close rather than on every click, which would be sluggish.
+        """
+        if not (self.ground_truth_dirty or force):
+            return
+
+        # Save against the specimen the marks were loaded from, not whatever is
+        # displayed now: after a specimen switch those differ, and writing to
+        # the wrong file would corrupt another specimen's ground truth.
+        specimen_data = getattr(self.context, "specimen_data", {})
+        specimen = specimen_data.get(self.ground_truth_specimen_id)
+        if specimen is None:
+            return
+
+        save_ground_truth(specimen, self.ground_truth_marks)
+        self.ground_truth_dirty = False
+
+    def _current_specimen(self):
+        """The Specimen currently displayed, or None."""
+        specimen_id = getattr(self.context, "current_specimen_id", None)
+        specimen_data = getattr(self.context, "specimen_data", {})
+        if not specimen_id or specimen_id not in specimen_data:
+            return None
+        return specimen_data[specimen_id]
+
+    def current_slice_index(self):
+        """Zero-based index of the displayed slice."""
+        return int(self.scale.get()) - 1
+
+    def marks_on_current_slice(self):
+        """Operator marks for the displayed slice."""
+        return self.ground_truth_marks.get(self.current_slice_index(), [])
+
+    def _after_marks_changed(self):
+        """Redraw and notify the results panel after marks are edited."""
+        self.ground_truth_dirty = True
+        self.render_zoomed_image()
+        if self.validation_changed_callback:
+            self.validation_changed_callback()
+
+    @handle_errors("imageViewerPanel.add_ground_truth_mark")
+    def add_ground_truth_mark(self, event):
+        """Add a mark at the clicked image coordinate."""
+        image_x, image_y = self.canvas_to_image_coords(event.x, event.y)
+        if image_x is None or image_y is None:
+            return
+
+        slice_index = self.current_slice_index()
+        self.ground_truth_marks.setdefault(slice_index, []).append(
+            (float(image_x), float(image_y)))
+        self._after_marks_changed()
+
+        if getattr(self.context, 'status_bar', None):
+            count = len(self.ground_truth_marks[slice_index])
+            self.context.status_bar.update(
+                f"Mark {count} on slice {slice_index + 1}. "
+                f"Right-click removes, 'u' undoes, 'c' clears.", level="info")
+
+    @handle_errors("imageViewerPanel.on_validation_right_click")
+    def on_validation_right_click(self, event):
+        """Delete the nearest mark to the click, if one is close enough."""
+        if not self.validation_mode:
+            return
+
+        image_x, image_y = self.canvas_to_image_coords(event.x, event.y)
+        if image_x is None or image_y is None:
+            return
+
+        slice_index = self.current_slice_index()
+        marks = self.ground_truth_marks.get(slice_index)
+        if not marks:
+            return
+
+        distances = [((x - image_x) ** 2 + (y - image_y) ** 2) ** 0.5
+                     for x, y in marks]
+        nearest = min(range(len(marks)), key=distances.__getitem__)
+        if distances[nearest] > self.GROUND_TRUTH_DELETE_RADIUS:
+            return
+
+        marks.pop(nearest)
+        if not marks:
+            del self.ground_truth_marks[slice_index]
+        self._after_marks_changed()
+
+    @handle_errors("imageViewerPanel.undo_last_ground_truth_mark")
+    def undo_last_ground_truth_mark(self, event=None):
+        """Remove the most recent mark on this slice."""
+        if not self.validation_mode:
+            return
+
+        slice_index = self.current_slice_index()
+        marks = self.ground_truth_marks.get(slice_index)
+        if not marks:
+            return
+
+        marks.pop()
+        if not marks:
+            del self.ground_truth_marks[slice_index]
+        self._after_marks_changed()
+
+    @handle_errors("imageViewerPanel.clear_ground_truth_marks_on_slice")
+    def clear_ground_truth_marks_on_slice(self, event=None):
+        """Remove every mark on this slice."""
+        if not self.validation_mode:
+            return
+
+        slice_index = self.current_slice_index()
+        if slice_index not in self.ground_truth_marks:
+            return
+
+        del self.ground_truth_marks[slice_index]
+        self._after_marks_changed()
+
+    def draw_ground_truth_marks(self):
+        """Draw the operator marks for the displayed slice.
+
+        Drawn regardless of ``overlays_visible``: marking is done with the
+        detection overlay hidden so the marks stay independent of what the
+        software reports, so the marks themselves must remain visible then.
+        """
+        if not self.validation_mode:
+            return
+
+        converter = self._get_coordinate_converter()
+        if converter is None:
+            return
+
+        marks = self.marks_on_current_slice()
+        if not marks:
+            return
+
+        points = [converter.image_to_canvas(x, y) for x, y in marks]
+
+        # Thin connecting line first, so the markers sit on top of it.
+        if len(points) > 1:
+            flattened = [coordinate for point in points for coordinate in point]
+            self.canvas.create_line(*flattened, fill=GROUND_TRUTH_MARK_COLOR,
+                                    width=1, tags="ground_truth")
+
+        size = 4
+        for canvas_x, canvas_y in points:
+            self.canvas.create_line(canvas_x - size, canvas_y - size,
+                                    canvas_x + size, canvas_y + size,
+                                    fill=GROUND_TRUTH_MARK_COLOR, width=2,
+                                    tags="ground_truth")
+            self.canvas.create_line(canvas_x - size, canvas_y + size,
+                                    canvas_x + size, canvas_y - size,
+                                    fill=GROUND_TRUTH_MARK_COLOR, width=2,
+                                    tags="ground_truth")
+
     def draw_ascan_indicator(self, column_x):
         """
         Draw a vertical line to indicate which A-scan column is being viewed.
