@@ -140,7 +140,7 @@ def test_stability_stable_method():
 # compute_stable_combined_depth
 # ---------------------------------------------------------------------------
 
-def _ldd(knee, inflection, shoulder):
+def _ldd(knee, inflection, shoulder, half_span=np.nan):
     return {
         0: {
             "surface_y": 100,
@@ -148,6 +148,7 @@ def _ldd(knee, inflection, shoulder):
                 "knee_depth": knee,
                 "inflection_depth": inflection,
                 "shoulder_depth": shoulder,
+                "half_span_depth": half_span,
             },
         }
     }
@@ -155,86 +156,172 @@ def _ldd(knee, inflection, shoulder):
 
 @pytest.mark.unit
 def test_combined_depth_missing_column():
-    depth, method = compute_stable_combined_depth({}, {}, ascan_x=0)
+    depth, method = compute_stable_combined_depth({}, ascan_x=0)
     assert np.isnan(depth) and method == "none"
 
 
 @pytest.mark.unit
-def test_combined_depth_inflection_only():
-    ldd = _ldd(knee=np.nan, inflection=40.0, shoulder=np.nan)
-    stability = {
-        "sigmoid_fit": {"is_stable": True, "mean_depth": 40.0, "std_depth": 1.0},
-        "knee_point": {"is_stable": False},
-        "sigmoid_shoulder": {"is_stable": False},
-    }
-    depth, method = compute_stable_combined_depth(ldd, stability, ascan_x=0)
+def test_combined_depth_is_median_of_three():
+    ldd = _ldd(knee=60.0, inflection=20.0, shoulder=90.0, half_span=40.0)
+    depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
     assert depth == pytest.approx(40.0)
-    assert method == "inflection_only"
+    assert method == "median+half_span+knee_point+sigmoid_fit"
 
 
 @pytest.mark.unit
-def test_combined_depth_shape_only_weighted():
-    ldd = _ldd(knee=50.0, inflection=np.nan, shoulder=60.0)
-    stability = {
-        "sigmoid_fit": {"is_stable": False},
-        "knee_point": {"is_stable": True, "std_depth": 2.0, "mean_depth": 50.0},
-        "sigmoid_shoulder": {"is_stable": True, "std_depth": 4.0, "mean_depth": 60.0},
-    }
-    depth, method = compute_stable_combined_depth(ldd, stability, ascan_x=0,
-                                                  preserve_wobbliness=True)
-    assert 50.0 <= depth <= 60.0
-    assert "knee_point" in method
+def test_combined_depth_ignores_shoulder():
+    # The shoulder is deliberately not a term; a wild value must not move it.
+    base, _ = compute_stable_combined_depth(
+        _ldd(knee=60.0, inflection=20.0, shoulder=90.0, half_span=40.0), ascan_x=0)
+    wild, _ = compute_stable_combined_depth(
+        _ldd(knee=60.0, inflection=20.0, shoulder=9000.0, half_span=40.0), ascan_x=0)
+    assert base == pytest.approx(wild)
 
 
 @pytest.mark.unit
-def test_combined_depth_ideal_with_offset():
-    ldd = _ldd(knee=50.0, inflection=40.0, shoulder=60.0)
-    stability = {
-        "sigmoid_fit": {"is_stable": True, "mean_depth": 40.0, "std_depth": 1.0},
-        "knee_point": {"is_stable": True, "std_depth": 2.0, "mean_depth": 50.0},
-        "sigmoid_shoulder": {"is_stable": True, "std_depth": 4.0, "mean_depth": 60.0},
-    }
-    depth, method = compute_stable_combined_depth(ldd, stability, ascan_x=0)
-    assert "inflection_offset" in method
-    assert np.isfinite(depth)
-
-
-@pytest.mark.unit
-def test_combined_depth_ideal_no_global_offset():
-    # mean shape == inflection mean -> global_offset == 0 branch.
-    ldd = _ldd(knee=50.0, inflection=50.0, shoulder=50.0)
-    stability = {
-        "sigmoid_fit": {"is_stable": True, "mean_depth": 50.0, "std_depth": 1.0},
-        "knee_point": {"is_stable": True, "std_depth": 2.0, "mean_depth": 50.0},
-        "sigmoid_shoulder": {"is_stable": True, "std_depth": 2.0, "mean_depth": 50.0},
-    }
-    depth, method = compute_stable_combined_depth(ldd, stability, ascan_x=0)
+def test_combined_depth_one_term_may_fail():
+    # A median of the two survivors when a term is NaN.
+    ldd = _ldd(knee=60.0, inflection=np.nan, shoulder=np.nan, half_span=40.0)
+    depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
     assert depth == pytest.approx(50.0)
+    assert "sigmoid_fit" not in method
 
 
 @pytest.mark.unit
-def test_combined_depth_fallback_no_stable():
-    ldd = _ldd(knee=55.0, inflection=np.nan, shoulder=np.nan)
-    stability = {
-        "sigmoid_fit": {"is_stable": False, "std_depth": np.inf},
-        "knee_point": {"is_stable": False, "std_depth": 3.0},
-        "sigmoid_shoulder": {"is_stable": False, "std_depth": np.inf},
-    }
-    depth, method = compute_stable_combined_depth(ldd, stability, ascan_x=0)
-    assert depth == pytest.approx(55.0)
-    assert method.startswith("fallback_")
+def test_combined_depth_outlier_does_not_move_median():
+    normal, _ = compute_stable_combined_depth(
+        _ldd(knee=50.0, inflection=48.0, shoulder=np.nan, half_span=52.0), ascan_x=0)
+    broken, _ = compute_stable_combined_depth(
+        _ldd(knee=50.0, inflection=48.0, shoulder=np.nan, half_span=999.0), ascan_x=0)
+    assert normal == pytest.approx(50.0)
+    assert broken == pytest.approx(50.0)
 
 
 @pytest.mark.unit
-def test_combined_depth_fallback_none_available():
+def test_combined_depth_all_nan():
     ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan)
-    stability = {
-        "sigmoid_fit": {"is_stable": False, "std_depth": np.inf},
-        "knee_point": {"is_stable": False, "std_depth": np.inf},
-        "sigmoid_shoulder": {"is_stable": False, "std_depth": np.inf},
-    }
-    depth, method = compute_stable_combined_depth(ldd, stability, ascan_x=0)
+    depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
     assert np.isnan(depth) and method == "none"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("offset", [-5.0, 0.0, 5.0])
+def test_combined_depth_offset_shifts_one_to_one(offset):
+    ldd = _ldd(knee=60.0, inflection=20.0, shoulder=np.nan, half_span=40.0)
+    depth, _ = compute_stable_combined_depth(ldd, ascan_x=0, depth_offset=offset)
+    assert depth == pytest.approx(40.0 + offset)
+
+
+# ---------------------------------------------------------------------------
+# Half-span crossing
+# ---------------------------------------------------------------------------
+
+def _step_profile(edge=50, high=200.0, low=60.0, length=200):
+    """Bright plateau, linear decay, then background."""
+    decay = np.linspace(high, low, 20)
+    return np.concatenate([
+        np.full(edge, high), decay, np.full(length - edge - decay.size, low)
+    ])
+
+
+@pytest.mark.unit
+def test_half_span_finds_the_crossing():
+    depth, meta = core.detect_depth_half_span(_step_profile(edge=50))
+    assert meta["success"]
+    assert 50 <= depth <= 75          # within the decay, not before it
+    assert meta["span"] == pytest.approx(140.0, abs=5.0)
+
+
+@pytest.mark.unit
+def test_half_span_tracks_edge_position():
+    shallow, _ = core.detect_depth_half_span(_step_profile(edge=30))
+    deep, _ = core.detect_depth_half_span(_step_profile(edge=80))
+    assert deep > shallow + 40
+
+
+@pytest.mark.unit
+def test_half_span_flat_profile_has_no_contrast():
+    depth, meta = core.detect_depth_half_span(np.full(200, 100.0))
+    assert np.isnan(depth)
+    assert meta["reason"] == "no_contrast"
+
+
+@pytest.mark.unit
+def test_half_span_empty_profile():
+    depth, meta = core.detect_depth_half_span(np.array([]))
+    assert np.isnan(depth) and not meta["success"]
+
+
+@pytest.mark.unit
+def test_half_span_ignores_single_speckle_dip():
+    # One deep spike must not satisfy the sustained-crossing requirement.
+    clean = _step_profile(edge=80)
+    spiked = clean.copy()
+    spiked[20] = 0.0
+    depth_clean, _ = core.detect_depth_half_span(clean)
+    depth_spiked, _ = core.detect_depth_half_span(spiked)
+    assert depth_spiked == pytest.approx(depth_clean, abs=6.0)
+    assert depth_spiked > 40
+
+
+@pytest.mark.unit
+def test_half_span_fraction_falls_with_contrast():
+    assert core.half_span_fraction(core.HALF_SPAN_REFERENCE_SPAN) == pytest.approx(
+        core.HALF_SPAN_BASE_FRACTION)
+    assert core.half_span_fraction(200.0) < core.HALF_SPAN_BASE_FRACTION
+    assert core.half_span_fraction(20.0) > core.HALF_SPAN_BASE_FRACTION
+
+
+@pytest.mark.unit
+def test_half_span_fraction_is_clipped():
+    low, high = core.HALF_SPAN_FRACTION_LIMITS
+    assert core.half_span_fraction(1e6) == pytest.approx(low)
+    assert core.half_span_fraction(-1e6) == pytest.approx(high)
+
+
+@pytest.mark.unit
+def test_half_span_higher_fraction_reads_shallower():
+    # The documented tuning direction of HALF_SPAN_BASE_FRACTION.
+    profile = _step_profile(edge=60)
+    shallow, _ = core.detect_depth_half_span(profile, fraction=0.70)
+    deep, _ = core.detect_depth_half_span(profile, fraction=0.30)
+    assert shallow < deep
+
+
+# ---------------------------------------------------------------------------
+# No-lesion gate
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+def test_no_lesion_gate_quiet_on_smooth_boundary():
+    # A real boundary is laterally smooth.
+    assert not core.is_no_lesion_slice([50.0 + 0.5 * i % 3 for i in range(100)])
+
+
+@pytest.mark.unit
+def test_no_lesion_gate_fires_on_scatter():
+    rng = np.random.default_rng(0)
+    assert core.is_no_lesion_slice(rng.normal(50.0, 30.0, 200).tolist())
+
+
+@pytest.mark.unit
+def test_no_lesion_gate_threshold_is_the_boundary():
+    values = [0.0, 20.0] * 50          # SD == 10
+    assert not core.is_no_lesion_slice(values, no_lesion_sd=15.0)
+    assert core.is_no_lesion_slice(values, no_lesion_sd=5.0)
+
+
+@pytest.mark.unit
+def test_no_lesion_gate_ignores_nan_and_empty():
+    assert not core.is_no_lesion_slice([])
+    assert not core.is_no_lesion_slice([np.nan, np.nan])
+    assert not core.is_no_lesion_slice([50.0, np.nan, 50.5])
+
+
+@pytest.mark.unit
+def test_no_lesion_gate_quiet_on_perfectly_flat_boundary():
+    # SD is exactly 0; a flat boundary is the clearest possible lesion end.
+    assert not core.is_no_lesion_slice([50.0] * 50, no_lesion_sd=0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -402,3 +489,116 @@ def test_process_slice_parallel_bad_path_returns_error():
     assert slice_idx == 3
     assert error is not None
     assert region_stats is None
+
+
+# ---------------------------------------------------------------------------
+# calculate_lesion_depth end to end (synthetic images)
+# ---------------------------------------------------------------------------
+
+def _synthetic_slice(lesion_thickness=40, width=160, height=220, noise=0.0,
+                     seed=0):
+    """Bright surface, a bright lesion band, then darker sound enamel."""
+    rng = np.random.default_rng(seed)
+    surface_y = 40
+    img = np.full((height, width), 30.0)
+    img[surface_y:surface_y + 3, :] = 255.0
+    img[surface_y + 3:surface_y + 3 + lesion_thickness, :] = 200.0
+    img[surface_y + 3 + lesion_thickness:, :] = 60.0
+    if noise:
+        img += rng.normal(0.0, noise, img.shape)
+    img = np.clip(img, 0, 255).astype(np.uint8)
+
+    surface = Surface(
+        raw_points=[(x, surface_y) for x in range(width)],
+        fitted_curves={"actual_surface": [(x, surface_y) for x in range(width)]},
+    )
+    region = RegionConfig(
+        slice_index=0,
+        specimen_start=(0, surface_y),
+        lesion_start=(20, surface_y),
+        lesion_end=(width - 20, surface_y),
+        tooth_end=(width - 1, surface_y),
+        buffer_pixels=0,
+    )
+    return img, surface, region
+
+
+@pytest.mark.unit
+def test_calculate_lesion_depth_emits_half_span_metadata():
+    img, surface, region = _synthetic_slice()
+    result = core.calculate_lesion_depth(
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN)
+    assert result is not None
+    meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
+    # shoulder_depth is still emitted: renderers and stored configs read it.
+    for key in ("half_span_depth", "knee_depth", "inflection_depth",
+                "shoulder_depth"):
+        assert key in meta
+    assert meta["combined_method_used"].startswith("median+")
+
+
+@pytest.mark.unit
+def test_calculate_lesion_depth_tracks_lesion_thickness():
+    def depth_for(thickness):
+        img, surface, region = _synthetic_slice(lesion_thickness=thickness)
+        return core.calculate_lesion_depth(
+            surface, region, img,
+            detection_method=DepthDetectionMethod.COMBINED_MEAN)
+
+    thin, thick = depth_for(25), depth_for(70)
+    assert thin is not None and thick is not None
+    assert thick.mean_depth > thin.mean_depth
+
+
+@pytest.mark.unit
+def test_calculate_lesion_depth_offset_shifts_result():
+    img, surface, region = _synthetic_slice()
+    base = core.calculate_lesion_depth(
+        surface, region, img,
+        detection_method=DepthDetectionMethod.COMBINED_MEAN)
+    shifted = core.calculate_lesion_depth(
+        surface, region, img, depth_offset=10.0,
+        detection_method=DepthDetectionMethod.COMBINED_MEAN)
+    assert base is not None and shifted is not None
+    # Offset is applied before the refractive-index division.
+    expected = 10.0 / core.TOOTH_REFRACTIVE_INDEX
+    assert shifted.mean_depth - base.mean_depth == pytest.approx(expected, abs=0.5)
+
+
+@pytest.mark.unit
+def test_calculate_lesion_depth_no_lesion_gate_reports_surface():
+    # Structureless noise -> the combined depth scatters -> gate fires.
+    rng = np.random.default_rng(3)
+    width, height, surface_y = 160, 220, 40
+    img = np.clip(rng.normal(120.0, 45.0, (height, width)), 0, 255)
+    img[surface_y:surface_y + 3, :] = 255.0
+    img = img.astype(np.uint8)
+    surface = Surface(
+        raw_points=[(x, surface_y) for x in range(width)],
+        fitted_curves={"actual_surface": [(x, surface_y) for x in range(width)]},
+    )
+    region = RegionConfig(
+        slice_index=0,
+        specimen_start=(0, surface_y), lesion_start=(20, surface_y),
+        lesion_end=(width - 20, surface_y), tooth_end=(width - 1, surface_y),
+        buffer_pixels=0,
+    )
+    result = core.calculate_lesion_depth(
+        surface, region, img, no_lesion_sd=1.0,   # force the gate
+        detection_method=DepthDetectionMethod.COMBINED_MEAN)
+    assert result is not None
+    assert result.mean_depth == pytest.approx(0.0)
+    meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
+    assert meta["combined_method_used"] == "no_lesion_surface"
+
+
+@pytest.mark.unit
+def test_calculate_lesion_depth_gate_quiet_on_clean_lesion():
+    img, surface, region = _synthetic_slice(noise=6.0)
+    result = core.calculate_lesion_depth(
+        surface, region, img,
+        detection_method=DepthDetectionMethod.COMBINED_MEAN)
+    assert result is not None
+    meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
+    assert meta["combined_method_used"] != "no_lesion_surface"
+    assert result.mean_depth > 0.0
