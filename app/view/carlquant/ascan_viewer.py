@@ -189,7 +189,7 @@ class AScanViewer:
         ttk.Checkbutton(toggles_frame, text="Sigmoid Fit Curve", variable=self.show_sigmoid_fit,
                        command=lambda: self._update_plot(force_image_sync=True)).grid(row=3, column=0, sticky='w', padx=5, pady=2)
         ttk.Checkbutton(toggles_frame, text="Zoom to Analysis", variable=self.zoom_to_analysis,
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=3, column=1, sticky='w', padx=5, pady=2)
+                       command=self._on_zoom_to_analysis_toggled).grid(row=3, column=1, sticky='w', padx=5, pady=2)
 
         ttk.Checkbutton(toggles_frame, text="Half-Span Crossing", variable=self.show_half_span,
                        command=lambda: self._update_plot(force_image_sync=True)).grid(row=4, column=0, sticky='w', padx=5, pady=2)
@@ -387,17 +387,28 @@ class AScanViewer:
         be read against the intensity profile that produced the detection.
         """
         mark = self._nearest_mark()
-        if mark is None:
-            return
+        if mark is not None:
+            mark_y = mark[1]
+            is_interpolated = False
+        else:
+            # Marks sit ~22 px apart, so most columns fall between two of them.
+            # Interpolating keeps a reference on screen; it is labelled as
+            # inferred and never reaches the scoring in the results panel.
+            mark_y = val.interpolated_mark_at(self._marks_for_current_slice(),
+                                              self.current_column)
+            if mark_y is None:
+                return
+            is_interpolated = True
 
-        mark_x, mark_y = mark
         self.ax.axhline(y=mark_y, color=GROUND_TRUTH_MARK_COLOR, linewidth=1.5,
-                        linestyle='--', zorder=3, label='Ground Truth')
+                        linestyle=':' if is_interpolated else '--', zorder=3,
+                        label='Ground Truth (interp.)' if is_interpolated else 'Ground Truth')
 
         intensity = (column_data[int(mark_y)]
                      if 0 <= int(mark_y) < len(column_data) else 128)
 
-        lines = ['Ground Truth (operator)',
+        lines = ['Ground Truth (interpolated)' if is_interpolated
+                 else 'Ground Truth (operator)',
                  f'X: {intensity:.1f}',
                  f'Y: {mark_y:.1f}']
         if surface_y is not None:
@@ -411,9 +422,15 @@ class AScanViewer:
             lines.append('Error (+ deep / - shallow):')
             lines.extend(errors)
 
+        if is_interpolated:
+            lines.append('')
+            lines.append('Interpolated between marks - not scored')
+
         self._plot_point_with_hover(
-            intensity, mark_y, '\n'.join(lines), 'Ground Truth',
-            'x', GROUND_TRUTH_MARK_COLOR, 12, 7)
+            intensity, mark_y, '\n'.join(lines),
+            'Ground Truth (interp.)' if is_interpolated else 'Ground Truth',
+            '+' if is_interpolated else 'x',
+            GROUND_TRUTH_MARK_COLOR, 12, 7)
 
     def _method_errors_against(self, mark_y, surface_y, metadata,
                                lesion_detection_data):
@@ -821,6 +838,22 @@ class AScanViewer:
         # Update indicator line in image viewer (lightweight operation)
         self._update_image_indicator()
     
+    @handle_errors("AScanViewer._on_zoom_to_analysis_toggled")
+    def _on_zoom_to_analysis_toggled(self):
+        """Zoom both views to the analysis region, or restore both.
+
+        The A-scan zooms in depth and the B-scan in lateral extent -- two
+        views of the same region, so one toggle drives both.
+        """
+        self._sync_image_analysis_zoom()
+        self._update_plot(force_image_sync=True)
+
+    def _sync_image_analysis_zoom(self):
+        """Push the current zoom-to-analysis state to the image viewer."""
+        image_panel = self.context.get_panel("carl_image")
+        if image_panel and hasattr(image_panel, "sync_analysis_zoom"):
+            image_panel.sync_analysis_zoom(self.zoom_to_analysis.get())
+
     @handle_errors("AScanViewer._update_image_indicator")
     def _update_image_indicator(self):
         """Update the A-scan indicator line in the image viewer."""
@@ -834,7 +867,12 @@ class AScanViewer:
         image_panel = self.context.get_panel("carl_image")
         if image_panel:
             image_panel.unregister_ascan_viewer_callback()
-            image_panel.clear_ascan_indicator()
+            # Forget, not just clear: the redraw below would otherwise restore
+            # the indicator for a viewer that is closing.
+            image_panel.forget_ascan_indicator()
+            # Release the analysis zoom with the viewer that asked for it.
+            if hasattr(image_panel, "sync_analysis_zoom"):
+                image_panel.sync_analysis_zoom(False)
             # Trigger redraw to hide component methods
             try:
                 image_panel.render_zoomed_image()
@@ -897,6 +935,10 @@ class AScanViewer:
         if self.dialog:
             self.dialog.title(f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}")
         
+        # Re-frame the B-scan: the lesion region differs per slice. Done before
+        # the indicator, whose canvas position depends on the zoom.
+        self._sync_image_analysis_zoom()
+
         # Update plot (force sync since this is programmatic, not slider drag)
         if hasattr(self, 'ax'):
             self._update_plot(force_image_sync=True)
@@ -944,6 +986,10 @@ class AScanViewer:
         if self.dialog:
             self.dialog.title(f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}")
         
+        # Re-frame the B-scan: the lesion region differs per slice. Done before
+        # the indicator, whose canvas position depends on the zoom.
+        self._sync_image_analysis_zoom()
+
         # Update plot (force sync since this is programmatic, not slider drag)
         if hasattr(self, 'ax'):
             self._update_plot(force_image_sync=True)
