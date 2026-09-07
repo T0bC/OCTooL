@@ -59,6 +59,8 @@ from app.logic.carlquant.carl_quant_core import (
     extract_regions,
     calculate_lesion_depth,
     process_slice_parallel,
+    DEPTH_OFFSET,
+    NO_LESION_SD,
 )
 from app.logic.carlquant.data_io import DataSaver
 from app.logic.carlquant.models import (
@@ -144,10 +146,15 @@ class AnalysisService:
         search_depth: int = DEFAULT_SEARCH_DEPTH,
         detection_method: DepthDetectionMethod = DepthDetectionMethod.COMBINED_MEAN,
         stability_threshold: float = DEFAULT_STABILITY_THRESHOLD,
-        preserve_wobbliness: bool = True,
+        depth_offset: float = DEPTH_OFFSET,
+        no_lesion_sd: float = NO_LESION_SD,
         slice_id: Optional[str] = None,
     ) -> LesionDepth:
-        """Calculate lesion depth from a detected surface and region config."""
+        """Calculate lesion depth from a detected surface and region config.
+
+        ``depth_offset`` and ``no_lesion_sd`` are forwarded so a caller can tune
+        them; both default to the validated values.
+        """
         return calculate_lesion_depth(
             surface,
             region_config,
@@ -155,7 +162,8 @@ class AnalysisService:
             search_depth=search_depth,
             detection_method=detection_method,
             stability_threshold=stability_threshold,
-            preserve_wobbliness=preserve_wobbliness,
+            depth_offset=depth_offset,
+            no_lesion_sd=no_lesion_sd,
             slice_id=slice_id,
         )
 
@@ -198,6 +206,8 @@ class AnalysisService:
         detection_method: str = DEFAULT_DETECTION_METHOD,
         slice_index: int = 0,
         slice_id: Optional[str] = None,
+        depth_offset: float = DEPTH_OFFSET,
+        no_lesion_sd: float = NO_LESION_SD,
     ) -> SliceAnalysis:
         """Run the full per-slice pipeline on an in-memory image array.
 
@@ -218,6 +228,8 @@ class AnalysisService:
             lesion_depth = cls.calculate_lesion_depth(
                 surface, region_config, image,
                 detection_method=method,
+                depth_offset=depth_offset,
+                no_lesion_sd=no_lesion_sd,
                 slice_id=name,
             )
         else:
@@ -242,6 +254,8 @@ class AnalysisService:
         num_lesion: int = 6,
         detection_method: str = DEFAULT_DETECTION_METHOD,
         slice_index: int = 0,
+        depth_offset: float = DEPTH_OFFSET,
+        no_lesion_sd: float = NO_LESION_SD,
     ) -> SliceAnalysis:
         """Load a grayscale image from disk and run :meth:`analyze_slice`."""
         img = Image.open(image_path).convert("L")
@@ -255,6 +269,7 @@ class AnalysisService:
             num_sound=num_sound, num_lesion=num_lesion,
             detection_method=detection_method,
             slice_index=slice_index, slice_id=slice_id,
+            depth_offset=depth_offset, no_lesion_sd=no_lesion_sd,
         )
 
     @classmethod
