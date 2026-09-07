@@ -51,7 +51,14 @@ from app.logic.carlquant.annotation_colors import (
     INFLECTION_POINT_COLOR,
     SHOULDER_POINT_COLOR,
     HALF_SPAN_POINT_COLOR,
-    LESION_DEPTH_PRIMARY_COLOR
+    LESION_DEPTH_PRIMARY_COLOR,
+    GROUND_TRUTH_MARK_COLOR
+)
+from app.logic.carlquant import validation as val
+from app.logic.carlquant.ground_truth import (
+    GroundTruthMismatchError,
+    has_ground_truth,
+    load_ground_truth,
 )
 
 
@@ -93,7 +100,14 @@ class AScanViewer:
         self.show_exp2_fit = tk.BooleanVar(value=False)
         self.show_sigmoid_fit = tk.BooleanVar(value=False)
         self.zoom_to_analysis = tk.BooleanVar(value=False)  # Zoom to analysis region
-        
+        # Ground truth defaults on when marks exist for this specimen, so an
+        # operator who has annotated it sees the comparison without hunting.
+        self.show_ground_truth = tk.BooleanVar(value=False)
+
+        # Operator marks for the displayed slice, {slice_index: [(x, y), ...]}
+        self.ground_truth_marks = {}
+        self._ground_truth_default_applied_for = None  # Specimen the default was set for
+
         # Cached specimen data
         self.specimen = None
         self.slice_result = None
@@ -179,6 +193,8 @@ class AScanViewer:
 
         ttk.Checkbutton(toggles_frame, text="Half-Span Crossing", variable=self.show_half_span,
                        command=lambda: self._update_plot(force_image_sync=True)).grid(row=4, column=0, sticky='w', padx=5, pady=2)
+        ttk.Checkbutton(toggles_frame, text="Ground Truth", variable=self.show_ground_truth,
+                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=4, column=1, sticky='w', padx=5, pady=2)
         
         # Slider frame with label above
         slider_container = ttk.Frame(main_frame)
@@ -317,6 +333,110 @@ class AScanViewer:
             self.slice_result = self.specimen.results[self.slice_index]
         else:
             self.slice_result = None
+
+        self._load_ground_truth_marks()
+
+    def _load_ground_truth_marks(self):
+        """Load operator marks for this specimen, if any have been recorded.
+
+        The toggle defaults on when ground truth exists so an annotated
+        specimen shows the comparison immediately, and stays inert otherwise.
+        """
+        if self.specimen is None:
+            return
+
+        try:
+            self.ground_truth_marks = load_ground_truth(self.specimen)
+        except GroundTruthMismatchError:
+            # Marks from another specimen would be meaningless here; the image
+            # viewer reports the mismatch, so stay silent and show nothing.
+            self.ground_truth_marks = {}
+
+        # Apply the "on when ground truth exists" default once per specimen, so
+        # a slice change does not undo the operator turning the toggle off.
+        if self._ground_truth_default_applied_for != self.specimen_id:
+            self._ground_truth_default_applied_for = self.specimen_id
+            self.show_ground_truth.set(
+                bool(self.ground_truth_marks) and has_ground_truth(self.specimen))
+
+    def _marks_for_current_slice(self):
+        """Operator marks on the slice being viewed."""
+        return self.ground_truth_marks.get(self.slice_index, [])
+
+    def _nearest_mark(self, tolerance=val.DEFAULT_TOLERANCE):
+        """The operator mark nearest the displayed column, or None.
+
+        Marks are placed per A-scan column but rarely land exactly on the one
+        being viewed, so a small tolerance is allowed; beyond it there is no
+        ground truth for this column and nothing is drawn.
+        """
+        marks = self._marks_for_current_slice()
+        if not marks or self.current_column is None:
+            return None
+
+        nearest = min(marks, key=lambda mark: abs(mark[0] - self.current_column))
+        if abs(nearest[0] - self.current_column) > tolerance:
+            return None
+        return nearest
+
+    def _plot_ground_truth(self, column_data, surface_y, metadata,
+                           lesion_detection_data):
+        """Draw the operator's mark for this column and each method's error.
+
+        The mark is a horizontal line across the A-scan at its depth, so it can
+        be read against the intensity profile that produced the detection.
+        """
+        mark = self._nearest_mark()
+        if mark is None:
+            return
+
+        mark_x, mark_y = mark
+        self.ax.axhline(y=mark_y, color=GROUND_TRUTH_MARK_COLOR, linewidth=1.5,
+                        linestyle='--', zorder=3, label='Ground Truth')
+
+        intensity = (column_data[int(mark_y)]
+                     if 0 <= int(mark_y) < len(column_data) else 128)
+
+        lines = ['Ground Truth (operator)',
+                 f'X: {intensity:.1f}',
+                 f'Y: {mark_y:.1f}']
+        if surface_y is not None:
+            lines.append(f'Depth: {mark_y - surface_y:.1f}px')
+
+        # Signed error of every enabled method: + too deep, - too shallow.
+        errors = self._method_errors_against(mark_y, surface_y, metadata,
+                                             lesion_detection_data)
+        if errors:
+            lines.append('')
+            lines.append('Error (+ deep / - shallow):')
+            lines.extend(errors)
+
+        self._plot_point_with_hover(
+            intensity, mark_y, '\n'.join(lines), 'Ground Truth',
+            'x', GROUND_TRUTH_MARK_COLOR, 12, 7)
+
+    def _method_errors_against(self, mark_y, surface_y, metadata,
+                               lesion_detection_data):
+        """Signed error of each enabled method against one mark, as text lines."""
+        if surface_y is None:
+            return []
+
+        enabled = [
+            ('Combined', self.show_combined_depth,
+             (lesion_detection_data or {}).get('knee_depth')),
+            ('Half-Span', self.show_half_span, metadata.get('half_span_depth')),
+            ('Knee', self.show_knee_point, metadata.get('knee_depth')),
+            ('Inflection', self.show_sigmoid_inflection,
+             metadata.get('inflection_depth')),
+            ('Shoulder', self.show_sigmoid_shoulder, metadata.get('shoulder_depth')),
+        ]
+
+        lines = []
+        for label, toggle, depth in enabled:
+            if not toggle.get() or depth is None or np.isnan(depth):
+                continue
+            lines.append(f'  {label}: {surface_y + depth - mark_y:+.1f}px')
+        return lines
     
     @handle_errors("AScanViewer._create_plot")
     def _create_plot(self, parent_frame):
@@ -581,7 +701,15 @@ class AScanViewer:
                             f'Combined Depth\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {combined_depth:.1f}px',
                             'Combined Depth',
                             '*', LESION_DEPTH_PRIMARY_COLOR, 15, 6)
-            
+
+            # Operator ground truth for this column, with each enabled method's
+            # signed error against it. Seeing the mark against the intensity
+            # profile is what makes a disagreement diagnosable rather than
+            # merely visible.
+            if self.show_ground_truth.get():
+                self._plot_ground_truth(column_data, surface_y, metadata,
+                                        lesion_detection_data)
+
             # Plot fit curves (computed on-demand from image data)
             # Get the profile start position
             profile_start_y = lesion_detection_data.get('profile_start_y', surface_y)
