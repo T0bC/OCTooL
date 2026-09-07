@@ -1036,7 +1036,8 @@ class image_viewer_panel(BaseCanvasPanel):
         show_knee = False
         show_inflection = False
         show_shoulder = False
-        
+        show_half_span = False
+
         # Check if there's an active A-Scan viewer with checkbox states
         results_panel = self.context.get_panel("carl_results")
         if results_panel and hasattr(results_panel, 'active_ascan_viewer'):
@@ -1046,12 +1047,14 @@ class image_viewer_panel(BaseCanvasPanel):
                 show_knee = ascan_viewer.show_knee_point.get()
                 show_inflection = ascan_viewer.show_sigmoid_inflection.get()
                 show_shoulder = ascan_viewer.show_sigmoid_shoulder.get()
-        
+                show_half_span = ascan_viewer.show_half_span.get()
+
         renderer = LesionDepthAnnotationRenderer(self.canvas, converter)
-        renderer.draw(lesion_depth, 
-                     show_knee=show_knee, 
-                     show_inflection=show_inflection, 
-                     show_shoulder=show_shoulder)
+        renderer.draw(lesion_depth,
+                     show_knee=show_knee,
+                     show_inflection=show_inflection,
+                     show_shoulder=show_shoulder,
+                     show_half_span=show_half_span)
     
     def draw_ascan_indicator(self, column_x):
         """
