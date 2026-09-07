@@ -303,3 +303,220 @@ def test_ground_truth_hidden_when_no_results_panel(tmp_path):
     panel.context.get_panel = lambda name: None
 
     assert panel.should_show_ground_truth() is False
+
+
+# ============================================================================
+# A-scan column indicator survives a full redraw
+# ============================================================================
+
+
+class FakeCanvas:
+    """Records canvas operations without a display."""
+
+    def __init__(self, width=800, height=600):
+        self._width = width
+        self._height = height
+        self.lines = []
+        self.deleted = []
+        self._next_id = 1
+
+    def create_line(self, *coords, **kwargs):
+        item = self._next_id
+        self._next_id += 1
+        self.lines.append((item, coords, kwargs))
+        return item
+
+    def delete(self, target):
+        self.deleted.append(target)
+        if target == "all":
+            self.lines = []
+
+    def winfo_width(self):
+        return self._width
+
+    def winfo_height(self):
+        return self._height
+
+
+class FakeImage:
+    def __init__(self, width=1000, height=400):
+        self.width = width
+        self.height = height
+
+
+def make_indicator_panel(tmp_path):
+    """Panel with just enough state to draw the A-scan indicator."""
+    panel, specimen = make_panel(tmp_path)
+    panel.canvas = FakeCanvas()
+    panel.rawImage = FakeImage()
+    panel.zoom_level = 1.0
+    panel.image_offset_x = 0
+    panel.image_offset_y = 0
+    panel.fitted_width = panel.rawImage.width
+    panel.fitted_height = panel.rawImage.height
+    panel.ascan_indicator_line = None
+    panel.ascan_indicator_column = None
+    panel.analysis_zoom_active = False
+    return panel, specimen
+
+
+@pytest.mark.unit
+def test_indicator_remembers_its_column(tmp_path):
+    """GIVEN an indicator drawn, WHEN checking, THEN the column is retained.
+
+    A full redraw rebuilds the canvas; without the remembered column the line
+    could not be restored, which made it vanish on slider release.
+    """
+    panel, _ = make_indicator_panel(tmp_path)
+    panel.draw_ascan_indicator(450)
+
+    assert panel.ascan_indicator_column == 450
+    assert panel.ascan_indicator_line is not None
+
+
+@pytest.mark.unit
+def test_clearing_keeps_the_column_so_a_redraw_restores_it(tmp_path):
+    """GIVEN a cleared indicator, WHEN redrawing, THEN it comes back."""
+    panel, _ = make_indicator_panel(tmp_path)
+    panel.draw_ascan_indicator(450)
+    panel.clear_ascan_indicator()
+
+    assert panel.ascan_indicator_line is None
+    assert panel.ascan_indicator_column == 450
+
+    panel.draw_ascan_indicator(panel.ascan_indicator_column)
+    assert panel.ascan_indicator_line is not None
+
+
+@pytest.mark.unit
+def test_forgetting_stops_the_indicator_coming_back(tmp_path):
+    """GIVEN the viewer closed, WHEN forgetting, THEN no redraw restores it.
+
+    on_close triggers a redraw right after clearing, which would otherwise
+    reinstate the indicator for a viewer that is gone.
+    """
+    panel, _ = make_indicator_panel(tmp_path)
+    panel.draw_ascan_indicator(450)
+    panel.forget_ascan_indicator()
+
+    assert panel.ascan_indicator_line is None
+    assert panel.ascan_indicator_column is None
+
+
+# ============================================================================
+# Zoom to analysis region
+# ============================================================================
+
+
+def add_region_config(specimen, slice_index=0, lesion_start=400, lesion_end=800):
+    """Give a specimen a lesion region on one slice."""
+    region = SimpleNamespace(
+        lesion_start=(lesion_start, 0),
+        lesion_end=(lesion_end, 0),
+    )
+    specimen.config = SimpleNamespace(regions={slice_index: region})
+    return specimen
+
+
+@pytest.mark.unit
+def test_lesion_bounds_pad_into_the_sound_enamel(tmp_path):
+    """GIVEN a lesion region, WHEN bounding, THEN padding is added on both sides."""
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=400, lesion_end=800)
+
+    x_start, x_end = panel.lesion_region_bounds(specimen, 0)
+
+    assert x_start == 400 - panel.ANALYSIS_ZOOM_PADDING
+    assert x_end == 800 + panel.ANALYSIS_ZOOM_PADDING
+
+
+@pytest.mark.unit
+def test_lesion_bounds_are_clamped_to_the_image(tmp_path):
+    """GIVEN a lesion at the image edge, WHEN bounding, THEN padding is clipped."""
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=10, lesion_end=990)
+
+    x_start, x_end = panel.lesion_region_bounds(specimen, 0)
+
+    assert x_start == 0
+    assert x_end == panel.rawImage.width
+
+
+@pytest.mark.unit
+def test_lesion_bounds_none_without_a_region_config(tmp_path):
+    """GIVEN no region set, WHEN bounding, THEN None is returned rather than a guess."""
+    panel, specimen = make_indicator_panel(tmp_path)
+    specimen.config = None
+
+    assert panel.lesion_region_bounds(specimen, 0) is None
+
+
+@pytest.mark.unit
+def test_analysis_zoom_frames_the_lesion(tmp_path):
+    """GIVEN a lesion region, WHEN zooming, THEN it fills the canvas width."""
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=400, lesion_end=600)
+    panel.render_zoomed_image = lambda: None
+
+    assert panel.apply_analysis_zoom() is True
+
+    # Padded region spans 360..640 = 280px, in an 800px canvas.
+    assert panel.zoom_level == pytest.approx(800 / 280)
+    # Its left edge maps to the canvas left edge.
+    assert panel.image_offset_x == pytest.approx(-360 * panel.zoom_level)
+
+
+@pytest.mark.unit
+def test_analysis_zoom_declines_when_the_region_spans_the_image(tmp_path):
+    """GIVEN a lesion as wide as the image, WHEN zooming, THEN the view is left alone.
+
+    The fitted view already shows it; zooming further would only crop.
+    """
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=0, lesion_end=1000)
+
+    assert panel.apply_analysis_zoom() is False
+    assert panel.zoom_level == 1.0
+
+
+@pytest.mark.unit
+def test_analysis_zoom_declines_without_a_region(tmp_path):
+    """GIVEN no region config, WHEN zooming, THEN nothing changes."""
+    panel, specimen = make_indicator_panel(tmp_path)
+    specimen.config = None
+
+    assert panel.apply_analysis_zoom() is False
+    assert panel.zoom_level == 1.0
+
+
+@pytest.mark.unit
+def test_sync_applies_and_releases_the_zoom(tmp_path):
+    """GIVEN the toggle, WHEN switched on then off, THEN the view zooms and restores."""
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=400, lesion_end=600)
+    panel.render_zoomed_image = lambda: None
+
+    panel.sync_analysis_zoom(True)
+    assert panel.analysis_zoom_active is True
+    assert panel.zoom_level > 1.0
+
+    panel.sync_analysis_zoom(False)
+    assert panel.analysis_zoom_active is False
+    assert panel.zoom_level == 1.0
+    assert panel.image_offset_x == 0
+
+
+@pytest.mark.unit
+def test_sync_off_leaves_a_manual_zoom_untouched(tmp_path):
+    """GIVEN a zoom the operator set, WHEN the toggle goes off, THEN it survives.
+
+    Only a zoom this feature applied should be undone.
+    """
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=400, lesion_end=600)
+    panel.render_zoomed_image = lambda: None
+    panel.zoom_level = 3.0  # set by the operator, not by the toggle
+
+    panel.sync_analysis_zoom(False)
+
+    assert panel.zoom_level == 3.0
