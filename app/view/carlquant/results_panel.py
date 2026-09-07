@@ -38,11 +38,14 @@ Author: Tobias Meissner
 
 
 import tkinter as tk
+from tkinter import ttk
 from tksheet import Sheet
 from app.view.shared.error_handler import handle_errors
 from app.logic.carlquant import RegionStats, Surface, LesionDepth, SliceResult, DataLoader
 from app.view.carlquant.ascan_viewer import AScanViewer
 from app.logic.carlquant.annotation_colors import ROW_HIGHLIGHT_NAVIGATION_COLOR, ROW_HIGHLIGHT_ASCAN_COLOR
+from app.logic.carlquant import validation as val
+from app.logic.carlquant.ground_truth import has_ground_truth
 
 
 class resultsPanel:
@@ -111,9 +114,214 @@ class resultsPanel:
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
-        
+
         # Set initial column widths
         self._set_column_widths()
+
+        self._setup_validation_ui()
+
+    # ============================================================================
+    # VALIDATION MODE
+    # ============================================================================
+
+    @handle_errors("resultsPanel._setup_validation_ui")
+    def _setup_validation_ui(self):
+        """Build the Validation Mode toggle and its error readout.
+
+        The readout stays hidden until validation mode is enabled, so the
+        results grid is unchanged for everyone not measuring accuracy.
+        """
+        self.validation_enabled = tk.BooleanVar(value=False)
+
+        self.validationFrame = ttk.Frame(self.frame)
+        self.validationFrame.grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        self.validationFrame.columnconfigure(1, weight=1)
+
+        self.validationCheck = ttk.Checkbutton(
+            self.validationFrame,
+            text="Validation Mode",
+            variable=self.validation_enabled,
+            command=self._on_validation_toggled,
+            bootstyle="success-round-toggle"
+        )
+        self.validationCheck.grid(row=0, column=0, sticky="w", padx=(2, 8))
+
+        # Marking with the detection overlay visible makes the marks drift
+        # toward it and the comparison circular, so the state is called out.
+        self.overlayHintLabel = ttk.Label(self.validationFrame, text="")
+        self.overlayHintLabel.grid(row=0, column=1, sticky="w")
+
+        self.validationResultsFrame = ttk.Frame(self.frame)
+        self.validationSheet = None
+
+    def _image_panel(self):
+        """The image viewer panel, which owns the marks."""
+        return self.context.get_panel("carl_image")
+
+    @handle_errors("resultsPanel._on_validation_toggled")
+    def _on_validation_toggled(self):
+        """Switch marking on or off and show or hide the readout."""
+        enabled = self.validation_enabled.get()
+
+        image_panel = self._image_panel()
+        if image_panel:
+            image_panel.set_validation_mode(enabled)
+            image_panel.validation_changed_callback = (
+                self.refresh_validation_scores if enabled else None)
+
+        if enabled:
+            self.validationResultsFrame.grid(row=2, column=0, sticky="nsew", pady=(2, 0))
+            self.refresh_validation_scores()
+        else:
+            self.validationResultsFrame.grid_remove()
+            self.overlayHintLabel.config(text="")
+
+    @handle_errors("resultsPanel.refresh_validation_scores")
+    def refresh_validation_scores(self):
+        """Recompute and redisplay the per-slice and per-specimen errors."""
+        if not self.validation_enabled.get():
+            return
+
+        image_panel = self._image_panel()
+        if image_panel is None:
+            return
+
+        self._update_overlay_hint(image_panel)
+
+        specimen = self._current_specimen()
+        if specimen is None:
+            self._render_validation_message("No specimen selected.")
+            return
+
+        marks_by_slice = image_panel.ground_truth_marks
+        if not marks_by_slice:
+            self._render_validation_message(
+                "No marks yet. Press 'h' to hide the overlay, then click the "
+                "true lesion end.")
+            return
+
+        per_slice = {}
+        for slice_index, marks in marks_by_slice.items():
+            detection_data = self._lesion_detection_data(specimen, slice_index)
+            if detection_data:
+                per_slice[slice_index] = val.score_slice(detection_data, marks)
+
+        if not per_slice:
+            self._render_validation_message(
+                "Marked slices have no analysis results yet. Run the analysis "
+                "to score them.")
+            return
+
+        current_slice = image_panel.current_slice_index()
+        self._render_validation_table(per_slice, current_slice)
+
+    def _update_overlay_hint(self, image_panel):
+        """Warn while the detection overlay is visible during marking."""
+        if getattr(image_panel, "overlays_visible", False):
+            self.overlayHintLabel.config(
+                text="Overlay VISIBLE - press 'h' to hide it before marking",
+                bootstyle="warning")
+        else:
+            self.overlayHintLabel.config(
+                text="Overlay hidden - marks are independent", bootstyle="secondary")
+
+    def _current_specimen(self):
+        """The Specimen currently selected, or None."""
+        specimen_id = getattr(self.context, "current_specimen_id", None)
+        specimen_data = getattr(self.context, "specimen_data", {})
+        if not specimen_id or specimen_id not in specimen_data:
+            return None
+        return specimen_data[specimen_id]
+
+    def _lesion_detection_data(self, specimen, slice_index):
+        """Per-column detection data for one slice, or None if not analysed."""
+        result = (specimen.results or {}).get(slice_index)
+        lesion_depth = getattr(result, "lesion_depth", None) if result else None
+        return getattr(lesion_depth, "lesion_detection_data", None) if lesion_depth else None
+
+    def _ensure_validation_sheet(self):
+        """Create the readout sheet on first use."""
+        if self.validationSheet is not None:
+            return
+
+        self.validationSheet = Sheet(
+            self.validationResultsFrame,
+            headers=["METHOD", "MEDIAN", "|MEDIAN|", "P90", "N",
+                     "SPECIMEN MEAN |MED|", "SPECIMEN ERROR"],
+            show_table=True,
+            show_row_index=False,
+            show_header=True,
+            show_x_scrollbar=True,
+            show_y_scrollbar=False,
+            height=170
+        )
+        self.validationSheet.set_options(
+            table_bg="#2b2b2b", table_fg="#dcdcdc",
+            header_bg="#3c3c3c", header_fg="#ffffff",
+            grid_color="#444444", outline_color="#666666"
+        )
+        self.validationSheet.enable_bindings("copy", "single_select")
+        self.validationSheet.grid(row=0, column=0, sticky="nsew")
+
+        self.validationSummaryLabel = ttk.Label(
+            self.validationResultsFrame, text="", bootstyle="secondary")
+        self.validationSummaryLabel.grid(row=1, column=0, sticky="w", pady=(2, 0))
+
+        self.validationResultsFrame.columnconfigure(0, weight=1)
+        self.validationResultsFrame.grid_rowconfigure(0, weight=1)
+
+    def _render_validation_message(self, message):
+        """Show an explanatory message in place of the table."""
+        self._ensure_validation_sheet()
+        self.validationSheet.set_sheet_data([], reset_col_positions=False)
+        self.validationSummaryLabel.config(text=message)
+
+    def _render_validation_table(self, per_slice, current_slice):
+        """Render per-slice errors for the current slice plus specimen aggregates.
+
+        Both scales are shown deliberately: per-column accuracy is what an
+        A-scan reader sees, while the specimen mean is what downstream analysis
+        consumes, and a consistently signed bias does not cancel under
+        averaging -- so the two can rank methods differently.
+        """
+        self._ensure_validation_sheet()
+
+        specimen_summary = val.score_specimen(per_slice)
+        slice_result = per_slice.get(current_slice)
+
+        rows = []
+        for method in val.METHODS:
+            slice_scores = (slice_result or {}).get("methods", {}).get(method, {})
+            specimen_scores = specimen_summary["methods"][method]
+            has_slice_marks = bool(slice_scores.get("n"))
+
+            rows.append([
+                val.METHOD_LABELS[method],
+                val.format_error(slice_scores.get("median")) if has_slice_marks else "--",
+                val.format_error(slice_scores.get("abs_median"), signed=False) if has_slice_marks else "--",
+                val.format_error(slice_scores.get("p90"), signed=False) if has_slice_marks else "--",
+                str(slice_scores.get("n", 0)) if has_slice_marks else "--",
+                val.format_error(specimen_scores["mean_abs_median"], signed=False),
+                val.format_error(specimen_scores["specimen_error"]),
+            ])
+
+        self.validationSheet.set_sheet_data(rows, reset_col_positions=False)
+
+        summary = (
+            f"Slice {current_slice + 1}: "
+            f"{(slice_result or {}).get('n_marks', 0)} marks   |   "
+            f"Specimen: {specimen_summary['n_slices']} slices, "
+            f"{specimen_summary['n_marks']} marks   |   "
+            f"Operator mean depth: "
+            f"{val.format_error(specimen_summary['operator_mean_depth'], signed=False)} px"
+        )
+        if slice_result and slice_result.get("gated"):
+            summary += "   |   GATED: no lesion detected, depth = surface line"
+        if specimen_summary["gated_slices"]:
+            gated = ", ".join(str(index + 1) for index in specimen_summary["gated_slices"])
+            summary += f"   |   Gated slices: {gated}"
+
+        self.validationSummaryLabel.config(text=summary)
 
 
     @handle_errors("resultsPanel.load_results_for")
