@@ -49,6 +49,7 @@ from app.logic.carlquant.annotation_colors import (
     KNEE_POINT_COLOR,
     INFLECTION_POINT_COLOR,
     SHOULDER_POINT_COLOR,
+    HALF_SPAN_POINT_COLOR,
     EXTRACTION_REGION_COLOR,
     EXTRACTION_REGION_LESION_COLOR,
     EXTRACTION_REGION_TEXT_COLOR,
@@ -392,23 +393,25 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         'knee_point': KNEE_POINT_COLOR,
         'inflection_point': INFLECTION_POINT_COLOR,
         'shoulder_point': SHOULDER_POINT_COLOR,
+        'half_span_point': HALF_SPAN_POINT_COLOR,
         # Add future methods here, e.g.:
         # 'gradient_method': 'orange',
         # 'threshold_method': 'lime',
     }
-    
-    def draw(self, lesion_depth, show_component_methods=False, show_knee=False, show_inflection=False, show_shoulder=False):
+
+    def draw(self, lesion_depth, show_component_methods=False, show_knee=False, show_inflection=False, show_shoulder=False, show_half_span=False):
         """
         Draw lesion depth results.
-        
+
         Draws a smooth line connecting all depth points.
-        
+
         Args:
             lesion_depth: Lesion depth result object
-            show_component_methods: If True, draw all component methods (knee, inflection, shoulder)
+            show_component_methods: If True, draw all component methods
             show_knee: If True, draw only knee point method line
             show_inflection: If True, draw only inflection point method line
             show_shoulder: If True, draw only shoulder point method line
+            show_half_span: If True, draw only half-span crossing method line
         """
         if not lesion_depth:
             return
@@ -424,19 +427,20 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
             return
         
         # Draw individual component methods if any are enabled
-        if show_component_methods or show_knee or show_inflection or show_shoulder:
-            self._draw_component_methods(lesion_depth, show_knee, show_inflection, show_shoulder)
-        
+        if show_component_methods or show_knee or show_inflection or show_shoulder or show_half_span:
+            self._draw_component_methods(lesion_depth, show_knee, show_inflection,
+                                         show_shoulder, show_half_span)
+
         # Draw smooth line connecting all points
         self.draw_line(points, color=LESION_DEPTH_PRIMARY_COLOR, width=2, tags="lesion_depth_overlay")
-    
-    def _draw_component_methods(self, lesion_depth, show_knee=True, show_inflection=True, show_shoulder=True):
+
+    def _draw_component_methods(self, lesion_depth, show_knee=True, show_inflection=True, show_shoulder=True, show_half_span=True):
         """
         Draw individual detection method results based on user selection.
-        
-        Extracts knee, inflection, and shoulder points from lesion_detection_data
-        and renders them as separate lines. Easily extensible for future methods.
-        
+
+        Extracts each method's points from lesion_detection_data and renders
+        them as separate lines. Easily extensible for future methods.
+
         Args:
             lesion_depth: Lesion depth result object with lesion_detection_data
             show_knee: If True, draw knee point method line
@@ -450,7 +454,8 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         method_points = {
             'knee_point': [],
             'inflection_point': [],
-            'shoulder_point': []
+            'shoulder_point': [],
+            'half_span_point': []
         }
         
         for x, data in sorted(lesion_depth.lesion_detection_data.items()):
@@ -487,6 +492,16 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
                     except (TypeError, ValueError):
                         pass
             
+            # Extract half-span crossing
+            if show_half_span:
+                half_span_depth = metadata.get('half_span_depth')
+                if half_span_depth is not None and not (hasattr(half_span_depth, '__iter__') and len(half_span_depth) == 0):
+                    try:
+                        if not np.isnan(half_span_depth):
+                            method_points['half_span_point'].append((x, surface_y + half_span_depth))
+                    except (TypeError, ValueError):
+                        pass
+
             # EXTENSIBILITY: Add future methods here
             # Example:
             # if show_gradient:
