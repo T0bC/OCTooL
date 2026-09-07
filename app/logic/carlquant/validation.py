@@ -16,8 +16,14 @@ A-scan reader sees; the specimen mean is what downstream analysis consumes, and
 a consistently signed bias does *not* cancel under averaging -- so the two can
 rank methods differently. Reporting only one hides that.
 
+Interpolation is **display only**. ``interpolate_marks`` fills the gaps between
+an operator's ~18 marks so every column can show a reference, but scoring reads
+real marks alone -- an inferred value must never reach a reported error.
+
 Key contents:
 - METHODS: The depth measures compared, in report order.
+- interpolate_marks: Smooth curve through one slice's marks, for display.
+- interpolated_mark_at: Interpolated ground-truth depth at one column.
 - nearest_analysed_column: Maps a mark's x to the nearest analysed A-scan column.
 - method_depth: Reads one method's depth from a column, handling the naming trap.
 - method_errors: Signed per-mark errors for one method.
@@ -85,6 +91,88 @@ DEFAULT_TOLERANCE = 3
 
 #: ``combined_method_used`` value marking a slice the no-lesion gate fired on.
 NO_LESION_METHOD = "no_lesion_surface"
+
+
+def interpolate_marks(
+        marks: Sequence[Tuple[float, float]]) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+    """Smooth curve through the operator marks of one slice.
+
+    An operator places roughly 18 marks across a ~375 px lesion, a median of
+    ~22 px apart, so most A-scan columns fall between marks and have no ground
+    truth of their own. Interpolating gives every column in the marked range a
+    reference to display.
+
+    The curve passes *through* the marks rather than smoothing them: each mark
+    is a deliberate operator judgement, not a noisy detection, so moving one
+    would misrepresent what was clicked.
+
+    Uses PCHIP -- a smooth cubic that is also shape-preserving, so it cannot
+    overshoot between two marks. A plain cubic spline was measured on the 793
+    collected marks first and overshot by up to **35 px** on slice 0 of the
+    held-out specimen, across a 29 px gap; that is deeper than the lesions
+    being measured, so it would have invented a lesion end no operator marked.
+    Rare (3 of 441 gaps) but severe, and silent.
+
+    Clipped to the marked range -- outside the first and last mark there is no
+    operator judgement to infer from, and extrapolating would invent one.
+
+    Returns:
+        ``(x, y)`` arrays at 1 px spacing over the marked range, or None if
+        there are too few marks to fit.
+    """
+    if marks is None or len(marks) < 2:
+        return None
+
+    points = np.array(sorted(marks, key=lambda mark: mark[0]), dtype=float)
+    # Average duplicate columns; the interpolator needs strictly increasing x.
+    unique_x, inverse = np.unique(points[:, 0], return_inverse=True)
+    if unique_x.size < 2:
+        return None
+    unique_y = np.array([points[inverse == index, 1].mean()
+                         for index in range(unique_x.size)])
+
+    # Round *inwards*: marks have fractional x, so flooring the first / ceiling
+    # the last would put grid points outside the marked range, where a
+    # non-extrapolating curve is undefined.
+    x_full = np.arange(int(np.ceil(unique_x[0])), int(np.floor(unique_x[-1])) + 1,
+                       dtype=float)
+    if x_full.size == 0:
+        return None
+
+    if unique_x.size < 3:
+        # PCHIP needs three points; two marks define a straight line anyway.
+        return x_full, np.interp(x_full, unique_x, unique_y)
+
+    try:
+        from scipy.interpolate import PchipInterpolator
+        curve = PchipInterpolator(unique_x, unique_y, extrapolate=False)
+        return x_full, np.asarray(curve(x_full), dtype=float)
+    except Exception:
+        # A curve that will not fit falls back to a straight join, which is
+        # still better than showing nothing between marks.
+        return x_full, np.interp(x_full, unique_x, unique_y)
+
+
+def interpolated_mark_at(marks: Sequence[Tuple[float, float]],
+                         column_x: float) -> Optional[float]:
+    """Interpolated ground-truth y at one column, or None outside the marked range.
+
+    For display only. Scoring uses real marks via :func:`method_errors`, so an
+    inferred value can never change a reported error.
+    """
+    curve = interpolate_marks(marks)
+    if curve is None:
+        return None
+
+    # Bound by the marks themselves, not the integer grid: a mark at x=540.9
+    # is inside the marked range even though the grid stops at 540.
+    column_x = float(column_x)
+    mark_xs = [float(mark[0]) for mark in marks]
+    if column_x < min(mark_xs) or column_x > max(mark_xs):
+        return None
+
+    x_full, y_full = curve
+    return float(np.interp(column_x, x_full, y_full))
 
 
 def nearest_analysed_column(lesion_detection_data, x,
