@@ -125,7 +125,6 @@ def process_slice_parallel(slice_idx, image_path, region_config, air_config, num
                 search_depth=200,
                 detection_method=detection_method,
                 stability_threshold=20.0,
-                preserve_wobbliness=True,
                 slice_id=slice_name
             )
         else:
@@ -851,6 +850,92 @@ def sigmoid_model(z, L, U, k, z0):
     return L + (U - L) / (1 + np.exp(k * (z - z0)))
 
 
+# === Half-span crossing =====================================================
+# Deterministic, fit-free depth term. Unlike the sigmoid it cannot fail to
+# converge (that fit collapses to z0=0 on some specimens).
+#
+# Constants calibrated against 328 operator marks over 20 specimens and
+# validated against 465 marks on a held-out specimen. See scripts/HANDOVER.md.
+
+HALF_SPAN_BASE_FRACTION = 0.50      # tunable: >0.50 reads shallower, <0.50 deeper
+HALF_SPAN_REFERENCE_SPAN = 110.0    # contrast at which the base fraction applies
+HALF_SPAN_CONTRAST_SLOPE = 0.10     # fraction drop per 100 grey values of extra span
+HALF_SPAN_FRACTION_LIMITS = (0.15, 0.90)
+HALF_SPAN_SMOOTH_WINDOW = 9         # boxcar width, and the sustain length
+HALF_SPAN_BACKGROUND_TAIL = 50      # depth window whose median is the background
+HALF_SPAN_PEAK_WINDOW = 20          # depth window in which the surface peak is taken
+
+#: Constant px offset added to the combined depth. Tunable; 0.0 is validated.
+DEPTH_OFFSET = 0.0
+
+
+def _boxcar(profile: np.ndarray, window: int) -> np.ndarray:
+    """Centred boxcar smoothing, preserving length."""
+    if window <= 1 or profile.size < window:
+        return profile.astype(float)
+    kernel = np.ones(window, dtype=float) / window
+    return np.convolve(profile.astype(float), kernel, mode="same")
+
+
+def half_span_fraction(span: float) -> float:
+    """Threshold fraction for a given contrast span.
+
+    High-contrast lesions cross a fixed threshold too early and read shallow,
+    so the fraction is lowered as span rises.
+    """
+    fraction = (HALF_SPAN_BASE_FRACTION
+                - HALF_SPAN_CONTRAST_SLOPE
+                * (span - HALF_SPAN_REFERENCE_SPAN) / 100.0)
+    return float(np.clip(fraction, *HALF_SPAN_FRACTION_LIMITS))
+
+
+def detect_depth_half_span(intensity_profile: np.ndarray,
+                           fraction: Optional[float] = None) -> Tuple[float, Dict]:
+    """Depth where the smoothed profile crosses background + fraction*span.
+
+    The crossing must hold for HALF_SPAN_SMOOTH_WINDOW samples, so a single
+    speckle dip cannot trigger it.
+
+    Returns:
+        (depth_value, metadata_dict)
+    """
+    profile = np.asarray(intensity_profile, dtype=float)
+    if profile.size == 0:
+        return np.nan, {'success': False, 'reason': 'empty_profile'}
+
+    smoothed = _boxcar(profile, HALF_SPAN_SMOOTH_WINDOW)
+    background = float(np.median(smoothed[-HALF_SPAN_BACKGROUND_TAIL:]))
+    peak = float(smoothed[:HALF_SPAN_PEAK_WINDOW].max())
+    span = peak - background
+
+    metadata = {'success': False, 'method': 'half_span',
+                'background': background, 'peak': peak, 'span': span}
+
+    if span <= 1:
+        metadata['reason'] = 'no_contrast'
+        return np.nan, metadata
+
+    if fraction is None:
+        fraction = half_span_fraction(span)
+    threshold = background + fraction * span
+    metadata.update({'fraction': fraction, 'threshold': threshold})
+
+    below = np.flatnonzero(smoothed < threshold)
+    if below.size == 0:
+        metadata['reason'] = 'never_crosses'
+        return np.nan, metadata
+
+    for index in below:
+        if np.all(smoothed[index:index + HALF_SPAN_SMOOTH_WINDOW] < threshold):
+            metadata['success'] = True
+            return float(index), metadata
+
+    # Crossed but never sustained; the first crossing is the best estimate.
+    metadata['success'] = True
+    metadata['sustained'] = False
+    return float(below[0]), metadata
+
+
 def detect_depth_sigmoid_fit(intensity_profile: np.ndarray, depth_indices: np.ndarray) -> Tuple[float, int, Dict]:
     """
     Detect lesion depth by fitting sigmoid and finding inflection point.
@@ -1023,202 +1108,74 @@ def compute_method_stability(method_raw_points: dict,
     return stability_info
 
 
-def compute_stable_combined_depth(lesion_detection_data: dict, 
-                                  stability_info: dict,
+#: Lateral SD (px) of the combined depth above which a slice is judged to carry
+#: no usable lesion signal. Measured over 45 slices / 793 operator marks: lesion
+#: slices reach 14.0, the one no-lesion slice 22.6. Any value in 15-18 gives
+#: zero false positives on that data, which has n=1 no-lesion slices.
+NO_LESION_SD = 15.0
+
+#: Depth reported when the no-lesion gate fires: the detected surface line.
+#: Depth is measured from the interpolated surface, so on a cavitated slice with
+#: no lesion beneath this is the cavitation depth. Every slice reports a number.
+NO_LESION_DEPTH = 0.0
+
+
+def compute_stable_combined_depth(lesion_detection_data: dict,
                                   ascan_x: int,
-                                  preserve_wobbliness: bool = True,
-                                  anchor_weight: float = 0.5) -> tuple:
+                                  depth_offset: float = DEPTH_OFFSET) -> tuple:
     """
-    Compute combined depth using offset-based correction with adaptive weighting.
-    
-    Strategy:
-    - Inflection point: Provides correction offset (how much to shift toward surface)
-    - Knee/Shoulder: Preserve lesion shape/wobbliness (averaged with SD weighting)
-    - Adaptive weighting: anchor_weight scaled by offset magnitude
-    - Combined: shape_depth + (offset * adaptive_anchor_weight)
-    
-    This approach PRESERVES wobbliness while applying correction. Unlike weighted averaging,
-    which blends methods (flattening variation), offset correction SHIFTS the entire shape
-    toward the inflection point without reducing variation.
-    
-    Adaptive Correction (Exponential with Wobbliness Preservation):
-    - Uses LOCAL offset for correction direction: offset = inflection_depth - shape_depth
-    - Uses GLOBAL offset as reference to scale correction strength
-    - Exponential scaling with reduced steepness (k=1.0) + 50% weight multiplier
-    - This preserves wobbliness while correcting systematic bias
-    - A-Scans with larger local offsets get stronger correction (but limited)
-    - A-Scans with smaller local offsets get minimal correction
-    - Fully automatic - no manual tuning needed
-    
-    Example (with k=1.0, 50% multiplier, anchor_weight=0.3):
-        Global offset: 50px (inflection_mean=100px, shape_mean=150px)
-        
-        A-Scan 1: inflection=100px, shape=155px, offset=-55px, ratio=1.1 → weight=0.10 → correction=-5.5px → result=149.5px
-        A-Scan 2: inflection=102px, shape=148px, offset=-46px, ratio=0.92 → weight=0.09 → correction=-4.1px → result=144px
-        A-Scan 3: inflection=105px, shape=110px, offset=-5px, ratio=0.1 → weight=0.01 → correction=-0.05px → result=110px
-        
-        Result: Gentle correction preserves wobbliness while reducing systematic bias toward inflection
-    
+    Combine the per-column depth terms: median(half_span, knee, inflection).
+
+    A median means any one term can fail completely without moving the answer.
+    A weighted blend was measured and rejected: it removed the pooled bias but
+    left per-slice errors up to +/-33 px, because the optimal weight varied
+    0.20-1.00 across specimens with no runtime-computable predictor.
+
+    The lower shoulder is deliberately not a term - it inherits a 1/k blow-up
+    and was the worst measure tested (29.8 px mean error, 94.4 px worst).
+
     Args:
-        lesion_detection_data: Dict containing per-column detection metadata
-        stability_info: Dict with stability metrics for each method (includes mean_depth)
-        ascan_x: Current x-coordinate of the A-Scan
-        preserve_wobbliness: If True, weight knee/shoulder by SD to preserve variation (default True)
-        anchor_weight: Maximum correction strength (0.0-1.0, default 0.3)
-                      Scaled exponentially based on local_offset/global_offset ratio
-                      Large deviations approach full strength, small deviations get minimal correction
-        
+        lesion_detection_data: Per-column detection metadata
+        ascan_x: Column to combine
+        depth_offset: Constant px offset added to the result (tunable, default 0)
+
     Returns:
         (depth_value, method_used) tuple
-        method_used is a string indicating which methods were combined
     """
     if ascan_x not in lesion_detection_data:
         return np.nan, "none"
-    
+
     metadata = lesion_detection_data[ascan_x].get('detection_metadata', {})
-    
-    # Extract depth values
-    knee_depth = metadata.get('knee_depth', np.nan)
-    inflection_depth = metadata.get('inflection_depth', np.nan)
-    shoulder_depth = metadata.get('shoulder_depth', np.nan)
-    
-    # Check stability for each method
-    knee_stable = not np.isnan(knee_depth) and stability_info.get('knee_point', {}).get('is_stable', False)
-    inflection_stable = not np.isnan(inflection_depth) and stability_info.get('sigmoid_fit', {}).get('is_stable', False)
-    shoulder_stable = not np.isnan(shoulder_depth) and stability_info.get('sigmoid_shoulder', {}).get('is_stable', False)
-    
-    # Collect shape-preserving methods (knee and shoulder)
-    shape_methods = []
-    if knee_stable:
-        shape_methods.append(('knee_point', knee_depth))
-    if shoulder_stable:
-        shape_methods.append(('sigmoid_shoulder', shoulder_depth))
-    
-    # === Case 1: IDEAL - Have inflection + shape methods ===
-    if inflection_stable and len(shape_methods) > 0:
-        # Compute shape depth (average of knee/shoulder) - preserves wobbliness
-        if preserve_wobbliness and len(shape_methods) > 1:
-            # Weight by SD to preserve wobbliness between knee/shoulder
-            shape_weights = []
-            for method_name, _ in shape_methods:
-                sd = stability_info.get(method_name, {}).get('std_depth', 1.0)
-                shape_weights.append(max(sd, 0.1))
-            total = sum(shape_weights)
-            shape_weights = [w / total for w in shape_weights]
-            shape_depth = sum(d * w for (_, d), w in zip(shape_methods, shape_weights))
-        else:
-            # Simple average
-            shape_depth = np.mean([d for _, d in shape_methods])
-        
-        # Offset-based correction: Shift shape toward inflection while preserving wobbliness
-        # IMPORTANT: Use LOCAL shape_depth for this A-scan, not global mean
-        # This ensures correction is based on local disagreement between methods
-        offset = inflection_depth - shape_depth
-        
-        # Get global mean shape depth for adaptive weighting calculation
-        shape_method_names = [m for m, _ in shape_methods]
-        if len(shape_method_names) == 2:
-            # Both knee and shoulder - use average of their means
-            mean_shape = np.mean([
-                stability_info.get('knee_point', {}).get('mean_depth', shape_depth),
-                stability_info.get('sigmoid_shoulder', {}).get('mean_depth', shape_depth)
-            ])
-        elif 'knee_point' in shape_method_names:
-            mean_shape = stability_info.get('knee_point', {}).get('mean_depth', shape_depth)
-        else:
-            mean_shape = stability_info.get('sigmoid_shoulder', {}).get('mean_depth', shape_depth)
-        
-        # Adaptive anchor_weight: larger offset → stronger correction
-        # Compute global offset between inflection and shape methods
-        inflection_mean = stability_info.get('sigmoid_fit', {}).get('mean_depth', inflection_depth)
-        global_offset = abs(inflection_mean - mean_shape)
-        
-        # Compute local offset for this A-Scan
-        local_offset = abs(offset)
-        
-        # Adaptive weighting: balance local correction with wobbliness preservation
-        # Strategy: Use local offset for direction, but scale by global offset to prevent over-correction
-        # This preserves wobbliness while still correcting systematic bias
-        if global_offset > 0:
-            # Ratio of local to global offset
-            ratio = local_offset / global_offset
-            
-            # Exponential scaling with reduced steepness to preserve wobbliness
-            # Lower k = gentler correction = more wobbliness preserved
-            k = 1  # Reduced from 2.0: gives ~63% weight at ratio=1, ~86% at ratio=2
-            
-            # Base adaptive weight from exponential function
-            base_weight = 1.0 - np.exp(-k * ratio)
-            
-            # Further reduce weight to preserve wobbliness
-            # Only apply partial correction even at maximum
-            adaptive_anchor_weight = anchor_weight * base_weight * 0.5  # 50% of calculated weight
-            
-        else:
-            # No global offset - methods agree perfectly, no correction needed
-            adaptive_anchor_weight = 0.0
-        
-        # Apply adaptive correction - shifts the shape without flattening it
-        combined_depth = shape_depth + (offset * adaptive_anchor_weight)
-        
-        method_names = [m for m, _ in shape_methods]
-        method_used = f"inflection_offset+{'+'.join(method_names)}"
-        return combined_depth, method_used
-    
-    # === Case 2: Only inflection (no shape methods) ===
-    # When knee and shoulder are both unstable, this typically indicates NO LESION:
-    # - Unstable knee/shoulder means no clear decay pattern (no lesion signature)
-    # - Inflection point is close to surface (shallow/no lesion)
-    # - Averaging unstable methods with inflection creates misleading depths
-    # Solution: Trust the stable inflection point alone - it represents the true (shallow) depth
-    elif inflection_stable:
-        # Use inflection depth directly - it's the only reliable measurement
-        # This correctly handles the "no lesion" case where inflection is near surface
-        return inflection_depth, "inflection_only"
-    
-    # === Case 3: Only shape methods (no inflection) ===
-    elif len(shape_methods) > 0:
-        if preserve_wobbliness and len(shape_methods) > 1:
-            # Weight by SD
-            weights = []
-            for method_name, _ in shape_methods:
-                sd = stability_info.get(method_name, {}).get('std_depth', 1.0)
-                weights.append(max(sd, 0.1))
-            total = sum(weights)
-            weights = [w / total for w in weights]
-            combined_depth = sum(d * w for (_, d), w in zip(shape_methods, weights))
-        else:
-            combined_depth = np.mean([d for _, d in shape_methods])
-        
-        method_names = [m for m, _ in shape_methods]
-        method_used = "+".join(method_names) + ("_weighted" if preserve_wobbliness and len(shape_methods) > 1 else "")
-        return combined_depth, method_used
-    
-    # === Case 4: No stable methods - fallback to most stable ===
-    else:
-        min_cv = np.inf
-        best_method = None
-        best_depth = np.nan
-        
-        for method_name in ['knee_point', 'sigmoid_fit', 'sigmoid_shoulder']:
-            cv = stability_info.get(method_name, {}).get('std_depth', np.inf)
-            if cv < min_cv:
-                if method_name == 'knee_point':
-                    depth = metadata.get('knee_depth', np.nan)
-                elif method_name == 'sigmoid_fit':
-                    depth = metadata.get('inflection_depth', np.nan)
-                else:  # sigmoid_shoulder
-                    depth = metadata.get('shoulder_depth', np.nan)
-                
-                if not np.isnan(depth):
-                    min_cv = cv
-                    best_method = method_name
-                    best_depth = depth
-        
-        if best_method is not None:
-            return best_depth, f"fallback_{best_method}"
-        else:
-            return np.nan, "none"
+    candidates = [
+        ('half_span', metadata.get('half_span_depth', np.nan)),
+        ('knee_point', metadata.get('knee_depth', np.nan)),
+        ('sigmoid_fit', metadata.get('inflection_depth', np.nan)),
+    ]
+    finite = [(name, depth) for name, depth in candidates
+              if depth is not None and np.isfinite(depth)]
+    if not finite:
+        return np.nan, "none"
+
+    combined = float(np.median([depth for _, depth in finite])) + depth_offset
+    return combined, "median+" + "+".join(name for name, _ in finite)
+
+
+def is_no_lesion_slice(combined_depths, no_lesion_sd: float = NO_LESION_SD) -> bool:
+    """
+    True when the combined depth is laterally unstable over the slice.
+
+    A real lesion boundary is laterally smooth - that is what makes it a
+    boundary. Scatter means the thing being tracked is not one.
+
+    Gating on knee or inflection SD instead was measured and rejected: neither
+    correlates with its own error (r = -0.06 and +0.01), and both overlap the
+    no-lesion slice.
+    """
+    values = np.asarray([d for d in combined_depths if d is not None], dtype=float)
+    values = values[np.isfinite(values)]
+    if values.size == 0:
+        return False
+    return bool(np.std(values) > no_lesion_sd)
 
 
 # Default refractive index for tooth material (enamel/dentin)
@@ -1237,8 +1194,8 @@ def calculate_lesion_depth(surface: Surface,
                           median_kernel_size: int = 7,
                           outlier_threshold: float = 2,
                           stability_threshold: float = 20.0,
-                          preserve_wobbliness: bool = True,
-                          anchor_weight: float = 0.4,
+                          depth_offset: float = DEPTH_OFFSET,
+                          no_lesion_sd: float = NO_LESION_SD,
                           slice_id = None,
                           refractive_index: float = TOOTH_REFRACTIVE_INDEX) -> Optional[LesionDepth]:
     """
@@ -1271,10 +1228,15 @@ def calculate_lesion_depth(surface: Surface,
                            Larger values (e.g., 7) remove wider spikes from speckles
         outlier_threshold: Number of standard deviations for outlier detection (default 2.0)
                           Lower values (e.g., 1.5) are more aggressive at removing spikes
-        stability_threshold: SD threshold in pixels for method stability (default 20.0)
-                           Methods with SD > threshold are excluded from combining
-        preserve_wobbliness: If True, use weighted averaging to preserve lesion texture (default True)
-                           Methods with higher SD get more weight
+        stability_threshold: SD threshold in pixels for per-method stability reporting
+                           (default 20.0). Diagnostic only; the combination does not
+                           branch on it.
+        depth_offset: Constant pixel offset added to the combined depth (default 0.0).
+                     Positive reads deeper, negative shallower. 0.0 is the validated
+                     value; provided so a study can nudge the result if needed.
+        no_lesion_sd: Lateral SD (px) of the combined depth above which the slice is
+                     judged to have no lesion and is reported at the surface
+                     (default 15.0). See NO_LESION_SD.
         refractive_index: Refractive index of tooth material for cavitation depth correction (default 1.5)
                          When cavitation is present, the subsurface lesion depth (below actual surface)
                          is divided by this value to convert from optical to physical depth.
@@ -1367,6 +1329,9 @@ def calculate_lesion_depth(surface: Surface,
         shoulder_depth = sigmoid_meta.get('shoulder_depth', np.nan) if sigmoid_meta.get('success') else np.nan
         shoulder_idx = sigmoid_meta.get('shoulder_idx', -1) if sigmoid_meta.get('success') else -1
         
+        # Method 3: Half-span crossing (fit-free, cannot fail to converge)
+        half_span_depth, half_span_meta = detect_depth_half_span(intensity_profile)
+
         # Store all method results in metadata (always available now)
         detection_metadata = {
             'knee_depth': knee_depth,
@@ -1375,6 +1340,9 @@ def calculate_lesion_depth(surface: Surface,
             'inflection_idx': inflection_idx,
             'shoulder_depth': shoulder_depth,
             'shoulder_idx': shoulder_idx,
+            'half_span_depth': half_span_depth,
+            'half_span_span': half_span_meta.get('span', np.nan),
+            'half_span_fraction': half_span_meta.get('fraction', np.nan),
             'sigmoid_success': sigmoid_meta.get('success', False),
             'fit_params': fit_params
         }
@@ -1483,27 +1451,35 @@ def calculate_lesion_depth(surface: Surface,
         # No valid depth points found
         return None
     
-    # For COMBINED_MEAN method: perform stability analysis and recompute with weighted averaging
+    # For COMBINED_MEAN method: combine per column, then apply the no-lesion gate.
     if detection_method == DepthDetectionMethod.COMBINED_MEAN:
-        # Compute stability metrics (raw points already collected during A-Scan loop)
+        # Reported for diagnostics only; nothing branches on it.
         stability_info = compute_method_stability(
             method_raw_points,
             lesion_detection_data,
             stability_threshold=stability_threshold
         )
-                
-        # Recompute depth points using stable weighted combination
-        depth_points = []
-        for ascan_x in sorted(lesion_detection_data.keys()):
-            # Get weighted combined depth
-            combined_depth, method_used = compute_stable_combined_depth(
-                lesion_detection_data,
-                stability_info,
-                ascan_x,
-                preserve_wobbliness=preserve_wobbliness,
-                anchor_weight=anchor_weight
+
+        # Stage 1: combine each column.
+        ascan_xs = sorted(lesion_detection_data.keys())
+        combined_by_x = {}
+        for ascan_x in ascan_xs:
+            combined_by_x[ascan_x] = compute_stable_combined_depth(
+                lesion_detection_data, ascan_x, depth_offset=depth_offset
             )
-            
+
+        # Stage 2: the gate acts on the combined depth's own lateral scatter,
+        # so it cannot be evaluated until stage 1 has run.
+        no_lesion = is_no_lesion_slice(
+            [d for d, _ in combined_by_x.values()], no_lesion_sd=no_lesion_sd
+        )
+
+        depth_points = []
+        for ascan_x in ascan_xs:
+            combined_depth, method_used = combined_by_x[ascan_x]
+            if no_lesion:
+                combined_depth, method_used = NO_LESION_DEPTH, "no_lesion_surface"
+
             if not np.isnan(combined_depth):
                 surface_y = lesion_detection_data[ascan_x]['surface_y']
                 
