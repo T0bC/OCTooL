@@ -71,6 +71,12 @@ LESION_BOUNDARY_COLOR = '#FFD700'            # Gold/yellow - lesion start/end (d
 # AIR Reference Color
 AIR_REGION_COLOR = '#37bfe9'                 # Bright cyan - AIR reference area
 
+# Validation Mode Color (operator-annotated ground truth for the true lesion end)
+# Matches the colour used in the research renders the existing marks were made
+# with. It repeats EXTRACTION_REGION_COLOR, which is acceptable because marking
+# is done with the overlays hidden, so the two are never on screen together.
+GROUND_TRUTH_MARK_COLOR = '#00FF88'          # Bright mint green - operator lesion-end marks
+
 # Results Panel Row Highlighting Colors
 ROW_HIGHLIGHT_NAVIGATION_COLOR = '#2d5016'   # Dark green - normal navigation highlighting
 ROW_HIGHLIGHT_ASCAN_COLOR = '#6a4c93'        # Purple/lavender - A-Scan viewer active highlighting
