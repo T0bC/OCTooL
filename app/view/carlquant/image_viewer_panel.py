@@ -52,6 +52,7 @@ from app.logic.carlquant.ground_truth import (
     load_ground_truth,
     save_ground_truth,
 )
+from app.logic.carlquant.validation import interpolate_marks
 from app.view.carlquant.annotation_renderer import (
     CoordinateConverter,
     SurfaceAnnotationRenderer,
@@ -119,6 +120,8 @@ class image_viewer_panel(BaseCanvasPanel):
         
         # A-Scan indicator state
         self.ascan_indicator_line = None   # Canvas line ID for A-scan column indicator
+        self.ascan_indicator_column = None # Column it marks, so a redraw can restore it
+        self.analysis_zoom_active = False  # True while this panel drives the zoom
         
         # A-Scan viewer callback (for synchronization)
         self.ascan_viewer_callback = None  # Callback to notify A-Scan viewer of slice changes
@@ -184,6 +187,12 @@ class image_viewer_panel(BaseCanvasPanel):
         # with the detection overlay hidden ('h'), so the operator's own marks
         # have to stay visible in exactly that state.
         self.draw_ground_truth_marks()
+
+        # Restore the A-scan column indicator. A full redraw rebuilds the
+        # canvas, so without this the line vanishes whenever one happens --
+        # most visibly on slider release, right after dragging.
+        if self.ascan_indicator_column is not None:
+            self.draw_ascan_indicator(self.ascan_indicator_column)
 
         if not self.overlays_visible:
             return
@@ -1282,34 +1291,60 @@ class image_viewer_panel(BaseCanvasPanel):
         del self.ground_truth_marks[slice_index]
         self._after_marks_changed()
 
+    def should_show_ground_truth(self):
+        """Whether ground truth belongs on the B-scan right now.
+
+        Shown while marking, and also whenever the A-Scan viewer's "Ground
+        Truth" toggle is on -- reading a disagreement means looking at the
+        B-scan and the A-scan together, so the two views follow one another
+        rather than requiring validation mode to be switched on as well.
+        """
+        if self.validation_mode:
+            return True
+
+        # Same lookup the per-method overlay toggles use (see draw_lesion_depth).
+        results_panel = self.context.get_panel("carl_results")
+        if not (results_panel and hasattr(results_panel, 'active_ascan_viewer')):
+            return False
+
+        ascan_viewer = results_panel.active_ascan_viewer
+        if not (ascan_viewer and ascan_viewer.dialog
+                and ascan_viewer.dialog.winfo_exists()):
+            return False
+
+        return bool(ascan_viewer.show_ground_truth.get())
+
     def draw_ground_truth_marks(self):
-        """Draw the operator marks for the displayed slice.
+        """Draw the operator marks for the displayed slice, and the curve through them.
 
         Drawn regardless of ``overlays_visible``: marking is done with the
         detection overlay hidden so the marks stay independent of what the
         software reports, so the marks themselves must remain visible then.
+
+        The marks are joined by the same interpolation the A-Scan viewer reads
+        between them, so the two views show the same reference. The curve is
+        display only and is clipped to the marked range.
         """
-        if not self.validation_mode:
+        if not self.should_show_ground_truth():
             return
 
         converter = self._get_coordinate_converter()
         if converter is None:
             return
 
+        # A specimen opened without validation mode still needs its marks read.
+        if not self.ground_truth_marks and self.ground_truth_specimen_id is None:
+            self.load_ground_truth_marks()
+
         marks = self.marks_on_current_slice()
         if not marks:
             return
 
-        points = [converter.image_to_canvas(x, y) for x, y in marks]
-
-        # Thin connecting line first, so the markers sit on top of it.
-        if len(points) > 1:
-            flattened = [coordinate for point in points for coordinate in point]
-            self.canvas.create_line(*flattened, fill=GROUND_TRUTH_MARK_COLOR,
-                                    width=1, tags="ground_truth")
+        self._draw_ground_truth_curve(converter, marks)
 
         size = 4
-        for canvas_x, canvas_y in points:
+        for image_x, image_y in marks:
+            canvas_x, canvas_y = converter.image_to_canvas(image_x, image_y)
             self.canvas.create_line(canvas_x - size, canvas_y - size,
                                     canvas_x + size, canvas_y + size,
                                     fill=GROUND_TRUTH_MARK_COLOR, width=2,
@@ -1318,6 +1353,116 @@ class image_viewer_panel(BaseCanvasPanel):
                                     canvas_x + size, canvas_y - size,
                                     fill=GROUND_TRUTH_MARK_COLOR, width=2,
                                     tags="ground_truth")
+
+    def _draw_ground_truth_curve(self, converter, marks):
+        """Draw the interpolated curve joining the marks, under the markers."""
+        curve = interpolate_marks(marks)
+        if curve is None:
+            return
+
+        x_values, y_values = curve
+        flattened = []
+        for image_x, image_y in zip(x_values, y_values):
+            canvas_x, canvas_y = converter.image_to_canvas(image_x, image_y)
+            flattened.extend((canvas_x, canvas_y))
+
+        if len(flattened) >= 4:
+            self.canvas.create_line(*flattened, fill=GROUND_TRUTH_MARK_COLOR,
+                                    width=1, tags="ground_truth")
+
+    # ============================================================================
+    # ZOOM TO ANALYSIS REGION
+    # ============================================================================
+
+    #: Padding into the sound enamel on each side of the lesion, in image px.
+    ANALYSIS_ZOOM_PADDING = 40
+
+    def lesion_region_bounds(self, specimen, current_slice):
+        """Horizontal extent of the lesion on this slice, or None if unconfigured.
+
+        Returns ``(x_start, x_end)`` in image pixels, padded into the sound
+        enamel on both sides so the lesion is not framed edge to edge, and
+        clamped to the image.
+        """
+        config = getattr(specimen, "config", None)
+        if not config or current_slice not in getattr(config, "regions", {}):
+            return None
+
+        region = config.regions[current_slice]
+        lesion_start = region.lesion_start[0]
+        lesion_end = region.lesion_end[0]
+        if lesion_end <= lesion_start:
+            return None
+
+        image_width = self.rawImage.width if self.rawImage is not None else lesion_end
+        x_start = max(0, lesion_start - self.ANALYSIS_ZOOM_PADDING)
+        x_end = min(image_width, lesion_end + self.ANALYSIS_ZOOM_PADDING)
+        return x_start, x_end
+
+    @handle_errors("imageViewerPanel.apply_analysis_zoom")
+    def apply_analysis_zoom(self):
+        """Frame the lesion region, mirroring the A-Scan viewer's zoom toggle.
+
+        Zooms so the padded lesion region fills the canvas width and centres it.
+        Returns True if a zoom was applied, False if the region is unknown --
+        in which case the caller should leave the view alone rather than guess.
+        """
+        if self.rawImage is None:
+            return False
+
+        specimen = self._current_specimen()
+        if specimen is None:
+            return False
+
+        bounds = self.lesion_region_bounds(specimen, self.current_slice_index())
+        if bounds is None:
+            return False
+
+        x_start, x_end = bounds
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        if canvas_width <= 1 or canvas_height <= 1:
+            return False
+
+        # Fit the region to the canvas width, but never below the fitted view
+        # (1.0) or above the same ceiling the wheel zoom uses.
+        region_width = x_end - x_start
+        zoom = canvas_width / region_width
+        fitted_zoom = canvas_width / self.rawImage.width
+        zoom = max(fitted_zoom, min(zoom, 10.0))
+        if zoom <= fitted_zoom:
+            # The region is as wide as the image; the fitted view already shows it.
+            return False
+
+        self.zoom_level = zoom
+        # Centre the region horizontally, and the image vertically.
+        self.image_offset_x = -x_start * zoom + (canvas_width - region_width * zoom) / 2
+        self.image_offset_y = (canvas_height - self.rawImage.height * zoom) / 2
+
+        self.render_zoomed_image()
+        return True
+
+    @handle_errors("imageViewerPanel.reset_analysis_zoom")
+    def reset_analysis_zoom(self):
+        """Return to the fitted view after analysis zoom is switched off."""
+        if self.rawImage is None:
+            return
+
+        self.zoom_level = 1.0
+        self.image_offset_x = 0
+        self.image_offset_y = 0
+        self.render_zoomed_image()
+
+    @handle_errors("imageViewerPanel.sync_analysis_zoom")
+    def sync_analysis_zoom(self, enabled):
+        """Apply or undo the analysis zoom to match the A-Scan viewer toggle."""
+        if enabled:
+            self.analysis_zoom_active = bool(self.apply_analysis_zoom())
+        elif self.analysis_zoom_active:
+            # Only undo a zoom this feature applied, so a manual zoom the
+            # operator set themselves is not thrown away.
+            self.analysis_zoom_active = False
+            self.reset_analysis_zoom()
 
     def draw_ascan_indicator(self, column_x):
         """
@@ -1328,14 +1473,19 @@ class image_viewer_panel(BaseCanvasPanel):
         """
         # Clear previous indicator
         self.clear_ascan_indicator()
-        
+
+        # Remember the column so a full redraw can restore the line. Without
+        # this the indicator survives dragging (which only redraws the line)
+        # but disappears on release, when the canvas is rebuilt.
+        self.ascan_indicator_column = column_x
+
         if not hasattr(self, 'rawImage') or self.rawImage is None:
             return
-        
+
         converter = self._get_coordinate_converter()
         if converter is None:
             return
-        
+
         # Convert image coordinates to canvas coordinates
         # Draw line from top to bottom of image
         image_height = self.rawImage.height
@@ -1355,11 +1505,21 @@ class image_viewer_panel(BaseCanvasPanel):
         )
     
     def clear_ascan_indicator(self):
-        """Clear the A-scan indicator line from the canvas."""
+        """Remove the indicator line from the canvas, keeping the column.
+
+        The column is retained so a redraw can restore the line. Use
+        :meth:`forget_ascan_indicator` when the A-Scan viewer closes and the
+        indicator should not come back.
+        """
         if self.ascan_indicator_line is not None:
             self.canvas.delete(self.ascan_indicator_line)
             self.ascan_indicator_line = None
         self.canvas.delete("ascan_indicator")
+
+    def forget_ascan_indicator(self):
+        """Clear the indicator and stop restoring it on redraw."""
+        self.clear_ascan_indicator()
+        self.ascan_indicator_column = None
     
     def register_ascan_viewer_callback(self, callback):
         """
