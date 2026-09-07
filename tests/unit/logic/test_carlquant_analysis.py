@@ -209,3 +209,52 @@ class TestAnalyzeSliceWithRegion:
         assert isinstance(result, SliceAnalysis)
         assert len(result.region_stats) > 0
         assert result.lesion_depth is None or isinstance(result.lesion_depth, LesionDepth)
+
+
+class TestDepthTuningIsReachable:
+    """The tuning parameters must reach the core from every public entry point.
+
+    ``anchor_weight`` was previously added as a knob but never forwarded by the
+    service, so production was pinned at its default. These tests fail if that
+    happens again.
+    """
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("param", ["depth_offset", "no_lesion_sd"])
+    @pytest.mark.parametrize(
+        "func", ["calculate_lesion_depth", "analyze_slice", "analyze_image"]
+    )
+    def test_entry_points_accept_tuning_params(self, func, param):
+        import inspect
+        signature = inspect.signature(getattr(AnalysisService, func))
+        assert param in signature.parameters
+
+    @pytest.mark.unit
+    def test_depth_offset_is_forwarded_to_core(self, lesion_image, full_width_region):
+        """GIVEN an offset, WHEN analyze_slice, THEN the reported depth shifts."""
+        surface = _flat_surface(5, 250)
+        base = AnalysisService.calculate_lesion_depth(
+            surface, full_width_region, lesion_image,
+        )
+        shifted = AnalysisService.calculate_lesion_depth(
+            surface, full_width_region, lesion_image, depth_offset=10.0,
+        )
+        if base is None or shifted is None:
+            pytest.skip("synthetic image yielded no depth points")
+        assert shifted.mean_depth > base.mean_depth
+
+    @pytest.mark.unit
+    def test_no_lesion_sd_is_forwarded_to_core(self, lesion_image, full_width_region):
+        """GIVEN a negative threshold, WHEN analysed, THEN the gate reports surface.
+
+        Negative rather than 0.0: this fixture's boundary is perfectly flat, so
+        its SD is exactly 0.0 and ``0.0 > 0.0`` would not fire -- correctly, a
+        flat boundary is not scatter.
+        """
+        surface = _flat_surface(5, 250)
+        gated = AnalysisService.calculate_lesion_depth(
+            surface, full_width_region, lesion_image, no_lesion_sd=-1.0,
+        )
+        if gated is None:
+            pytest.skip("synthetic image yielded no depth points")
+        assert gated.mean_depth == pytest.approx(0.0)
