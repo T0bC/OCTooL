@@ -975,26 +975,31 @@ def detect_depth_sigmoid_fit(intensity_profile: np.ndarray, depth_indices: np.nd
         L, U, k, z0 = popt
         
         # Calculate key points on sigmoid curve:
-        # 1. Inflection point (z0): Maximum rate of change (50% transition)
-        # 2. Shoulder: Upper transition region (~15% from U to L)
-        
-        # Inflection point (current method)
+        # 1. Inflection point (z0): maximum rate of change (50% transition)
+        # 2. Lower shoulder: where the decay has nearly reached the noise floor
+
+        # Inflection point
         depth_value = z0
         depth_idx = np.argmin(np.abs(depth_indices - z0))
-        
-        # Calculate shoulder point
-        # For sigmoid: I(z) = L + (U - L) / (1 + exp(k * (z - z0)))
-        # Shoulder: Point where I(z) = U - 0.15*(U - L) (15% down from upper asymptote)
-        
+
+        # Lower shoulder.
+        #
+        # NOTE: shoulder_intensity below is a solve parameter, NOT the intensity
+        # at the returned depth. Substituting it into the inverse sigmoid gives
+        # the closed form z0 + ln(1/0.15 - 1)/k = z0 + 1.7346/k, which lands
+        # where the curve has fallen to 15% ABOVE the noise floor L. So the
+        # shoulder is always DEEPER than the inflection, not closer to the
+        # surface. (Verify before "simplifying" this expression: replacing it
+        # with L + 0.15*(U - L) is not equivalent and moves the result ~34 px.)
+        #
+        # The 1/k factor is why this measure is unreliable -- a shallow fit
+        # (small k) sends it far past the lesion. Measured worst of all terms
+        # (29.8 px mean, 94.4 px worst), which is why the combination rule does
+        # not use it. Still emitted: renderers and stored configs read it.
         intensity_range = U - L
-        shoulder_intensity = U - 0.15 * intensity_range  # 85% of range
-        
-        # Solve for z where sigmoid equals target intensity
-        # I(z) = L + (U - L) / (1 + exp(k * (z - z0))) = target
-        # Rearranging: z = z0 - (1/k) * ln((U - L)/(target - L) - 1)
-        
+        shoulder_intensity = U - 0.15 * intensity_range
+
         try:
-            # Shoulder depth (earlier in profile, closer to surface)
             shoulder_depth = z0 - (1/k) * np.log((U - L)/(shoulder_intensity - L) - 1)
             shoulder_idx = np.argmin(np.abs(depth_indices - shoulder_depth))
             shoulder_depth = float(shoulder_depth)
