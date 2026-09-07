@@ -520,3 +520,20 @@ def test_sync_off_leaves_a_manual_zoom_untouched(tmp_path):
     panel.sync_analysis_zoom(False)
 
     assert panel.zoom_level == 3.0
+
+
+@pytest.mark.unit
+def test_overlays_survive_a_partially_initialised_panel():
+    """GIVEN none of the subclass state, WHEN drawing overlays, THEN no AttributeError.
+
+    ``draw_specialized_overlays`` is a hook the base class calls from its own
+    constructor and on every resize, so it can run before -- or without -- this
+    subclass's optional attributes existing.
+    """
+    panel = image_viewer_panel.__new__(image_viewer_panel)
+    panel.context = SimpleNamespace(get_panel=lambda name: None)
+    panel.overlays_visible = False
+    panel.rawImage = None
+    panel.canvas = FakeCanvas()
+
+    panel.draw_specialized_overlays()  # must not raise
