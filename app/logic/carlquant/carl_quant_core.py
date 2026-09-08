@@ -869,8 +869,13 @@ HALF_SPAN_PEAK_WINDOW = 20          # depth window in which the surface peak is 
 DEPTH_OFFSET = 0.0
 
 
-def _boxcar(profile: np.ndarray, window: int) -> np.ndarray:
-    """Centred boxcar smoothing, preserving length."""
+def boxcar(profile: np.ndarray, window: int) -> np.ndarray:
+    """Centred boxcar smoothing, preserving length.
+
+    Public because the A-Scan viewer redraws the smoothed profile to explain
+    the half-span crossing, and it has to be the same smoothing the detection
+    ran on.
+    """
     if window <= 1 or profile.size < window:
         return profile.astype(float)
     kernel = np.ones(window, dtype=float) / window
@@ -903,7 +908,7 @@ def detect_depth_half_span(intensity_profile: np.ndarray,
     if profile.size == 0:
         return np.nan, {'success': False, 'reason': 'empty_profile'}
 
-    smoothed = _boxcar(profile, HALF_SPAN_SMOOTH_WINDOW)
+    smoothed = boxcar(profile, HALF_SPAN_SMOOTH_WINDOW)
     background = float(np.median(smoothed[-HALF_SPAN_BACKGROUND_TAIL:]))
     peak = float(smoothed[:HALF_SPAN_PEAK_WINDOW].max())
     span = peak - background
@@ -1442,6 +1447,19 @@ def calculate_lesion_depth(surface: Surface,
             'half_span_depth': half_span_depth,
             'half_span_span': half_span_meta.get('span', np.nan),
             'half_span_fraction': half_span_meta.get('fraction', np.nan),
+            # Every term the half-span crossing is built from, so the result
+            # stays reconstructable from a saved config: this is a measurement
+            # that has to be auditable after the fact, not just reproducible
+            # by re-running. The smoothed profile is not stored -- it is a
+            # boxcar of the intensity profile, which is stored, so it is
+            # recomputed for display rather than duplicated on disk.
+            'half_span_background': half_span_meta.get('background', np.nan),
+            'half_span_peak': half_span_meta.get('peak', np.nan),
+            'half_span_threshold': half_span_meta.get('threshold', np.nan),
+            'half_span_smooth_window': HALF_SPAN_SMOOTH_WINDOW,
+            'half_span_sustained': half_span_meta.get('sustained', True),
+            'half_span_success': half_span_meta.get('success', False),
+            'half_span_reason': half_span_meta.get('reason'),
             'sigmoid_success': sigmoid_meta.get('success', False),
             'fit_params': fit_params
         }
