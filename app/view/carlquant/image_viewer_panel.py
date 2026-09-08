@@ -181,6 +181,32 @@ class image_viewer_panel(BaseCanvasPanel):
             return image_list[index]
         return None
     
+    def active_ascan_viewer(self):
+        """The open A-Scan viewer, or None.
+
+        Its checkboxes drive several B-scan overlays so the two views agree
+        without the operator setting the same thing twice.
+        """
+        results_panel = self.context.get_panel("carl_results")
+        if not (results_panel and hasattr(results_panel, 'active_ascan_viewer')):
+            return None
+        viewer = results_panel.active_ascan_viewer
+        if not (viewer and viewer.dialog and viewer.dialog.winfo_exists()):
+            return None
+        return viewer
+
+    def ascan_toggle(self, name, default=False):
+        """Read one A-Scan viewer checkbox, falling back when it is closed.
+
+        Overlays that predate the shared toggles pass ``default=True`` so
+        closing the viewer restores the B-scan rather than blanking it.
+        """
+        viewer = self.active_ascan_viewer()
+        if viewer is None:
+            return default
+        variable = getattr(viewer, name, None)
+        return default if variable is None else bool(variable.get())
+
     def draw_specialized_overlays(self):
         """Draw region boundaries and AIR reference areas after image rendering.
 
@@ -214,18 +240,20 @@ class image_viewer_panel(BaseCanvasPanel):
         specimen = specimen_data[specimen_id]
         current_slice = int(self.scale.get()) - 1
         
-        # Draw region boundaries and AIR reference areas
-        self.draw_region_boundaries(specimen, current_slice)
+        # Overlays the A-Scan viewer can switch off. When it is closed every
+        # toggle reads True, so the B-scan looks the same as it always did.
+        if self.ascan_toggle('show_boundaries', default=True):
+            self.draw_region_boundaries(specimen, current_slice)
         self.draw_air_regions(specimen, current_slice)
-        
-        # Draw surface detection results
-        self.draw_surface_results(specimen, current_slice)
-        
+
+        if self.ascan_toggle('show_surface', default=True):
+            self.draw_surface_results(specimen, current_slice)
+
         # Draw lesion depth results
         self.draw_lesion_depth(specimen, current_slice)
-        
-        # Draw extraction regions
-        self.draw_extraction_regions(specimen, current_slice)
+
+        if self.ascan_toggle('show_extraction_regions', default=True):
+            self.draw_extraction_regions(specimen, current_slice)
 
     # ============================================================================
     # IMAGE DISPLAY (OVERRIDE FOR SPECIMEN-SPECIFIC LOGIC)
@@ -1089,29 +1117,14 @@ class image_viewer_panel(BaseCanvasPanel):
         if converter is None:
             return
         
-        # Get checkbox states from A-Scan viewer if it's open
-        show_knee = False
-        show_inflection = False
-        show_shoulder = False
-        show_half_span = False
-
-        # Check if there's an active A-Scan viewer with checkbox states
-        results_panel = self.context.get_panel("carl_results")
-        if results_panel and hasattr(results_panel, 'active_ascan_viewer'):
-            ascan_viewer = results_panel.active_ascan_viewer
-            if ascan_viewer and ascan_viewer.dialog and ascan_viewer.dialog.winfo_exists():
-                # Get checkbox states from A-Scan viewer
-                show_knee = ascan_viewer.show_knee_point.get()
-                show_inflection = ascan_viewer.show_sigmoid_inflection.get()
-                show_shoulder = ascan_viewer.show_sigmoid_shoulder.get()
-                show_half_span = ascan_viewer.show_half_span.get()
-
+        # Per-method overlays are off unless the A-Scan viewer asks for them:
+        # they are diagnostic, so the B-scan stays uncluttered by default.
         renderer = LesionDepthAnnotationRenderer(self.canvas, converter)
         renderer.draw(lesion_depth,
-                     show_knee=show_knee,
-                     show_inflection=show_inflection,
-                     show_shoulder=show_shoulder,
-                     show_half_span=show_half_span)
+                     show_knee=self.ascan_toggle('show_knee_point'),
+                     show_inflection=self.ascan_toggle('show_sigmoid_inflection'),
+                     show_shoulder=self.ascan_toggle('show_sigmoid_shoulder'),
+                     show_half_span=self.ascan_toggle('show_half_span'))
 
     # ============================================================================
     # VALIDATION MODE (GROUND-TRUTH ANNOTATION)
@@ -1311,16 +1324,7 @@ class image_viewer_panel(BaseCanvasPanel):
             return True
 
         # Same lookup the per-method overlay toggles use (see draw_lesion_depth).
-        results_panel = self.context.get_panel("carl_results")
-        if not (results_panel and hasattr(results_panel, 'active_ascan_viewer')):
-            return False
-
-        ascan_viewer = results_panel.active_ascan_viewer
-        if not (ascan_viewer and ascan_viewer.dialog
-                and ascan_viewer.dialog.winfo_exists()):
-            return False
-
-        return bool(ascan_viewer.show_ground_truth.get())
+        return self.ascan_toggle('show_ground_truth')
 
     def draw_ground_truth_marks(self):
         """Draw the operator marks for the displayed slice, and the curve through them.
