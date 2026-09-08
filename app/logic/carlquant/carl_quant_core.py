@@ -855,7 +855,7 @@ def sigmoid_model(z, L, U, k, z0):
 # converge (that fit collapses to z0=0 on some specimens).
 #
 # Constants calibrated against 328 operator marks over 20 specimens and
-# validated against 465 marks on a held-out specimen. See scripts/HANDOVER.md.
+# validated against 465 marks on a held-out specimen.
 
 HALF_SPAN_BASE_FRACTION = 0.50      # tunable: >0.50 reads shallower, <0.50 deeper
 HALF_SPAN_REFERENCE_SPAN = 110.0    # contrast at which the base fraction applies
@@ -1124,25 +1124,125 @@ NO_LESION_SD = 15.0
 #: no lesion beneath this is the cavitation depth. Every slice reports a number.
 NO_LESION_DEPTH = 0.0
 
+#: ``depth_method_used`` value marking a slice with no usable lesion signal,
+#: whether from the lateral-scatter gate or from every method being unstable.
+NO_LESION_METHOD = "no_lesion_surface"
+
+
+#: Lateral SD (px) below which a method's per-column trace is considered a
+#: usable lesion boundary. A real boundary is laterally smooth; scatter above
+#: this means the term is tracking speckle, not tissue.
+#:
+#: Measured over 20 slices: half-span clears this on 18, and the two slices it
+#: fails are the ones where it should fail (one no-lesion, one near-sound).
+METHOD_STABILITY_SD = 12.0
+
+#: Order the cascade falls through once half-span is rejected.
+_FALLBACK_METHODS = ("knee_point", "sigmoid_fit")
+
+#: detection_metadata key holding each method's raw per-column depth.
+_METHOD_METADATA_KEY = {
+    "half_span": "half_span_depth",
+    "knee_point": "knee_depth",
+    "sigmoid_fit": "inflection_depth",
+}
+
+
+def method_depth_series(lesion_detection_data: dict, method: str) -> dict:
+    """Per-column raw depth for one method, keyed by column x.
+
+    Reads ``detection_metadata``, never the top-level column keys, so it is
+    unaffected by the combined result being written back onto the column.
+    """
+    key = _METHOD_METADATA_KEY[method]
+    series = {}
+    for ascan_x, column in lesion_detection_data.items():
+        value = (column.get('detection_metadata') or {}).get(key, np.nan)
+        if value is not None and np.isfinite(value):
+            series[ascan_x] = float(value)
+    return series
+
+
+def is_method_stable(depth_series: dict,
+                     stability_sd: float = METHOD_STABILITY_SD) -> bool:
+    """True when a method's depths hold together laterally across the slice.
+
+    Needs at least 3 columns; fewer is not a trace, and its SD is meaningless.
+    """
+    values = np.asarray(list(depth_series.values()), dtype=float)
+    if values.size < 3:
+        return False
+    return bool(np.std(values) <= stability_sd)
+
+
+def select_depth_method(lesion_detection_data: dict,
+                        stability_sd: float = METHOD_STABILITY_SD) -> tuple:
+    """Pick which method supplies this slice's lesion depth.
+
+    Half-span is the primary measure: it is fit-free, cannot fail to converge,
+    and tracks the visible lesion boundary most closely. It is used alone
+    whenever it is stable, rather than being averaged with the other terms --
+    a median over all three was measured to be *wobblier* than half-span by
+    itself (SD 12.83 vs 7.48 on one cavitated slice), because the terms are
+    near-ordered rather than independent, so an unstable term keeps dragging
+    the median off the good one.
+
+    The fallbacks exist because the two remaining terms are biased in opposite,
+    known directions: the knee reads deep (deeper than half-span in 81.5% of
+    8713 columns) and the sigmoid inflection reads shallow (shallower in 97.7%,
+    median ratio 0.455, since it marks the 50% intensity transition rather than
+    the lesion end). Averaging them cancels the two biases; either one alone is
+    a last resort, reported because a biased depth is still more informative
+    than reporting no lesion at all.
+
+    Returns:
+        (method_name, depth_series) -- ``method_name`` is one of
+        ``half_span``, ``mean+knee_point+sigmoid_fit``, ``knee_point``,
+        ``sigmoid_fit``, or ``no_lesion_surface`` when nothing is stable.
+        ``depth_series`` maps column x to raw depth, empty for the last case.
+    """
+    half_span = method_depth_series(lesion_detection_data, 'half_span')
+    if is_method_stable(half_span, stability_sd):
+        return 'half_span', half_span
+
+    stable = {}
+    for method in _FALLBACK_METHODS:
+        series = method_depth_series(lesion_detection_data, method)
+        if is_method_stable(series, stability_sd):
+            stable[method] = series
+
+    if len(stable) == len(_FALLBACK_METHODS):
+        knee, inflection = (stable[m] for m in _FALLBACK_METHODS)
+        shared = knee.keys() & inflection.keys()
+        if shared:
+            averaged = {x: (knee[x] + inflection[x]) / 2.0 for x in shared}
+            return 'mean+' + '+'.join(_FALLBACK_METHODS), averaged
+
+    for method in _FALLBACK_METHODS:
+        if method in stable:
+            return method, stable[method]
+
+    return NO_LESION_METHOD, {}
+
 
 def compute_stable_combined_depth(lesion_detection_data: dict,
                                   ascan_x: int,
-                                  depth_offset: float = DEPTH_OFFSET) -> tuple:
+                                  depth_offset: float = DEPTH_OFFSET,
+                                  depth_series: Optional[dict] = None,
+                                  method_used: Optional[str] = None) -> tuple:
     """
-    Combine the per-column depth terms: median(half_span, knee, inflection).
+    Look up one column's depth from the method chosen for the whole slice.
 
-    A median means any one term can fail completely without moving the answer.
-    A weighted blend was measured and rejected: it removed the pooled bias but
-    left per-slice errors up to +/-33 px, because the optimal weight varied
-    0.20-1.00 across specimens with no runtime-computable predictor.
-
-    The lower shoulder is deliberately not a term - it inherits a 1/k blow-up
-    and was the worst measure tested (29.8 px mean error, 94.4 px worst).
+    Which method that is comes from :func:`select_depth_method`, which needs
+    every column to judge lateral stability -- so it is decided once per slice
+    and passed in here, not re-derived per column.
 
     Args:
         lesion_detection_data: Per-column detection metadata
-        ascan_x: Column to combine
+        ascan_x: Column to read
         depth_offset: Constant px offset added to the result (tunable, default 0)
+        depth_series: Chosen method's per-column depths
+        method_used: Name of the chosen method, recorded on each column
 
     Returns:
         (depth_value, method_used) tuple
@@ -1150,19 +1250,13 @@ def compute_stable_combined_depth(lesion_detection_data: dict,
     if ascan_x not in lesion_detection_data:
         return np.nan, "none"
 
-    metadata = lesion_detection_data[ascan_x].get('detection_metadata', {})
-    candidates = [
-        ('half_span', metadata.get('half_span_depth', np.nan)),
-        ('knee_point', metadata.get('knee_depth', np.nan)),
-        ('sigmoid_fit', metadata.get('inflection_depth', np.nan)),
-    ]
-    finite = [(name, depth) for name, depth in candidates
-              if depth is not None and np.isfinite(depth)]
-    if not finite:
-        return np.nan, "none"
+    if depth_series is None or method_used is None:
+        method_used, depth_series = select_depth_method(lesion_detection_data)
 
-    combined = float(np.median([depth for _, depth in finite])) + depth_offset
-    return combined, "median+" + "+".join(name for name, _ in finite)
+    if ascan_x not in depth_series:
+        return np.nan, method_used
+
+    return float(depth_series[ascan_x]) + depth_offset, method_used
 
 
 def is_no_lesion_slice(combined_depths, no_lesion_sd: float = NO_LESION_SD) -> bool:
@@ -1445,8 +1539,10 @@ def calculate_lesion_depth(surface: Surface,
                 'knee_idx': depth_idx,  # Name kept for compatibility
                 'surface_y': surface_y_int,  # Original surface position
                 'profile_start_y': start_y,  # Where profile extraction started
-                'knee_depth': depth_value,  # Depth relative to profile start
-                'actual_depth': actual_depth_from_surface,  # Total depth from surface
+                # See the combined branch below for why these two are kept
+                # apart: _px is drawn, _corrected is reported.
+                'lesion_depth_px': depth_value,
+                'lesion_depth_corrected': actual_depth_from_surface,
                 'fitted_curve': fitted_curve.tolist() if fitted_curve is not None else None,
                 'fit_params': fit_params,
                 'detection_metadata': detection_metadata
@@ -1465,12 +1561,18 @@ def calculate_lesion_depth(surface: Surface,
             stability_threshold=stability_threshold
         )
 
-        # Stage 1: combine each column.
+        # Stage 1: choose one method for the whole slice, then read each column
+        # from it. The choice needs every column's depths to judge lateral
+        # stability, so it cannot be made per column.
         ascan_xs = sorted(lesion_detection_data.keys())
+        chosen_method, chosen_series = select_depth_method(
+            lesion_detection_data, stability_sd=stability_threshold
+        )
         combined_by_x = {}
         for ascan_x in ascan_xs:
             combined_by_x[ascan_x] = compute_stable_combined_depth(
-                lesion_detection_data, ascan_x, depth_offset=depth_offset
+                lesion_detection_data, ascan_x, depth_offset=depth_offset,
+                depth_series=chosen_series, method_used=chosen_method
             )
 
         # Stage 2: the gate acts on the combined depth's own lateral scatter,
@@ -1482,8 +1584,8 @@ def calculate_lesion_depth(surface: Surface,
         depth_points = []
         for ascan_x in ascan_xs:
             combined_depth, method_used = combined_by_x[ascan_x]
-            if no_lesion:
-                combined_depth, method_used = NO_LESION_DEPTH, "no_lesion_surface"
+            if no_lesion or method_used == NO_LESION_METHOD:
+                combined_depth, method_used = NO_LESION_DEPTH, NO_LESION_METHOD
 
             if not np.isnan(combined_depth):
                 surface_y = lesion_detection_data[ascan_x]['surface_y']
@@ -1491,10 +1593,14 @@ def calculate_lesion_depth(surface: Surface,
                 # Convert to absolute y-coordinate
                 lesion_bottom_y = surface_y + combined_depth
                 
-                # Apply refractive index correction (same logic as non-combined methods)
-                # For cavitated lesions, split depth into:
-                # 1. Cavitation depth (air, n=1): interpolated surface to actual surface - no correction
-                # 2. Subsurface depth (tooth, n~1.5): actual surface to lesion bottom - divide by n
+                # Refractive index correction, for the reported value only.
+                # Acquisition runs at n=1, so pixels are raw optical path: a
+                # depth in tooth reads ~1.5x too deep and must be divided,
+                # while a cavitation is air and must not be.
+                #
+                # Cavitated columns therefore split into two segments:
+                # 1. Interpolated (sound) surface to actual surface -- air, n=1
+                # 2. Actual surface to lesion bottom -- tooth, divided by n
                 if interpolated_dict is not None and ascan_x in interpolated_dict:
                     interpolated_y = interpolated_dict[ascan_x]
                     actual_y = surface_dict[ascan_x]
@@ -1505,12 +1611,23 @@ def calculate_lesion_depth(surface: Surface,
                     # Non-cavitated: entire depth is in tooth material
                     actual_depth_from_surface = combined_depth / refractive_index
                 
+                # (x, y) is a pixel position for drawing; the third element is
+                # the corrected depth, and is what reaches Excel via mean_depth.
                 depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
-                
-                # Update lesion_detection_data with combined result
-                lesion_detection_data[ascan_x]['knee_depth'] = combined_depth
-                lesion_detection_data[ascan_x]['actual_depth'] = actual_depth_from_surface
-                lesion_detection_data[ascan_x]['detection_metadata']['combined_method_used'] = method_used
+
+                # Two spaces, deliberately kept apart:
+                #   lesion_depth_px       - raw pixels, what the image shows.
+                #     Everything drawn uses this, so a line lands on the
+                #     boundary the operator can see. Operator marks are made on
+                #     uncorrected images too, so the calibration constants and
+                #     the validation scores live in this space as well.
+                #   lesion_depth_corrected - physical depth after refractive
+                #     index. Reported to Excel for downstream statistics; never
+                #     drawn, because it does not correspond to a pixel row.
+                column = lesion_detection_data[ascan_x]
+                column['lesion_depth_px'] = combined_depth
+                column['lesion_depth_corrected'] = actual_depth_from_surface
+                column['detection_metadata']['depth_method_used'] = method_used
         
         if len(depth_points) == 0:
             return None
