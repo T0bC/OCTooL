@@ -92,6 +92,21 @@ def convert_to_json_serializable(obj):
 # jpg files are not supported since the color video image is not needed for the analysis
 IMAGE_EXTENSIONS = ['*.png', '*.tif', '*.tiff']
 
+def _optional_float(value):
+    """Float for JSON, or None when the value is missing or NaN.
+
+    NaN is not valid JSON, and writing 0.0 instead would read back as a
+    detection exactly at the surface.
+    """
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return None if np.isnan(number) else number
+
+
 def natural_key(path):
     return [int(text) if text.isdigit() else text.lower()
             for text in re.split(r'(\d+)', path.name)]
@@ -622,8 +637,8 @@ class DataSaver:
                         for x, data in result.lesion_depth.lesion_detection_data.items():
                             detection_data_serializable[str(x)] = {
                                 'surface_y': int(data.get('surface_y', 0)),
-                                'actual_depth': float(data.get('actual_depth', np.nan)) if not np.isnan(data.get('actual_depth', np.nan)) else None,
-                                'knee_depth': float(data.get('knee_depth', np.nan)) if not np.isnan(data.get('knee_depth', np.nan)) else None,
+                                'lesion_depth_px': _optional_float(data.get('lesion_depth_px')),
+                                'lesion_depth_corrected': _optional_float(data.get('lesion_depth_corrected')),
                                 'detection_metadata': convert_to_json_serializable(data.get('detection_metadata', {}))
                             }
                         lesion_depth_data["lesion_detection_data"] = detection_data_serializable
