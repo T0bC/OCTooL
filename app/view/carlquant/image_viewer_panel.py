@@ -182,7 +182,12 @@ class image_viewer_panel(BaseCanvasPanel):
         return None
     
     def draw_specialized_overlays(self):
-        """Draw region boundaries and AIR reference areas after image rendering."""
+        """Draw region boundaries and AIR reference areas after image rendering.
+
+        This is a hook the base class calls from its own constructor, so it can
+        run before this subclass has finished initialising. Optional state is
+        therefore read defensively rather than assumed to exist.
+        """
         # Ground-truth marks are drawn before the overlay check: marking is done
         # with the detection overlay hidden ('h'), so the operator's own marks
         # have to stay visible in exactly that state.
@@ -191,8 +196,9 @@ class image_viewer_panel(BaseCanvasPanel):
         # Restore the A-scan column indicator. A full redraw rebuilds the
         # canvas, so without this the line vanishes whenever one happens --
         # most visibly on slider release, right after dragging.
-        if self.ascan_indicator_column is not None:
-            self.draw_ascan_indicator(self.ascan_indicator_column)
+        indicator_column = getattr(self, 'ascan_indicator_column', None)
+        if indicator_column is not None:
+            self.draw_ascan_indicator(indicator_column)
 
         if not self.overlays_visible:
             return
@@ -1299,7 +1305,9 @@ class image_viewer_panel(BaseCanvasPanel):
         B-scan and the A-scan together, so the two views follow one another
         rather than requiring validation mode to be switched on as well.
         """
-        if self.validation_mode:
+        # Read defensively: this runs from draw_specialized_overlays, which the
+        # base class calls during its own constructor.
+        if getattr(self, 'validation_mode', False):
             return True
 
         # Same lookup the per-method overlay toggles use (see draw_lesion_depth).
@@ -1424,23 +1432,66 @@ class image_viewer_panel(BaseCanvasPanel):
         if canvas_width <= 1 or canvas_height <= 1:
             return False
 
-        # Fit the region to the canvas width, but never below the fitted view
-        # (1.0) or above the same ceiling the wheel zoom uses.
+        # ``zoom_level`` is an absolute image-pixel scale once it leaves 1.0
+        # (render_zoomed_image sizes the image as rawImage.width * zoom_level),
+        # so the comparison point is the *fitted* scale, which for these images
+        # is usually height-constrained rather than width-constrained.
+        fitted_zoom = min(canvas_width / self.rawImage.width,
+                          canvas_height / self.rawImage.height)
+
         region_width = x_end - x_start
-        zoom = canvas_width / region_width
-        fitted_zoom = canvas_width / self.rawImage.width
-        zoom = max(fitted_zoom, min(zoom, 10.0))
+        zoom = min(canvas_width / region_width, 10.0)
         if zoom <= fitted_zoom:
-            # The region is as wide as the image; the fitted view already shows it.
+            # The fitted view already shows the region no smaller; leave it be.
             return False
 
         self.zoom_level = zoom
-        # Centre the region horizontally, and the image vertically.
-        self.image_offset_x = -x_start * zoom + (canvas_width - region_width * zoom) / 2
-        self.image_offset_y = (canvas_height - self.rawImage.height * zoom) / 2
+        # Put the region's left edge at the canvas left edge; the region fills
+        # the canvas width by construction, so no extra horizontal centring.
+        self.image_offset_x = -x_start * zoom
+
+        # Frame vertically on the lesion, not on the image. The lesion sits
+        # just below the surface -- in the top ~16% of these images -- so
+        # centring the whole image would push it off the top of the canvas.
+        self.image_offset_y = self._analysis_zoom_offset_y(
+            specimen, self.current_slice_index(), zoom, canvas_height)
 
         self.render_zoomed_image()
         return True
+
+    def _analysis_zoom_offset_y(self, specimen, current_slice, zoom, canvas_height):
+        """Vertical offset that frames the lesion depth, in canvas pixels.
+
+        Anchors on the detected surface where one exists, showing a little
+        tissue above it and the analysis depth below. Falls back to the top of
+        the image, which is closer than centring for these specimens.
+        """
+        scaled_height = self.rawImage.height * zoom
+        if scaled_height <= canvas_height:
+            # The whole image fits; centre it.
+            return (canvas_height - scaled_height) / 2
+
+        surface_y = self._mean_surface_y(specimen, current_slice)
+        if surface_y is None:
+            return 0.0
+
+        # Show ~15% of the canvas above the surface, the rest below it.
+        offset = -(surface_y * zoom) + canvas_height * 0.15
+        # Never scroll past either edge of the image.
+        return max(min(offset, 0.0), canvas_height - scaled_height)
+
+    def _mean_surface_y(self, specimen, current_slice):
+        """Mean detected surface row for a slice, or None if not analysed."""
+        result = (getattr(specimen, "results", None) or {}).get(current_slice)
+        surface = getattr(result, "surface", None) if result else None
+        curves = getattr(surface, "fitted_curves", None) if surface else None
+        if not curves:
+            return None
+
+        points = curves.get("interpolated_surface") or curves.get("actual_surface")
+        if not points:
+            return None
+        return sum(y for _, y in points) / len(points)
 
     @handle_errors("imageViewerPanel.reset_analysis_zoom")
     def reset_analysis_zoom(self):
@@ -1456,9 +1507,11 @@ class image_viewer_panel(BaseCanvasPanel):
     @handle_errors("imageViewerPanel.sync_analysis_zoom")
     def sync_analysis_zoom(self, enabled):
         """Apply or undo the analysis zoom to match the A-Scan viewer toggle."""
+        # Read defensively: the A-Scan viewer can call this during teardown,
+        # against a panel that may not have finished initialising.
         if enabled:
             self.analysis_zoom_active = bool(self.apply_analysis_zoom())
-        elif self.analysis_zoom_active:
+        elif getattr(self, 'analysis_zoom_active', False):
             # Only undo a zoom this feature applied, so a manual zoom the
             # operator set themselves is not thrown away.
             self.analysis_zoom_active = False
