@@ -15,7 +15,6 @@ from app.logic.carlquant.carl_quant_core import (
     sigmoid_model,
     fit_exp2_to_profile,
     detect_depth_sigmoid_fit,
-    compute_method_stability,
     compute_stable_combined_depth,
     select_depth_method,
     is_method_stable,
@@ -112,31 +111,32 @@ def test_sigmoid_fit_success():
 
 
 # ---------------------------------------------------------------------------
-# compute_method_stability
+# is_method_stable
 # ---------------------------------------------------------------------------
 
 @pytest.mark.unit
-def test_stability_too_few_raw_points():
-    info = compute_method_stability({"knee_point": [(0, 5)]}, {})
-    assert info["knee_point"]["is_stable"] is False
-    assert info["knee_point"]["n_points"] == 1
+def test_stability_needs_at_least_three_columns():
+    # Two points always look perfectly consistent; that is not a trace.
+    assert is_method_stable({0: 40.0, 1: 40.0}) is False
 
 
 @pytest.mark.unit
-def test_stability_few_matching_columns():
-    # 3 raw points but none present in lesion_detection_data -> depth_values < 3.
-    raw = {"knee_point": [(0, 5), (1, 6), (2, 7)]}
-    info = compute_method_stability(raw, lesion_detection_data={})
-    assert info["knee_point"]["is_stable"] is False
+def test_stability_flat_trace_is_stable():
+    assert is_method_stable({x: 40.0 for x in range(5)}) is True
 
 
 @pytest.mark.unit
-def test_stability_stable_method():
-    raw = {"knee_point": [(x, 100 + x) for x in range(5)]}
-    ldd = {x: {"surface_y": x} for x in range(5)}  # relative depth constant = 100
-    info = compute_method_stability(raw, ldd, stability_threshold=20.0)
-    assert bool(info["knee_point"]["is_stable"]) is True
-    assert info["knee_point"]["std_depth"] == pytest.approx(0.0)
+def test_stability_scattered_trace_is_not():
+    scattered = {x: 40.0 + (40.0 if x % 2 else -40.0) for x in range(5)}
+    assert is_method_stable(scattered) is False
+
+
+@pytest.mark.unit
+def test_stability_threshold_is_the_boundary():
+    # SD of [-6, +6] alternating is exactly 6.0.
+    trace = {x: 40.0 + (6.0 if x % 2 else -6.0) for x in range(4)}
+    assert is_method_stable(trace, stability_sd=6.0) is True
+    assert is_method_stable(trace, stability_sd=5.9) is False
 
 
 # ---------------------------------------------------------------------------
@@ -587,19 +587,19 @@ def test_calculate_lesion_depth_emits_half_span_metadata():
 
 
 @pytest.mark.unit
-def test_method_choice_uses_its_own_threshold_not_the_reporting_one():
-    """The cascade must not be driven by ``stability_threshold``.
+def test_method_choice_defaults_to_the_tight_threshold():
+    """The cascade's default must be METHOD_STABILITY_SD, not something looser.
 
-    That parameter only labels methods in the diagnostics report and defaults
-    to 20.0, which is loose enough to accept a half-span trace that should be
-    rejected. Passing a deliberately huge reporting threshold must not change
-    which method is chosen.
+    A half-span trace scattered well past 12 px was once accepted because the
+    choice was wired to a 20.0 reporting threshold, which reported a lesion
+    depth on a slice that has none.
     """
     ldd = _ldd_scattered("half_span_depth", spread=40.0, knee_depth=55.0)
-    strict, _ = core.select_depth_method(ldd, stability_sd=12.0)
-    assert strict == "knee_point"
-    # Same data, and the reporting threshold plays no part in this decision.
-    assert core.select_depth_method(ldd)[0] == strict
+    assert core.select_depth_method(ldd)[0] == "knee_point"
+    assert core.METHOD_STABILITY_SD == 12.0
+    # Loosening it far enough does accept half-span -- so the default is what
+    # keeps that trace out, not some other property of the fixture.
+    assert core.select_depth_method(ldd, stability_sd=100.0)[0] == "half_span"
 
 
 @pytest.mark.unit
