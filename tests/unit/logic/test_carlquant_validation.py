@@ -4,9 +4,9 @@ Unit tests for app/logic/carlquant/validation.py.
 Covers the sign convention, the tolerance window for matching marks to analysed
 columns, NaN handling, the no-lesion gate, and the two-scale specimen aggregate.
 
-The central trap guarded here is that ``knee_depth`` means two different things
-depending on nesting depth: the combined result at the top level of a column,
-the raw knee point inside ``detection_metadata``.
+The distinction guarded here is between the slice's final result
+(``lesion_depth_px`` at the top level of a column) and the raw knee point
+(``knee_depth`` inside ``detection_metadata``).
 """
 import numpy as np
 import pytest
@@ -15,19 +15,19 @@ from app.logic.carlquant import validation as val
 
 
 def make_column(surface_y=100.0, combined=20.0, half_span=18.0, knee=25.0,
-                inflection=15.0, shoulder=40.0, method_used="median_of_three"):
+                inflection=15.0, shoulder=40.0, method_used="half_span"):
     """One entry of lesion_detection_data, shaped as carl_quant_core writes it."""
     return {
         "surface_y": surface_y,
-        # Top level: the final combined result, under a historical name.
-        "knee_depth": combined,
+        # Top level: the slice's final result, in raw pixels.
+        "lesion_depth_px": combined,
         "detection_metadata": {
             # Nested: the raw component methods.
             "half_span_depth": half_span,
             "knee_depth": knee,
             "inflection_depth": inflection,
             "shoulder_depth": shoulder,
-            "combined_method_used": method_used,
+            "depth_method_used": method_used,
         },
     }
 
@@ -38,7 +38,7 @@ def make_slice(columns=(100, 101, 102), **kwargs):
 
 @pytest.mark.unit
 def test_combined_and_knee_read_different_values():
-    """GIVEN the knee_depth name collision, WHEN reading, THEN the two differ.
+    """GIVEN a column, WHEN reading combined and knee, THEN the two differ.
 
     Getting this wrong makes 'combined' and 'knee' score identically, which
     silently invalidates the whole comparison.
