@@ -440,7 +440,7 @@ class AScanViewer:
 
         enabled = [
             ('Combined', self.show_combined_depth,
-             (lesion_detection_data or {}).get('knee_depth')),
+             (lesion_detection_data or {}).get('lesion_depth_px')),
             ('Half-Span', self.show_half_span, metadata.get('half_span_depth')),
             ('Knee', self.show_knee_point, metadata.get('knee_depth')),
             ('Inflection', self.show_sigmoid_inflection,
@@ -702,12 +702,13 @@ class AScanViewer:
             
             # Combined depth (final result, relative to surface)
             if self.show_combined_depth.get():
-                # Try to get the actual detected depth
-                combined_depth = None
-                if 'actual_depth' in lesion_detection_data:
-                    combined_depth = lesion_detection_data['actual_depth']
-                elif 'knee_depth' in lesion_detection_data:
-                    combined_depth = lesion_detection_data['knee_depth']
+                # Raw pixel depth, never the refractive-index-corrected one:
+                # this marker has to sit on the boundary visible in the image,
+                # and the corrected value does not correspond to a pixel row.
+                combined_depth = lesion_detection_data.get('lesion_depth_px')
+                if combined_depth is None:
+                    # Configs written before the field was split.
+                    combined_depth = lesion_detection_data.get('knee_depth')
                 
                 if combined_depth is not None and not np.isnan(combined_depth):
                     absolute_depth = surface_y + combined_depth
