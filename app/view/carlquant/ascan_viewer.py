@@ -38,11 +38,16 @@ Author: Tobias Meissner
 
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from PIL import Image
 import numpy as np
 from app.view.shared.error_handler import handle_errors
-from app.logic.carlquant.carl_quant_core import fit_exp2_to_profile, detect_depth_sigmoid_fit
+from app.logic.carlquant.carl_quant_core import (
+    fit_exp2_to_profile,
+    detect_depth_sigmoid_fit,
+    boxcar,
+    HALF_SPAN_SMOOTH_WINDOW,
+)
 from app.logic.carlquant.annotation_colors import (
     ROW_HIGHLIGHT_NAVIGATION_COLOR,
     ACTUAL_SURFACE_COLOR,
@@ -60,6 +65,10 @@ from app.logic.carlquant.ground_truth import (
     has_ground_truth,
     load_ground_truth,
 )
+
+#: Columns stepped per Shift+arrow. Plain arrows move one column, which is the
+#: point -- the slider cannot be dragged that precisely.
+COLUMN_STEP_COARSE = 10
 
 
 class AScanViewer:
@@ -99,6 +108,19 @@ class AScanViewer:
         self.show_combined_depth = tk.BooleanVar(value=True)
         self.show_exp2_fit = tk.BooleanVar(value=False)
         self.show_sigmoid_fit = tk.BooleanVar(value=False)
+        # The terms the half-span crossing is built from: smoothed profile,
+        # background, peak and threshold. Drawn together because the number
+        # only means something as a construction, not as four loose values.
+        self.show_half_span_construction = tk.BooleanVar(value=False)
+        # B-scan overlays driven from here so both views agree (good UX beats
+        # hunting for the same toggle in two places).
+        #
+        # On by default, together with Surface Points and Combined Depth:
+        # opening a result should show what was measured and where it was
+        # measured from, without the operator switching four things on first.
+        # The diagnostic per-method overlays stay off.
+        self.show_extraction_regions = tk.BooleanVar(value=True)
+        self.show_boundaries = tk.BooleanVar(value=True)
         self.zoom_to_analysis = tk.BooleanVar(value=False)  # Zoom to analysis region
         # Ground truth defaults on when marks exist for this specimen, so an
         # operator who has annotated it sees the comparison without hunting.
@@ -141,7 +163,7 @@ class AScanViewer:
         # Set size and position (narrower but taller, responsive to screen height)
         screen_width = self.dialog.winfo_screenwidth()
         screen_height = self.dialog.winfo_screenheight()
-        dialog_width = 400  # Narrower than before (was 900)
+        dialog_width = 570  # Fits the four toggle groups without dead space
         dialog_height = int(screen_height * 0.75)  # 75% of screen height
         x = (screen_width - dialog_width) // 2
         y = (screen_height - dialog_height) // 2
@@ -152,7 +174,7 @@ class AScanViewer:
         self.dialog.configure(bg=bg_color)
         
         # Main frame
-        main_frame = ttk.Frame(self.dialog, padding=20)
+        main_frame = ttk.Frame(self.dialog, padding=8)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Get image dimensions for slider range
@@ -161,44 +183,54 @@ class AScanViewer:
         # Load specimen data for annotations
         self._load_specimen_data()
         
-        # Toggles frame with grid layout for neat 2-column alignment
-        toggles_frame = ttk.LabelFrame(main_frame, text="Display Options", padding=10)
-        toggles_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # Configure grid columns to distribute evenly
-        toggles_frame.columnconfigure(0, weight=1)
-        toggles_frame.columnconfigure(1, weight=1)
-        
-        # Checkboxes in 2 columns using grid
-        # Use lambda to ensure slider_dragging is False when checkboxes change
-        ttk.Checkbutton(toggles_frame, text="Surface Points", variable=self.show_surface, 
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=0, column=0, sticky='w', padx=5, pady=2)
-        ttk.Checkbutton(toggles_frame, text="Knee Point", variable=self.show_knee_point, 
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=0, column=1, sticky='w', padx=5, pady=2)
-        
-        ttk.Checkbutton(toggles_frame, text="Sigmoid Inflection", variable=self.show_sigmoid_inflection, 
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=1, column=0, sticky='w', padx=5, pady=2)
-        ttk.Checkbutton(toggles_frame, text="Sigmoid Shoulder", variable=self.show_sigmoid_shoulder, 
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=1, column=1, sticky='w', padx=5, pady=2)
-        
-        ttk.Checkbutton(toggles_frame, text="Combined Depth", variable=self.show_combined_depth, 
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=2, column=0, sticky='w', padx=5, pady=2)
-        ttk.Checkbutton(toggles_frame, text="Exp2 Fit Curve", variable=self.show_exp2_fit, 
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=2, column=1, sticky='w', padx=5, pady=2)
-        
-        ttk.Checkbutton(toggles_frame, text="Sigmoid Fit Curve", variable=self.show_sigmoid_fit,
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=3, column=0, sticky='w', padx=5, pady=2)
-        ttk.Checkbutton(toggles_frame, text="Zoom to Analysis", variable=self.zoom_to_analysis,
-                       command=self._on_zoom_to_analysis_toggled).grid(row=3, column=1, sticky='w', padx=5, pady=2)
+        # Toggles, grouped by what they answer: which depth was reported,
+        # how a method arrived at it, what to overlay on the B-scan, and how
+        # to frame the plot. Scattered checkboxes made related ones hard to
+        # find; four labelled columns keep each question in one place.
+        toggles_frame = ttk.LabelFrame(main_frame, text="Display Options", padding=6)
+        toggles_frame.pack(fill=tk.X, pady=(0, 6))
 
-        ttk.Checkbutton(toggles_frame, text="Half-Span Crossing", variable=self.show_half_span,
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=4, column=0, sticky='w', padx=5, pady=2)
-        ttk.Checkbutton(toggles_frame, text="Ground Truth", variable=self.show_ground_truth,
-                       command=lambda: self._update_plot(force_image_sync=True)).grid(row=4, column=1, sticky='w', padx=5, pady=2)
-        
+        groups = [
+            ("Detected Depths", [
+                ("Combined Depth", self.show_combined_depth, None),
+                ("Half-Span", self.show_half_span, None),
+                ("Knee Point", self.show_knee_point, None),
+                ("Sigmoid Inflection", self.show_sigmoid_inflection, None),
+                ("Sigmoid Shoulder", self.show_sigmoid_shoulder, None),
+            ]),
+            ("Method Internals", [
+                ("Exp2 Fit Curve", self.show_exp2_fit, None),
+                ("Sigmoid Fit Curve", self.show_sigmoid_fit, None),
+                ("Half-Span Construction", self.show_half_span_construction, None),
+            ]),
+            ("Image Overlays", [
+                ("Surface Points", self.show_surface, None),
+                ("Extraction Regions", self.show_extraction_regions, None),
+                ("Boundaries", self.show_boundaries, None),
+                ("Ground Truth", self.show_ground_truth,
+                 self._on_ground_truth_toggled),
+            ]),
+            ("View", [
+                ("Zoom to Analysis", self.zoom_to_analysis,
+                 self._on_zoom_to_analysis_toggled),
+            ]),
+        ]
+
+        for column, (heading, entries) in enumerate(groups):
+            toggles_frame.columnconfigure(column, weight=1)
+            ttk.Label(toggles_frame, text=heading,
+                      font=('Segoe UI', 8, 'bold')).grid(
+                row=0, column=column, sticky='w', padx=4, pady=(0, 2))
+            for row, (text, variable, command) in enumerate(entries, start=1):
+                ttk.Checkbutton(
+                    toggles_frame, text=text, variable=variable,
+                    command=command or (
+                        lambda: self._update_plot(force_image_sync=True))
+                ).grid(row=row, column=column, sticky='w', padx=4, pady=1)
+
         # Slider frame with label above
         slider_container = ttk.Frame(main_frame)
-        slider_container.pack(fill=tk.X, pady=(0, 15))
+        slider_container.pack(fill=tk.X, pady=(0, 6))
         
         # Label above slider
         slider_label = ttk.Label(
@@ -206,7 +238,7 @@ class AScanViewer:
             text="A-Scan",
             font=('Segoe UI', 10, 'bold')
         )
-        slider_label.pack(side=tk.TOP, anchor='w', pady=(0, 5))
+        slider_label.pack(side=tk.TOP, anchor='w', pady=(0, 2))
         
         # Slider and column number in horizontal layout
         slider_frame = ttk.Frame(slider_container)
@@ -227,16 +259,7 @@ class AScanViewer:
         self.slider.bind('<ButtonPress-1>', self._on_slider_press)
         self.slider.bind('<ButtonRelease-1>', self._on_slider_release)
         self.slider.set(self.current_column)
-        self.slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-        
-        # Column number (no "Column:" prefix)
-        self.column_label = ttk.Label(
-            slider_frame,
-            text=f"{self.current_column}",
-            font=('Segoe UI', 10),
-            width=6
-        )
-        self.column_label.pack(side=tk.LEFT)
+        self.slider.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Plot frame
         plot_frame = ttk.Frame(main_frame)
@@ -251,6 +274,15 @@ class AScanViewer:
         
         # Bind Escape key to close
         self.dialog.bind('<Escape>', lambda e: self.on_close())
+
+        # Arrow keys step the A-scan column; dragging the slider to a specific
+        # column is hard at this width. Bound on the dialog, not globally, so
+        # the image viewer canvas keeps its own Left/Right for slice
+        # navigation -- Tk routes keys to the focused window.
+        self.dialog.bind('<Left>', lambda e: self._step_column(-1))
+        self.dialog.bind('<Right>', lambda e: self._step_column(1))
+        self.dialog.bind('<Shift-Left>', lambda e: self._step_column(-COLUMN_STEP_COARSE))
+        self.dialog.bind('<Shift-Right>', lambda e: self._step_column(COLUMN_STEP_COARSE))
         
         # Bind window close event to clear indicator
         self.dialog.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -461,7 +493,8 @@ class AScanViewer:
         from matplotlib.figure import Figure
         from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
         # Create figure with dark background (smaller width for narrow window)
-        self.figure = Figure(figsize=(5, 6), facecolor='#2b2b2b')
+        # Wider than tall, matching a dialog that fits four toggle groups.
+        self.figure = Figure(figsize=(6, 6), facecolor='#2b2b2b')
         self.ax = self.figure.add_subplot(111)
         
         # Set dark theme for plot
@@ -496,7 +529,7 @@ class AScanViewer:
         # Initial plot - force draw to ensure proper rendering
         self._update_plot()
         self.canvas.draw_idle()
-        self.figure.tight_layout()
+        self.figure.tight_layout(pad=1.2)
         self.canvas.draw()
     
     def _plot_point_with_hover(self, x, y, hover_label, legend_label, marker='o', color='white', markersize=8, zorder=5):
@@ -773,7 +806,15 @@ class AScanViewer:
                                            label='Sigmoid Fit', alpha=0.9, zorder=3)
                     except Exception:
                         pass  # Silently skip if fitting fails
-        
+
+                # Half-span construction: every term the crossing is built
+                # from, so the reported depth can be read off the plot rather
+                # than taken on trust.
+                if self.show_half_span_construction.get():
+                    self._plot_half_span_construction(
+                        metadata, intensity_profile, profile_start_y,
+                        len(column_data))
+
         # Set labels and title (smaller fonts for narrow window)
         self.ax.set_xlabel('Gray Value', fontsize=9, color='#dcdcdc')
         self.ax.set_ylabel('Depth (px)', fontsize=9, color='#dcdcdc')
@@ -802,7 +843,7 @@ class AScanViewer:
                           facecolor='#2b2b2b', edgecolor='#dcdcdc', labelcolor='#dcdcdc')
         
         # Tight layout
-        self.figure.tight_layout()
+        self.figure.tight_layout(pad=1.2)
         
         # Redraw
         self.canvas.draw()
@@ -832,13 +873,102 @@ class AScanViewer:
         the slider is released.
         """
         self.current_column = int(float(value))
-        if hasattr(self, 'column_label'):
-            self.column_label.config(text=f"{self.current_column}")
         if hasattr(self, 'ax'):
             self._update_plot()  # Will skip image sync during dragging
         # Update indicator line in image viewer (lightweight operation)
         self._update_image_indicator()
     
+    @handle_errors("AScanViewer._plot_half_span_construction")
+    def _plot_half_span_construction(self, metadata, intensity_profile,
+                                     profile_start_y, image_height):
+        """Draw how the half-span crossing reached its depth.
+
+        Four things, which together are the whole method: the boxcar-smoothed
+        profile the test actually runs on, the background median and surface
+        peak that set the contrast span, and the threshold between them that
+        the profile has to cross and stay below.
+
+        The smoothed profile is recomputed here rather than stored -- it is a
+        boxcar of the intensity profile, which is already saved.
+        """
+        background = metadata.get('half_span_background')
+        peak = metadata.get('half_span_peak')
+        threshold = metadata.get('half_span_threshold')
+        window = metadata.get('half_span_smooth_window', HALF_SPAN_SMOOTH_WINDOW)
+
+        if len(intensity_profile) > 1 and window:
+            smoothed = boxcar(np.asarray(intensity_profile, dtype=float),
+                               int(window))
+            y_smooth = np.arange(len(smoothed)) + profile_start_y
+            visible = y_smooth < image_height
+            if np.any(visible):
+                self.ax.plot(smoothed[visible], y_smooth[visible], '-',
+                             color='#a29bfe', linewidth=1.8,
+                             label=f'Smoothed (w={int(window)})',
+                             alpha=0.9, zorder=2)
+
+        # Vertical lines: the plot is gray value on x, depth on y.
+        fraction = metadata.get('half_span_fraction')
+        for value, color, style, label in (
+                (background, '#7f8c8d', ':', 'Background'),
+                (peak, '#ffffff', ':', 'Peak'),
+                (threshold, HALF_SPAN_POINT_COLOR, '--',
+                 'Threshold' if fraction is None or not np.isfinite(fraction)
+                 else f'Threshold ({fraction:.2f})')):
+            if value is None or not np.isfinite(value):
+                continue
+            self.ax.axvline(x=value, color=color, linestyle=style,
+                            linewidth=1.4, alpha=0.85, label=label, zorder=2)
+
+        # A crossing that never held for the full window is the weaker case,
+        # so say when that happened rather than showing an unqualified line.
+        if metadata.get('half_span_sustained') is False:
+            self.ax.text(0.02, 0.02, 'crossing not sustained',
+                         transform=self.ax.transAxes, fontsize=7,
+                         color=HALF_SPAN_POINT_COLOR, alpha=0.9)
+
+    @handle_errors("AScanViewer._step_column")
+    def _step_column(self, delta):
+        """Move the selected A-scan by ``delta`` columns, clamped to the image.
+
+        Returning "break" stops Tk passing the arrow key on to the slider,
+        which would otherwise move it a second time.
+        """
+        if self.slider is None or self.current_column is None:
+            return "break"
+        upper = int(float(self.slider.cget("to")))
+        target = max(0, min(upper, self.current_column + delta))
+        if target != self.current_column:
+            self.slider.set(target)  # Fires _on_slider_change, which redraws.
+        return "break"
+
+    @handle_errors("AScanViewer._on_ground_truth_toggled")
+    def _on_ground_truth_toggled(self):
+        """Draw the operator marks, or explain how to create them.
+
+        Switching the toggle on with nothing to show would otherwise look
+        broken. The box explains what ground truth is and how to add it, then
+        clears the toggle so the checkbox matches what is actually drawn --
+        leaving it checked would strand the user with an empty overlay and no
+        prompt to act on.
+        """
+        if self.show_ground_truth.get() and not self._marks_for_current_slice():
+            self.show_ground_truth.set(False)
+            messagebox.showinfo(
+                "No Ground Truth Yet",
+                "No operator marks exist for this specimen.\n\n"
+                "Ground truth is where you judge the lesion to end, marked by "
+                "eye on the OCT image. It is what the detected depths are "
+                "scored against.\n\n"
+                "To create it:\n"
+                "1. Enable Validation Mode in the image viewer\n"
+                "2. Click along the lesion boundary to place marks\n"
+                "3. Re-open this toggle to compare",
+                parent=self.dialog,
+            )
+            return
+        self._update_plot(force_image_sync=True)
+
     @handle_errors("AScanViewer._on_zoom_to_analysis_toggled")
     def _on_zoom_to_analysis_toggled(self):
         """Zoom both views to the analysis region, or restore both.
@@ -927,11 +1057,7 @@ class AScanViewer:
         if hasattr(self, 'slider'):
             self.slider.configure(to=img_width - 1)
             self.slider.set(self.current_column)
-        
-        # Update column label
-        if hasattr(self, 'column_label'):
-            self.column_label.config(text=f"{self.current_column}")
-        
+
         # Update window title
         if self.dialog:
             self.dialog.title(f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}")
@@ -978,11 +1104,7 @@ class AScanViewer:
         if hasattr(self, 'slider'):
             self.slider.configure(to=img_width - 1)
             self.slider.set(self.current_column)
-        
-        # Update column label
-        if hasattr(self, 'column_label'):
-            self.column_label.config(text=f"{self.current_column}")
-        
+
         # Update window title
         if self.dialog:
             self.dialog.title(f"A-Scan Viewer - {self.specimen_id} - Slice {self.slice_index + 1}")
