@@ -75,10 +75,9 @@ METHOD_LABELS = {
 
 #: Keys inside ``detection_metadata`` holding each component method's depth.
 #:
-#: NOTE the naming trap: ``knee_depth`` at the *top level* of a column dict is
-#: the final combined result, while ``knee_depth`` inside ``detection_metadata``
-#: is the raw knee point. "combined" is therefore deliberately absent here and
-#: read separately in ``method_depth``.
+#: ``knee_depth`` here is always the raw knee point. The slice's final result
+#: is a separate top-level key (``lesion_depth_px``), so "combined" is absent
+#: from this map and read separately in ``method_depth``.
 _METADATA_KEYS = {
     "half_span": "half_span_depth",
     "knee": "knee_depth",
@@ -89,7 +88,7 @@ _METADATA_KEYS = {
 #: How far from a mark's x an analysed column may sit and still be scored (px).
 DEFAULT_TOLERANCE = 3
 
-#: ``combined_method_used`` value marking a slice the no-lesion gate fired on.
+#: ``depth_method_used`` value marking a slice the no-lesion gate fired on.
 NO_LESION_METHOD = "no_lesion_surface"
 
 
@@ -199,8 +198,12 @@ def method_depth(column: Dict, method: str) -> float:
     replaced by 0, which would score as a detection exactly at the surface.
     """
     if method == "combined":
-        # The final result, stored at the top level under a historical name.
-        value = column.get("knee_depth", np.nan)
+        # The slice's final result, in raw pixels -- the same space the
+        # operator marked in, so the two are directly comparable.
+        value = column.get("lesion_depth_px", np.nan)
+        if value is None or (isinstance(value, float) and np.isnan(value)):
+            # Configs written before the field was split off ``knee_depth``.
+            value = column.get("knee_depth", np.nan)
     else:
         metadata = column.get("detection_metadata") or {}
         value = metadata.get(_METADATA_KEYS[method], np.nan)
@@ -245,7 +248,9 @@ def is_gated_slice(lesion_detection_data) -> bool:
     """
     for column in (lesion_detection_data or {}).values():
         metadata = column.get("detection_metadata") or {}
-        if metadata.get("combined_method_used") == NO_LESION_METHOD:
+        method_used = metadata.get("depth_method_used",
+                                   metadata.get("combined_method_used"))
+        if method_used == NO_LESION_METHOD:
             return True
     return False
 
