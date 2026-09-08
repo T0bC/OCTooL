@@ -124,7 +124,6 @@ def process_slice_parallel(slice_idx, image_path, region_config, air_config, num
                 image_array,
                 search_depth=200,
                 detection_method=detection_method,
-                stability_threshold=20.0,
                 slice_id=slice_name
             )
         else:
@@ -1036,88 +1035,6 @@ def detect_depth_sigmoid_fit(intensity_profile: np.ndarray, depth_indices: np.nd
         return np.nan, -1, {'success': False, 'reason': str(e)}
 
 
-def compute_method_stability(method_raw_points: dict, 
-                            lesion_detection_data: dict,
-                            stability_threshold: float = 20.0) -> dict:
-    """
-    Compute stability metrics for each detection method.
-    
-    Uses ABSOLUTE standard deviation to measure consistency of depth detection
-    across A-scans. Lower SD indicates more stable (less wobbly) detection.
-    
-    This is better than CV (std/mean) because:
-    - CV unfairly penalizes shallow detections (small mean → high CV)
-    - Absolute SD directly measures wobbliness regardless of depth
-    - A straight line at any depth will have low SD
-    
-    Args:
-        method_raw_points: Dict mapping method names to list of (x, y) points
-        lesion_detection_data: Dict containing per-column detection metadata
-        stability_threshold: SD threshold (in pixels) above which a method is unstable
-                           Recommended: 10-20 pixels for typical OCT images
-        
-    Returns:
-        Dict with stability info:
-        {
-            'method_name': {
-                'cv': float,  # Kept for backward compatibility (now actually SD)
-                'is_stable': bool,  # True if SD <= threshold
-                'n_points': int,  # Number of valid detections
-                'mean_depth': float,
-                'std_depth': float
-            }
-        }
-    """
-    stability_info = {}
-    
-    for method_name, raw_points in method_raw_points.items():
-        if len(raw_points) < 3:  # Need at least 3 points for meaningful statistics
-            stability_info[method_name] = {
-                'cv': np.inf,
-                'is_stable': False,
-                'n_points': len(raw_points),
-                'mean_depth': np.nan,
-                'std_depth': np.nan
-            }
-            continue
-        
-        # Extract depth values (relative to surface) for this method
-        depth_values = []
-        for x, abs_y in raw_points:
-            if x in lesion_detection_data:
-                surface_y = lesion_detection_data[x]['surface_y']
-                relative_depth = abs_y - surface_y
-                depth_values.append(relative_depth)
-        
-        if len(depth_values) < 3:
-            stability_info[method_name] = {
-                'cv': np.inf,
-                'is_stable': False,
-                'n_points': len(depth_values),
-                'mean_depth': np.nan,
-                'std_depth': np.nan
-            }
-            continue
-        
-        # Compute statistics
-        mean_depth = np.mean(depth_values)
-        std_depth = np.std(depth_values)
-        
-        # Use ABSOLUTE standard deviation as stability metric
-        # (not CV, because CV unfairly penalizes shallow detections)
-        stability_metric = std_depth
-        
-        stability_info[method_name] = {
-            'cv': stability_metric,  # Field name kept for compatibility, but now contains SD
-            'is_stable': stability_metric <= stability_threshold,
-            'n_points': len(depth_values),
-            'mean_depth': mean_depth,
-            'std_depth': std_depth
-        }
-    
-    return stability_info
-
-
 #: Lateral SD (px) of the combined depth above which a slice is judged to carry
 #: no usable lesion signal. Measured over 45 slices / 793 operator marks: lesion
 #: slices reach 14.0, the one no-lesion slice 22.6. Any value in 15-18 gives
@@ -1297,7 +1214,6 @@ def calculate_lesion_depth(surface: Surface,
                           spline_degree: int = 3,
                           median_kernel_size: int = 7,
                           outlier_threshold: float = 2,
-                          stability_threshold: float = 20.0,
                           method_stability_sd: float = METHOD_STABILITY_SD,
                           depth_offset: float = DEPTH_OFFSET,
                           no_lesion_sd: float = NO_LESION_SD,
@@ -1333,10 +1249,8 @@ def calculate_lesion_depth(surface: Surface,
                            Larger values (e.g., 7) remove wider spikes from speckles
         outlier_threshold: Number of standard deviations for outlier detection (default 2.0)
                           Lower values (e.g., 1.5) are more aggressive at removing spikes
-        stability_threshold: SD threshold in pixels for per-method stability reporting
         method_stability_sd: SD threshold in pixels deciding which method is
-            trusted to supply the depth. Separate from stability_threshold,
-            which only labels methods in the diagnostics report.
+            trusted to supply the depth (see select_depth_method).
                            (default 20.0). Diagnostic only; the combination does not
                            branch on it.
         depth_offset: Constant pixel offset added to the combined depth (default 0.0).
@@ -1576,22 +1490,10 @@ def calculate_lesion_depth(surface: Surface,
     
     # For COMBINED_MEAN method: combine per column, then apply the no-lesion gate.
     if detection_method == DepthDetectionMethod.COMBINED_MEAN:
-        # Reported for diagnostics only; nothing branches on it.
-        stability_info = compute_method_stability(
-            method_raw_points,
-            lesion_detection_data,
-            stability_threshold=stability_threshold
-        )
-
         # Stage 1: choose one method for the whole slice, then read each column
         # from it. The choice needs every column's depths to judge lateral
         # stability, so it cannot be made per column.
         ascan_xs = sorted(lesion_detection_data.keys())
-        #
-        # Deliberately NOT stability_threshold: that one only labels methods
-        # in the diagnostics report above, and its 20.0 default is too loose
-        # to reject a method here. Which method is trusted is a separate,
-        # tighter decision -- see METHOD_STABILITY_SD.
         chosen_method, chosen_series = select_depth_method(
             lesion_detection_data, stability_sd=method_stability_sd
         )
