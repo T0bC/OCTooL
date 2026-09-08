@@ -61,6 +61,7 @@ from app.logic.carlquant.carl_quant_core import (
     process_slice_parallel,
     DEPTH_OFFSET,
     NO_LESION_SD,
+    METHOD_STABILITY_SD,
 )
 from app.logic.carlquant.data_io import DataSaver
 from app.logic.carlquant.models import (
@@ -72,7 +73,6 @@ from app.logic.carlquant.models import (
 
 # Defaults mirror the values used by run_carl_quant / process_slice_parallel.
 DEFAULT_SEARCH_DEPTH = 200
-DEFAULT_STABILITY_THRESHOLD = 20.0
 DEFAULT_DETECTION_METHOD = "combined_mean"
 
 
@@ -145,15 +145,16 @@ class AnalysisService:
         *,
         search_depth: int = DEFAULT_SEARCH_DEPTH,
         detection_method: DepthDetectionMethod = DepthDetectionMethod.COMBINED_MEAN,
-        stability_threshold: float = DEFAULT_STABILITY_THRESHOLD,
+        method_stability_sd: float = METHOD_STABILITY_SD,
         depth_offset: float = DEPTH_OFFSET,
         no_lesion_sd: float = NO_LESION_SD,
         slice_id: Optional[str] = None,
     ) -> LesionDepth:
         """Calculate lesion depth from a detected surface and region config.
 
-        ``depth_offset`` and ``no_lesion_sd`` are forwarded so a caller can tune
-        them; both default to the validated values.
+        ``method_stability_sd``, ``depth_offset`` and ``no_lesion_sd`` are
+        forwarded so a caller can tune them; all default to the validated
+        values.
         """
         return calculate_lesion_depth(
             surface,
@@ -161,7 +162,7 @@ class AnalysisService:
             image,
             search_depth=search_depth,
             detection_method=detection_method,
-            stability_threshold=stability_threshold,
+            method_stability_sd=method_stability_sd,
             depth_offset=depth_offset,
             no_lesion_sd=no_lesion_sd,
             slice_id=slice_id,
