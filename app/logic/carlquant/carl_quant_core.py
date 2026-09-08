@@ -1298,6 +1298,7 @@ def calculate_lesion_depth(surface: Surface,
                           median_kernel_size: int = 7,
                           outlier_threshold: float = 2,
                           stability_threshold: float = 20.0,
+                          method_stability_sd: float = METHOD_STABILITY_SD,
                           depth_offset: float = DEPTH_OFFSET,
                           no_lesion_sd: float = NO_LESION_SD,
                           slice_id = None,
@@ -1333,6 +1334,9 @@ def calculate_lesion_depth(surface: Surface,
         outlier_threshold: Number of standard deviations for outlier detection (default 2.0)
                           Lower values (e.g., 1.5) are more aggressive at removing spikes
         stability_threshold: SD threshold in pixels for per-method stability reporting
+        method_stability_sd: SD threshold in pixels deciding which method is
+            trusted to supply the depth. Separate from stability_threshold,
+            which only labels methods in the diagnostics report.
                            (default 20.0). Diagnostic only; the combination does not
                            branch on it.
         depth_offset: Constant pixel offset added to the combined depth (default 0.0).
@@ -1583,8 +1587,13 @@ def calculate_lesion_depth(surface: Surface,
         # from it. The choice needs every column's depths to judge lateral
         # stability, so it cannot be made per column.
         ascan_xs = sorted(lesion_detection_data.keys())
+        #
+        # Deliberately NOT stability_threshold: that one only labels methods
+        # in the diagnostics report above, and its 20.0 default is too loose
+        # to reject a method here. Which method is trusted is a separate,
+        # tighter decision -- see METHOD_STABILITY_SD.
         chosen_method, chosen_series = select_depth_method(
-            lesion_detection_data, stability_sd=stability_threshold
+            lesion_detection_data, stability_sd=method_stability_sd
         )
         combined_by_x = {}
         for ascan_x in ascan_xs:
