@@ -339,7 +339,13 @@ class FakeCanvas:
 
 
 class FakeImage:
-    def __init__(self, width=1000, height=400):
+    """Matches the real OCT slice shape: taller than wide vs the canvas.
+
+    An earlier fixture was 1000x400 -- wider than tall -- which fits the canvas
+    by width and hid the height-constrained framing the real images need.
+    """
+
+    def __init__(self, width=1164, height=1024):
         self.width = width
         self.height = height
 
@@ -434,7 +440,8 @@ def test_lesion_bounds_pad_into_the_sound_enamel(tmp_path):
 def test_lesion_bounds_are_clamped_to_the_image(tmp_path):
     """GIVEN a lesion at the image edge, WHEN bounding, THEN padding is clipped."""
     panel, specimen = make_indicator_panel(tmp_path)
-    add_region_config(specimen, lesion_start=10, lesion_end=990)
+    add_region_config(specimen, lesion_start=10,
+                      lesion_end=make_indicator_panel(tmp_path)[0].rawImage.width - 10)
 
     x_start, x_end = panel.lesion_region_bounds(specimen, 0)
 
@@ -467,13 +474,17 @@ def test_analysis_zoom_frames_the_lesion(tmp_path):
 
 
 @pytest.mark.unit
-def test_analysis_zoom_declines_when_the_region_spans_the_image(tmp_path):
-    """GIVEN a lesion as wide as the image, WHEN zooming, THEN the view is left alone.
+def test_analysis_zoom_declines_when_it_would_not_magnify(tmp_path):
+    """GIVEN a region no smaller than the fitted view, WHEN zooming, THEN nothing changes.
 
-    The fitted view already shows it; zooming further would only crop.
+    ``zoom_level`` is an absolute image scale, so the comparison point is the
+    fitted scale -- which for these tall slices is height-constrained.
     """
     panel, specimen = make_indicator_panel(tmp_path)
-    add_region_config(specimen, lesion_start=0, lesion_end=1000)
+    add_region_config(specimen, lesion_start=0, lesion_end=panel.rawImage.width)
+    # A canvas wide and short enough that fitting by height already magnifies
+    # more than framing the full-width region would.
+    panel.canvas = FakeCanvas(width=400, height=2000)
 
     assert panel.apply_analysis_zoom() is False
     assert panel.zoom_level == 1.0
@@ -537,3 +548,67 @@ def test_overlays_survive_a_partially_initialised_panel():
     panel.canvas = FakeCanvas()
 
     panel.draw_specialized_overlays()  # must not raise
+
+
+def add_surface(specimen, slice_index=0, surface_y=100):
+    """Give a specimen a detected surface, as the zoom framing reads it."""
+    curves = {"interpolated_surface": [(x, surface_y) for x in range(300, 900, 50)]}
+    specimen.results = {
+        slice_index: SimpleNamespace(surface=SimpleNamespace(fitted_curves=curves))
+    }
+    return specimen
+
+
+@pytest.mark.unit
+def test_analysis_zoom_keeps_the_lesion_on_screen(tmp_path):
+    """GIVEN a lesion near the surface, WHEN zooming, THEN it lands in the viewport.
+
+    The lesion sits in the top ~16% of these images. Centring the whole image
+    vertically pushed it off the top of the canvas, which is what made the
+    zoom look broken.
+    """
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=420, lesion_end=800)
+    add_surface(specimen, surface_y=100)
+    panel.canvas = FakeCanvas(width=800, height=600)
+    panel.render_zoomed_image = lambda: None
+
+    assert panel.apply_analysis_zoom() is True
+
+    zoom = panel.zoom_level
+    # A lesion end ~50px below the surface, at the middle of the region.
+    lesion_canvas_y = 150 * zoom + panel.image_offset_y
+    lesion_canvas_x = 610 * zoom + panel.image_offset_x
+
+    assert 0 <= lesion_canvas_y <= 600
+    assert 0 <= lesion_canvas_x <= 800
+
+
+@pytest.mark.unit
+def test_analysis_zoom_never_scrolls_past_the_image_top(tmp_path):
+    """GIVEN a shallow surface, WHEN framing, THEN no blank space above the image."""
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=420, lesion_end=800)
+    add_surface(specimen, surface_y=5)
+    panel.canvas = FakeCanvas(width=800, height=600)
+    panel.render_zoomed_image = lambda: None
+
+    panel.apply_analysis_zoom()
+
+    assert panel.image_offset_y <= 0
+
+
+@pytest.mark.unit
+def test_analysis_zoom_without_a_detected_surface_shows_the_top(tmp_path):
+    """GIVEN no analysis yet, WHEN framing, THEN the top of the image is shown.
+
+    Closer than centring for these specimens, where the lesion is near the top.
+    """
+    panel, specimen = make_indicator_panel(tmp_path)
+    add_region_config(specimen, lesion_start=420, lesion_end=800)
+    specimen.results = {}
+    panel.canvas = FakeCanvas(width=800, height=600)
+    panel.render_zoomed_image = lambda: None
+
+    assert panel.apply_analysis_zoom() is True
+    assert panel.image_offset_y == 0.0
