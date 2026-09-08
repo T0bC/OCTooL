@@ -17,6 +17,9 @@ from app.logic.carlquant.carl_quant_core import (
     detect_depth_sigmoid_fit,
     compute_method_stability,
     compute_stable_combined_depth,
+    select_depth_method,
+    is_method_stable,
+    NO_LESION_METHOD,
     cluster_surface_points,
     fit_surface_curve,
     fit_lesion_depth_curve_robust,
@@ -140,9 +143,15 @@ def test_stability_stable_method():
 # compute_stable_combined_depth
 # ---------------------------------------------------------------------------
 
-def _ldd(knee, inflection, shoulder, half_span=np.nan):
+def _ldd(knee, inflection, shoulder, half_span=np.nan, n_columns=5):
+    """A slice whose every column carries the same depths.
+
+    Constant depths mean SD is 0, so every method counts as stable unless a
+    test deliberately adds scatter. The cascade judges stability across
+    columns, so a single-column fixture cannot exercise it.
+    """
     return {
-        0: {
+        x: {
             "surface_y": 100,
             "detection_metadata": {
                 "knee_depth": knee,
@@ -151,7 +160,19 @@ def _ldd(knee, inflection, shoulder, half_span=np.nan):
                 "half_span_depth": half_span,
             },
         }
+        for x in range(n_columns)
     }
+
+
+def _ldd_scattered(method_key, spread, n_columns=5, **fixed):
+    """A slice where one method wobbles laterally and the rest hold steady."""
+    ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan,
+               n_columns=n_columns)
+    for i, x in enumerate(sorted(ldd)):
+        metadata = ldd[x]["detection_metadata"]
+        metadata.update(fixed)
+        metadata[method_key] = 40.0 + (spread if i % 2 else -spread)
+    return ldd
 
 
 @pytest.mark.unit
@@ -161,15 +182,17 @@ def test_combined_depth_missing_column():
 
 
 @pytest.mark.unit
-def test_combined_depth_is_median_of_three():
+def test_half_span_wins_when_stable():
+    # Half-span is the primary measure: stable means it is used alone, not
+    # averaged with terms that are biased deep (knee) and shallow (inflection).
     ldd = _ldd(knee=60.0, inflection=20.0, shoulder=90.0, half_span=40.0)
     depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
     assert depth == pytest.approx(40.0)
-    assert method == "median+half_span+knee_point+sigmoid_fit"
+    assert method == "half_span"
 
 
 @pytest.mark.unit
-def test_combined_depth_ignores_shoulder():
+def test_shoulder_never_contributes():
     # The shoulder is deliberately not a term; a wild value must not move it.
     base, _ = compute_stable_combined_depth(
         _ldd(knee=60.0, inflection=20.0, shoulder=90.0, half_span=40.0), ascan_x=0)
@@ -179,29 +202,55 @@ def test_combined_depth_ignores_shoulder():
 
 
 @pytest.mark.unit
-def test_combined_depth_one_term_may_fail():
-    # A median of the two survivors when a term is NaN.
-    ldd = _ldd(knee=60.0, inflection=np.nan, shoulder=np.nan, half_span=40.0)
+def test_unstable_half_span_falls_back_to_mean_of_two():
+    # Knee reads deep and inflection shallow, so their mean cancels the two
+    # biases -- the only case where terms are averaged.
+    ldd = _ldd_scattered("half_span_depth", spread=40.0,
+                         knee_depth=60.0, inflection_depth=20.0)
     depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
-    assert depth == pytest.approx(50.0)
-    assert "sigmoid_fit" not in method
+    assert depth == pytest.approx(40.0)
+    assert method == "mean+knee_point+sigmoid_fit"
 
 
 @pytest.mark.unit
-def test_combined_depth_outlier_does_not_move_median():
-    normal, _ = compute_stable_combined_depth(
-        _ldd(knee=50.0, inflection=48.0, shoulder=np.nan, half_span=52.0), ascan_x=0)
-    broken, _ = compute_stable_combined_depth(
-        _ldd(knee=50.0, inflection=48.0, shoulder=np.nan, half_span=999.0), ascan_x=0)
-    assert normal == pytest.approx(50.0)
-    assert broken == pytest.approx(50.0)
+def test_falls_through_to_knee_when_inflection_also_unstable():
+    ldd = _ldd_scattered("half_span_depth", spread=40.0, knee_depth=55.0)
+    for i, x in enumerate(sorted(ldd)):
+        ldd[x]["detection_metadata"]["inflection_depth"] = (
+            10.0 + (40.0 if i % 2 else -40.0))
+    depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
+    assert depth == pytest.approx(55.0)
+    assert method == "knee_point"
 
 
 @pytest.mark.unit
-def test_combined_depth_all_nan():
+def test_inflection_alone_is_the_last_resort():
+    # Biased shallow by design, but a biased depth beats reporting none.
+    ldd = _ldd_scattered("half_span_depth", spread=40.0, inflection_depth=18.0)
+    for i, x in enumerate(sorted(ldd)):
+        ldd[x]["detection_metadata"]["knee_depth"] = (
+            70.0 + (40.0 if i % 2 else -40.0))
+    depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
+    assert depth == pytest.approx(18.0)
+    assert method == "sigmoid_fit"
+
+
+@pytest.mark.unit
+def test_no_method_stable_reports_no_lesion():
     ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan)
     depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
-    assert np.isnan(depth) and method == "none"
+    assert np.isnan(depth) and method == NO_LESION_METHOD
+
+
+@pytest.mark.unit
+def test_a_wild_half_span_column_no_longer_hides_behind_the_median():
+    # Under the old median-of-three a single 999 px column was absorbed by the
+    # other terms. The cascade instead rejects half-span for the whole slice,
+    # which is the point: one bad column means the trace is not a boundary.
+    ldd = _ldd(knee=50.0, inflection=48.0, shoulder=np.nan, half_span=52.0)
+    ldd[0]["detection_metadata"]["half_span_depth"] = 999.0
+    _, method = compute_stable_combined_depth(ldd, ascan_x=1)
+    assert method != "half_span"
 
 
 @pytest.mark.unit
@@ -534,7 +583,7 @@ def test_calculate_lesion_depth_emits_half_span_metadata():
     for key in ("half_span_depth", "knee_depth", "inflection_depth",
                 "shoulder_depth"):
         assert key in meta
-    assert meta["combined_method_used"].startswith("median+")
+    assert meta["depth_method_used"] == "half_span"
 
 
 @pytest.mark.unit
@@ -589,7 +638,7 @@ def test_calculate_lesion_depth_no_lesion_gate_reports_surface():
     assert result is not None
     assert result.mean_depth == pytest.approx(0.0)
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
-    assert meta["combined_method_used"] == "no_lesion_surface"
+    assert meta["depth_method_used"] == "no_lesion_surface"
 
 
 @pytest.mark.unit
@@ -600,5 +649,5 @@ def test_calculate_lesion_depth_gate_quiet_on_clean_lesion():
         detection_method=DepthDetectionMethod.COMBINED_MEAN)
     assert result is not None
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
-    assert meta["combined_method_used"] != "no_lesion_surface"
+    assert meta["depth_method_used"] != "no_lesion_surface"
     assert result.mean_depth > 0.0
