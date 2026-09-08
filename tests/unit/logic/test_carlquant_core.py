@@ -587,6 +587,64 @@ def test_calculate_lesion_depth_emits_half_span_metadata():
 
 
 @pytest.mark.unit
+def test_method_choice_uses_its_own_threshold_not_the_reporting_one():
+    """The cascade must not be driven by ``stability_threshold``.
+
+    That parameter only labels methods in the diagnostics report and defaults
+    to 20.0, which is loose enough to accept a half-span trace that should be
+    rejected. Passing a deliberately huge reporting threshold must not change
+    which method is chosen.
+    """
+    ldd = _ldd_scattered("half_span_depth", spread=40.0, knee_depth=55.0)
+    strict, _ = core.select_depth_method(ldd, stability_sd=12.0)
+    assert strict == "knee_point"
+    # Same data, and the reporting threshold plays no part in this decision.
+    assert core.select_depth_method(ldd)[0] == strict
+
+
+@pytest.mark.unit
+def test_half_span_construction_terms_are_stored():
+    """Every term the crossing is built from survives into the config.
+
+    The A-Scan viewer draws these to explain the method, and a saved result
+    has to stay auditable without re-running the analysis.
+    """
+    img, surface, region = _synthetic_slice()
+    result = core.calculate_lesion_depth(
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN)
+    assert result is not None
+    meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
+    for key in ("half_span_background", "half_span_peak",
+                "half_span_threshold", "half_span_smooth_window"):
+        assert key in meta, key
+    # The threshold has to sit between the two levels that define it.
+    assert (meta["half_span_background"] <= meta["half_span_threshold"]
+            <= meta["half_span_peak"])
+
+
+@pytest.mark.unit
+def test_stored_threshold_matches_background_plus_fraction_of_span():
+    # Guards the stored terms actually describing the reported depth, rather
+    # than being recorded from some other pass over the profile.
+    img, surface, region = _synthetic_slice()
+    result = core.calculate_lesion_depth(
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN)
+    meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
+    expected = (meta["half_span_background"]
+                + meta["half_span_fraction"] * meta["half_span_span"])
+    assert meta["half_span_threshold"] == pytest.approx(expected)
+
+
+@pytest.mark.unit
+def test_boxcar_preserves_length_and_is_public():
+    # The A-Scan viewer redraws the smoothed profile with this exact function,
+    # so it has to stay importable and length-preserving.
+    profile = np.linspace(200.0, 20.0, 60)
+    smoothed = core.boxcar(profile, 9)
+    assert smoothed.shape == profile.shape
+
+
+@pytest.mark.unit
 def test_calculate_lesion_depth_tracks_lesion_thickness():
     def depth_for(thickness):
         img, surface, region = _synthetic_slice(lesion_thickness=thickness)
