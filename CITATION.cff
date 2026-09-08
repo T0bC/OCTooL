@@ -44,8 +44,8 @@ keywords:
   - Python
   - tkinter
 repository-code: "https://github.com/T0bC/OCTooL.git"
-version: 2026.7
-date-released: 2026-08-20
+version: 2026.8
+date-released: 2026-09-08
 license: GPL-3.0-or-later
 notes: >-
   Tobias Meißner is the main developer and maintainer of OCTooL, and led
@@ -69,4 +69,4 @@ notes: >-
   software. The authors reviewed all AI-generated content for
   correctness, functionality, and scientific accuracy and take full
   responsibility for the final published work. The following model(s) or
-  application(s) were used: Claude Sonnet 4.6, Claude Opus 4.5, Kimi 2.5.
+  application(s) were used: Claude Sonnet 4.6, Claude Opus 4.5, Claude Opus 5, Kimi 2.5.
