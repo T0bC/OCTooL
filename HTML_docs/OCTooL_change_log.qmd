@@ -11,6 +11,66 @@ format:
 editor: visual
 ---
 
+# Version 2026.8 (2026-09-08)
+
+## CarlQuant: Lesion Depth Detection
+
+### Half-Span Crossing as the Primary Measure
+
+-   Added the half-span crossing method: a deterministic, fit-free depth term that locates where the smoothed A-scan profile falls below `background + fraction x span` and stays below it. Unlike the sigmoid fit it cannot fail to converge
+-   The threshold fraction adapts to contrast, since high-contrast lesions cross a fixed threshold too early and read shallow
+-   Replaced the previous median-of-three combination rule with a stability cascade. Measured across 20 slices, the median was *wobblier* than half-span alone (SD 12.83 vs 7.48 on one cavitated slice) because the three terms are near-ordered rather than independent, so an unstable term repeatedly dragged the median off the good one
+
+### Method Selection Cascade
+
+The slice's depth now comes from one method, chosen by lateral stability rather than blended:
+
+1.  Half-span, whenever its lateral SD is within `METHOD_STABILITY_SD` (12 px)
+2.  Otherwise the mean of the knee point and the sigmoid inflection, which are biased deep and shallow respectively, so averaging cancels the two biases
+3.  Otherwise whichever of those two is stable on its own
+4.  Otherwise the interpolated surface, so only a present cavitation contributes to the reported depth
+
+-   The chosen method is recorded per column as `depth_method_used`, making every reported depth traceable to the measure that produced it
+-   The sigmoid shoulder remains computed and displayed but contributes to no result: its `1/k` factor made it the least reliable term measured (29.8 px mean error, 94.4 px worst)
+
+### Refractive Index Correction Applied Only to Reported Values
+
+-   Drawn lines in the A-Scan viewer, the image viewer, and annotated exports now show **uncorrected** pixel positions, so an overlay lands on the boundary actually visible in the image
+-   The refractive index correction is applied only to the depth reported in the Excel export. On cavitated slices the depth is still split into an air segment (n = 1, uncorrected) and a subsurface segment (n = 1.5), as before
+-   This also aligns detection with validation: operator ground-truth marks are placed on uncorrected images, so both sides of a comparison now live in the same coordinate space
+
+### Clearer Data Field Names
+
+-   `knee_depth` at the top level of a column held the final combined result, not the knee point, while `knee_depth` inside `detection_metadata` held the actual knee. The final result is now `lesion_depth_px` and the corrected value is `lesion_depth_corrected`
+-   `combined_method_used` is now `depth_method_used`
+-   Configurations written by earlier versions are still read through fallbacks
+
+### Removed Unused Stability Reporting
+
+-   Removed `compute_method_stability()`, its `stability_threshold` parameter, and `DEFAULT_STABILITY_THRESHOLD`. The metric was computed on every combined run and never read, returned, stored, or displayed. Method stability is now decided by `METHOD_STABILITY_SD`, which is the only stability constant
+
+## CarlQuant: Ground-Truth Validation
+
+-   Added Validation Mode: operators mark where a lesion visually ends by clicking along the boundary on the B-scan, with undo (`u`) and clear-slice (`c`)
+-   Marks are stored per specimen alongside the analysis configuration and persist across sessions
+-   Added a scoring module reporting each detection method's signed error against the operator marks, per slice and aggregated per specimen, so competing measures can be compared on the same marks
+-   Marks are joined by a shape-preserving PCHIP interpolation, giving every analysed column a reference to display without moving any operator judgement
+-   Slices where the no-lesion gate fired are flagged in the report rather than silently scoring as zero-depth
+
+## CarlQuant: A-Scan Viewer
+
+-   Regrouped the display options into four labelled columns (Detected Depths, Method Internals, Image Overlays, View), replacing a flat list in which related toggles were scattered
+-   Surface Points, Extraction Regions, and Boundaries now drive the image viewer as well, so both views agree without setting the same thing twice
+-   Surface Points, Extraction Regions, Boundaries, and Combined Depth are shown by default when a result is opened; the per-method diagnostic overlays stay off
+-   Added a "Half-Span Construction" overlay drawing the smoothed profile together with the background, peak, and threshold levels, so the method can be read off the plot rather than taken on trust. The terms are now stored per column, keeping a saved result auditable without re-running the analysis
+-   Arrow keys step the selected A-scan by one column and Shift+arrow by ten, which the slider cannot do precisely. The image viewer keeps its own arrow keys for slice navigation
+-   Enabling "Ground Truth" with no marks present now explains what ground truth is and how to create it, instead of silently showing nothing
+-   Widened the window for the grouped toggles, removed the redundant column readout beside the slider (the plot title already names the column), and tightened padding
+
+## CarlQuant: Analysis Zoom
+
+-   "Zoom to Analysis" now frames both views on the analysed region together: the A-scan zooms in depth while the B-scan zooms laterally
+
 # Version 2026.7 (2026-08-20)
 
 ## Documentation
