@@ -35,16 +35,16 @@ Author: Tobias Meissner
 ****
 """
 
-
-from typing import Any, Callable, Dict
+from collections.abc import Callable
+from typing import Any
 
 from app.logic.carlquant.interpolation import (
-    CoordinateDescriptor,
-    REGION_DESCRIPTOR,
     AIR_DESCRIPTOR,
+    REGION_DESCRIPTOR,
+    CoordinateDescriptor,
+    interpolate_air_coordinates,
     interpolate_coordinates,
     interpolate_region_coordinates,
-    interpolate_air_coordinates,
 )
 
 __all__ = [
@@ -60,7 +60,7 @@ class InterpolationService:
 
     @staticmethod
     def interpolate(
-        config_dict: Dict[int, Any],
+        config_dict: dict[int, Any],
         total_slices: int,
         descriptor: CoordinateDescriptor,
         update_func: Callable[[int, Any, bool], None],
@@ -70,7 +70,7 @@ class InterpolationService:
 
     @staticmethod
     def interpolate_regions(
-        config_dict: Dict[int, Any],
+        config_dict: dict[int, Any],
         total_slices: int,
         update_func: Callable[[int, Any, bool], None],
     ) -> None:
@@ -79,7 +79,7 @@ class InterpolationService:
 
     @staticmethod
     def interpolate_air(
-        config_dict: Dict[int, Any],
+        config_dict: dict[int, Any],
         total_slices: int,
         update_func: Callable[[int, Any, bool], None],
     ) -> None:
