@@ -33,13 +33,12 @@ Author: Tobias Meissner
 ****
 """
 
-
 from app.logic.carlquant.data_io import (
+    IMAGE_EXTENSIONS,
     DataLoader,
     DataSaver,
     convert_to_json_serializable,
     natural_key,
-    IMAGE_EXTENSIONS,
 )
 
 __all__ = [
