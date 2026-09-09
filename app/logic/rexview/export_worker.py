@@ -34,13 +34,12 @@ Author: Tobias Meissner
 ****
 """
 
-
 from __future__ import annotations
 
 import traceback
 
 from app.logic.rexview.export_service import ExportService
-from app.logic.rexview.models import ExportConfig, SliceExportParams, ExportResult
+from app.logic.rexview.models import ExportConfig, ExportResult, SliceExportParams
 
 
 def export_one_file(
