@@ -37,11 +37,8 @@ Author: Tobias Meissner
 ****
 """
 
-
 import json
-from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Union
 
 from app.logic.annolyze.models import AnnotationConfig, ColumnSpec, MetadataConfig
 
@@ -59,7 +56,7 @@ class ConfigService:
     def build_config(
         self,
         metadata: MetadataConfig,
-        columns: List[ColumnSpec],
+        columns: list[ColumnSpec],
     ) -> dict:
         """
         Build an on-disk config dict from metadata + ordered column specs.
@@ -67,7 +64,7 @@ class ConfigService:
         ``position_after`` is computed from the preceding column's name
         (or ``SLICE`` for the first column), and ``order`` is the list index.
         """
-        ordered: List[ColumnSpec] = []
+        ordered: list[ColumnSpec] = []
         for i, col in enumerate(columns):
             position_after = columns[i - 1].name if i > 0 else "SLICE"
             ordered.append(
@@ -119,7 +116,7 @@ class ConfigService:
     # ------------------------------------------------------------------
     # File I/O (raise on error; no dialogs)
     # ------------------------------------------------------------------
-    def save_config_to_file(self, config: dict, filepath: Union[str, Path]) -> Path:
+    def save_config_to_file(self, config: dict, filepath: str | Path) -> Path:
         """Write ``config`` to ``filepath`` as JSON. Returns the path."""
         path = Path(filepath)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,7 +124,7 @@ class ConfigService:
             json.dump(config, f, indent=2, ensure_ascii=False)
         return path
 
-    def load_config_from_file(self, filepath: Union[str, Path]) -> Optional[dict]:
+    def load_config_from_file(self, filepath: str | Path) -> dict | None:
         """
         Load and validate a config from ``filepath``.
 
@@ -137,6 +134,6 @@ class ConfigService:
         path = Path(filepath)
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             config = json.load(f)
         return config if self.validate_config(config) else None
