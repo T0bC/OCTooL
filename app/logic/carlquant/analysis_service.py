@@ -40,35 +40,34 @@ Author: Tobias Meissner
 ****
 """
 
-
 from __future__ import annotations
 
 import gc
 import multiprocessing
 import random
+from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional
 
 import numpy as np
 from PIL import Image
 
 from app.logic.carlquant.carl_quant_core import (
+    DEPTH_OFFSET,
+    METHOD_STABILITY_SD,
+    NO_LESION_SD,
+    calculate_lesion_depth,
     detect_surface,
     extract_regions,
-    calculate_lesion_depth,
     process_slice_parallel,
-    DEPTH_OFFSET,
-    NO_LESION_SD,
-    METHOD_STABILITY_SD,
 )
 from app.logic.carlquant.data_io import DataSaver
 from app.logic.carlquant.models import (
+    DepthDetectionMethod,
+    LesionDepth,
     RegionStats,
     Surface,
-    LesionDepth,
-    DepthDetectionMethod,
 )
 
 # Defaults mirror the values used by run_carl_quant / process_slice_parallel.
@@ -84,10 +83,11 @@ class SliceAnalysis:
     (matching the legacy behaviour where depth is only computed for configured
     slices).
     """
+
     slice_index: int
-    region_stats: List[RegionStats]
+    region_stats: list[RegionStats]
     surface: Surface
-    lesion_depth: Optional[LesionDepth]
+    lesion_depth: LesionDepth | None
 
 
 # Type alias for the progress callback used by long-running operations.
@@ -102,6 +102,7 @@ class SpecimenAnalysisResult:
     ``status`` is one of ``"Completed"``, ``"Partial"`` (cancelled after some
     slices) or ``"Cancelled"`` (cancelled before any slice finished).
     """
+
     specimen_id: str
     status: str
     processed_count: int
@@ -127,7 +128,7 @@ class AnalysisService:
         region_config,
         num_sound_regions: int = 6,
         num_lesion_regions: int = 6,
-    ) -> List[RegionStats]:
+    ) -> list[RegionStats]:
         """Extract sound/lesion regions and their statistics."""
         return extract_regions(
             image,
@@ -148,7 +149,7 @@ class AnalysisService:
         method_stability_sd: float = METHOD_STABILITY_SD,
         depth_offset: float = DEPTH_OFFSET,
         no_lesion_sd: float = NO_LESION_SD,
-        slice_id: Optional[str] = None,
+        slice_id: str | None = None,
     ) -> LesionDepth:
         """Calculate lesion depth from a detected surface and region config.
 
@@ -172,7 +173,7 @@ class AnalysisService:
     # Per-slice pipeline (extracted from process_slice_parallel)
     # ------------------------------------------------------------------
     @staticmethod
-    def _dummy_region_stats(num_sound: int, num_lesion: int) -> List[RegionStats]:
+    def _dummy_region_stats(num_sound: int, num_lesion: int) -> list[RegionStats]:
         """Placeholder stats when no region configuration is present.
 
         Mirrors the legacy fallback used when a slice has no region config.
@@ -181,7 +182,10 @@ class AnalysisService:
             RegionStats(
                 "sound",
                 [random.randint(95, 105) for _ in range(100)],
-                mean=100.0, median=100.0, sd=2.0, se=1.0,
+                mean=100.0,
+                median=100.0,
+                sd=2.0,
+                se=1.0,
             )
             for _ in range(num_sound)
         ]
@@ -189,7 +193,10 @@ class AnalysisService:
             RegionStats(
                 "lesion",
                 [random.randint(75, 85) for _ in range(100)],
-                mean=80.0, median=80.0, sd=2.0, se=1.0,
+                mean=80.0,
+                median=80.0,
+                sd=2.0,
+                se=1.0,
             )
             for _ in range(num_lesion)
         ]
@@ -206,7 +213,7 @@ class AnalysisService:
         num_lesion: int = 6,
         detection_method: str = DEFAULT_DETECTION_METHOD,
         slice_index: int = 0,
-        slice_id: Optional[str] = None,
+        slice_id: str | None = None,
         depth_offset: float = DEPTH_OFFSET,
         no_lesion_sd: float = NO_LESION_SD,
     ) -> SliceAnalysis:
@@ -220,14 +227,18 @@ class AnalysisService:
 
         if region_config:
             region_stats = cls.extract_regions(
-                image, surface, region_config,
+                image,
+                surface,
+                region_config,
                 num_sound_regions=num_sound,
                 num_lesion_regions=num_lesion,
             )
             method = DepthDetectionMethod(detection_method)
             name = slice_id if slice_id is not None else f"slice_{slice_index}"
             lesion_depth = cls.calculate_lesion_depth(
-                surface, region_config, image,
+                surface,
+                region_config,
+                image,
                 detection_method=method,
                 depth_offset=depth_offset,
                 no_lesion_sd=no_lesion_sd,
@@ -266,11 +277,16 @@ class AnalysisService:
             img.close()
         slice_id = Path(image_path).stem if image_path else f"slice_{slice_index}"
         return cls.analyze_slice(
-            image, region_config, air_config,
-            num_sound=num_sound, num_lesion=num_lesion,
+            image,
+            region_config,
+            air_config,
+            num_sound=num_sound,
+            num_lesion=num_lesion,
             detection_method=detection_method,
-            slice_index=slice_index, slice_id=slice_id,
-            depth_offset=depth_offset, no_lesion_sd=no_lesion_sd,
+            slice_index=slice_index,
+            slice_id=slice_id,
+            depth_offset=depth_offset,
+            no_lesion_sd=no_lesion_sd,
         )
 
     @classmethod
@@ -281,9 +297,9 @@ class AnalysisService:
         num_sound: int = 6,
         num_lesion: int = 6,
         detection_method: str = DEFAULT_DETECTION_METHOD,
-        progress_callback: Optional[ProgressCallback] = None,
-        is_cancelled: Optional[Callable[[], bool]] = None,
-    ) -> List[SliceAnalysis]:
+        progress_callback: ProgressCallback | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
+    ) -> list[SliceAnalysis]:
         """Analyse a sequence of slices sequentially.
 
         Args:
@@ -298,13 +314,18 @@ class AnalysisService:
         """
         tasks = list(slice_tasks)
         total = len(tasks)
-        results: List[SliceAnalysis] = []
-        for completed, (slice_index, image_path, region_config, air_config) in enumerate(tasks, start=1):
+        results: list[SliceAnalysis] = []
+        for completed, (slice_index, image_path, region_config, air_config) in enumerate(
+            tasks, start=1
+        ):
             if is_cancelled is not None and is_cancelled():
                 break
             analysis = cls.analyze_image(
-                image_path, region_config, air_config,
-                num_sound=num_sound, num_lesion=num_lesion,
+                image_path,
+                region_config,
+                air_config,
+                num_sound=num_sound,
+                num_lesion=num_lesion,
                 detection_method=detection_method,
                 slice_index=slice_index,
             )
@@ -327,12 +348,12 @@ class AnalysisService:
         result_lock=None,
         save: bool = True,
         parallel_threshold: int = 10,
-        max_workers: Optional[int] = None,
-        on_status: Optional[Callable[[str], None]] = None,
-        on_slice_done: Optional[Callable[[int, int], None]] = None,
-        on_mode: Optional[Callable[[str, int], None]] = None,
-        on_error: Optional[Callable[[str], None]] = None,
-        is_cancelled: Optional[Callable[[], bool]] = None,
+        max_workers: int | None = None,
+        on_status: Callable[[str], None] | None = None,
+        on_slice_done: Callable[[int, int], None] | None = None,
+        on_mode: Callable[[str, int], None] | None = None,
+        on_error: Callable[[str], None] | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
     ) -> SpecimenAnalysisResult:
         """Analyse every slice of a specimen, store and (optionally) save results.
 
@@ -348,6 +369,7 @@ class AnalysisService:
         processing mode, ``on_error(msg)`` for per-slice errors, and
         ``is_cancelled()`` for cooperative cancellation.
         """
+
         def cancelled_now() -> bool:
             return is_cancelled is not None and is_cancelled()
 
@@ -374,7 +396,9 @@ class AnalysisService:
             slice_tasks.append((slice_index, image_path, region_config, air_config))
 
         total = len(slice_tasks)
-        workers = max_workers if max_workers is not None else max(1, multiprocessing.cpu_count() - 1)
+        workers = (
+            max_workers if max_workers is not None else max(1, multiprocessing.cpu_count() - 1)
+        )
         use_parallel = total > parallel_threshold and workers > 1
         processed_count = 0
         cancelled = False
@@ -393,8 +417,13 @@ class AnalysisService:
                         break
                     future = executor.submit(
                         process_slice_parallel,
-                        slice_idx, image_path, region_config, air_config,
-                        num_sound, num_lesion, detection_method,
+                        slice_idx,
+                        image_path,
+                        region_config,
+                        air_config,
+                        num_sound,
+                        num_lesion,
+                        detection_method,
                     )
                     future_to_slice[future] = slice_idx
 
@@ -433,9 +462,13 @@ class AnalysisService:
                     break
                 try:
                     analysis = cls.analyze_image(
-                        image_path, region_config, air_config,
-                        num_sound=num_sound, num_lesion=num_lesion,
-                        detection_method=detection_method, slice_index=slice_idx,
+                        image_path,
+                        region_config,
+                        air_config,
+                        num_sound=num_sound,
+                        num_lesion=num_lesion,
+                        detection_method=detection_method,
+                        slice_index=slice_idx,
                     )
                     store(slice_idx, analysis.region_stats, analysis.surface, analysis.lesion_depth)
                     processed_count += 1
