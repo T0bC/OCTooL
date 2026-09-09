@@ -29,30 +29,29 @@ Author: Tobias Meissner
 ****
 """
 
-
-from app.logic.carlquant.models import (
-    RegionStats,
-    Surface,
-    LesionDepth,
-    RegionConfig,
-    AirConfig,
-    SpecimenConfig,
-    SliceResult,
-    Specimen,
-    DepthDetectionMethod,
-)
 from app.logic.carlquant.analysis_service import (
     AnalysisService,
     SliceAnalysis,
     SpecimenAnalysisResult,
 )
-from app.logic.carlquant.interpolation_service import (
-    InterpolationService,
-    CoordinateDescriptor,
-    REGION_DESCRIPTOR,
-    AIR_DESCRIPTOR,
-)
 from app.logic.carlquant.data_service import DataLoader, DataSaver
+from app.logic.carlquant.interpolation_service import (
+    AIR_DESCRIPTOR,
+    REGION_DESCRIPTOR,
+    CoordinateDescriptor,
+    InterpolationService,
+)
+from app.logic.carlquant.models import (
+    AirConfig,
+    DepthDetectionMethod,
+    LesionDepth,
+    RegionConfig,
+    RegionStats,
+    SliceResult,
+    Specimen,
+    SpecimenConfig,
+    Surface,
+)
 
 __all__ = [
     # Models
