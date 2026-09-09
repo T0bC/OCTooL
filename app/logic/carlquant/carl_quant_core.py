@@ -7,7 +7,8 @@ processing. process_slice_parallel lives at module level so it is picklable by
 ProcessPoolExecutor on Windows.
 
 Key contents:
-- process_slice_parallel: Picklable module-level worker that loads an image and runs the full pipeline.
+- process_slice_parallel: Picklable module-level worker that loads an image and runs the
+  full pipeline.
 - detect_surface: Finds the specimen surface using intensity peaks and AIR thresholding.
 - extract_regions: Extracts sound/lesion regions and computes statistics.
 - calculate_lesion_depth: Calculates lesion depth with knee-point, sigmoid, and combined methods.
@@ -261,7 +262,7 @@ def fit_surface_curve(
         tck = splrep(x_sorted, y_sorted, k=spline_degree, s=s_param)
         x_full = np.arange(x_start, x_end)
         y_fitted = splev(x_full, tck)
-        fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted)]
+        fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted, strict=True)]
         return {curve_name: fitted_curve}
     except Exception:
         return {}
@@ -352,7 +353,7 @@ def fit_lesion_depth_curve_robust(
         tck = splrep(x_clean, y_clean, k=min(spline_degree, len(x_clean) - 1), s=s_param)
         x_full = np.arange(x_start, x_end)
         y_fitted = splev(x_full, tck)
-        fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted)]
+        fitted_curve = [(int(x), int(y)) for x, y in zip(x_full, y_fitted, strict=True)]
         return {curve_name: fitted_curve}
     except Exception:
         return {}
@@ -460,7 +461,8 @@ def extract_regions(
     Extract pixel values from sound and lesion regions.
 
     Algorithm:
-    1. Divide sound areas (left and right of lesion) into num_sound_regions TOTAL (split between left/right)
+    1. Divide sound areas (left and right of lesion) into num_sound_regions TOTAL
+       (split between left/right)
     2. Divide lesion area into num_lesion_regions
     3. For each region, place 25x25 pixel rectangle 10px below surface
     4. Extract pixel values and calculate statistics
@@ -774,7 +776,7 @@ def knee_pt(y, x):
                 coeffs_left = np.linalg.lstsq(A_left, y_left, rcond=None)[0]
                 y_fit_left = A_left @ coeffs_left
                 delsfwd = y_left - y_fit_left
-            except:
+            except Exception:
                 delsfwd = np.zeros(len(x_left))
         else:
             delsfwd = np.zeros(len(x_left))
@@ -789,7 +791,7 @@ def knee_pt(y, x):
                 coeffs_right = np.linalg.lstsq(A_right, y_right, rcond=None)[0]
                 y_fit_right = A_right @ coeffs_right
                 delsbck = y_right - y_fit_right
-            except:
+            except Exception:
                 delsbck = np.zeros(len(x_right))
         else:
             delsbck = np.zeros(len(x_right))
@@ -1303,9 +1305,10 @@ def calculate_lesion_depth(
         no_lesion_sd: Lateral SD (px) of the combined depth above which the slice is
                      judged to have no lesion and is reported at the surface
                      (default 15.0). See NO_LESION_SD.
-        refractive_index: Refractive index of tooth material for cavitation depth correction (default 1.5)
-                         When cavitation is present, the subsurface lesion depth (below actual surface)
-                         is divided by this value to convert from optical to physical depth.
+        refractive_index: Refractive index of tooth material for cavitation depth correction
+                         (default 1.5). When cavitation is present, the subsurface lesion depth
+                         (below actual surface) is divided by this value to convert from optical
+                         to physical depth.
                          Air (n=1) portion of cavitation requires no correction.
 
     Returns:
@@ -1481,8 +1484,10 @@ def calculate_lesion_depth(
 
             # Calculate actual depth from surface with refractive index correction
             # For cavitated lesions, split depth into two parts:
-            # 1. Cavitation depth (air, n=1): from interpolated surface to actual surface - no correction
-            # 2. Subsurface depth (tooth, n~1.5): from actual surface to lesion bottom - divide by n
+            # 1. Cavitation depth (air, n=1): from interpolated surface to actual surface -
+            #    no correction
+            # 2. Subsurface depth (tooth, n~1.5): from actual surface to lesion bottom -
+            #    divide by n
             # This accounts for OCT measuring optical path length, not physical distance
             if interpolated_dict is not None and ascan_x in interpolated_dict:
                 interpolated_y = interpolated_dict[ascan_x]
@@ -1492,7 +1497,8 @@ def calculate_lesion_depth(
                 cavitation_depth = actual_y - interpolated_y
 
                 # Subsurface depth: from actual surface into tooth material
-                # depth_value is already relative to actual surface (profile starts at surface_y_int)
+                # depth_value is already relative to actual surface (profile starts at
+                # surface_y_int)
                 subsurface_optical_depth = depth_value
 
                 # Convert subsurface optical depth to physical depth using refractive index
