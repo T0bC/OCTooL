@@ -36,14 +36,11 @@ Author: Tobias Meissner
 ****
 """
 
-
-from typing import Dict, List, Optional, Tuple
-
 import numpy as np
 
 from app.logic.annolyze.models import Annotation
 
-Point = Tuple[float, float]
+Point = tuple[float, float]
 
 # A cubic spline (k=3) needs at least 4 points; below this we fall back to lines.
 MIN_SPLINE_POINTS = 4
@@ -56,15 +53,15 @@ class AnnotationService:
     # ------------------------------------------------------------------
     # Geometry
     # ------------------------------------------------------------------
-    def polyline_length(self, points: List[Point]) -> float:
+    def polyline_length(self, points: list[Point]) -> float:
         """Total Euclidean length of a poly-line through ``points``."""
         if not points or len(points) < 2:
             return 0.0
         pts = np.asarray(points, dtype=float)
         diffs = np.diff(pts, axis=0)
-        return float(np.sum(np.sqrt(np.sum(diffs ** 2, axis=1))))
+        return float(np.sum(np.sqrt(np.sum(diffs**2, axis=1))))
 
-    def spline_points(self, points: List[Point], num: int = 500) -> List[Point]:
+    def spline_points(self, points: list[Point], num: int = 500) -> list[Point]:
         """
         Sample a cubic spline through ``points``.
 
@@ -74,7 +71,8 @@ class AnnotationService:
         if len(points) < MIN_SPLINE_POINTS:
             return [tuple(p) for p in points]
         try:
-            from scipy.interpolate import splprep, splev
+            from scipy.interpolate import splev, splprep
+
             pts_np = np.asarray(points, dtype=float)
             tck, _ = splprep([pts_np[:, 0], pts_np[:, 1]], s=0, k=3)
             u = np.linspace(0, 1, num)
@@ -83,7 +81,7 @@ class AnnotationService:
         except Exception:
             return [tuple(p) for p in points]
 
-    def annotation_length(self, points: List[Point], mode: str) -> float:
+    def annotation_length(self, points: list[Point], mode: str) -> float:
         """
         Length of an annotation in the given ``mode`` ('line' or 'spline').
 
@@ -95,7 +93,8 @@ class AnnotationService:
         if mode == "line" or len(points) < MIN_SPLINE_POINTS:
             return self.polyline_length(points)
         try:
-            from scipy.interpolate import splprep, splev
+            from scipy.interpolate import splev, splprep
+
             pts = np.asarray(points, dtype=float)
             tck, _ = splprep([pts[:, 0], pts[:, 1]], s=0, k=3)
             u = np.linspace(0, 1, 1000)
@@ -107,7 +106,7 @@ class AnnotationService:
     # ------------------------------------------------------------------
     # Color
     # ------------------------------------------------------------------
-    def hex_to_rgba(self, color: str, alpha: int = 255) -> Tuple[int, int, int, int]:
+    def hex_to_rgba(self, color: str, alpha: int = 255) -> tuple[int, int, int, int]:
         """Convert a ``#RRGGBB`` hex string to an RGBA tuple."""
         if isinstance(color, str) and color.startswith("#") and len(color) >= 7:
             r = int(color[1:3], 16)
@@ -131,25 +130,23 @@ class AnnotationService:
         return Annotation.normalize(raw).model_dump()
 
     def serialize_slice_annotations(
-        self, slice_annotations: Dict[int, List[dict]]
-    ) -> Dict[str, List[dict]]:
+        self, slice_annotations: dict[int, list[dict]]
+    ) -> dict[str, list[dict]]:
         """
         Convert ``{slice_index: [annotation_dict, ...]}`` to the on-disk JSON
         structure ``{"slice_<i>": [serializable, ...]}``.
         """
-        result: Dict[str, List[dict]] = {}
+        result: dict[str, list[dict]] = {}
         for slice_index, annotations in slice_annotations.items():
             key = f"slice_{slice_index}"
             result[key] = [Annotation.normalize(a).to_serializable() for a in annotations]
         return result
 
-    def deserialize_annotations(
-        self, json_data: Dict[str, List[dict]]
-    ) -> Dict[int, List[dict]]:
+    def deserialize_annotations(self, json_data: dict[str, list[dict]]) -> dict[int, list[dict]]:
         """
         Convert the on-disk JSON structure back to ``{slice_index: [annotation_dict]}``.
         """
-        result: Dict[int, List[dict]] = {}
+        result: dict[int, list[dict]] = {}
         for slice_key, annotations in json_data.items():
             slice_index = int(str(slice_key).replace("slice_", ""))
             result[slice_index] = [Annotation.normalize(a).model_dump() for a in annotations]
