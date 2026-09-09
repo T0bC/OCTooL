@@ -34,6 +34,7 @@ Author: Tobias Meissner
 ****
 """
 
+import contextlib
 import threading
 import tkinter as tk
 from concurrent.futures import ThreadPoolExecutor
@@ -85,10 +86,8 @@ class KeybindingManager:
 
     def _unbind_key(self, key):
         """Remove the binding for a single key (best-effort)."""
-        try:
+        with contextlib.suppress(Exception):
             self.annotate_panel.window.unbind(f"<{key.lower()}>")
-        except Exception:
-            pass
 
     @handle_errors("KeybindingManager.register_keybindings")
     def register_keybindings(self):

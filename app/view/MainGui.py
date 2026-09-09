@@ -37,6 +37,7 @@ Author: Tobias Meissner
 ****
 """
 
+import contextlib
 import tkinter as tk
 import webbrowser
 from tkinter import ttk
@@ -422,18 +423,14 @@ class MainGui:
             context.shutdown()
             context.silence_tcl_background_errors()
 
-        try:
-            # quit() before destroy(): with another Tk root in the process
-            # (a Positron/Spyder kernel's own), destroy() alone wouldn't make
-            # mainloop() return, so %run would never finish.
+        # quit() before destroy(): with another Tk root in the process
+        # (a Positron/Spyder kernel's own), destroy() alone wouldn't make
+        # mainloop() return, so %run would never finish.
+        with contextlib.suppress(tk.TclError):
             self.mainWin.quit()
-        except tk.TclError:
-            pass
 
-        try:
-            self.mainWin.destroy()
-        except tk.TclError:
-            pass  # Already torn down.
+        with contextlib.suppress(tk.TclError):
+            self.mainWin.destroy()  # Already torn down.
 
         prev = getattr(self, "_prev_default_root", None)
         if prev is not None and prev is not self.mainWin:

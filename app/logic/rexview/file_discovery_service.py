@@ -346,8 +346,8 @@ class FileDiscoveryService:
 
             try:
                 start, end = map(int, range_str.split("-"))
-            except Exception:
-                raise ValueError(f"Invalid range format: {range_str}")
+            except Exception as e:
+                raise ValueError(f"Invalid range format: {range_str}") from e
 
             if count is None:
                 count = end - start + 1
@@ -370,7 +370,7 @@ class FileDiscoveryService:
         except ValueError:
             raise
         except Exception as e:
-            raise RuntimeError(f"Failed to parse metadata file: {e}")
+            raise RuntimeError(f"Failed to parse metadata file: {e}") from e
 
         return export_settings
 
@@ -512,7 +512,10 @@ class FileDiscoveryService:
         if not sidecar_path.exists():
             error_msg = None
             if show_errors:
-                error_msg = f"No metadata file found at:\n{sidecar_path}\n\nFalling back to full-range export (1 to {dim_y})."
+                error_msg = (
+                    f"No metadata file found at:\n{sidecar_path}\n\n"
+                    f"Falling back to full-range export (1 to {dim_y})."
+                )
             return self.get_default_export_settings(dim_y), error_msg
 
         try:
@@ -528,7 +531,10 @@ class FileDiscoveryService:
         except RuntimeError as runtime_err:
             error_msg = None
             if show_errors:
-                error_msg = f"Unable to read metadata file:\n{runtime_err}\n\nUsing default range as fallback."
+                error_msg = (
+                    f"Unable to read metadata file:\n{runtime_err}\n\n"
+                    "Using default range as fallback."
+                )
             return self.get_default_export_settings(dim_y), error_msg
 
     def build_queue_items_for_file(

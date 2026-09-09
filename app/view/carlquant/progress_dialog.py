@@ -294,7 +294,7 @@ class ProgressDialog:
         try:
             self.dialog.grab_release()
             self.dialog.destroy()
-        except:
+        except Exception:
             pass  # Dialog may already be destroyed
 
     def show(self):

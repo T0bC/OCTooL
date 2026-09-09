@@ -78,7 +78,8 @@ class TestSplinePoints:
 
     @pytest.mark.unit
     def test_degenerate_points_fall_back_to_original(self, service):
-        """GIVEN 4 identical points (spline fit fails), WHEN spline_points, THEN originals returned."""
+        """GIVEN 4 identical points (spline fit fails), WHEN spline_points, THEN
+        originals returned."""
         pts = [(5, 5), (5, 5), (5, 5), (5, 5)]
         assert service.spline_points(pts) == pts
 
@@ -86,7 +87,8 @@ class TestSplinePoints:
 class TestAnnotationLengthFallback:
     @pytest.mark.unit
     def test_degenerate_spline_falls_back_to_polyline(self, service):
-        """GIVEN 4 identical points in spline mode, WHEN annotation_length, THEN falls back (0.0)."""
+        """GIVEN 4 identical points in spline mode, WHEN annotation_length, THEN falls
+        back (0.0)."""
         pts = [(5, 5), (5, 5), (5, 5), (5, 5)]
         assert service.annotation_length(pts, "spline") == pytest.approx(0.0)
 

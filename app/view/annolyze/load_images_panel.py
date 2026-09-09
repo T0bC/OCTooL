@@ -34,6 +34,7 @@ Author: Tobias Meissner
 ****
 """
 
+import contextlib
 import os
 import re
 from concurrent import futures
@@ -62,7 +63,10 @@ class loadImagePanel:
         self.frame.columnconfigure(0, weight=1)
         self.frame.columnconfigure(1, weight=1)
         # %% LoadImages Button
-        self.pickFolderToolTip = "Choose a folder that contains OCT Image(s). Supported formats are [png, jpg, tif, tiff]"
+        self.pickFolderToolTip = (
+            "Choose a folder that contains OCT Image(s). "
+            "Supported formats are [png, jpg, tif, tiff]"
+        )
         self.pickFolderBtn = ttk.Button(
             self.frame,
             text="Select Folder",
@@ -200,10 +204,8 @@ class loadImagePanel:
             if window is not None:
                 for spec in getattr(self.context, "keybinding_specs", None) or []:
                     key = spec[2]
-                    try:
+                    with contextlib.suppress(Exception):
                         window.unbind(f"<{key.lower()}>")
-                    except Exception:
-                        pass
 
         # Reset the add-columns panel's keybinding/data-type bookkeeping
         add_columns_panel = self.context.get_panel("add_columns", required=False)

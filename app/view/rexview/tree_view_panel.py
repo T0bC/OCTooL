@@ -102,7 +102,6 @@ class treeViewPanel:
     # %% Test for Input
     def set_cell_value(self, event):
         for item in self.treeView.selection():
-            item_text = self.treeView.item(item, "values")
             column = self.treeView.identify_column(event.x)
             row = self.treeView.identify_row(event.y)
         cn = int(str(column).replace("#", ""))
@@ -180,7 +179,7 @@ class treeViewPanel:
         """
         self.firstEntry = firstEntry
         self.lastEntry = lastEntry
-        if resetState == False:
+        if not resetState:
             self.numOfSlices = int(lastEntry) - int(firstEntry)
         else:
             self.numOfSlices = int(lastEntry) - int(firstEntry) + 1
@@ -416,7 +415,7 @@ class treeViewPanel:
         None.
 
         """
-        if allFiles == False:
+        if not allFiles:
             first_slice = int(self.getValue(column="First"))
             last_slice = int(self.getValue(column="Last"))
 
@@ -477,7 +476,8 @@ class treeViewPanel:
             dialogs.show_warning(
                 self.root,
                 "Missing Selection",
-                "Please select a valid entry in the queue table before changing the slice direction.",
+                "Please select a valid entry in the queue table before changing the "
+                "slice direction.",
             )
             return
 

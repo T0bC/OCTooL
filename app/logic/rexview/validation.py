@@ -74,9 +74,8 @@ def slice_order_error(
 
     When either bound is ``None`` the invariant is considered satisfied.
     """
-    if first_slice is not None and last_slice is not None:
-        if first_slice > last_slice:
-            return f"first_slice ({first_slice}) must be <= last_slice ({last_slice})"
+    if first_slice is not None and last_slice is not None and first_slice > last_slice:
+        return f"first_slice ({first_slice}) must be <= last_slice ({last_slice})"
     return None
 
 

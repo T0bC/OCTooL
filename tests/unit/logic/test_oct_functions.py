@@ -32,7 +32,8 @@ class TestOctToGV:
 
     @pytest.mark.unit
     def test_octToGV_with_advanced_filter(self, sample_complex_bscan):
-        """GIVEN a complex B-scan, WHEN advancedFilter='selected', THEN dark speckles are filtered."""
+        """GIVEN a complex B-scan, WHEN advancedFilter='selected', THEN dark speckles
+        are filtered."""
         result_no_filter = octF.octToGV(sample_complex_bscan, dBmin=20, dBmax=80, advancedFilter="")
         result_filtered = octF.octToGV(
             sample_complex_bscan, dBmin=20, dBmax=80, advancedFilter="selected"
@@ -160,7 +161,8 @@ class TestReadXMLContent:
 
     @pytest.mark.unit
     def test_readXMLContent_parses_xml(self, tmp_path):
-        """GIVEN a zip with XML, WHEN readXMLContent is called, THEN returns BeautifulSoup object."""
+        """GIVEN a zip with XML, WHEN readXMLContent is called, THEN returns
+        BeautifulSoup object."""
         from bs4 import BeautifulSoup
 
         zip_path = tmp_path / "test.oct"

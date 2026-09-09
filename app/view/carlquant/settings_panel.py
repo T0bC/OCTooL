@@ -123,15 +123,21 @@ class settingsPanel:
         # Updated tooltip with consistent formatting
         method_tooltip = (
             "Lesion depth detection algorithm:\n\n"
-            "• Combined (Recommended) – Intelligently combines multiple methods using stability analysis. "
-            "Filters out unstable methods (SD > 20px) and uses weighted averaging to preserve natural lesion texture. "
+            "• Combined (Recommended) – Intelligently combines multiple methods using "
+            "stability analysis. "
+            "Filters out unstable methods (SD > 20px) and uses weighted averaging to "
+            "preserve natural lesion texture. "
             "Provides the most robust results across different lesion types.\n\n"
-            "• Knee Point – Two-line fitting to find the transition point where intensity decay changes slope. "
-            "Best for sharp exponential decay patterns. Fits an exponential model and finds the 'elbow' point.\n\n"
-            "• Inflection – Sigmoid curve inflection point (50% transition, maximum rate of change). "
+            "• Knee Point – Two-line fitting to find the transition point where "
+            "intensity decay changes slope. "
+            "Best for sharp exponential decay patterns. Fits an exponential model and "
+            "finds the 'elbow' point.\n\n"
+            "• Inflection – Sigmoid curve inflection point (50% transition, maximum "
+            "rate of change). "
             "Ideal for smooth S-shaped intensity transitions.\n\n"
             "• Shoulder – Sigmoid shoulder point (15% from upper asymptote). "
-            "Detects the early transition region, useful for identifying the start of lesion penetration."
+            "Detects the early transition region, useful for identifying the start of "
+            "lesion penetration."
         )
 
         Tooltip(self.methodDropdown, text=method_tooltip, wraplength=400)

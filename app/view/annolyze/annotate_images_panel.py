@@ -335,7 +335,6 @@ class annotatePanel(BaseCanvasPanel):
             self.canvas.delete(temp_id)
 
             text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
             max_width = max(max_width, text_width)
 
             label_positions.append((label_x, label_y, text, color))
@@ -387,13 +386,13 @@ class annotatePanel(BaseCanvasPanel):
 
         if current_mode == "line":
             # Switching to spline mode
-            if num_points < 4:
+            if num_points < 4 and hasattr(self.context, "status_bar") and self.context.status_bar:
                 # Show user feedback about minimum points needed
-                if hasattr(self.context, "status_bar") and self.context.status_bar:
-                    self.context.status_bar.update(
-                        f"Spline mode activated. Add {4 - num_points} more point(s) for smooth curve (currently {num_points}/4)",
-                        level="info",
-                    )
+                self.context.status_bar.update(
+                    f"Spline mode activated. Add {4 - num_points} more point(s) for "
+                    f"smooth curve (currently {num_points}/4)",
+                    level="info",
+                )
             self.current_annotation["mode"] = "spline"
         else:
             # Switching back to line mode
@@ -550,7 +549,8 @@ class annotatePanel(BaseCanvasPanel):
     # %%remove existing point
     @handle_errors("annotatePanel.on_right_click")
     def on_right_click(self, event):
-        """Remove a point if right-clicked near it, or clear all uncommitted points if clicked in empty space"""
+        """Remove a point if right-clicked near it, or clear all uncommitted points if
+        clicked in empty space"""
         point_index = self.get_point_near_cursor(event.x, event.y)
 
         if point_index is not None:
@@ -689,5 +689,5 @@ class annotatePanel(BaseCanvasPanel):
             measurement = metadata_panel.measurementEntry.get()
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
             return f"Operator: {operator} | Measurement: {measurement} | {timestamp}"
-        except:
+        except Exception:
             return None

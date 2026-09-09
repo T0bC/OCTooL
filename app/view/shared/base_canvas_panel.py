@@ -481,7 +481,6 @@ class BaseCanvasPanel:
         # Use fitted size if zoom_level == 1.0
         if self.zoom_level == 1.0:
             current_width = getattr(self, "fitted_width", self.rawImage.width)
-            current_height = getattr(self, "fitted_height", self.rawImage.height)
             current_zoom = current_width / self.rawImage.width
         else:
             current_zoom = self.zoom_level
@@ -753,7 +752,7 @@ class BaseCanvasPanel:
                     )
                     output_folder.mkdir(parents=True, exist_ok=True)
                     return output_folder
-            except:
+            except Exception:
                 pass
 
         # Fallback to simple annotations folder
@@ -924,7 +923,7 @@ class BaseCanvasPanel:
                     try:
                         # Try to use a nice font
                         font = ImageFont.truetype("arial.ttf", 16)
-                    except:
+                    except Exception:
                         # Fall back to default font
                         font = ImageFont.load_default()
 

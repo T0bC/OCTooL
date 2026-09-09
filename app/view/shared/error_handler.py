@@ -34,6 +34,7 @@ Author: Tobias Meissner
 ****
 """
 
+import contextlib
 import threading
 import tkinter as tk
 import traceback
@@ -62,10 +63,8 @@ def show_error_popup(title, message):
     if threading.current_thread() is not threading.main_thread():
         # The window may have been closed between the error occurring and
         # this callback being scheduled.
-        try:
+        with contextlib.suppress(Exception):
             root.after(0, lambda: _build_error_popup(root, title, message))
-        except Exception:
-            pass
         return
 
     _build_error_popup(root, title, message)
@@ -120,11 +119,9 @@ def install_tk_exception_handler(root):
         popup_message = (
             f"An unexpected error occurred:\n\nException: {exc_value}\n\nTraceback:\n{tb}"
         )
-        try:
+        # Never let the error handler itself crash the app.
+        with contextlib.suppress(Exception):
             show_error_popup("Error", popup_message)
-        except Exception:
-            # Never let the error handler itself crash the app.
-            pass
         log_error_to_file("tkinter.callback", (), {}, "Unhandled Tk callback exception", tb)
 
     root.report_callback_exception = report_callback_exception

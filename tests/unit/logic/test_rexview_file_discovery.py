@@ -329,7 +329,8 @@ class TestParseMetadataFile:
 
     @pytest.mark.unit
     def test_parse_simple_range(self, service):
-        """GIVEN file with simple range, WHEN parse, THEN extracts correctly with inclusive default count."""
+        """GIVEN file with simple range, WHEN parse, THEN extracts correctly with
+        inclusive default count."""
         path = self._write_temp_file("10-50\n")
         try:
             result = service.parse_metadata_file(Path(path))

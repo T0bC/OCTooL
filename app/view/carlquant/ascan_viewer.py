@@ -35,6 +35,7 @@ Author: Tobias Meissner
 ****
 """
 
+import contextlib
 import tkinter as tk
 from tkinter import messagebox, ttk
 
@@ -605,12 +606,12 @@ class AScanViewer:
         # 1. Explicitly requested (checkbox change), OR
         # 2. Not currently dragging the slider
         # This prevents expensive full canvas redraws during slider movement
-        if force_image_sync or not self.slider_dragging:
-            if self.image_viewer_redraw_callback is not None:
-                try:
-                    self.image_viewer_redraw_callback()
-                except Exception:
-                    pass  # Silently ignore if image viewer is not available
+        if (
+            force_image_sync or not self.slider_dragging
+        ) and self.image_viewer_redraw_callback is not None:
+            # Silently ignore if image viewer is not available
+            with contextlib.suppress(Exception):
+                self.image_viewer_redraw_callback()
 
         # Extract column (A-scan)
         column_data = self.current_image[:, self.current_column]
@@ -763,7 +764,8 @@ class AScanViewer:
                         self._plot_point_with_hover(
                             intensity,
                             absolute_depth,
-                            f"Knee Point\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {knee_depth:.1f}px",
+                            f"Knee Point\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\n"
+                            f"Depth: {knee_depth:.1f}px",
                             "Knee Point",
                             "^",
                             KNEE_POINT_COLOR,
@@ -781,7 +783,8 @@ class AScanViewer:
                         self._plot_point_with_hover(
                             intensity,
                             absolute_depth,
-                            f"Sigmoid Inflection\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {inflection_depth:.1f}px",
+                            f"Sigmoid Inflection\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\n"
+                            f"Depth: {inflection_depth:.1f}px",
                             "Sigmoid Inflection",
                             "v",
                             INFLECTION_POINT_COLOR,
@@ -799,7 +802,8 @@ class AScanViewer:
                         self._plot_point_with_hover(
                             intensity,
                             absolute_depth,
-                            f"Sigmoid Shoulder\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {shoulder_depth:.1f}px",
+                            f"Sigmoid Shoulder\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\n"
+                            f"Depth: {shoulder_depth:.1f}px",
                             "Sigmoid Shoulder",
                             "d",
                             SHOULDER_POINT_COLOR,
@@ -844,7 +848,8 @@ class AScanViewer:
                         self._plot_point_with_hover(
                             intensity,
                             absolute_depth,
-                            f"Combined Depth\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\nDepth: {combined_depth:.1f}px",
+                            f"Combined Depth\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\n"
+                            f"Depth: {combined_depth:.1f}px",
                             "Combined Depth",
                             "*",
                             LESION_DEPTH_PRIMARY_COLOR,
@@ -981,10 +986,9 @@ class AScanViewer:
         self.slider_dragging = False
         # Trigger final sync with image viewer after drag completes
         if self.image_viewer_redraw_callback is not None:
-            try:
+            # Silently ignore if image viewer is not available
+            with contextlib.suppress(Exception):
                 self.image_viewer_redraw_callback()
-            except Exception:
-                pass  # Silently ignore if image viewer is not available
 
     @handle_errors("AScanViewer._on_slider_change")
     def _on_slider_change(self, value):
@@ -1152,10 +1156,9 @@ class AScanViewer:
             if hasattr(image_panel, "sync_analysis_zoom"):
                 image_panel.sync_analysis_zoom(False)
             # Trigger redraw to hide component methods
-            try:
+            # Silently ignore if redraw fails
+            with contextlib.suppress(Exception):
                 image_panel.render_zoomed_image()
-            except Exception:
-                pass  # Silently ignore if redraw fails
 
         # Clear active viewer reference in results panel and switch back to green highlighting
         results_panel = self.context.get_panel("carl_results")
@@ -1195,7 +1198,6 @@ class AScanViewer:
 
         # Get image dimensions
         img_width = self.current_image.shape[1]
-        img_height = self.current_image.shape[0]
 
         # Reset column to center
         self.current_column = img_width // 2
@@ -1283,7 +1285,7 @@ class AScanViewer:
         hover_threshold = 15  # pixels
         found_point = False
 
-        for x, y, label, artist in self.annotation_points:
+        for x, y, label, _artist in self.annotation_points:
             # Transform data coordinates to display coordinates
             display_coords = self.ax.transData.transform([[x, y]])[0]
             mouse_coords = np.array([event.x, event.y])

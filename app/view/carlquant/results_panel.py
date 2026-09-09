@@ -417,7 +417,8 @@ class resultsPanel:
         self.sheet.set_sheet_data(rows)
         self._set_column_widths()  # Set column widths after loading data
         self.context.status_bar.update(
-            f"Loaded {len(rows)} slice results for '{specimen_id}' ({num_sound} sound + {num_lesion} lesion regions).",
+            f"Loaded {len(rows)} slice results for '{specimen_id}' "
+            f"({num_sound} sound + {num_lesion} lesion regions).",
             level="info",
         )
 
@@ -500,7 +501,8 @@ class resultsPanel:
         Set the highlight color and re-highlight the current row if any.
 
         Args:
-            color: Hex color string (e.g., ROW_HIGHLIGHT_NAVIGATION_COLOR or ROW_HIGHLIGHT_ASCAN_COLOR)
+            color: Hex color string (e.g., ROW_HIGHLIGHT_NAVIGATION_COLOR or
+                ROW_HIGHLIGHT_ASCAN_COLOR)
         """
         self.highlight_color = color
 
@@ -551,7 +553,8 @@ class resultsPanel:
     def _on_single_click(self, event):
         """
         Handle single-click event on a row.
-        Highlights the row and navigates both image viewer and A-Scan viewer (if open) to the selected slice.
+        Highlights the row and navigates both image viewer and A-Scan viewer (if open)
+        to the selected slice.
         """
         # Get the clicked row
         row = self.sheet.identify_row(event, exclude_index=True)

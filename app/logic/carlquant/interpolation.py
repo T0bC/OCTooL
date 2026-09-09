@@ -8,7 +8,8 @@ to add new coordinate types.
 Key contents:
 - InterpolatableConfig: Protocol defining the interface for keyframe-interpolatable configs.
 - CoordinateDescriptor: Dataclass describing which fields to interpolate for a config type.
-- REGION_DESCRIPTOR / AIR_DESCRIPTOR: Pre-defined descriptors for region (4 points) and AIR (2 points).
+- REGION_DESCRIPTOR / AIR_DESCRIPTOR: Pre-defined descriptors for region (4 points) and
+  AIR (2 points).
 - interpolate_coordinates: Generic keyframe interpolation engine for any coordinate-based config.
 - interpolate_region_coordinates / interpolate_air_coordinates: Convenience wrappers.
 
@@ -37,7 +38,7 @@ Author: Tobias Meissner
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Protocol, TypeVar
+from typing import Any, Protocol
 
 # ============================================================================
 # PROTOCOLS - Define what makes a config "interpolatable"
@@ -90,10 +91,8 @@ AIR_DESCRIPTOR = CoordinateDescriptor(
 # CORE INTERPOLATION ENGINE
 # ============================================================================
 
-ConfigType = TypeVar("ConfigType", bound=InterpolatableConfig)
 
-
-def interpolate_coordinates(
+def interpolate_coordinates[ConfigType: InterpolatableConfig](
     config_dict: dict[int, ConfigType],
     total_slices: int,
     descriptor: CoordinateDescriptor,
@@ -150,7 +149,7 @@ def interpolate_coordinates(
     _forward_fill_after_last_keyframe(keyframes[-1], config_dict, total_slices, update_func)
 
 
-def _propagate_single_keyframe(
+def _propagate_single_keyframe[ConfigType: InterpolatableConfig](
     keyframe_idx: int,
     config_dict: dict[int, ConfigType],
     total_slices: int,
@@ -164,7 +163,7 @@ def _propagate_single_keyframe(
             update_func(slice_idx, keyframe_config, is_keyframe=False)
 
 
-def _interpolate_between_keyframes(
+def _interpolate_between_keyframes[ConfigType: InterpolatableConfig](
     keyframes: list[int],
     config_dict: dict[int, ConfigType],
     descriptor: CoordinateDescriptor,
@@ -194,7 +193,7 @@ def _interpolate_between_keyframes(
             update_func(slice_idx, interpolated_config, is_keyframe=False)
 
 
-def _backfill_before_first_keyframe(
+def _backfill_before_first_keyframe[ConfigType: InterpolatableConfig](
     first_keyframe_idx: int,
     config_dict: dict[int, ConfigType],
     update_func: Callable[[int, ConfigType, bool], None],
@@ -206,7 +205,7 @@ def _backfill_before_first_keyframe(
             update_func(slice_idx, first_config, is_keyframe=False)
 
 
-def _forward_fill_after_last_keyframe(
+def _forward_fill_after_last_keyframe[ConfigType: InterpolatableConfig](
     last_keyframe_idx: int,
     config_dict: dict[int, ConfigType],
     total_slices: int,
@@ -219,7 +218,7 @@ def _forward_fill_after_last_keyframe(
             update_func(slice_idx, last_config, is_keyframe=False)
 
 
-def _create_interpolated_config(
+def _create_interpolated_config[ConfigType: InterpolatableConfig](
     start_config: ConfigType, end_config: ConfigType, t: float, descriptor: CoordinateDescriptor
 ) -> ConfigType:
     """

@@ -67,19 +67,22 @@ class TestExportConfig:
 
     @pytest.mark.unit
     def test_invalid_export_format(self):
-        """GIVEN invalid export format, WHEN ExportConfig is created, THEN ValidationError is raised."""
+        """GIVEN invalid export format, WHEN ExportConfig is created, THEN
+        ValidationError is raised."""
         with pytest.raises(ValidationError):
             ExportConfig(export_format=".jpg")
 
     @pytest.mark.unit
     def test_invalid_averaging(self):
-        """GIVEN invalid averaging method, WHEN ExportConfig is created, THEN ValidationError is raised."""
+        """GIVEN invalid averaging method, WHEN ExportConfig is created, THEN
+        ValidationError is raised."""
         with pytest.raises(ValidationError):
             ExportConfig(averaging="invalid")
 
     @pytest.mark.unit
     def test_tukey_window_bounds(self):
-        """GIVEN out-of-bounds tukey value, WHEN ExportConfig is created, THEN ValidationError is raised."""
+        """GIVEN out-of-bounds tukey value, WHEN ExportConfig is created, THEN
+        ValidationError is raised."""
         with pytest.raises(ValidationError):
             ExportConfig(tukey_window_size=1.5)
 
@@ -88,7 +91,8 @@ class TestExportConfig:
 
     @pytest.mark.unit
     def test_from_gui_state(self):
-        """GIVEN GUI widget states, WHEN from_gui_state is called, THEN config is created correctly."""
+        """GIVEN GUI widget states, WHEN from_gui_state is called, THEN config is
+        created correctly."""
         config = export_config_from_gui_state(
             resize_state="selected",
             prefer_raw_state=("selected",),
@@ -137,7 +141,8 @@ class TestSliceExportParams:
 
     @pytest.mark.unit
     def test_invalid_slice_range(self):
-        """GIVEN first_slice > last_slice, WHEN SliceExportParams is created, THEN ValidationError is raised."""
+        """GIVEN first_slice > last_slice, WHEN SliceExportParams is created, THEN
+        ValidationError is raised."""
         with pytest.raises(ValidationError) as exc_info:
             SliceExportParams(
                 file_path="/path/to/file.oct",
@@ -150,7 +155,8 @@ class TestSliceExportParams:
 
     @pytest.mark.unit
     def test_num_slices_exceeds_range(self):
-        """GIVEN num_slices > available range, WHEN SliceExportParams is created, THEN ValidationError is raised."""
+        """GIVEN num_slices > available range, WHEN SliceExportParams is created, THEN
+        ValidationError is raised."""
         with pytest.raises(ValidationError) as exc_info:
             SliceExportParams(
                 file_path="/path/to/file.oct",
@@ -163,7 +169,8 @@ class TestSliceExportParams:
 
     @pytest.mark.unit
     def test_invalid_slice_direction(self):
-        """GIVEN invalid slice direction, WHEN SliceExportParams is created, THEN ValidationError is raised."""
+        """GIVEN invalid slice direction, WHEN SliceExportParams is created, THEN
+        ValidationError is raised."""
         with pytest.raises(ValidationError):
             SliceExportParams(
                 file_path="/path/to/file.oct",
@@ -176,7 +183,8 @@ class TestSliceExportParams:
 
     @pytest.mark.unit
     def test_refractive_index_bounds(self):
-        """GIVEN out-of-bounds refractive index, WHEN SliceExportParams is created, THEN ValidationError is raised."""
+        """GIVEN out-of-bounds refractive index, WHEN SliceExportParams is created, THEN
+        ValidationError is raised."""
         with pytest.raises(ValidationError):
             SliceExportParams(
                 file_path="/path/to/file.oct",
@@ -203,7 +211,8 @@ class TestSliceExportParams:
 
     @pytest.mark.unit
     def test_from_treeview_row(self):
-        """GIVEN TreeView row values, WHEN from_treeview_row is called, THEN params are created correctly."""
+        """GIVEN TreeView row values, WHEN from_treeview_row is called, THEN params are
+        created correctly."""
         params = slice_export_params_from_treeview_row(
             path="C:/data/scan.oct",
             name="Scan001",
@@ -243,13 +252,15 @@ class TestExportProgress:
 
     @pytest.mark.unit
     def test_item_progress_calculation(self):
-        """GIVEN progress values, WHEN item_progress is accessed, THEN correct percentage is returned."""
+        """GIVEN progress values, WHEN item_progress is accessed, THEN correct
+        percentage is returned."""
         progress = ExportProgress(current_item=3, total_items=10)
         assert progress.item_progress == 30.0
 
     @pytest.mark.unit
     def test_slice_progress_calculation(self):
-        """GIVEN progress values, WHEN slice_progress is accessed, THEN correct percentage is returned."""
+        """GIVEN progress values, WHEN slice_progress is accessed, THEN correct
+        percentage is returned."""
         progress = ExportProgress(current_slice=7, total_slices=20)
         assert progress.slice_progress == 35.0
 

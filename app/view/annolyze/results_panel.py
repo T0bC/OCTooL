@@ -165,7 +165,8 @@ class resultsPanel:
                     dialogs.show_warning(
                         self.root,
                         "Duplicate Key Binding",
-                        f"The key binding '{keyBind}' is already assigned to column '{existing_col}'. Please choose a unique key.",
+                        f"The key binding '{keyBind}' is already assigned to column "
+                        f"'{existing_col}'. Please choose a unique key.",
                     )
                     return
 

@@ -77,14 +77,22 @@ class addColumnsPanel:
 
         self.dataTypeToolTip = (
             "Select the type of data stored in this column:\n\n"
-            "Continuous – A number that can take any value within a range. Used for measurements like length (mm, cm, m), weight (kg), or time (seconds).\n\n"
-            "Percentage – A value expressed as a part of 100. Useful for proportions or rates. Example: 85% battery, 12% error rate.\n\n"
-            "Boolean – A simple Yes/No or True/False value. Great for binary decisions. Example: Is active? → Yes.\n\n"
-            "Categorical – A label or category that describes a group. Not ordered. Example: 'Red', 'Blue', 'Green'.\n\n"
-            "Ordinal – Categories that have a meaningful order, but not necessarily equal spacing. Example: 'Low', 'Medium', 'High'.\n\n"
-            "Integer – Whole numbers without decimals. Used for counts or discrete values. Example: 1, 42, -7.\n\n"
-            "Float – Decimal numbers. More precise than integers. Example: 3.14, -0.001, 0.5.\n\n"
-            "Text/String – Free-form text or labels. Can be names, comments, or descriptions. Example: 'Sample A'.\n\n"
+            "Continuous – A number that can take any value within a range. Used for "
+            "measurements like length (mm, cm, m), weight (kg), or time (seconds).\n\n"
+            "Percentage – A value expressed as a part of 100. Useful for proportions or "
+            "rates. Example: 85% battery, 12% error rate.\n\n"
+            "Boolean – A simple Yes/No or True/False value. Great for binary decisions. "
+            "Example: Is active? → Yes.\n\n"
+            "Categorical – A label or category that describes a group. Not ordered. "
+            "Example: 'Red', 'Blue', 'Green'.\n\n"
+            "Ordinal – Categories that have a meaningful order, but not necessarily equal "
+            "spacing. Example: 'Low', 'Medium', 'High'.\n\n"
+            "Integer – Whole numbers without decimals. Used for counts or discrete "
+            "values. Example: 1, 42, -7.\n\n"
+            "Float – Decimal numbers. More precise than integers. Example: 3.14, -0.001, "
+            "0.5.\n\n"
+            "Text/String – Free-form text or labels. Can be names, comments, or "
+            "descriptions. Example: 'Sample A'.\n\n"
         )
 
         self.dataTypeVar = tk.StringVar()
@@ -127,7 +135,11 @@ class addColumnsPanel:
             wraplength=200,
         )
 
-        self.addColumnAndBindingToTableToolTip = "Add a new custom column to the results table with the specified name, keybinding, data type, and color. The keybinding allows quick data entry using keyboard shortcuts during image annotation."
+        self.addColumnAndBindingToTableToolTip = (
+            "Add a new custom column to the results table with the specified name, "
+            "keybinding, data type, and color. The keybinding allows quick data entry "
+            "using keyboard shortcuts during image annotation."
+        )
 
         self.addColumnAndBindingToTable = ttk.Button(
             self.frame,

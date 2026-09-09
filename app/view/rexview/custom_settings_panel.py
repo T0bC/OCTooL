@@ -171,8 +171,9 @@ class customSettingsPanel:
 
         self.dynRangeLabelToolTip = (
             "Roughly speaking, the dynamic range indicates the "
-            "range between the darkest and lightest grey values. A kind of contrast adjustment"
-            " takes place, so to speak. In the concrete case, the signal-to-noise ratio is defined here."
+            "range between the darkest and lightest grey values. A kind of contrast "
+            "adjustment takes place, so to speak. In the concrete case, the "
+            "signal-to-noise ratio is defined here."
         )
 
         self.dynRangeLabel = ttk.Label(self.frame, text="Dyn. Range [dB]")
@@ -244,8 +245,9 @@ class customSettingsPanel:
             "dispersion is not compensated, this leads to the broadening of the point spread "
             "function of the Fourier transform. To achieve the best possible resolution, a "
             "dispersion correction must be carried out. This can be achieved "
-            "either by appropriate dispersion elements in the interferometer arms or numerically "
-            "by means of software. The latter is done here. The value used must be determined empirically."
+            "either by appropriate dispersion elements in the interferometer arms or "
+            "numerically by means of software. The latter is done here. The value used "
+            "must be determined empirically."
         )
 
         self.dispersionMenu = ttk.Combobox(
@@ -305,7 +307,10 @@ class customSettingsPanel:
         Tooltip(self.resetCurDispButton, text=self.dipsResToolTip, wraplength=200)
 
         # %% RexView direction
-        self.expDirLabelToolTip = "Define the image slice direction here. First character is always the X axis (width) and second always the y axis (height) of the resulting image."
+        self.expDirLabelToolTip = (
+            "Define the image slice direction here. First character is always the X "
+            "axis (width) and second always the y axis (height) of the resulting image."
+        )
 
         self.expDirLabel = ttk.Label(self.frame, text="Image Slice Direction")
         self.expDirLabel.grid(row=7, column=0, sticky=tk.W, pady=3)
@@ -350,13 +355,20 @@ class customSettingsPanel:
         Tooltip(self.addAllExpDirButton, text=self.expDirAllToolTip, wraplength=200)
 
         # %% Refractive Index
-        self.refractiveIndexLabelTooltip = "Defines how much the image is stretched or compressed. A value of 1 shows true surface dimensions; higher values  distort the surface but retain approximate depth accuracy."
+        self.refractiveIndexLabelTooltip = (
+            "Defines how much the image is stretched or compressed. A value of 1 shows "
+            "true surface dimensions; higher values  distort the surface but retain "
+            "approximate depth accuracy."
+        )
 
         self.refractiveIndexLabel = ttk.Label(self.frame, text="Refractive Index")
         self.refractiveIndexLabel.grid(row=8, column=0, sticky=tk.W, pady=3)
         Tooltip(self.refractiveIndexLabel, text=self.refractiveIndexLabelTooltip, wraplength=200)
 
-        self.refractiveIndexEntryTooltip = "Enter the refractive index (e.g. 1.0). Values >1 stretch the surface while maintaining depth cues. Use with caution for samples with varying indices."
+        self.refractiveIndexEntryTooltip = (
+            "Enter the refractive index (e.g. 1.0). Values >1 stretch the surface while "
+            "maintaining depth cues. Use with caution for samples with varying indices."
+        )
 
         self.refractiveIndexEntry = ttk.Entry(self.frame, width=4, bootstyle="success")
         self.refractiveIndexEntry.insert(0, 1)
@@ -514,7 +526,8 @@ class customSettingsPanel:
         Returns
         -------
         dict
-            Dictionary with custom settings values ready for gui_adapters.settings_config_from_gui_state().
+            Dictionary with custom settings values ready for
+            gui_adapters.settings_config_from_gui_state().
 
         """
         disp_type, disp_coeff = self.getDispersion()

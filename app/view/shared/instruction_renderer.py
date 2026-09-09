@@ -196,8 +196,6 @@ class InstructionRenderer:
         line_spacing = 17
         section_spacing = 7
 
-        # Calculate required height for workflow steps
-        workflow_height = self._calculate_workflow_height(data, line_spacing, section_spacing)
         available_height = canvas_height - start_y - 40  # Reserve space for title and bottom margin
 
         # Title

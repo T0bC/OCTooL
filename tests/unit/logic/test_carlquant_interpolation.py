@@ -152,7 +152,8 @@ class TestEdgeCases:
 
     @pytest.mark.unit
     def test_adjacent_keyframes_skip_interpolation(self):
-        """GIVEN adjacent keyframes (no gap), WHEN interpolating, THEN no slice is created between them."""
+        """GIVEN adjacent keyframes (no gap), WHEN interpolating, THEN no slice is
+        created between them."""
         configs = {
             0: _region(0, 0, keyframe=True),
             1: _region(1, 100, keyframe=True),  # adjacent to slice 0 -> nothing to interpolate
@@ -167,7 +168,8 @@ class TestEdgeCases:
 
     @pytest.mark.unit
     def test_air_optional_point2_present_only_in_start(self):
-        """GIVEN start has point2 but end does not, WHEN interpolating, THEN start's point2 is kept."""
+        """GIVEN start has point2 but end does not, WHEN interpolating, THEN start's
+        point2 is kept."""
         configs = {
             0: AirConfig(slice_index=0, point1=(0, 0), point2=(10, 10), is_keyframe=True),
             2: AirConfig(slice_index=2, point1=(100, 100), point2=None, is_keyframe=True),

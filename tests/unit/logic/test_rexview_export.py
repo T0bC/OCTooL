@@ -72,7 +72,8 @@ class TestPrepareExport:
 
     @pytest.mark.unit
     def test_prepare_export_returns_dict(self, service, params, config, metadata):
-        """GIVEN valid inputs, WHEN prepare_export is called, THEN returns dict with required keys."""
+        """GIVEN valid inputs, WHEN prepare_export is called, THEN returns dict with
+        required keys."""
         result = service.prepare_export(params, config, metadata)
 
         assert isinstance(result, dict)
@@ -83,7 +84,8 @@ class TestPrepareExport:
 
     @pytest.mark.unit
     def test_prepare_export_calculates_slices(self, service, params, config, metadata):
-        """GIVEN params with slice range, WHEN prepare_export is called, THEN slices are calculated."""
+        """GIVEN params with slice range, WHEN prepare_export is called, THEN slices are
+        calculated."""
         result = service.prepare_export(params, config, metadata)
 
         selected = result["selected_slices"]
@@ -93,7 +95,8 @@ class TestPrepareExport:
 
     @pytest.mark.unit
     def test_prepare_export_xz_direction(self, service, params, config, metadata):
-        """GIVEN XZ slice direction, WHEN prepare_export is called, THEN slices_to_load equals selected."""
+        """GIVEN XZ slice direction, WHEN prepare_export is called, THEN slices_to_load
+        equals selected."""
         params.slice_direction = "XZ"
         result = service.prepare_export(params, config, metadata)
 
@@ -101,7 +104,8 @@ class TestPrepareExport:
 
     @pytest.mark.unit
     def test_prepare_export_yz_direction(self, service, config, metadata):
-        """GIVEN YZ slice direction, WHEN prepare_export is called, THEN all Y slices are loaded."""
+        """GIVEN YZ slice direction, WHEN prepare_export is called, THEN all Y slices are
+        loaded."""
         params = SliceExportParams(
             file_path="C:/data/test.oct",
             name="TestScan",
@@ -117,7 +121,8 @@ class TestPrepareExport:
 
     @pytest.mark.unit
     def test_prepare_export_prefers_raw(self, service, params, config, metadata):
-        """GIVEN prefer_raw=True and raw data available, WHEN prepare_export, THEN sel_data_type='Raw'."""
+        """GIVEN prefer_raw=True and raw data available, WHEN prepare_export, THEN
+        sel_data_type='Raw'."""
         config.prefer_raw = True
         result = service.prepare_export(params, config, metadata)
 
@@ -295,7 +300,8 @@ class TestGenerateExportFilename:
 
     @pytest.mark.unit
     def test_generate_filename_format(self, service, metadata):
-        """GIVEN export params, WHEN generate_export_filename is called, THEN filename has correct format."""
+        """GIVEN export params, WHEN generate_export_filename is called, THEN filename
+        has correct format."""
         params = SliceExportParams(
             file_path="test.oct",
             name="MyScan",
@@ -317,7 +323,8 @@ class TestGenerateExportFilename:
 
     @pytest.mark.unit
     def test_generate_filename_png_format(self, service, metadata):
-        """GIVEN export_format='.png', WHEN generate_export_filename is called, THEN filename ends with .png."""
+        """GIVEN export_format='.png', WHEN generate_export_filename is called, THEN
+        filename ends with .png."""
         params = SliceExportParams(
             file_path="test.oct",
             name="Test",

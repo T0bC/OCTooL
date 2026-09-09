@@ -37,6 +37,7 @@ Author: Tobias Meissner
 ****
 """
 
+import contextlib
 import json
 import threading
 import urllib.request
@@ -140,10 +141,8 @@ def check_for_updates_async(tk_widget, on_update_available, on_error=None):
             elif info.error and on_error is not None:
                 on_error(info)
 
-        try:
+        # Window closed while the network call was in flight.
+        with contextlib.suppress(Exception):
             tk_widget.after(0, dispatch)
-        except Exception:
-            # Window closed while the network call was in flight.
-            pass
 
     threading.Thread(target=worker, daemon=True).start()

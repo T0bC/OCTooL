@@ -43,6 +43,8 @@ Author: Tobias Meissner
 ****
 """
 
+import contextlib
+
 
 class AppContext:
     def __init__(self):
@@ -102,21 +104,17 @@ class AppContext:
             if timer.is_alive():
                 timer.cancel()
                 if on_pending is not None:
-                    try:
+                    with contextlib.suppress(Exception):
                         on_pending()
-                    except Exception:
-                        pass
         self._timers.clear()
 
         for executor in self._executors:
-            try:
+            with contextlib.suppress(Exception):
                 executor.shutdown(wait=False, cancel_futures=True)
                 # ThreadPoolExecutor.shutdown() has no timeout; join its
                 # worker threads ourselves so a stuck task can't hang exit.
                 for thread in list(getattr(executor, "_threads", [])):
                     thread.join(timeout=wait_seconds)
-            except Exception:
-                pass
         self._executors.clear()
 
         self._cancel_pending_after_jobs()
@@ -133,10 +131,8 @@ class AppContext:
         except Exception:
             return
         for after_id in pending_ids:
-            try:
+            with contextlib.suppress(Exception):
                 root.after_cancel(after_id)
-            except Exception:
-                pass
 
     def silence_tcl_background_errors(self):
         """Replace Tcl's bgerror handler with a no-op just before the root is
@@ -147,7 +143,5 @@ class AppContext:
         root = self.root
         if root is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             root.tk.call("proc", "bgerror", "msg", "")
-        except Exception:
-            pass

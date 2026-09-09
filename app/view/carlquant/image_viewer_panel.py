@@ -328,7 +328,8 @@ class image_viewer_panel(BaseCanvasPanel):
 
             self.scaleValue.set(f"Slice {index + 1} / {len(image_list)}")
 
-            self.render_zoomed_image()  # Calls base class method which calls draw_specialized_overlays()
+            # Calls base class method which calls draw_specialized_overlays()
+            self.render_zoomed_image()
 
             # Update tracking
             self.last_displayed_slice = index
@@ -597,7 +598,8 @@ class image_viewer_panel(BaseCanvasPanel):
             )
 
             # Perform interpolation between keyframes (saves at end)
-            # This handles both first-time setup (1 keyframe → propagate) and multi-keyframe interpolation
+            # This handles both first-time setup (1 keyframe → propagate) and
+            # multi-keyframe interpolation
             self._interpolate_region_coordinates(specimen, total_slices)
 
             # Determine status message based on number of user-defined keyframes
@@ -836,18 +838,21 @@ class image_viewer_panel(BaseCanvasPanel):
             )
 
             # Perform interpolation between keyframes (saves at end)
-            # This handles both first-time setup (1 keyframe → propagate) and multi-keyframe interpolation
+            # This handles both first-time setup (1 keyframe → propagate) and
+            # multi-keyframe interpolation
             self._interpolate_air_coordinates(specimen, total_slices)
 
             # Determine status message based on number of user-defined keyframes
             num_keyframes = sum(1 for a in specimen.config.air.values() if a.is_keyframe)
             if num_keyframes == 1:
                 self.context.status_bar.update(
-                    f"AIR reference area initialized for all {total_slices} slices", level="success"
+                    f"AIR reference area initialized for all {total_slices} slices",
+                    level="success",
                 )
             else:
                 self.context.status_bar.update(
-                    f"AIR reference keyframe set at slice {current_slice + 1}, interpolation applied",
+                    f"AIR reference keyframe set at slice {current_slice + 1}, "
+                    "interpolation applied",
                     level="success",
                 )
 
@@ -1378,7 +1383,7 @@ class image_viewer_panel(BaseCanvasPanel):
 
         x_values, y_values = curve
         flattened = []
-        for image_x, image_y in zip(x_values, y_values):
+        for image_x, image_y in zip(x_values, y_values, strict=True):
             canvas_x, canvas_y = converter.image_to_canvas(image_x, image_y)
             flattened.extend((canvas_x, canvas_y))
 

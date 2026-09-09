@@ -164,11 +164,13 @@ class SettingsService:
                 errors.append("scale_font_size must be positive when scale is enabled")
 
         # Validate dispersion coefficient when dispersion is enabled
-        if config.dispersion_type == "Quadratic":
-            if not (-100 <= config.dispersion_coefficient <= 100):
-                errors.append(
-                    f"dispersion_coefficient ({config.dispersion_coefficient}) must be between -100 and 100"
-                )
+        if config.dispersion_type == "Quadratic" and not (
+            -100 <= config.dispersion_coefficient <= 100
+        ):
+            errors.append(
+                f"dispersion_coefficient ({config.dispersion_coefficient}) "
+                "must be between -100 and 100"
+            )
 
         # Validate refractive index
         if not (0.1 <= config.refractive_index <= 5.0):
@@ -207,14 +209,17 @@ class SettingsService:
         # Validate type
         if disp_type not in self.VALID_OPTIONS["dispersion_type"]:
             raise ValueError(
-                f"Invalid dispersion type: {disp_type}. Must be one of {self.VALID_OPTIONS['dispersion_type']}"
+                f"Invalid dispersion type: {disp_type}. "
+                f"Must be one of {self.VALID_OPTIONS['dispersion_type']}"
             )
 
         # Parse coefficient
         try:
             coefficient = int(coeff_str)
-        except ValueError:
-            raise ValueError(f"Invalid dispersion coefficient: {coeff_str}. Must be an integer.")
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid dispersion coefficient: {coeff_str}. Must be an integer."
+            ) from e
 
         # Validate range
         min_val, max_val = self.VALUE_RANGES["dispersion_coefficient"]

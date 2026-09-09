@@ -21,7 +21,8 @@ class TestQueueServiceInit:
 
     @pytest.mark.unit
     def test_direction_mapping_exists(self):
-        """GIVEN QueueService, WHEN accessing DIRECTION_TO_DIMENSION, THEN it contains expected keys."""
+        """GIVEN QueueService, WHEN accessing DIRECTION_TO_DIMENSION, THEN it contains
+        expected keys."""
         service = QueueService()
         assert "XZ" in service.DIRECTION_TO_DIMENSION
         assert "YZ" in service.DIRECTION_TO_DIMENSION

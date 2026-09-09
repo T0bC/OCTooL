@@ -68,7 +68,9 @@ class imagePanel:
         self.frame.columnconfigure(1, weight=1)
         self.frame.columnconfigure(2, weight=0)
 
-        # self.canvas = ResizingCanvas(self.frame, width=1024, height=342, highlightthickness=0, bg='red')
+        # self.canvas = ResizingCanvas(
+        #     self.frame, width=1024, height=342, highlightthickness=0, bg='red'
+        # )
         self.canvas = tk.Canvas(
             self.frame, width=1024, height=342, highlightthickness=0, bg="#505050"
         )
@@ -197,9 +199,10 @@ class imagePanel:
             else:
                 self.rawImage = None
 
+            current_scale_position = int(self.scale.get() - 1)
             self.scale.bind(
                 "<ButtonRelease-1>",
-                lambda event, scalePosition=int(self.scale.get() - 1): [
+                lambda event, scalePosition=current_scale_position: [
                     self.scale.focus_set(),
                     self.showImage(scalePosition, self.rawImage),
                 ],

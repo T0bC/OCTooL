@@ -78,7 +78,8 @@ class LesionDepth:
     lesion_detection_data: dict[int, dict] | None = (
         None  # Per-column lesion detection data for visualization
     )
-    # lesion_detection_data format: {x_column: {'intensity': [...], 'depth_idx': [...], 'knee_idx': int, 'detection_metadata': {...}}}
+    # lesion_detection_data format: {x_column: {'intensity': [...], 'depth_idx': [...],
+    # 'knee_idx': int, 'detection_metadata': {...}}}
     smoothed_depth_points: list[tuple[int, int]] | None = (
         None  # Spline-smoothed depth points for cleaner visualization
     )

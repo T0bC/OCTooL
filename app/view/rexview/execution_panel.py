@@ -35,6 +35,7 @@ Author: Tobias Meissner
 ****
 """
 
+import contextlib
 import tkinter as tk
 from concurrent import futures
 from pathlib import Path
@@ -224,10 +225,8 @@ class executionPanel:
         self.export_service.cancel()
 
         # Delegate teardown to the same on_close() the window's "X" uses.
-        try:
+        with contextlib.suppress(tk.TclError):
             self.mainWin.quit()
-        except tk.TclError:
-            pass
 
         main_gui = getattr(self.context, "main_gui", None)
         if main_gui is not None:
@@ -236,10 +235,8 @@ class executionPanel:
 
         self.context.shutdown()
         self.context.silence_tcl_background_errors()
-        try:
+        with contextlib.suppress(tk.TclError):
             self.mainWin.destroy()
-        except tk.TclError:
-            pass
 
     def _collect_export_config(self) -> ExportConfig:
         """

@@ -327,14 +327,14 @@ def getXMLAttributes(xmlContent):
             xmlContent.find("DevicePresetDescription").getText().split("(")[1].split(" ")[0]
             + " kHz"
         )
-    except:
+    except Exception:
         thorSens = "notAvail-Old_OCT_Version"
 
     thorProbe = safe_get_text("Probe")
     thorCentrWaveLen = safe_get_text("CentralWavelength", "").split(".")[0]
     try:
         thorDateTime = str(datetime.fromtimestamp(int(safe_get_text("Timestamp", default=0))))
-    except:
+    except Exception:
         thorDateTime = "Unknown"
     thorScanTime = safe_get_text("ScanTime", default=0.0, cast_type=float)
     thorSoftVers = safe_get_text("OriginalSoftwareVer", default="notAvail-Old_OCT_Version")
@@ -426,8 +426,7 @@ def createVideoImageFromRaw(xmlDict: dict, archive: None):
     # Reshape to 2D image (height, width)
     img_arr = img_arr.reshape((xmlDict["videoImageX"], xmlDict["videoImageZ"]))
 
-    # Extract channels from packed ARGB
-    a = (img_arr >> 24) & 0xFF
+    # Extract channels from packed ARGB (alpha discarded, unused downstream)
     r = (img_arr >> 16) & 0xFF
     g = (img_arr >> 8) & 0xFF
     b = img_arr & 0xFF
@@ -530,10 +529,7 @@ def createImageFromRaw(
         # ====================================================================
 
         # Pre-compute constants and shared data (moved outside loop for efficiency)
-        if dispersion[0] == "Quadratic":
-            dispersionCoefficient = int(dispersion[1]) * 3.78e-4
-        else:
-            dispersionCoefficient = 0
+        dispersionCoefficient = int(dispersion[1]) * 3.78e-4 if dispersion[0] == "Quadratic" else 0
 
         ref_scale = int(7e4)
 
@@ -562,7 +558,8 @@ def createImageFromRaw(
             np.float32(2) * math.pi * 1j * np.float32(M) * np.float32(K) / xmlDict["Nline"]
         )
 
-        # Pre-compute Tukey window ONCE (not per slice) - significant speed improvement for multi-slice exports
+        # Pre-compute Tukey window ONCE (not per slice) - significant speed improvement
+        # for multi-slice exports
         from scipy import signal
 
         tukey_win = np.float32(signal.windows.tukey(xmlDict["Nline"], tukeySize))[..., np.newaxis]
@@ -623,7 +620,8 @@ def createImageFromRaw(
             # Use pre-computed Tukey window (computed once outside loop)
             window0 = np.divide(tukey_win, np.sum(tukey_win.sum(axis=0))) / apoWin0[..., np.newaxis]
 
-            # Process the B-scan and cast to complex64 for 50% memory reduction and 15-25% speed improvement
+            # Process the B-scan and cast to complex64 for 50% memory reduction and
+            # 15-25% speed improvement
             result = nftm @ (
                 (window0 * (raw0 - apo0[..., np.newaxis] - off0))
                 * np.transpose(np.conjugate(dispersionCorrection))

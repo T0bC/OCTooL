@@ -69,17 +69,20 @@ class pickFilesPanel:
         # Add buttons and instructions here
         self.pickFolderToolTip = (
             "Choose a folder whichs contains at least one OCT file. "
-            "All OCT Files inside this folder and subfolders are detected and added to the queue. \n\n"
-            "To supply export range, equidistant slices and refractive index for an OCT file, place a "
-            "text file with the exact same name (e.g. scan.oct -> scan.txt) in the same folder. \n\n"
-            "If no exact match exists, a text file named after the specimen base name (the file name "
-            "without a trailing run-counter/mode suffix, e.g. scan_0002_Mode3D.oct -> scan.txt) is used "
-            "instead, as long as it is unambiguous. If several scans in the folder share that base name "
-            "and none of them has its own exact-named text file, the base-name text file is applied only "
-            "to the scan with the highest run counter (the newest kept attempt); the others fall back to "
-            "default settings. \n\n"
-            "Each line defines one export direction as VIEW:START-END:COUNT:RI (all parts but the range "
-            "are optional): \n"
+            "All OCT Files inside this folder and subfolders are detected and added "
+            "to the queue. \n\n"
+            "To supply export range, equidistant slices and refractive index for an "
+            "OCT file, place a text file with the exact same name (e.g. scan.oct -> "
+            "scan.txt) in the same folder. \n\n"
+            "If no exact match exists, a text file named after the specimen base name "
+            "(the file name without a trailing run-counter/mode suffix, e.g. "
+            "scan_0002_Mode3D.oct -> scan.txt) is used instead, as long as it is "
+            "unambiguous. If several scans in the folder share that base name and none "
+            "of them has its own exact-named text file, the base-name text file is "
+            "applied only to the scan with the highest run counter (the newest kept "
+            "attempt); the others fall back to default settings. \n\n"
+            "Each line defines one export direction as VIEW:START-END:COUNT:RI (all "
+            "parts but the range are optional): \n"
             " 33-444\n"
             " 33-444:25\n"
             " XZ:33-444:25\n"
@@ -189,7 +192,8 @@ class pickFilesPanel:
                 dialogs.show_info(
                     self.root,
                     "No OCT Files Found",
-                    f"No OCT files were found in:\n{self.folderPath}\n\nPlease choose another folder.",
+                    f"No OCT files were found in:\n{self.folderPath}\n\n"
+                    "Please choose another folder.",
                 )
                 self.context.safe_status_update(
                     "No OCT files found in selected folder.", level="warning"
@@ -236,7 +240,6 @@ class pickFilesPanel:
         self.treeView.setMultipleValues(self.tmpFileList)
         count = len(self.tmpFileList)
         self.context.safe_status_update(f"Added {count} item(s) to export queue.", level="success")
-        self.root.destroy
 
     # %%
     def _collect_oct_files(self, folder_path: Path):
@@ -330,13 +333,11 @@ class pickFilesPanel:
                 pool.submit(self._file_discovery_service.process_file, Path(fp), show_errors): i
                 for i, fp in enumerate(file_paths)
             }
-            completed = 0
-            for future in futures.as_completed(future_to_index):
+            for completed, future in enumerate(futures.as_completed(future_to_index), start=1):
                 index = future_to_index[future]
                 if self.running == 1:
                     break
                 results[index] = future.result()
-                completed += 1
                 self._update_progress_popup(completed)
 
         entries = []

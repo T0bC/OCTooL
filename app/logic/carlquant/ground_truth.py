@@ -168,19 +168,23 @@ def save_ground_truth(specimen, marks: Marks) -> Path:
         },
     }
 
-    handle = tempfile.NamedTemporaryFile(
+    with tempfile.NamedTemporaryFile(
         mode="w",
         suffix=".tmp",
         prefix=f"{specimen.specimen_id}_groundtruth_",
         dir=str(path.parent),
         delete=False,
-    )
-    temp_path = Path(handle.name)
-    try:
-        with handle:
+    ) as handle:
+        temp_path = Path(handle.name)
+        try:
             json.dump(payload, handle, indent=2)
             handle.flush()
             os.fsync(handle.fileno())
+        except BaseException:
+            handle.close()
+            temp_path.unlink(missing_ok=True)
+            raise
+    try:
         os.replace(temp_path, path)
     except BaseException:
         temp_path.unlink(missing_ok=True)

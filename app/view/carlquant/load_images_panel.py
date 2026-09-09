@@ -72,7 +72,10 @@ class loadImagePanel:
         button_frame.columnconfigure(1, weight=1)
 
         # Remove Selected Button
-        self.removeSelectedTooltip = "Remove the selected specimen(s) from the list to exclude from processing. Use Shift+Click to select multiple rows."
+        self.removeSelectedTooltip = (
+            "Remove the selected specimen(s) from the list to exclude from processing. "
+            "Use Shift+Click to select multiple rows."
+        )
         self.removeSelectedBtn = ttk.Button(
             button_frame, text="Remove", command=self.removeSelected, bootstyle="danger"
         )
@@ -80,7 +83,10 @@ class loadImagePanel:
         Tooltip(self.removeSelectedBtn, text=self.removeSelectedTooltip, wraplength=200)
 
         # Clear Coordinates Button
-        self.clearCoordsTooltip = "Clear all REGION boundaries and AIR reference coordinates (air/empty space area) for the selected specimen, resetting it to a fresh state"
+        self.clearCoordsTooltip = (
+            "Clear all REGION boundaries and AIR reference coordinates (air/empty space "
+            "area) for the selected specimen, resetting it to a fresh state"
+        )
         self.clearCoordsBtn = ttk.Button(
             button_frame,
             text="Clear Coords",
@@ -142,7 +148,8 @@ class loadImagePanel:
         Load specimens after metadata is set, checking for existing results.
 
         Logic:
-        - Uses operator and measurement metadata to identify the target Data_{operator}_{measurement} folder
+        - Uses operator and measurement metadata to identify the target
+          Data_{operator}_{measurement} folder
         - If a matching folder exists, loads configuration and results from it
         - If no matching folder exists (different operator/measurement), specimen is marked as "New"
         - This allows re-analysis with different metadata without overwriting previous results
@@ -165,7 +172,7 @@ class loadImagePanel:
         self.context.specimen_data = DataLoader.find_image_stacks(root)
 
         # Check each specimen for matching Data_{operator}_{measurement} folder
-        for specimen_id, specimen in self.context.specimen_data.items():
+        for _specimen_id, specimen in self.context.specimen_data.items():
             # Store metadata in specimen for saving operations
             specimen.operator = operator
             specimen.measurement = measurement
@@ -177,12 +184,15 @@ class loadImagePanel:
                 # Matching data folder found - reload config (lightweight, no annotations yet)
                 # This loads only regions/air coordinates, not the heavy 20MB annotation data
                 specimen.config = DataLoader.load_specimen_config(specimen, load_annotations=False)
-                if specimen.config:
-                    # Check if annotations exist (without loading them)
-                    if hasattr(specimen, "_has_annotations") and specimen._has_annotations:
-                        specimen.status = "Analyzed"
-                        # Note: Annotations will be loaded on-demand when user clicks the specimen
-                        # This significantly speeds up initial folder loading
+                # Check if annotations exist (without loading them)
+                if (
+                    specimen.config
+                    and hasattr(specimen, "_has_annotations")
+                    and specimen._has_annotations
+                ):
+                    specimen.status = "Analyzed"
+                    # Note: Annotations will be loaded on-demand when user clicks the specimen
+                    # This significantly speeds up initial folder loading
             else:
                 # No matching Data folder - specimen will be analyzed fresh with current metadata
                 # Other Data folders (different operator/measurement) are preserved and ignored
@@ -191,7 +201,7 @@ class loadImagePanel:
         # Update specimen panel display
         specimen_panel = self.context.get_panel("carl_specimen")
         rows = []
-        for specimen_id, specimen in self.context.specimen_data.items():
+        for specimen in self.context.specimen_data.values():
             rows.append([specimen.specimen_id, specimen.slices, specimen.status])
         specimen_panel.sheet.set_sheet_data(rows)
         specimen_panel._set_column_widths()
@@ -240,7 +250,10 @@ class loadImagePanel:
 
     @handle_errors("loadImagePanel.removeSelected")
     def removeSelected(self):
-        """Remove selected specimen(s) from the table and specimen_data. Supports multi-selection."""
+        """Remove selected specimen(s) from the table and specimen_data.
+
+        Supports multi-selection.
+        """
         # Check if specimen data exists
         if not hasattr(self.context, "specimen_data") or not self.context.specimen_data:
             self.context.status_bar.update("No specimens loaded.", level="warning")
@@ -412,7 +425,7 @@ class loadImagePanel:
                     missing_items.append("Region boundaries")
                 else:
                     # Validate that region boundaries have all 4 points
-                    for slice_idx, region_config in specimen.config.regions.items():
+                    for region_config in specimen.config.regions.values():
                         if not all(
                             [
                                 region_config.specimen_start,
@@ -429,7 +442,7 @@ class loadImagePanel:
                     missing_items.append("AIR coordinates")
                 else:
                     # Validate that AIR coordinates have both points
-                    for slice_idx, air_config in specimen.config.air.items():
+                    for air_config in specimen.config.air.values():
                         if not air_config.point1 or not air_config.point2:
                             missing_items.append("AIR coordinates (incomplete)")
                             break
@@ -543,7 +556,8 @@ class loadImagePanel:
 
             # Update status bar
             self.context.status_bar.update(
-                f"{len(invalid_specimens)} specimen(s) have missing coordinates. Analysis cannot start.",
+                f"{len(invalid_specimens)} specimen(s) have missing coordinates. "
+                "Analysis cannot start.",
                 level="error",
             )
             return

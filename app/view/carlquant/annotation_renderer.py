@@ -643,7 +643,7 @@ class RegionBoundaryAnnotationRenderer(BaseAnnotationRenderer):
             (region.tooth_end, SPECIMEN_BOUNDARY_COLOR, "Tooth End"),
         ]
 
-        for point, color, label in boundaries:
+        for point, color, _label in boundaries:
             x, y = point
             self.draw_vertical_line(x, color=color, width=2, tags="region_visual")
 

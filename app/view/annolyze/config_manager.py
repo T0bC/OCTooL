@@ -181,7 +181,6 @@ class ConfigManager:
             metadata_panel = context.get_panel("metadata")
             results_panel = context.get_panel("results")
             add_columns_panel = context.get_panel("add_columns")
-            annotate_panel = context.get_panel("anno_image")
 
             # Apply metadata
             for key in ["operator", "measurement", "system"]:
@@ -245,7 +244,8 @@ class ConfigManager:
 
             for key, info in column_map.items():
                 context.status_bar.update(
-                    f"Registered keybinding: <{key}> for column '{info['col_name']}' with type '{info['data_type']}'",
+                    f"Registered keybinding: <{key}> for column '{info['col_name']}' "
+                    f"with type '{info['data_type']}'",
                     level="success",
                 )
 
