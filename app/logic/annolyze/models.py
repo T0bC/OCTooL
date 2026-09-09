@@ -35,15 +35,13 @@ Author: Tobias Meissner
 ****
 """
 
-
 from datetime import datetime
-from typing import List, Literal, Optional, Tuple
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 # A point is stored as (x, y) in image coordinates.
-Point = Tuple[float, float]
+Point = tuple[float, float]
 
 # Data types a dynamic column can hold.
 DataType = Literal[
@@ -64,13 +62,15 @@ NON_DRAWN_TYPES = ("Boolean", "Categorical", "Ordinal", "Text/String")
 class Annotation(BaseModel):
     """A single annotation (poly-line or spline) on one image slice."""
 
-    id: Optional[str] = Field(default=None, description="Unique annotation id, e.g. 'GAP_0'")
-    feature: str = Field(default="unknown", description="Feature/column name this annotation belongs to")
-    points: List[Point] = Field(default_factory=list, description="Points in image coordinates")
+    id: str | None = Field(default=None, description="Unique annotation id, e.g. 'GAP_0'")
+    feature: str = Field(
+        default="unknown", description="Feature/column name this annotation belongs to"
+    )
+    points: list[Point] = Field(default_factory=list, description="Points in image coordinates")
     mode: Literal["line", "spline"] = Field(default="line", description="Rendering mode")
     color: str = Field(default="#FFFFFF", description="Hex color string")
     locked: bool = Field(default=False, description="Whether the annotation is committed/locked")
-    timestamp: Optional[str] = Field(default=None, description="ISO timestamp of creation")
+    timestamp: str | None = Field(default=None, description="ISO timestamp of creation")
 
     model_config = {"validate_assignment": True}
 
@@ -152,7 +152,7 @@ class AnnotationConfig(BaseModel):
     """Full analysis configuration (metadata + dynamic columns + info)."""
 
     metadata: MetadataConfig = Field(default_factory=MetadataConfig)
-    columns: List[ColumnSpec] = Field(default_factory=list)
+    columns: list[ColumnSpec] = Field(default_factory=list)
     version: str = Field(default="1.0")
     description: str = Field(default="OCTooL Analysis Configuration")
 
@@ -181,9 +181,7 @@ class AnnotationConfig(BaseModel):
                 "measurement": self.metadata.measurement,
                 "system": self.metadata.system,
             },
-            "columns": {
-                "dynamic_columns": [c.to_config_dict() for c in self.columns]
-            },
+            "columns": {"dynamic_columns": [c.to_config_dict() for c in self.columns]},
             "ui_settings": {
                 "sheet_width": 800,
                 "sheet_height": 400,
@@ -205,8 +203,8 @@ class UndoAction(BaseModel):
     old_value: str = Field(default="")
     new_value: str = Field(default="")
     key: str = Field(default="")
-    feature: Optional[str] = Field(default=None)
-    annotation_id: Optional[str] = Field(default=None)
+    feature: str | None = Field(default=None)
+    annotation_id: str | None = Field(default=None)
     color: str = Field(default="#FFFFFF")
     timestamp: datetime = Field(default_factory=datetime.now)
 
