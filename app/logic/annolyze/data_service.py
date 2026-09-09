@@ -37,11 +37,9 @@ Author: Tobias Meissner
 ****
 """
 
-
 import csv
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
 
 from app.logic.annolyze.annotation_service import AnnotationService
 
@@ -49,7 +47,7 @@ from app.logic.annolyze.annotation_service import AnnotationService
 class DataService:
     """Pure file discovery + annotation/results/config I/O (context-free)."""
 
-    def __init__(self, annotation_service: Optional[AnnotationService] = None):
+    def __init__(self, annotation_service: AnnotationService | None = None):
         self.annotation_service = annotation_service or AnnotationService()
 
     # ------------------------------------------------------------------
@@ -57,10 +55,10 @@ class DataService:
     # ------------------------------------------------------------------
     def find_file(
         self,
-        base_folder: Union[str, Path],
+        base_folder: str | Path,
         pattern: str,
-        sample_name: Optional[str] = None,
-    ) -> Optional[Path]:
+        sample_name: str | None = None,
+    ) -> Path | None:
         """
         Recursively find a file matching ``pattern`` under ``base_folder``.
 
@@ -79,7 +77,7 @@ class DataService:
 
     def build_data_folder(
         self,
-        sample_folder: Union[str, Path],
+        sample_folder: str | Path,
         operator: str,
         measurement: str,
     ) -> Path:
@@ -89,17 +87,17 @@ class DataService:
     # ------------------------------------------------------------------
     # Annotations
     # ------------------------------------------------------------------
-    def load_annotations(self, filepath: Union[str, Path]) -> Dict[int, List[dict]]:
+    def load_annotations(self, filepath: str | Path) -> dict[int, list[dict]]:
         """Load annotations JSON and return ``{slice_index: [annotation_dict]}``."""
         path = Path(filepath)
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             json_data = json.load(f)
         return self.annotation_service.deserialize_annotations(json_data)
 
     def save_annotations(
         self,
-        slice_annotations: Dict[int, List[dict]],
-        filepath: Union[str, Path],
+        slice_annotations: dict[int, list[dict]],
+        filepath: str | Path,
     ) -> Path:
         """Serialize ``slice_annotations`` to ``filepath`` as JSON. Returns the path."""
         path = Path(filepath)
@@ -112,14 +110,14 @@ class DataService:
     # ------------------------------------------------------------------
     # Results (CSV)
     # ------------------------------------------------------------------
-    def load_results(self, filepath: Union[str, Path]) -> Tuple[List[str], List[List[str]]]:
+    def load_results(self, filepath: str | Path) -> tuple[list[str], list[list[str]]]:
         """
         Load a results CSV. Returns ``(headers, rows)``.
 
         Returns ``([], [])`` when the file is empty.
         """
         path = Path(filepath)
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             rows = list(csv.reader(f))
         if not rows:
             return [], []
@@ -127,9 +125,9 @@ class DataService:
 
     def save_results(
         self,
-        headers: List[str],
-        data: List[List],
-        filepath: Union[str, Path],
+        headers: list[str],
+        data: list[list],
+        filepath: str | Path,
     ) -> Path:
         """Write ``headers`` + ``data`` to a CSV at ``filepath``. Returns the path."""
         path = Path(filepath)
@@ -143,7 +141,7 @@ class DataService:
     # ------------------------------------------------------------------
     # Config
     # ------------------------------------------------------------------
-    def save_config(self, config: dict, filepath: Union[str, Path]) -> Path:
+    def save_config(self, config: dict, filepath: str | Path) -> Path:
         """Write a config dict to ``filepath`` as JSON. Returns the path."""
         path = Path(filepath)
         path.parent.mkdir(parents=True, exist_ok=True)
