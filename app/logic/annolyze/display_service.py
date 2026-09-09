@@ -34,8 +34,6 @@ Author: Tobias Meissner
 ****
 """
 
-
-
 # Column width heuristics (kept identical to the original panel logic).
 BASE_WIDTH = 40
 CHAR_WIDTH = 7
@@ -49,7 +47,7 @@ class DisplayService:
     def luminance(self, hex_color: str) -> float:
         """Relative luminance (WCAG) of a ``#RRGGBB`` color, in [0, 1]."""
         hex_color = hex_color.lstrip("#")
-        r, g, b = (int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+        r, g, b = (int(hex_color[i : i + 2], 16) / 255.0 for i in (0, 2, 4))
 
         def adjust(c: float) -> float:
             return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
