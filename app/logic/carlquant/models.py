@@ -34,18 +34,17 @@ Author: Tobias Meissner
 ****
 """
 
-
+from app.logic.carlquant.carl_quant_core import DepthDetectionMethod
 from app.logic.carlquant.specimen_model import (
-    RegionStats,
-    Surface,
+    AirConfig,
     LesionDepth,
     RegionConfig,
-    AirConfig,
-    SpecimenConfig,
+    RegionStats,
     SliceResult,
     Specimen,
+    SpecimenConfig,
+    Surface,
 )
-from app.logic.carlquant.carl_quant_core import DepthDetectionMethod
 
 __all__ = [
     "RegionStats",
