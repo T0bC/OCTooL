@@ -101,11 +101,15 @@ class treeViewPanel:
 
     # %% Test for Input
     def set_cell_value(self, event):
-        for item in self.treeView.selection():
-            column = self.treeView.identify_column(event.x)
-            row = self.treeView.identify_row(event.y)
+        # identify_row/identify_column return "" when the double-click lands on
+        # a heading or empty space below the last row; bail out instead of
+        # raising on the int() conversion below.
+        item = self.treeView.identify_row(event.y)
+        column = self.treeView.identify_column(event.x)
+        if not item or not column:
+            return
         cn = int(str(column).replace("#", ""))
-        rn = int(str(row).replace("I", ""))
+        rn = int(str(item).replace("I", ""))
         entryedit = tk.Text(self.frame, width=10 + (cn - 1) * 16, height=1)
         entryedit.insert(0.0, self.treeView.set(item, column))
         entryedit.place(x=16 + (cn - 1) * 130, y=6 + rn * 20)
