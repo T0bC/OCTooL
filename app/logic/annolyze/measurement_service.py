@@ -39,9 +39,7 @@ Author: Tobias Meissner
 ****
 """
 
-
 import string
-from typing import List, Optional, Set
 
 # Keys reserved by the annotation canvas (fit-curve / toggle overlays).
 RESERVED_KEYS = ("f", "h")
@@ -56,7 +54,7 @@ PERCENTAGE_MAX = 100
 class MeasurementService:
     """Pure per-data-type cell value transforms and key filtering."""
 
-    def apply_continuous(self, current_value, measured_value) -> Optional[str]:
+    def apply_continuous(self, current_value, measured_value) -> str | None:
         """
         Add ``measured_value`` to the (numeric) ``current_value``.
 
@@ -127,9 +125,9 @@ class MeasurementService:
     # ------------------------------------------------------------------
     def available_keys(
         self,
-        used_keys: Optional[List[str]] = None,
-        reserved: Optional[Set[str]] = None,
-    ) -> List[str]:
+        used_keys: list[str] | None = None,
+        reserved: set[str] | None = None,
+    ) -> list[str]:
         """
         Return lowercase ascii letters that are neither used nor reserved.
 
@@ -140,7 +138,7 @@ class MeasurementService:
         reserved_set = set(reserved) if reserved is not None else set(RESERVED_KEYS)
         return [k for k in string.ascii_lowercase if k not in used and k not in reserved_set]
 
-    def feature_from_annotation_id(self, annotation_id: Optional[str]) -> Optional[str]:
+    def feature_from_annotation_id(self, annotation_id: str | None) -> str | None:
         """Extract the feature/label prefix from an annotation id like 'GAP_0'."""
         if not annotation_id:
             return None
