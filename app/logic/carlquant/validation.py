@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CarlQuant Detection Validation Scoring.
 
@@ -53,9 +52,7 @@ Author: Tobias Meissner
 ****
 """
 
-
-
-from typing import Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -92,8 +89,7 @@ DEFAULT_TOLERANCE = 3
 NO_LESION_METHOD = "no_lesion_surface"
 
 
-def interpolate_marks(
-        marks: Sequence[Tuple[float, float]]) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+def interpolate_marks(marks: Sequence[tuple[float, float]]) -> tuple[np.ndarray, np.ndarray] | None:
     """Smooth curve through the operator marks of one slice.
 
     An operator places roughly 18 marks across a ~375 px lesion, a median of
@@ -127,14 +123,12 @@ def interpolate_marks(
     unique_x, inverse = np.unique(points[:, 0], return_inverse=True)
     if unique_x.size < 2:
         return None
-    unique_y = np.array([points[inverse == index, 1].mean()
-                         for index in range(unique_x.size)])
+    unique_y = np.array([points[inverse == index, 1].mean() for index in range(unique_x.size)])
 
     # Round *inwards*: marks have fractional x, so flooring the first / ceiling
     # the last would put grid points outside the marked range, where a
     # non-extrapolating curve is undefined.
-    x_full = np.arange(int(np.ceil(unique_x[0])), int(np.floor(unique_x[-1])) + 1,
-                       dtype=float)
+    x_full = np.arange(int(np.ceil(unique_x[0])), int(np.floor(unique_x[-1])) + 1, dtype=float)
     if x_full.size == 0:
         return None
 
@@ -144,6 +138,7 @@ def interpolate_marks(
 
     try:
         from scipy.interpolate import PchipInterpolator
+
         curve = PchipInterpolator(unique_x, unique_y, extrapolate=False)
         return x_full, np.asarray(curve(x_full), dtype=float)
     except Exception:
@@ -152,8 +147,7 @@ def interpolate_marks(
         return x_full, np.interp(x_full, unique_x, unique_y)
 
 
-def interpolated_mark_at(marks: Sequence[Tuple[float, float]],
-                         column_x: float) -> Optional[float]:
+def interpolated_mark_at(marks: Sequence[tuple[float, float]], column_x: float) -> float | None:
     """Interpolated ground-truth y at one column, or None outside the marked range.
 
     For display only. Scoring uses real marks via :func:`method_errors`, so an
@@ -174,8 +168,9 @@ def interpolated_mark_at(marks: Sequence[Tuple[float, float]],
     return float(np.interp(column_x, x_full, y_full))
 
 
-def nearest_analysed_column(lesion_detection_data, x,
-                            tolerance: int = DEFAULT_TOLERANCE) -> Optional[int]:
+def nearest_analysed_column(
+    lesion_detection_data, x, tolerance: int = DEFAULT_TOLERANCE
+) -> int | None:
     """Closest analysed A-scan column to ``x``, or None if none is within tolerance.
 
     Detection runs on a subset of columns, so a mark rarely lands exactly on one.
@@ -185,12 +180,13 @@ def nearest_analysed_column(lesion_detection_data, x,
     if not lesion_detection_data:
         return None
     xi = int(round(x))
-    candidates = [c for c in range(xi - tolerance, xi + tolerance + 1)
-                  if c in lesion_detection_data]
+    candidates = [
+        c for c in range(xi - tolerance, xi + tolerance + 1) if c in lesion_detection_data
+    ]
     return min(candidates, key=lambda c: abs(c - xi)) if candidates else None
 
 
-def method_depth(column: Dict, method: str) -> float:
+def method_depth(column: dict, method: str) -> float:
     """Depth reported by one method for one column, in px below the surface.
 
     Returns NaN when the method did not produce a value for this column (a fit
@@ -215,15 +211,18 @@ def method_depth(column: Dict, method: str) -> float:
         return float(np.nan)
 
 
-def method_errors(lesion_detection_data, marks: Sequence[Tuple[float, float]],
-                  method: str,
-                  tolerance: int = DEFAULT_TOLERANCE) -> np.ndarray:
+def method_errors(
+    lesion_detection_data,
+    marks: Sequence[tuple[float, float]],
+    method: str,
+    tolerance: int = DEFAULT_TOLERANCE,
+) -> np.ndarray:
     """Signed errors (px) of one method against the operator marks.
 
     ``error = (surface_y at that column + method depth) - mark_y``, so positive
     means the detection sits below the mark, i.e. too deep.
     """
-    errors: List[float] = []
+    errors: list[float] = []
     for mark in marks or ():
         mark_x, mark_y = float(mark[0]), float(mark[1])
         column_x = nearest_analysed_column(lesion_detection_data, mark_x, tolerance)
@@ -248,20 +247,18 @@ def is_gated_slice(lesion_detection_data) -> bool:
     """
     for column in (lesion_detection_data or {}).values():
         metadata = column.get("detection_metadata") or {}
-        method_used = metadata.get("depth_method_used",
-                                   metadata.get("combined_method_used"))
+        method_used = metadata.get("depth_method_used", metadata.get("combined_method_used"))
         if method_used == NO_LESION_METHOD:
             return True
     return False
 
 
-def _summarise(errors: np.ndarray) -> Dict[str, float]:
+def _summarise(errors: np.ndarray) -> dict[str, float]:
     """median / |median| / p90 / n for one method's errors."""
     finite = errors[np.isfinite(errors)] if errors.size else errors
     if finite.size == 0:
         # No marks scored: report n=0 and NaN rather than a fabricated 0.0.
-        return {"median": float(np.nan), "abs_median": float(np.nan),
-                "p90": float(np.nan), "n": 0}
+        return {"median": float(np.nan), "abs_median": float(np.nan), "p90": float(np.nan), "n": 0}
     absolute = np.abs(finite)
     return {
         "median": float(np.median(finite)),
@@ -277,22 +274,23 @@ def mean_detected_depth(lesion_detection_data, method: str) -> float:
     This is the slice-level quantity the specimen mean is built from -- the
     number downstream analysis consumes -- as opposed to the per-mark error.
     """
-    values = np.array([method_depth(column, method)
-                       for column in (lesion_detection_data or {}).values()],
-                      dtype=float)
+    values = np.array(
+        [method_depth(column, method) for column in (lesion_detection_data or {}).values()],
+        dtype=float,
+    )
     if values.size == 0 or not np.any(np.isfinite(values)):
         return float(np.nan)
     return float(np.nanmean(values))
 
 
-def mean_operator_depth(lesion_detection_data,
-                        marks: Sequence[Tuple[float, float]],
-                        tolerance: int = DEFAULT_TOLERANCE) -> float:
+def mean_operator_depth(
+    lesion_detection_data, marks: Sequence[tuple[float, float]], tolerance: int = DEFAULT_TOLERANCE
+) -> float:
     """Mean depth of the operator's marks below the surface, in px.
 
     The ground-truth analogue of a slice's reported mean depth.
     """
-    depths: List[float] = []
+    depths: list[float] = []
     for mark in marks or ():
         mark_x, mark_y = float(mark[0]), float(mark[1])
         column_x = nearest_analysed_column(lesion_detection_data, mark_x, tolerance)
@@ -305,8 +303,9 @@ def mean_operator_depth(lesion_detection_data,
     return float(np.mean(depths)) if depths else float(np.nan)
 
 
-def score_slice(lesion_detection_data, marks: Sequence[Tuple[float, float]],
-                tolerance: int = DEFAULT_TOLERANCE) -> Dict:
+def score_slice(
+    lesion_detection_data, marks: Sequence[tuple[float, float]], tolerance: int = DEFAULT_TOLERANCE
+) -> dict:
     """Score every method against the marks on one slice.
 
     Returns a dict with:
@@ -331,7 +330,7 @@ def score_slice(lesion_detection_data, marks: Sequence[Tuple[float, float]],
     }
 
 
-def score_specimen(per_slice_results: Dict[int, Dict]) -> Dict:
+def score_specimen(per_slice_results: dict[int, dict]) -> dict:
     """Aggregate per-slice scores over a specimen, at both scales.
 
     Per method, reports:
@@ -348,14 +347,18 @@ def score_specimen(per_slice_results: Dict[int, Dict]) -> Dict:
     differently, because a consistently signed bias does not cancel when slices
     are averaged; reporting one alone misrepresents the comparison.
     """
-    scored = [result for result in (per_slice_results or {}).values()
-              if result and result.get("n_marks")]
+    scored = [
+        result for result in (per_slice_results or {}).values() if result and result.get("n_marks")
+    ]
 
-    operator_means = [result["operator_mean_depth"] for result in scored
-                      if np.isfinite(result.get("operator_mean_depth", np.nan))]
+    operator_means = [
+        result["operator_mean_depth"]
+        for result in scored
+        if np.isfinite(result.get("operator_mean_depth", np.nan))
+    ]
     operator_specimen_mean = float(np.mean(operator_means)) if operator_means else float(np.nan)
 
-    methods: Dict[str, Dict[str, float]] = {}
+    methods: dict[str, dict[str, float]] = {}
     for method in METHODS:
         abs_medians, medians, depths, total_n = [], [], [], 0
         for result in scored:
@@ -374,10 +377,11 @@ def score_specimen(per_slice_results: Dict[int, Dict]) -> Dict:
             "mean_median": float(np.mean(medians)) if medians else float(np.nan),
             "worst_abs_median": float(np.max(abs_medians)) if abs_medians else float(np.nan),
             "specimen_mean_depth": specimen_mean_depth,
-            "specimen_error": (specimen_mean_depth - operator_specimen_mean
-                               if np.isfinite(specimen_mean_depth)
-                               and np.isfinite(operator_specimen_mean)
-                               else float(np.nan)),
+            "specimen_error": (
+                specimen_mean_depth - operator_specimen_mean
+                if np.isfinite(specimen_mean_depth) and np.isfinite(operator_specimen_mean)
+                else float(np.nan)
+            ),
             "n": total_n,
         }
 
@@ -386,8 +390,11 @@ def score_specimen(per_slice_results: Dict[int, Dict]) -> Dict:
         "n_slices": len(scored),
         "n_marks": sum(result["n_marks"] for result in scored),
         "operator_mean_depth": operator_specimen_mean,
-        "gated_slices": sorted(index for index, result in (per_slice_results or {}).items()
-                               if result and result.get("gated")),
+        "gated_slices": sorted(
+            index
+            for index, result in (per_slice_results or {}).items()
+            if result and result.get("gated")
+        ),
     }
 
 
