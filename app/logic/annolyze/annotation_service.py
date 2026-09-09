@@ -77,7 +77,7 @@ class AnnotationService:
             tck, _ = splprep([pts_np[:, 0], pts_np[:, 1]], s=0, k=3)
             u = np.linspace(0, 1, num)
             x_new, y_new = splev(u, tck)
-            return list(zip(x_new.tolist(), y_new.tolist()))
+            return list(zip(x_new.tolist(), y_new.tolist(), strict=True))
         except Exception:
             return [tuple(p) for p in points]
 
