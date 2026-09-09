@@ -418,7 +418,8 @@ class DataLoader:
                     continue
 
                 try:
-                    # Excel now uses 1-based slice numbers, convert back to 0-based for internal storage
+                    # Excel now uses 1-based slice numbers, convert back to 0-based for
+                    # internal storage
                     slice_index_from_excel = row[0] if isinstance(row[0], int) else (i + 1)
                     slice_index = slice_index_from_excel - 1  # Convert to 0-based
                     sound_medians = row[1 : 1 + sound_count]
@@ -578,11 +579,13 @@ class DataSaver:
 
     @staticmethod
     def save_specimen_config(specimen: Specimen, include_annotations: bool = False):
-        """Save specimen configuration (REGIONS, AIR reference, and optionally computed annotations) to JSON file.
+        """Save specimen configuration (REGIONS, AIR reference, and optionally computed
+        annotations) to JSON file.
 
         Args:
             specimen: Specimen object to save
-            include_annotations: If True, save computed annotations (surface, lesion_depth, extraction_regions)
+            include_annotations: If True, save computed annotations (surface, lesion_depth,
+                extraction_regions)
         """
         if not specimen.config:
             return
@@ -925,7 +928,7 @@ class DataSaver:
 
                     try:
                         font = ImageFont.truetype("arial.ttf", 12)
-                    except:
+                    except Exception:
                         font = ImageFont.load_default()
 
                     for stats in result.region_stats:
@@ -969,7 +972,8 @@ class DataSaver:
                             font=font,
                         )
 
-                # Save annotated image using original filename (without _annotated suffix since folder is named "annotations")
+                # Save annotated image using original filename (without _annotated suffix
+                # since folder is named "annotations")
                 original_filename = specimen.images[
                     slice_idx
                 ].stem  # Get filename without extension
