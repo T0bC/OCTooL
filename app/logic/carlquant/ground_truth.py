@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CarlQuant Ground-Truth Storage.
 
@@ -46,23 +45,18 @@ Author: Tobias Meissner
 ****
 """
 
-
-
 import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 #: Filename suffix identifying a ground-truth file within a Data_ folder.
 GROUND_TRUTH_SUFFIX = "_groundtruth.json"
 
 #: Written into the file so it is self-describing when read outside the app.
-GROUND_TRUTH_DESCRIPTION = (
-    "Operator-annotated true lesion end, absolute image (x, y) pixels."
-)
+GROUND_TRUTH_DESCRIPTION = "Operator-annotated true lesion end, absolute image (x, y) pixels."
 
-Marks = Dict[int, List[Tuple[float, float]]]
+Marks = dict[int, list[tuple[float, float]]]
 
 
 class GroundTruthMismatchError(ValueError):
@@ -111,7 +105,7 @@ def load_ground_truth(specimen) -> Marks:
         return {}
 
     try:
-        with open(path, "r") as handle:
+        with open(path) as handle:
             payload = json.load(handle)
     except (OSError, ValueError):
         # An unreadable or corrupt file must not stop the specimen from opening.
