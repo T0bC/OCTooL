@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Application entry point.
 
@@ -39,16 +38,15 @@ Author: Tobias Meissner
 ****
 """
 
-import sys
-import os
-import traceback
-import tkinter as tk
 import multiprocessing
+import tkinter as tk
+import traceback
+
+from app.logic.shared.logging_utils import log_error_to_file
 from app.view import MainGui as mainGui
 from app.view.shared.error_handler import show_error_popup
-from app.logic.shared.logging_utils import log_error_to_file
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # CRITICAL: Required for PyInstaller executables on Windows
     # Prevents worker processes from re-launching the GUI
     multiprocessing.freeze_support()
@@ -59,16 +57,13 @@ if __name__ == '__main__':
         # Use centralized error handler for consistent UX and logging
         tb = traceback.format_exc()
         error_message = (
-            f"Critical error during application startup:\n\n"
-            f"Exception: {str(e)}\n\n"
-            f"Traceback:\n{tb}"
+            f"Critical error during application startup:\n\nException: {str(e)}\n\nTraceback:\n{tb}"
         )
-        
+
         # Ensure we have a Tk root for the error popup
         if tk._default_root is None:
             root = tk.Tk()
             root.withdraw()
-        
+
         show_error_popup("Application Startup Error", error_message)
         log_error_to_file("OCTooL.main", (), {}, "Critical startup error", tb)
-
