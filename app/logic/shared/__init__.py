@@ -26,7 +26,6 @@ Author: Tobias Meissner
 ****
 """
 
-
 from app.logic.shared.models import OCTMetadata
 
-__all__ = ['OCTMetadata']
+__all__ = ["OCTMetadata"]
