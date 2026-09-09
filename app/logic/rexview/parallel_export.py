@@ -36,18 +36,17 @@ Author: Tobias Meissner
 ****
 """
 
-
 from __future__ import annotations
 
 import os
+from collections.abc import Callable, Iterable
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import Callable, Iterable, List, Optional, Tuple
 
-from app.logic.rexview.models import ExportConfig, SliceExportParams, ExportResult
 from app.logic.rexview.export_worker import export_one_file
+from app.logic.rexview.models import ExportConfig, ExportResult, SliceExportParams
 
 # A task is a (file_path, params, config) tuple dispatched to a worker.
-ExportTask = Tuple[str, SliceExportParams, ExportConfig]
+ExportTask = tuple[str, SliceExportParams, ExportConfig]
 
 
 class ParallelExportCoordinator:
@@ -60,10 +59,10 @@ class ParallelExportCoordinator:
         self,
         worker_fn: Callable[..., ExportResult] = export_one_file,
         executor_factory: Callable[..., object] = ProcessPoolExecutor,
-        cpu_count: Optional[int] = None,
-        max_workers_cap: Optional[int] = None,
-        available_memory_gb: Optional[float] = None,
-        gb_per_worker: Optional[float] = None,
+        cpu_count: int | None = None,
+        max_workers_cap: int | None = None,
+        available_memory_gb: float | None = None,
+        gb_per_worker: float | None = None,
     ):
         """
         Args:
@@ -101,7 +100,7 @@ class ParallelExportCoordinator:
     def compute_worker_count(
         self,
         queue_len: int,
-        requested: Optional[int] = None,
+        requested: int | None = None,
     ) -> int:
         """
         Determine the number of worker processes to use.
@@ -123,9 +122,9 @@ class ParallelExportCoordinator:
     def run(
         self,
         tasks: Iterable[ExportTask],
-        worker_count: Optional[int] = None,
-        progress_callback: Optional[Callable[[ExportResult], None]] = None,
-    ) -> List[ExportResult]:
+        worker_count: int | None = None,
+        progress_callback: Callable[[ExportResult], None] | None = None,
+    ) -> list[ExportResult]:
         """
         Execute all export tasks across a pool and collect their results.
 
@@ -139,7 +138,7 @@ class ParallelExportCoordinator:
             List of ExportResult objects (one per completed task).
         """
         tasks = list(tasks)
-        results: List[ExportResult] = []
+        results: list[ExportResult] = []
 
         if self._cancelled or not tasks:
             return results
@@ -164,7 +163,7 @@ class ParallelExportCoordinator:
                     result = ExportResult(
                         file_path=file_path,
                         exported_files=[],
-                        failed_count=getattr(params, 'num_slices', 0),
+                        failed_count=getattr(params, "num_slices", 0),
                         error=str(exc),
                     )
                 results.append(result)
