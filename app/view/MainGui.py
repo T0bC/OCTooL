@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Main GUI.
 
@@ -38,23 +37,24 @@ Author: Tobias Meissner
 ****
 """
 
-
 import tkinter as tk
-from tkinter import ttk
 import webbrowser
+from tkinter import ttk
+
 from ttkbootstrap import Style
 from ttkbootstrap.publisher import Publisher
-from app.view.rexview import rexViewTab
+
+from app.logic.shared.app_config import SERVER_BASE_URL, VERSION_DISPLAY
+from app.logic.shared.paths import resource_path
+from app.logic.shared.update_checker import check_for_updates_async, check_for_updates_sync
 from app.view.annolyze import annoLyzeTab
 from app.view.carlquant import carlQuantTab
+from app.view.rexview import rexViewTab
+from app.view.shared.about_dialog import AboutDialog
 from app.view.shared.app_context import AppContext
-from app.logic.shared.paths import resource_path
-from app.view.shared.status_bar import StatusBar
 from app.view.shared.error_handler import handle_errors, install_tk_exception_handler
 from app.view.shared.help_dialog import HelpDialog
-from app.view.shared.about_dialog import AboutDialog
-from app.logic.shared.app_config import VERSION_DISPLAY, SERVER_BASE_URL
-from app.logic.shared.update_checker import check_for_updates_async, check_for_updates_sync
+from app.view.shared.status_bar import StatusBar
 
 
 def _reset_ttkbootstrap_state():
@@ -106,15 +106,15 @@ class MainGui:
         self.context.main_gui = self
 
         self.version = VERSION_DISPLAY
-        self.mainWin.title(str('OCTooL' + self.version))
+        self.mainWin.title(str("OCTooL" + self.version))
         self.pathToFolder = None
-        self.mainWin['padx'] = 5
-        self.mainWin['pady'] = 5
+        self.mainWin["padx"] = 5
+        self.mainWin["pady"] = 5
 
         # seetings for resizing of the window
-        self.mainWin.columnconfigure(0, weight = 1)
-        self.mainWin.rowconfigure(0, weight = 1)  # Main content row
-        self.mainWin.rowconfigure(1, weight = 0)  # Status bar row
+        self.mainWin.columnconfigure(0, weight=1)
+        self.mainWin.rowconfigure(0, weight=1)  # Main content row
+        self.mainWin.rowconfigure(1, weight=0)  # Status bar row
 
         # set a custom icon
         try:
@@ -129,58 +129,56 @@ class MainGui:
         # Create custom tab styles with different colors
         self._setup_tab_styles()
 
-
         # %% Create custom colored tab system
         # Create container for custom tab system
         self.tabContainer = ttk.Frame(self.mainWin)
-        self.tabContainer.grid(row = 0, column = 0, sticky = tk.E + tk.W + tk.N + tk.S)
+        self.tabContainer.grid(row=0, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
         self.tabContainer.columnconfigure(0, weight=1)
         self.tabContainer.rowconfigure(1, weight=1)
 
         # Create custom tab bar with colored buttons
         self.tabBar = ttk.Frame(self.tabContainer)
-        self.tabBar.grid(row=0, column=0, sticky="ew", padx=5, pady=(5,0))
+        self.tabBar.grid(row=0, column=0, sticky="ew", padx=5, pady=(5, 0))
 
         # Create colored tab buttons
         self.create_colored_tab_buttons()
 
         # Create content area (using notebook without visible tabs)
         self.tabParent = ttk.Notebook(self.tabContainer)
-        self.tabParent.grid(row = 1, column = 0, sticky = tk.E + tk.W + tk.N + tk.S)
+        self.tabParent.grid(row=1, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
 
         # Hide the notebook tabs after creation
         self.tabParent.configure(style="Hidden.TNotebook")
         # make the window resizeable
-        self.tabParent.columnconfigure(0, weight = 1)
-        self.tabParent.rowconfigure(0, weight = 1)
+        self.tabParent.columnconfigure(0, weight=1)
+        self.tabParent.rowconfigure(0, weight=1)
 
         # Shared status bar container
         self.statusFrame = ttk.Frame(self.mainWin)
-        self.statusFrame.grid(row = 1, column = 0, sticky = tk.E + tk.W, pady = (5, 0))
-        self.statusFrame.columnconfigure(0, weight = 1)
+        self.statusFrame.grid(row=1, column=0, sticky=tk.E + tk.W, pady=(5, 0))
+        self.statusFrame.columnconfigure(0, weight=1)
 
         self.statusBar = StatusBar(self.statusFrame)
-        self.statusBar.frame.grid(row = 0, column = 0, sticky = "ew")
+        self.statusBar.frame.grid(row=0, column=0, sticky="ew")
 
         # %% EXPORT TAB
         # create a frame holding the contents for the tab
         if self.ENABLE_REXVIEW:
             self.rexViewTabFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.rexViewTabFrame, text = 'RexView')
+            self.tabParent.add(self.rexViewTabFrame, text="RexView")
             # Fill the tab with content defined in rexViewTab.py
             rexViewTab.addContent(self, self.rexViewTabFrame)
-
 
         # %% Anylyzing Tab
         if self.ENABLE_ANNOLYZE:
             self.annoLyzeFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.annoLyzeFrame, text = 'AnnoLyze')
+            self.tabParent.add(self.annoLyzeFrame, text="AnnoLyze")
             annoLyzeTab.addContent(self, self.annoLyzeFrame)
 
         # %% Carl Quant
         if self.ENABLE_CARLQUANT:
             self.carlQuantTabFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.carlQuantTabFrame, text='CarlQuant')
+            self.tabParent.add(self.carlQuantTabFrame, text="CarlQuant")
             carlQuantTab.addContent(self, self.carlQuantTabFrame)
 
         # Apply custom styles to individual tabs after all tabs are created
@@ -200,17 +198,17 @@ class MainGui:
     def _setup_tab_styles(self):
         """Setup custom styles for colored tab buttons."""
         # Hide the default notebook tabs completely by modifying the layout
-        self.style.layout("Hidden.TNotebook", [
-            ("Notebook.client", {"sticky": "nswe"})
-        ])  # Only keep the client area, remove tab area
+        self.style.layout(
+            "Hidden.TNotebook", [("Notebook.client", {"sticky": "nswe"})]
+        )  # Only keep the client area, remove tab area
 
         # Alternative: Set tab height to 0
         self.style.configure(
             "Hidden.TNotebook.Tab",
             padding=[0, 0, 0, 0],  # No padding at all
-            borderwidth=0,         # No border
+            borderwidth=0,  # No border
             focuscolor="none",
-            relief="flat"
+            relief="flat",
         )
 
         # Make tabs invisible by setting their size to 0
@@ -218,7 +216,7 @@ class MainGui:
             "Hidden.TNotebook.Tab",
             expand=[("selected", [0, 0, 0, 0])],  # No expansion
             background=[("selected", ""), ("active", ""), ("!active", "")],
-            foreground=[("selected", ""), ("active", ""), ("!active", "")]
+            foreground=[("selected", ""), ("active", ""), ("!active", "")],
         )
 
         # Create colored button styles for each tab
@@ -229,7 +227,7 @@ class MainGui:
             foreground="white",
             borderwidth=0,
             focuscolor="none",
-            padding=[20, 10]
+            padding=[20, 10],
         )
 
         # AnnoLyze tab - Green/Success
@@ -239,7 +237,7 @@ class MainGui:
             foreground="white",
             borderwidth=0,
             focuscolor="none",
-            padding=[20, 10]
+            padding=[20, 10],
         )
 
         # CarlQuant tab - Orange/Warning
@@ -249,15 +247,13 @@ class MainGui:
             foreground="white",
             borderwidth=0,
             focuscolor="none",
-            padding=[20, 10]
+            padding=[20, 10],
         )
 
         # Header tool buttons (Updates / Help / About) - consistent emoji font
         # so the glyphs all render at the same, larger size.
         self.style.configure(
-            "Header.secondary.TButton",
-            font=("Segoe UI Emoji", 11),
-            padding=[12, 5]
+            "Header.secondary.TButton", font=("Segoe UI Emoji", 11), padding=[12, 5]
         )
 
     @handle_errors("MainGui.create_colored_tab_buttons")
@@ -265,29 +261,36 @@ class MainGui:
         """Create colored buttons that act as tabs, plus Help and About buttons."""
         self.tab_buttons = []
         self.current_tab = 0
-        
+
         # Configure tabBar to have space between tab buttons and help buttons
         self.tabBar.columnconfigure(0, weight=0)  # Tab buttons
         self.tabBar.columnconfigure(1, weight=1)  # Spacer
         self.tabBar.columnconfigure(2, weight=0)  # Help buttons
-        
+
         # Container for tab buttons (left side)
         tab_button_container = ttk.Frame(self.tabBar)
         tab_button_container.grid(row=0, column=0, sticky="w")
 
         # Track column position for dynamic button placement
         col_index = 0
-        
+
         # RexView button
         if self.ENABLE_REXVIEW:
             export_btn = ttk.Button(
                 tab_button_container,
-                text="RexView", #📊
+                text="RexView",  # 📊
                 style="RexView.TButton",
                 command=lambda idx=col_index: self.switch_tab(idx),
-                takefocus=False  # Prevent button from taking focus
+                takefocus=False,  # Prevent button from taking focus
             )
-            export_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_ANNOLYZE or self.ENABLE_CARLQUANT else 0))
+            export_btn.grid(
+                row=0,
+                column=col_index,
+                padx=(
+                    0 if col_index == 0 else 2,
+                    2 if self.ENABLE_ANNOLYZE or self.ENABLE_CARLQUANT else 0,
+                ),
+            )
             self.tab_buttons.append(export_btn)
             col_index += 1
 
@@ -295,12 +298,16 @@ class MainGui:
         if self.ENABLE_ANNOLYZE:
             analyze_btn = ttk.Button(
                 tab_button_container,
-                text="AnnoLyze", #🔬
+                text="AnnoLyze",  # 🔬
                 style="AnnoLyze.TButton",
                 command=lambda idx=col_index: self.switch_tab(idx),
-                takefocus=False  # Prevent button from taking focus
+                takefocus=False,  # Prevent button from taking focus
             )
-            analyze_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_CARLQUANT else 0))
+            analyze_btn.grid(
+                row=0,
+                column=col_index,
+                padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_CARLQUANT else 0),
+            )
             self.tab_buttons.append(analyze_btn)
             col_index += 1
 
@@ -308,26 +315,26 @@ class MainGui:
         if self.ENABLE_CARLQUANT:
             carlquant_btn = ttk.Button(
                 tab_button_container,
-                text="CarlQuant", #⚡
+                text="CarlQuant",  # ⚡
                 style="CarlQuant.TButton",
                 command=lambda idx=col_index: self.switch_tab(idx),
-                takefocus=False  # Prevent button from taking focus
+                takefocus=False,  # Prevent button from taking focus
             )
             carlquant_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 0))
             self.tab_buttons.append(carlquant_btn)
             col_index += 1
-        
+
         # Container for Help and About buttons (right side)
         help_button_container = ttk.Frame(self.tabBar)
         help_button_container.grid(row=0, column=2, sticky="e")
-        
+
         # Check for updates button
         update_btn = ttk.Button(
             help_button_container,
             text="🔄 Check for updates",
             style="Header.secondary.TButton",
             command=self.onCheckForUpdates,
-            takefocus=False
+            takefocus=False,
         )
         update_btn.grid(row=0, column=0, padx=(0, 2))
 
@@ -337,17 +344,17 @@ class MainGui:
             text="❓ Help",
             style="Header.secondary.TButton",
             command=self.onHelp,
-            takefocus=False
+            takefocus=False,
         )
         help_btn.grid(row=0, column=1, padx=2)
-        
+
         # About button
         about_btn = ttk.Button(
             help_button_container,
             text="ℹ️ About",
             style="Header.secondary.TButton",
             command=self.onAbout,
-            takefocus=False
+            takefocus=False,
         )
         about_btn.grid(row=0, column=2, padx=(2, 0))
 
@@ -359,11 +366,11 @@ class MainGui:
         if num_tabs == 0:
             # No tabs available, do nothing
             return
-        
+
         if tab_index >= num_tabs:
             # Tab index out of bounds, do nothing
             return
-        
+
         # Force the button to lose focus immediately
         self.mainWin.focus_set()
 
@@ -377,7 +384,7 @@ class MainGui:
         # Update button appearances (optional: make selected button darker)
         for i, btn in enumerate(self.tab_buttons):
             # Remove focus from all buttons
-            btn.state(['!pressed', '!active'])
+            btn.state(["!pressed", "!active"])
 
             if i == tab_index:
                 # Make selected button slightly darker
@@ -400,7 +407,7 @@ class MainGui:
 
     @handle_errors("MainGui.start")
     def start(self):
-        self.mainWin.mainloop() #start monitoring and updating the GUI
+        self.mainWin.mainloop()  # start monitoring and updating the GUI
 
     @handle_errors("MainGui.on_close")
     def on_close(self):
@@ -443,14 +450,14 @@ class MainGui:
             tab_type_map.append(1)  # AnnoLyze
         if self.ENABLE_CARLQUANT:
             tab_type_map.append(2)  # CarlQuant
-        
+
         # Get the actual tab type for the current tab index
         if self.current_tab < len(tab_type_map):
             actual_tab_type = tab_type_map[self.current_tab]
         else:
             # Fallback to first available tab type
             actual_tab_type = tab_type_map[0] if tab_type_map else 0
-        
+
         help_dialog = HelpDialog(self.mainWin, self.style, actual_tab_type)
         help_dialog.show()
 
@@ -468,34 +475,33 @@ class MainGui:
             self._on_update_available(info)
         elif info.error:
             tk.messagebox.showwarning(
-                title='Update Check Failed',
-                message='Could not check for updates.\n\n'
-                        f'{info.error}\n\nCheck your internet connection.'
+                title="Update Check Failed",
+                message="Could not check for updates.\n\n"
+                f"{info.error}\n\nCheck your internet connection.",
             )
         else:
             tk.messagebox.showinfo(
-                title='No Updates',
-                message=f'OCTooL{self.version} is up to date.'
+                title="No Updates", message=f"OCTooL{self.version} is up to date."
             )
 
     @handle_errors("MainGui.on_update_available")
     def _on_update_available(self, info):
         """Show an 'update available' dialog and optionally open the download."""
         message = (
-            f'A newer version of OCTooL is available.\n\n'
-            f'Installed:{self.version}\n'
-            f'Available:  [v. {info.latest_version}]\n'
+            f"A newer version of OCTooL is available.\n\n"
+            f"Installed:{self.version}\n"
+            f"Available:  [v. {info.latest_version}]\n"
         )
         if info.notes:
-            message += f'\n{info.notes}\n'
+            message += f"\n{info.notes}\n"
         message += (
-            '\nInstallation: Download the zip, extract it, close OCTooL and\n'
-            'replace the old folder (or overwrite the existing one).\n'
-            'Create a new desktop shortcut from OCTooL.exe if necessary.\n\n'
-            'Open the download page now?'
+            "\nInstallation: Download the zip, extract it, close OCTooL and\n"
+            "replace the old folder (or overwrite the existing one).\n"
+            "Create a new desktop shortcut from OCTooL.exe if necessary.\n\n"
+            "Open the download page now?"
         )
 
-        if tk.messagebox.askyesno(title='Update Available', message=message):
+        if tk.messagebox.askyesno(title="Update Available", message=message):
             if info.download_url:
                 webbrowser.open(info.download_url)
             else:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze Load Images Panel.
 
@@ -35,19 +34,18 @@ Author: Tobias Meissner
 ****
 """
 
-
-from tkinter import ttk, filedialog
-from pathlib import Path
 import os
+import re
 from concurrent import futures
 from fnmatch import fnmatch
-import re
-import json
-import csv
-from app.view.shared.tool_tip import Tooltip
-from app.view.shared.error_handler import handle_errors
+from pathlib import Path
+from tkinter import filedialog, ttk
+
 from app.view.annolyze.data_io import DataLoader
 from app.view.shared import dialogs
+from app.view.shared.error_handler import handle_errors
+from app.view.shared.tool_tip import Tooltip
+
 
 class loadImagePanel:
     @handle_errors("loadImagePanel.__init__")
@@ -61,31 +59,30 @@ class loadImagePanel:
         self._picker_executor = futures.ThreadPoolExecutor(max_workers=1)
         self.context.register_executor(self._picker_executor)
 
-
         self.frame.columnconfigure(0, weight=1)
         self.frame.columnconfigure(1, weight=1)
         # %% LoadImages Button
-        self.pickFolderToolTip = 'Choose a folder that contains OCT Image(s). Supported formats are [png, jpg, tif, tiff]'
+        self.pickFolderToolTip = "Choose a folder that contains OCT Image(s). Supported formats are [png, jpg, tif, tiff]"
         self.pickFolderBtn = ttk.Button(
             self.frame,
-            text='Select Folder',
-            #width=14,
+            text="Select Folder",
+            # width=14,
             command=self.globalPickerThread,
-            bootstyle="primary"
+            bootstyle="primary",
         )
         self.pickFolderBtn.grid(row=0, column=0, sticky="ew", pady=3, padx=3)
         Tooltip(self.pickFolderBtn, text=self.pickFolderToolTip, wraplength=200)
 
         # %% Load Config Button
-        self.loadConfigToolTip = 'Load a config file for layout and key bindings'
+        self.loadConfigToolTip = "Load a config file for layout and key bindings"
         self.loadConfig = ttk.Button(
             self.frame,
-            text='Load Config',
-            #width=14,
+            text="Load Config",
+            # width=14,
             command=self.loadConfigToTable,
-            bootstyle="primary"
+            bootstyle="primary",
         )
-        self.loadConfig.grid(row=0, column=1, sticky="ew", pady=3, padx=3  )
+        self.loadConfig.grid(row=0, column=1, sticky="ew", pady=3, padx=3)
         Tooltip(self.loadConfig, text=self.loadConfigToolTip, wraplength=200)
 
     # %% Load Config Function
@@ -100,20 +97,17 @@ class loadImagePanel:
         else:
             dialogs.show_error(self.root, "Error", "Missing panel references in context")
 
-
     # %% Threaded Image Picker
     def globalPickerThread(self):
         self.running = 0
         self._picker_executor.submit(self.getImagePaths)
-
 
     @handle_errors("Error in getImagePaths")
     def getImagePaths(self):
         global dir
 
         selected_folder = filedialog.askdirectory(
-            initialdir=dir,
-            title='Select the Folder Containing Your OCT Images!'
+            initialdir=dir, title="Select the Folder Containing Your OCT Images!"
         )
         if not selected_folder:
             self.context.status_bar.update("No folder selected.", level="warning")
@@ -124,29 +118,40 @@ class loadImagePanel:
         self.context.sample_name = self.folderPath.name
 
         # Collect image files
-        image_extensions = ['*.jpg', '*.png', '*.tif', '*.tiff']
+        image_extensions = ["*.jpg", "*.png", "*.tif", "*.tiff"]
 
         def natural_key(path):
-            return [int(text) if text.isdigit() else text.lower()
-                    for text in re.split(r'(\d+)', path.name)]
+            return [
+                int(text) if text.isdigit() else text.lower()
+                for text in re.split(r"(\d+)", path.name)
+            ]
 
         tmpPathList = sorted(
-            [file for file in self.folderPath.iterdir()
-             if file.is_file() and any(fnmatch(file.name.lower(), ext) for ext in image_extensions)],
-            key=natural_key
+            [
+                file
+                for file in self.folderPath.iterdir()
+                if file.is_file()
+                and any(fnmatch(file.name.lower(), ext) for ext in image_extensions)
+            ],
+            key=natural_key,
         )
 
         if not tmpPathList:
-            self.context.safe_status_update("No suitable image files found in the selected folder.", level="error")
+            self.context.safe_status_update(
+                "No suitable image files found in the selected folder.", level="error"
+            )
             return
 
-        self.tmpFileList = [{
-            'name': os.path.basename(path),
-            'first': True,
-            'last': False,
-            'status': 'new',
-            'path': path
-        } for path in tmpPathList]
+        self.tmpFileList = [
+            {
+                "name": os.path.basename(path),
+                "first": True,
+                "last": False,
+                "status": "new",
+                "path": path,
+            }
+            for path in tmpPathList
+        ]
 
         self.context.image_list = self.tmpFileList
 
@@ -224,4 +229,3 @@ class loadImagePanel:
                 pass
         if add_columns_panel and hasattr(add_columns_panel, "update_available_keys"):
             add_columns_panel.update_available_keys()
-

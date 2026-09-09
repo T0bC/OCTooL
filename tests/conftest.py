@@ -1,13 +1,15 @@
 """
 Shared pytest fixtures for OCTooL tests.
 """
-import pytest
+
 import sys
-from pathlib import Path
-import numpy as np
-from PIL import Image
 from io import BytesIO
+from pathlib import Path
 from zipfile import ZipFile
+
+import numpy as np
+import pytest
+from PIL import Image
 
 # Add project root to path for imports
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -17,6 +19,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # ============================================================================
 # Path Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def project_root() -> Path:
@@ -40,11 +43,12 @@ def sample_oct_dir(fixtures_dir) -> Path:
 # Image Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def sample_grayscale_image() -> Image.Image:
     """Create a sample 256x256 grayscale image for testing."""
     arr = np.random.randint(0, 256, (256, 256), dtype=np.uint8)
-    return Image.fromarray(arr, mode='L')
+    return Image.fromarray(arr, mode="L")
 
 
 @pytest.fixture
@@ -72,45 +76,46 @@ def sample_complex_bscan() -> np.ndarray:
 # XML/Metadata Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def sample_xml_dict() -> dict:
     """Return a sample xmlDict structure matching OCT metadata format."""
     return {
-        'xmlDataType': {'Type': 'RawSpectraAndProcessedIntensity'},
-        'dataType': 'RawSpectraAndProcessedIntensity',
-        'xmlPixelInfo': '2.0\n6.0\n6.0',
-        'imgSizemmZ': 2.0,
-        'imgSizemmX': 6.0,
-        'imgSizemmY': 6.0,
-        'pixelDimensions': '512\n512\n128',
-        'dimZ': 512,
-        'dimX': 512,
-        'dimY': 128,
-        'imgSize': (512, 128),
-        'pixSizeZ': 6.0,
-        'studyName': 'Test_Study',
-        'expNumber': 1,
-        'Nline': 2048,
-        'Napo': 64,
-        'Nx': 512,
-        'offsScale': 1.0,
-        'aScanAv': 4,
-        'imgResizeFactorX': 1.0,
-        'imgResizeFactorY': 1.0,
-        'spacingZ': 3.9,
-        'spacingX': 11.7,
-        'spacingY': 46.9,
-        'Modell': 'TEL220PSC2',
-        'Serialnumber': 'TEST123',
-        'Sensitivity': '76 kHz',
-        'Probe_Name': 'OCT-LK4',
-        'Wavelength': '1300',
-        'Acquisition_DateTime': '2024-01-01 12:00:00',
-        'Scan_Duration': 5.0,
-        'Software_Version': '5.4.0',
-        'is3D': True,
-        'videoImageZ': 640,
-        'videoImageX': 480,
+        "xmlDataType": {"Type": "RawSpectraAndProcessedIntensity"},
+        "dataType": "RawSpectraAndProcessedIntensity",
+        "xmlPixelInfo": "2.0\n6.0\n6.0",
+        "imgSizemmZ": 2.0,
+        "imgSizemmX": 6.0,
+        "imgSizemmY": 6.0,
+        "pixelDimensions": "512\n512\n128",
+        "dimZ": 512,
+        "dimX": 512,
+        "dimY": 128,
+        "imgSize": (512, 128),
+        "pixSizeZ": 6.0,
+        "studyName": "Test_Study",
+        "expNumber": 1,
+        "Nline": 2048,
+        "Napo": 64,
+        "Nx": 512,
+        "offsScale": 1.0,
+        "aScanAv": 4,
+        "imgResizeFactorX": 1.0,
+        "imgResizeFactorY": 1.0,
+        "spacingZ": 3.9,
+        "spacingX": 11.7,
+        "spacingY": 46.9,
+        "Modell": "TEL220PSC2",
+        "Serialnumber": "TEST123",
+        "Sensitivity": "76 kHz",
+        "Probe_Name": "OCT-LK4",
+        "Wavelength": "1300",
+        "Acquisition_DateTime": "2024-01-01 12:00:00",
+        "Scan_Duration": 5.0,
+        "Software_Version": "5.4.0",
+        "is3D": True,
+        "videoImageZ": 640,
+        "videoImageX": 480,
     }
 
 
@@ -118,15 +123,16 @@ def sample_xml_dict() -> dict:
 def sample_xml_dict_2d(sample_xml_dict) -> dict:
     """Return a sample xmlDict for 2D (single B-scan) data."""
     xml_dict = sample_xml_dict.copy()
-    xml_dict['dimY'] = 1
-    xml_dict['imgSizemmY'] = None
-    xml_dict['is3D'] = False
+    xml_dict["dimY"] = 1
+    xml_dict["imgSizemmY"] = None
+    xml_dict["is3D"] = False
     return xml_dict
 
 
 # ============================================================================
 # Mock Archive Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_oct_archive(sample_xml_dict) -> ZipFile:
@@ -135,8 +141,8 @@ def mock_oct_archive(sample_xml_dict) -> ZipFile:
     Contains Header.xml and minimal data files.
     """
     buffer = BytesIO()
-    
-    with ZipFile(buffer, 'w') as zf:
+
+    with ZipFile(buffer, "w") as zf:
         # Create minimal Header.xml
         header_xml = """<?xml version="1.0" encoding="utf-8"?>
 <Ocity>
@@ -168,29 +174,30 @@ def mock_oct_archive(sample_xml_dict) -> ZipFile:
     </DataFiles>
 </Ocity>
 """
-        zf.writestr('Header.xml', header_xml)
-    
+        zf.writestr("Header.xml", header_xml)
+
     buffer.seek(0)
-    return ZipFile(buffer, 'r')
+    return ZipFile(buffer, "r")
 
 
 # ============================================================================
 # Export Config Fixtures (for Phase 2+)
 # ============================================================================
 
+
 @pytest.fixture
 def default_export_config() -> dict:
     """Return default export configuration values."""
     return {
-        'resize_enabled': True,
-        'prefer_raw': True,
-        'advanced_filter': False,
-        'export_format': '.tiff',
-        'averaging': 'coherent',
-        'tukey_window_size': 0.9,
-        'scale_enabled': True,
-        'scale_length_um': 500,
-        'scale_font_size': 30,
+        "resize_enabled": True,
+        "prefer_raw": True,
+        "advanced_filter": False,
+        "export_format": ".tiff",
+        "averaging": "coherent",
+        "tukey_window_size": 0.9,
+        "scale_enabled": True,
+        "scale_length_um": 500,
+        "scale_font_size": 30,
     }
 
 
@@ -198,14 +205,14 @@ def default_export_config() -> dict:
 def default_slice_params() -> dict:
     """Return default slice export parameters."""
     return {
-        'file_path': '/path/to/file.oct',
-        'name': 'TestScan',
-        'first_slice': 1,
-        'last_slice': 10,
-        'num_slices': 5,
-        'slice_direction': 'XZ',
-        'db_min': 20,
-        'db_max': 80,
-        'refractive_index': 1.0,
-        'dispersion': ('None', '0'),
+        "file_path": "/path/to/file.oct",
+        "name": "TestScan",
+        "first_slice": 1,
+        "last_slice": 10,
+        "num_slices": 5,
+        "slice_direction": "XZ",
+        "db_min": 20,
+        "db_max": 80,
+        "refractive_index": 1.0,
+        "dispersion": ("None", "0"),
     }

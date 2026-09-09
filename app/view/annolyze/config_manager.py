@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze Config Manager.
 
@@ -35,15 +34,16 @@ Author: Tobias Meissner
 ****
 """
 
-
 import os
+from pathlib import Path
 from tkinter import filedialog
-from app.view.shared.error_handler import handle_errors
+
+from app.logic.annolyze.config_service import ConfigService
+from app.logic.annolyze.models import ColumnSpec, MetadataConfig
 from app.view.annolyze.key_binding_manager import KeybindingManager
 from app.view.shared import dialogs
-from app.logic.annolyze.config_service import ConfigService
-from app.logic.annolyze.models import MetadataConfig, ColumnSpec
-from pathlib import Path
+from app.view.shared.error_handler import handle_errors
+
 
 class ConfigManager:
     def __init__(self):
@@ -61,8 +61,8 @@ class ConfigManager:
 
     def _collect_columns(self, results_panel, add_columns_panel) -> list:
         """Collector: read dynamic column widget state into ColumnSpec models."""
-        keybindings = getattr(add_columns_panel, 'column_keybindings', {})
-        data_types = getattr(add_columns_panel, 'column_data_types', {})
+        keybindings = getattr(add_columns_panel, "column_keybindings", {})
+        data_types = getattr(add_columns_panel, "column_data_types", {})
         return [
             ColumnSpec(
                 name=col_name,
@@ -78,54 +78,59 @@ class ConfigManager:
         columns = self._collect_columns(results_panel, add_columns_panel)
         return self.config_service.build_config(metadata, columns)
 
-
     @handle_errors("ConfigManager.save_config")
     def save_config(self, metadata_panel, results_panel, add_columns_panel, context, filepath=None):
         """
         Save configuration to file.
-        
+
         Args:
             filepath: If provided, saves to this path. If None, prompts user with dialog.
         """
         config = self.build_config(metadata_panel, results_panel, add_columns_panel)
-        
+
         # Prompt user for location if no filepath provided
         if filepath is None:
             filepath = filedialog.asksaveasfilename(
                 title="Save Configuration",
                 defaultextension=".json",
-                filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
             )
             show_dialog = True
         else:
             show_dialog = False
-        
+
         if filepath:
             try:
                 self.config_service.save_config_to_file(config, filepath)
                 context.status_bar.update(f"Config saved to: {filepath}", level="success")
                 if show_dialog:
-                    dialogs.show_info(context.root, "Success", f"Configuration saved to:\n{filepath}")
+                    dialogs.show_info(
+                        context.root, "Success", f"Configuration saved to:\n{filepath}"
+                    )
             except Exception as e:
                 context.status_bar.update(f"Failed to save config: {e}", level="error")
                 if show_dialog:
-                    dialogs.show_error(context.root, "Error", f"Failed to save configuration:\n{str(e)}")
+                    dialogs.show_error(
+                        context.root, "Error", f"Failed to save configuration:\n{str(e)}"
+                    )
 
     @handle_errors("ConfigManager.save_config_to_folder")
-    def save_config_to_folder(self, folder_path, metadata_panel, results_panel, add_columns_panel, context):
+    def save_config_to_folder(
+        self, folder_path, metadata_panel, results_panel, add_columns_panel, context
+    ):
         """
         Auto-save config to a specific folder (convenience wrapper for annotation auto-save).
         """
         config_path = Path(folder_path) / "config.json"
-        self.save_config(metadata_panel, results_panel, add_columns_panel, context, filepath=str(config_path))
-
+        self.save_config(
+            metadata_panel, results_panel, add_columns_panel, context, filepath=str(config_path)
+        )
 
     @handle_errors("ConfigManager.load_config")
     def load_config(self, filename=None):
         if not filename:
             filename = filedialog.askopenfilename(
-                title="Load Configuration",
-                filetypes=[("JSON files", "*.json")]
+                title="Load Configuration", filetypes=[("JSON files", "*.json")]
             )
 
         if filename and os.path.exists(filename):
@@ -139,7 +144,6 @@ class ConfigManager:
                 dialogs.show_error(None, "Error", f"Failed to load configuration:\n{str(e)}")
 
         return None
-
 
     def validate_config(self, config):
         return self.config_service.validate_config(config)
@@ -183,14 +187,16 @@ class ConfigManager:
             for key in ["operator", "measurement", "system"]:
                 entry = getattr(metadata_panel, f"{key}Entry", None)
                 if entry:
-                    entry.delete(0, 'end')
+                    entry.delete(0, "end")
                     entry.insert(0, config["metadata"].get(key, ""))
 
             # Apply dynamic columns
             results_panel.dynamic_col_specs.clear()
             results_panel.dynamic_insert_index = 2
 
-            columns_to_add = sorted(config["columns"]["dynamic_columns"], key=lambda x: x.get("order", 0))
+            columns_to_add = sorted(
+                config["columns"]["dynamic_columns"], key=lambda x: x.get("order", 0)
+            )
             for col in columns_to_add:
                 col_name = col["name"]
                 color = col.get("color", "#FFFFFF")
@@ -202,16 +208,18 @@ class ConfigManager:
                     col_index = results_panel.sheet.headers().index(col_name)
                     results_panel.sheet.column_width(col_index, width=col.get("width", 100))
                 except Exception as e:
-                    context.status_bar.update(f"Failed to set width for {col_name}: {e}", level="error")
+                    context.status_bar.update(
+                        f"Failed to set width for {col_name}: {e}", level="error"
+                    )
 
                 # Update add_columns_panel attributes
-                if hasattr(add_columns_panel, 'column_keybindings'):
+                if hasattr(add_columns_panel, "column_keybindings"):
                     add_columns_panel.column_keybindings[col_name] = col.get("keybinding", "")
-                if hasattr(add_columns_panel, 'add_keybinding'):
+                if hasattr(add_columns_panel, "add_keybinding"):
                     add_columns_panel.add_keybinding(col_name, col.get("keybinding", ""))
-                if hasattr(add_columns_panel, 'column_data_types'):
+                if hasattr(add_columns_panel, "column_data_types"):
                     add_columns_panel.column_data_types[col_name] = col.get("data_type", "")
-                if hasattr(add_columns_panel, 'column_colors'):
+                if hasattr(add_columns_panel, "column_colors"):
                     add_columns_panel.column_colors[col_name] = color
 
             results_panel.sheet.refresh()
@@ -228,7 +236,6 @@ class ConfigManager:
                 for key, info in column_map.items()
             ]
 
-
             # Update dropdown to reflect used keys
             if hasattr(add_columns_panel, "update_available_keys"):
                 add_columns_panel.update_available_keys()
@@ -236,14 +243,13 @@ class ConfigManager:
             if hasattr(context, "keyboard_layout_viewer") and context.keyboard_layout_viewer:
                 context.keyboard_layout_viewer.update_highlights()
 
-
             for key, info in column_map.items():
                 context.status_bar.update(
                     f"Registered keybinding: <{key}> for column '{info['col_name']}' with type '{info['data_type']}'",
-                    level="success"
+                    level="success",
                 )
 
-            #messagebox.showinfo("Success", "Configuration loaded successfully!")
+            # messagebox.showinfo("Success", "Configuration loaded successfully!")
             return True
 
         except Exception as e:
@@ -253,4 +259,3 @@ class ConfigManager:
     def get_data_type_for_column(self, col_name):
         config = getattr(self, "active_config", self.default_config)
         return self.config_service.get_data_type_for_column(config, col_name)
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze Keybinding Manager.
 
@@ -35,17 +34,18 @@ Author: Tobias Meissner
 ****
 """
 
-
-from app.view.shared.error_handler import handle_errors
-from datetime import datetime
-from app.view.annolyze.undo_panel import UndoPanel
-from app.view.annolyze.data_io import DataSaver
-from app.logic.annolyze.measurement_service import MeasurementService
-from app.view.shared import dialogs
 import threading
 import tkinter as tk
-from tkinter import ttk
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from tkinter import ttk
+
+from app.logic.annolyze.measurement_service import MeasurementService
+from app.view.annolyze.data_io import DataSaver
+from app.view.annolyze.undo_panel import UndoPanel
+from app.view.shared import dialogs
+from app.view.shared.error_handler import handle_errors
+
 
 class KeybindingManager:
     @handle_errors("KeybindingManager.__init__")
@@ -63,7 +63,7 @@ class KeybindingManager:
             "Ordinal": self.handle_ordinal,
             "Integer": self.handle_integer,
             "Float": self.handle_float,
-            "Text/String": self.handle_text_string
+            "Text/String": self.handle_text_string,
         }
         self.save_timer = None
 
@@ -166,13 +166,12 @@ class KeybindingManager:
 
         handler = self.handlers.get(data_type)
         if handler:
-                handler(slice_index, col_index, color, data_type, value, annotation_id)
+            handler(slice_index, col_index, color, data_type, value, annotation_id)
 
-     # %% Save Measurements, Annotations and Config
+    # %% Save Measurements, Annotations and Config
     def _save_all(self):
         saver = DataSaver(self.annotate_panel.context)
         self._save_executor.submit(saver.save_all)
-
 
     def debounce_save(self, delay=1.5):
         if self.save_timer:
@@ -181,7 +180,6 @@ class KeybindingManager:
         self.save_timer = threading.Timer(delay, self._save_all)
         self.annotate_panel.context.register_timer(self.save_timer, on_pending=self._save_all)
         self.save_timer.start()
-
 
     @handle_errors("KeybindingManager.update_metadata")
     def update_metadata(self, row_index):
@@ -207,14 +205,13 @@ class KeybindingManager:
             "OPERATOR": operator,
             "MEASUREMENT": measurement,
             "SYSTEM": system,
-            "DATE_TIME": date_time
+            "DATE_TIME": date_time,
         }
 
         for col_name, val in values.items():
             if col_name in headers:
                 col_index = headers.index(col_name)
                 sheet.set_cell_data(row_index, col_index, val)
-
 
     # %% Data Type Handlers
     @handle_errors("KeybindingManager.handle_continuous")
@@ -228,24 +225,25 @@ class KeybindingManager:
             return
 
         # Record undo info
-        self.undo_stack.append({
-            "row": row,
-            "col": col,
-            "col_name": self.sheet.headers()[col],
-            "old_value": current_value,
-            "new_value": new_value,
-            "key": data_type,
-            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
-            "annotation_id": annotation_id,
-            "timestamp": datetime.now(),
-            "color": color
-        })
+        self.undo_stack.append(
+            {
+                "row": row,
+                "col": col,
+                "col_name": self.sheet.headers()[col],
+                "old_value": current_value,
+                "new_value": new_value,
+                "key": data_type,
+                "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
+                "annotation_id": annotation_id,
+                "timestamp": datetime.now(),
+                "color": color,
+            }
+        )
 
         # Update the sheet
         self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
-
 
     @handle_errors("KeybindingManager.handle_boolean")
     def handle_boolean(self, row, col, color, data_type, value=None, annotation_id=None):
@@ -255,24 +253,25 @@ class KeybindingManager:
         new_value = self.measurement_service.toggle_boolean(current_value)
 
         # Record undo info
-        self.undo_stack.append({
-            "row": row,
-            "col": col,
-            "col_name": self.sheet.headers()[col],
-            "old_value": current_value,
-            "new_value": new_value,
-            "key": data_type,
-            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
-            "annotation_id": annotation_id,
-            "timestamp": datetime.now(),
-            "color": color
-        })
+        self.undo_stack.append(
+            {
+                "row": row,
+                "col": col,
+                "col_name": self.sheet.headers()[col],
+                "old_value": current_value,
+                "new_value": new_value,
+                "key": data_type,
+                "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
+                "annotation_id": annotation_id,
+                "timestamp": datetime.now(),
+                "color": color,
+            }
+        )
 
         # Update sheet
         self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
-
 
     @handle_errors("KeybindingManager.handle_percentage")
     def handle_percentage(self, row, col, color, data_type, value=None, annotation_id=None):
@@ -280,23 +279,24 @@ class KeybindingManager:
 
         new_value = self.measurement_service.increment_percentage(current_value)
 
-        self.undo_stack.append({
-            "row": row,
-            "col": col,
-            "col_name": self.sheet.headers()[col],
-            "old_value": current_value,
-            "new_value": new_value,
-            "key": data_type,
-            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
-            "annotation_id": annotation_id,
-            "timestamp": datetime.now(),
-            "color": color
-        })
+        self.undo_stack.append(
+            {
+                "row": row,
+                "col": col,
+                "col_name": self.sheet.headers()[col],
+                "old_value": current_value,
+                "new_value": new_value,
+                "key": data_type,
+                "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
+                "annotation_id": annotation_id,
+                "timestamp": datetime.now(),
+                "color": color,
+            }
+        )
 
         self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
-
 
     @handle_errors("KeybindingManager.handle_categorical")
     def handle_categorical(self, row, col, color, data_type, value=None, annotation_id=None):
@@ -306,24 +306,25 @@ class KeybindingManager:
         new_value = self.measurement_service.increment_categorical(current_value)
 
         # Record undo info
-        self.undo_stack.append({
-            "row": row,
-            "col": col,
-            "col_name": self.sheet.headers()[col],
-            "old_value": current_value,
-            "new_value": new_value,
-            "key": data_type,
-            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
-            "annotation_id": annotation_id,
-            "timestamp": datetime.now(),
-            "color": color
-        })
+        self.undo_stack.append(
+            {
+                "row": row,
+                "col": col,
+                "col_name": self.sheet.headers()[col],
+                "old_value": current_value,
+                "new_value": new_value,
+                "key": data_type,
+                "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
+                "annotation_id": annotation_id,
+                "timestamp": datetime.now(),
+                "color": color,
+            }
+        )
 
         # Update sheet
         self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
-
 
     @handle_errors("KeybindingManager.handle_ordinal")
     def handle_ordinal(self, row, col, color, data_type, value=None, annotation_id=None):
@@ -333,24 +334,25 @@ class KeybindingManager:
         new_value = self.measurement_service.increment_ordinal(current_value)
 
         # Record undo info
-        self.undo_stack.append({
-            "row": row,
-            "col": col,
-            "col_name": self.sheet.headers()[col],
-            "old_value": current_value,
-            "new_value": new_value,
-            "key": data_type,
-            "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
-            "annotation_id": annotation_id,
-            "timestamp": datetime.now(),
-            "color": color
-        })
+        self.undo_stack.append(
+            {
+                "row": row,
+                "col": col,
+                "col_name": self.sheet.headers()[col],
+                "old_value": current_value,
+                "new_value": new_value,
+                "key": data_type,
+                "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
+                "annotation_id": annotation_id,
+                "timestamp": datetime.now(),
+                "color": color,
+            }
+        )
 
         # Update sheet
         self.sheet.set_cell_data(row, col, new_value)
         self.sheet.deselect("all")
         self.flash_cell(row, col)
-
 
     @handle_errors("KeybindingManager.handle_integer")
     def handle_integer(self, row, col, color, data_type, value=None, annotation_id=None):
@@ -364,28 +366,17 @@ class KeybindingManager:
     def handle_text_string(self, row, col, color, data_type, value=None, annotation_id=None):
         self.prompt_for_value(row, col, color, data_type, value, annotation_id)
 
-
     # %% Visual Feedback in tksheet results table
     def flash_cell(self, row, col, bg="#FFD700", fg="#000000", duration=800):
         # Highlight the cell
-        self.sheet.highlight_cells(
-            row=row,
-            column=col,
-            bg=bg,
-            fg=fg,
-            overwrite=True
-        )
+        self.sheet.highlight_cells(row=row, column=col, bg=bg, fg=fg, overwrite=True)
 
         # Schedule dehighlight after `duration` milliseconds
-        self.sheet.after(duration, lambda: self.sheet.dehighlight_cells(
-            row=row,
-            column=col
-        ))
+        self.sheet.after(duration, lambda: self.sheet.dehighlight_cells(row=row, column=col))
 
     # %% Undo Panel
     def open_undo_panel(self):
         UndoPanel(self.annotate_panel.context, self.undo_stack)
-
 
     def undo_last(self):
         if not self.undo_stack:
@@ -410,7 +401,6 @@ class KeybindingManager:
             self.annotate_panel.save_current_annotations()
             self.annotate_panel.draw_overlay_annotations(row)
 
-
     def prompt_for_value(self, row, col, color, data_type, value=None, annotation_id=None):
         col_name = self.sheet.headers()[col]
 
@@ -433,25 +423,29 @@ class KeybindingManager:
                 if data_type == "Integer" and "whole number" in str(e):
                     dialogs.show_warning(parent, "Invalid Input", str(e))
                 else:
-                    dialogs.show_error(parent, "Invalid Input", f"Could not parse value: {raw_input}")
+                    dialogs.show_error(
+                        parent, "Invalid Input", f"Could not parse value: {raw_input}"
+                    )
                 return
 
             # Get current value for undo tracking
             current_value = self.sheet.get_cell_data(row, col)
 
             # Record undo info
-            self.undo_stack.append({
-                "row": row,
-                "col": col,
-                "col_name": col_name,
-                "old_value": current_value,
-                "new_value": parsed_value,
-                "key": data_type,
-                "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
-                "annotation_id": annotation_id,
-                "timestamp": datetime.now(),
-                "color": color
-            })
+            self.undo_stack.append(
+                {
+                    "row": row,
+                    "col": col,
+                    "col_name": col_name,
+                    "old_value": current_value,
+                    "new_value": parsed_value,
+                    "key": data_type,
+                    "feature": self.measurement_service.feature_from_annotation_id(annotation_id),
+                    "annotation_id": annotation_id,
+                    "timestamp": datetime.now(),
+                    "color": color,
+                }
+            )
 
             # Update the sheet
             self.sheet.set_cell_data(row, col, str(parsed_value))
@@ -474,9 +468,5 @@ class KeybindingManager:
 
         entry.bind("<Return>", lambda event: on_submit())
 
-
         submit_btn = ttk.Button(self.popup, text="Submit", command=on_submit)
         submit_btn.pack(pady=5)
-
-
-

@@ -37,9 +37,9 @@ import time
 import traceback
 from threading import Thread
 
-from app.view.carlquant.progress_dialog import ProgressDialog
-from app.view.shared.error_handler import show_error_popup, log_error_to_file
 from app.logic.carlquant import AnalysisService
+from app.view.carlquant.progress_dialog import ProgressDialog
+from app.view.shared.error_handler import log_error_to_file, show_error_popup
 
 
 def run_carl_quant(context):
@@ -49,6 +49,7 @@ def run_carl_quant(context):
     specimen's analysis to :meth:`AnalysisService.analyze_specimen` while a modal
     :class:`ProgressDialog` reflects progress and offers a Cancel button.
     """
+
     def worker():
         specimen_list = list(context.specimen_data.items())
         specimen_ids = [sid for sid, _ in specimen_list]
@@ -86,7 +87,9 @@ def run_carl_quant(context):
                         f"Skipped specimen {specimen_id} (user choice)", level="info"
                     )
                     specimen.status = "Skipped"
-                    context.root.after(0, lambda sid=specimen_id: _set_row_status(context, sid, "Skipped"))
+                    context.root.after(
+                        0, lambda sid=specimen_id: _set_row_status(context, sid, "Skipped")
+                    )
                     progress_dialog.complete_specimen(specimen_idx)
                     continue
 
@@ -129,8 +132,9 @@ def run_carl_quant(context):
                 was_cancelled = progress_dialog.is_cancelled()
                 context.root.after(
                     0,
-                    lambda sid=specimen_id, status=result.status, wc=was_cancelled:
-                        _set_row_status(context, sid, status, lock_on_complete=not wc),
+                    lambda sid=specimen_id, status=result.status, wc=was_cancelled: _set_row_status(
+                        context, sid, status, lock_on_complete=not wc
+                    ),
                 )
 
                 progress_dialog.complete_specimen(specimen_idx)
@@ -147,9 +151,7 @@ def run_carl_quant(context):
         except Exception as exc:
             tb = traceback.format_exc()
             error_message = (
-                f"CarlQuant Analysis Error:\n\n"
-                f"Exception: {str(exc)}\n\n"
-                f"Traceback:\n{tb}"
+                f"CarlQuant Analysis Error:\n\nException: {str(exc)}\n\nTraceback:\n{tb}"
             )
             log_error_to_file("run_carl_quant.worker", (), {}, "Worker thread exception", tb)
             context.root.after(

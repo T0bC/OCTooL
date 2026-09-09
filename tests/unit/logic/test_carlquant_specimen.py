@@ -6,7 +6,6 @@ processing, result storage, status setting, progress/mode callbacks, and
 cooperative cancellation. Saving is disabled (``save=False``) to keep tests fast
 and tkinter/Excel free; the persistence path is covered by DataSaver tests.
 """
-import threading
 
 import numpy as np
 import pytest
@@ -14,9 +13,9 @@ from PIL import Image
 
 from app.logic.carlquant.analysis_service import AnalysisService, SpecimenAnalysisResult
 from app.logic.carlquant.models import (
+    RegionConfig,
     Specimen,
     SpecimenConfig,
-    RegionConfig,
 )
 
 
@@ -61,7 +60,10 @@ class TestSequentialAnalysis:
         specimen = _make_specimen(tmp_path, 3)
         statuses = []
         result = AnalysisService.analyze_specimen(
-            specimen, num_sound=2, num_lesion=2, save=False,
+            specimen,
+            num_sound=2,
+            num_lesion=2,
+            save=False,
             on_status=statuses.append,
         )
         assert isinstance(result, SpecimenAnalysisResult)
@@ -81,7 +83,10 @@ class TestSequentialAnalysis:
         specimen = _make_specimen(tmp_path, 2)
         modes = []
         AnalysisService.analyze_specimen(
-            specimen, num_sound=1, num_lesion=1, save=False,
+            specimen,
+            num_sound=1,
+            num_lesion=1,
+            save=False,
             on_mode=lambda mode, workers: modes.append((mode, workers)),
         )
         assert modes == [("sequential", 1)]
@@ -92,7 +97,10 @@ class TestSequentialAnalysis:
         specimen = _make_specimen(tmp_path, 3)
         calls = []
         AnalysisService.analyze_specimen(
-            specimen, num_sound=1, num_lesion=1, save=False,
+            specimen,
+            num_sound=1,
+            num_lesion=1,
+            save=False,
             on_slice_done=lambda done, total: calls.append((done, total)),
         )
         assert calls == [(0, 3), (1, 3), (2, 3)]
@@ -104,7 +112,10 @@ class TestCancellation:
         """GIVEN immediate cancel, WHEN analyzed, THEN status Cancelled, nothing stored."""
         specimen = _make_specimen(tmp_path, 3)
         result = AnalysisService.analyze_specimen(
-            specimen, num_sound=1, num_lesion=1, save=False,
+            specimen,
+            num_sound=1,
+            num_lesion=1,
+            save=False,
             is_cancelled=lambda: True,
         )
         assert result.status == "Cancelled"
@@ -124,8 +135,12 @@ class TestCancellation:
             return state["done"] >= 1
 
         result = AnalysisService.analyze_specimen(
-            specimen, num_sound=1, num_lesion=1, save=False,
-            on_slice_done=on_slice_done, is_cancelled=is_cancelled,
+            specimen,
+            num_sound=1,
+            num_lesion=1,
+            save=False,
+            on_slice_done=on_slice_done,
+            is_cancelled=is_cancelled,
         )
         assert result.status == "Partial"
         assert result.processed_count == 1
@@ -137,7 +152,10 @@ class TestRegionConfigPath:
         """GIVEN a specimen with region config, WHEN analyzed, THEN slices processed."""
         specimen = _make_specimen(tmp_path, 2, with_config=True)
         result = AnalysisService.analyze_specimen(
-            specimen, num_sound=2, num_lesion=2, save=False,
+            specimen,
+            num_sound=2,
+            num_lesion=2,
+            save=False,
         )
         assert result.status == "Completed"
         assert result.processed_count == 2
@@ -162,7 +180,11 @@ class TestRegionConfigPath:
 
         lock = CountingLock()
         AnalysisService.analyze_specimen(
-            specimen, num_sound=1, num_lesion=1, save=False, result_lock=lock,
+            specimen,
+            num_sound=1,
+            num_lesion=1,
+            save=False,
+            result_lock=lock,
         )
         assert lock.acquired == 2
 
@@ -173,7 +195,10 @@ class TestSavePath:
         """GIVEN save=True, WHEN analyzed, THEN results persist and memory is cleared."""
         specimen = _make_specimen(tmp_path, 2)
         result = AnalysisService.analyze_specimen(
-            specimen, num_sound=1, num_lesion=1, save=True,
+            specimen,
+            num_sound=1,
+            num_lesion=1,
+            save=True,
         )
         assert result.saved is True
         # Excel results file is written under Data_{operator}_{measurement}.
@@ -192,8 +217,12 @@ class TestParallelPath:
         specimen = _make_specimen(tmp_path, 3)
         modes = []
         result = AnalysisService.analyze_specimen(
-            specimen, num_sound=1, num_lesion=1, save=False,
-            parallel_threshold=1, max_workers=2,
+            specimen,
+            num_sound=1,
+            num_lesion=1,
+            save=False,
+            parallel_threshold=1,
+            max_workers=2,
             on_mode=lambda mode, workers: modes.append(mode),
         )
         assert modes == ["parallel"]

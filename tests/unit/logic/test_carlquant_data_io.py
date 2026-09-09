@@ -5,6 +5,7 @@ Covers JSON config round-trip (regions + AIR + computed annotations), Excel
 results round-trip, image-stack discovery, annotated-image rendering, and the
 error/fallback branches in DataLoader/DataSaver.
 """
+
 import json
 
 import numpy as np
@@ -18,14 +19,14 @@ from app.logic.carlquant.data_io import (
     natural_key,
 )
 from app.logic.carlquant.specimen_model import (
+    AirConfig,
+    LesionDepth,
+    RegionConfig,
+    RegionStats,
+    SliceResult,
     Specimen,
     SpecimenConfig,
-    RegionConfig,
-    AirConfig,
-    SliceResult,
-    RegionStats,
     Surface,
-    LesionDepth,
 )
 
 
@@ -86,10 +87,19 @@ def _populate_results(spec):
         smoothed_depth_points=[(0, 11), (1, 12)],
     )
     region_stats = [
-        RegionStats("sound", [10, 20], mean=15, median=15, sd=5, se=2,
-                    region_index=1, bounds=(0, 0, 10, 10)),
-        RegionStats("lesion", [30, 40], mean=35, median=35, sd=5, se=2,
-                    region_index=2, bounds=(10, 0, 20, 10)),
+        RegionStats(
+            "sound", [10, 20], mean=15, median=15, sd=5, se=2, region_index=1, bounds=(0, 0, 10, 10)
+        ),
+        RegionStats(
+            "lesion",
+            [30, 40],
+            mean=35,
+            median=35,
+            sd=5,
+            se=2,
+            region_index=2,
+            bounds=(10, 0, 20, 10),
+        ),
     ]
     spec.results[0] = SliceResult(
         slice_index=0,
@@ -103,10 +113,12 @@ def _populate_results(spec):
 # Helper functions
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 def test_natural_key_sorts_numerically():
     """natural_key should order names like a human (slice_2 before slice_10)."""
     from pathlib import Path
+
     names = [Path("slice_10.png"), Path("slice_2.png"), Path("slice_1.png")]
     names.sort(key=natural_key)
     assert [p.name for p in names] == ["slice_1.png", "slice_2.png", "slice_10.png"]
@@ -137,6 +149,7 @@ def test_convert_to_json_serializable_numpy_types():
 # ---------------------------------------------------------------------------
 # Config JSON round-trip
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_config_round_trip(tmp_path):
@@ -213,9 +226,7 @@ def test_load_config_legacy_two_point_format(tmp_path):
     folder.mkdir()
     legacy = {
         "specimen_id": "tooth1",
-        "regions": {
-            "0": {"start_point": [5, 10], "end_point": [35, 10]}
-        },
+        "regions": {"0": {"start_point": [5, 10], "end_point": [35, 10]}},
     }
     (folder / "tooth1_config.json").write_text(json.dumps(legacy))
 
@@ -233,6 +244,7 @@ def test_load_config_legacy_two_point_format(tmp_path):
 # ---------------------------------------------------------------------------
 # Excel results round-trip
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_results_excel_round_trip(tmp_path):
@@ -272,6 +284,7 @@ def test_store_slice_result(tmp_path):
 # Image stack discovery
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 def test_find_image_stacks(tmp_path):
     """find_image_stacks discovers folders containing images and skips annotations."""
@@ -294,6 +307,7 @@ def test_find_image_stacks(tmp_path):
 # ---------------------------------------------------------------------------
 # Error / fallback branches
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_load_config_missing_returns_none(tmp_path):
@@ -345,6 +359,7 @@ def test_load_results_missing_folder_is_noop(tmp_path):
 # ---------------------------------------------------------------------------
 # Annotated images
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_save_annotated_images(tmp_path):

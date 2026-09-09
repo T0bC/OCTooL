@@ -3,7 +3,6 @@ Unit tests for app/logic/annolyze/annotation_service.py
 
 Tests annotation geometry, color, and (de)serialization without GUI.
 """
-import math
 
 import pytest
 
@@ -121,8 +120,16 @@ class TestSerialization:
     def test_serialize_round_trip(self, service):
         """GIVEN slice annotations, WHEN serialize then deserialize, THEN keys preserved."""
         slice_annotations = {
-            0: [{"id": "GAP_0", "feature": "GAP", "points": [(1, 2), (3, 4)],
-                 "mode": "line", "color": "#FFFFFF", "locked": True}],
+            0: [
+                {
+                    "id": "GAP_0",
+                    "feature": "GAP",
+                    "points": [(1, 2), (3, 4)],
+                    "mode": "line",
+                    "color": "#FFFFFF",
+                    "locked": True,
+                }
+            ],
         }
         serialized = service.serialize_slice_annotations(slice_annotations)
         assert "slice_0" in serialized

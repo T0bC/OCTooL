@@ -1,8 +1,8 @@
 """
 Unit tests for app/logic/annolyze/data_service.py (context-free I/O).
 """
+
 import json
-from pathlib import Path
 
 import pytest
 
@@ -57,8 +57,16 @@ class TestAnnotationsIO:
     def test_save_then_load_round_trip(self, service, tmp_path):
         """GIVEN slice annotations, WHEN save then load, THEN slice keys preserved as ints."""
         slice_annotations = {
-            0: [{"id": "GAP_0", "feature": "GAP", "points": [(1, 2), (3, 4)],
-                 "mode": "line", "color": "#FFF", "locked": True}],
+            0: [
+                {
+                    "id": "GAP_0",
+                    "feature": "GAP",
+                    "points": [(1, 2), (3, 4)],
+                    "mode": "line",
+                    "color": "#FFF",
+                    "locked": True,
+                }
+            ],
         }
         path = tmp_path / "annotations" / "a.json"
         service.save_annotations(slice_annotations, path)

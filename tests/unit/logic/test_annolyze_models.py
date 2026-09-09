@@ -1,6 +1,7 @@
 """
 Unit tests for app/logic/annolyze/models.py factory/serialization helpers.
 """
+
 import pytest
 
 from app.logic.annolyze.models import (

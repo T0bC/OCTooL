@@ -1,6 +1,7 @@
 """
 Unit tests for app/logic/annolyze/measurement_service.py
 """
+
 import pytest
 
 from app.logic.annolyze.measurement_service import MeasurementService

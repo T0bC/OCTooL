@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 RexView Tree View Panel.
 
@@ -36,11 +35,11 @@ Author: Tobias Meissner
 ****
 """
 
-
 import tkinter as tk
 from tkinter import ttk
+
+from app.logic.rexview import QueueItem, QueueService
 from app.logic.shared import oct_functions as octF
-from app.logic.rexview import QueueService, QueueItem
 from app.view.rexview.gui_adapters import queue_item_from_treeview_values
 from app.view.shared import dialogs
 
@@ -59,33 +58,46 @@ class treeViewPanel:
         self._queue_service = QueueService()
 
         # canvas Frame and its contens
-        self.cols = ('Nr.', 'Name', 'First', 'Last', 'dB min', 'dB max', 'NumSlices', 'Refr. Ind.' , 'Disp. Coeff', 'Img. Slice Dir.' ,'Data Type', 'Status', 'Path')
-        self.treeView = ttk.Treeview(self.frame, columns=self.cols, show='headings')
+        self.cols = (
+            "Nr.",
+            "Name",
+            "First",
+            "Last",
+            "dB min",
+            "dB max",
+            "NumSlices",
+            "Refr. Ind.",
+            "Disp. Coeff",
+            "Img. Slice Dir.",
+            "Data Type",
+            "Status",
+            "Path",
+        )
+        self.treeView = ttk.Treeview(self.frame, columns=self.cols, show="headings")
         self.treeView.grid(row=0, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
 
         self.scrollbar = ttk.Scrollbar(self.frame, orient="vertical", command=self.treeView.yview)
-        self.scrollbar.grid(row=0, column=1, sticky='ns')
+        self.scrollbar.grid(row=0, column=1, sticky="ns")
         self.treeView.configure(yscrollcommand=self.scrollbar.set)
 
         for col in self.cols:
-            self.treeView.heading(col, text = col)
+            self.treeView.heading(col, text=col)
 
         # define col sizes
-        self.treeView.column('Nr.', width = 25)
-        self.treeView.column('Name', width = 200)
-        self.treeView.column('First', width = 50)
-        self.treeView.column('Last', width = 50)
-        self.treeView.column('dB min', width = 50)
-        self.treeView.column('dB max', width = 50)
-        self.treeView.column('NumSlices', width = 63)
-        self.treeView.column('Refr. Ind.', width = 50)
-        self.treeView.column('Disp. Coeff', width = 70)
-        self.treeView.column('Img. Slice Dir.', width = 90)
-        self.treeView.column('Data Type', width = 70)
-        self.treeView.column('Status', width = 70)
-        self.treeView.column('Path', width = 35)
-        self.treeView.bind('<Double-1>', self.set_cell_value)
-
+        self.treeView.column("Nr.", width=25)
+        self.treeView.column("Name", width=200)
+        self.treeView.column("First", width=50)
+        self.treeView.column("Last", width=50)
+        self.treeView.column("dB min", width=50)
+        self.treeView.column("dB max", width=50)
+        self.treeView.column("NumSlices", width=63)
+        self.treeView.column("Refr. Ind.", width=50)
+        self.treeView.column("Disp. Coeff", width=70)
+        self.treeView.column("Img. Slice Dir.", width=90)
+        self.treeView.column("Data Type", width=70)
+        self.treeView.column("Status", width=70)
+        self.treeView.column("Path", width=35)
+        self.treeView.bind("<Double-1>", self.set_cell_value)
 
     # %% Test for Input
     def set_cell_value(self, event):
@@ -93,25 +105,25 @@ class treeViewPanel:
             item_text = self.treeView.item(item, "values")
             column = self.treeView.identify_column(event.x)
             row = self.treeView.identify_row(event.y)
-        cn = int(str(column).replace('#', ''))
-        rn = int(str(row).replace('I', ''))
-        entryedit = tk.Text(self.frame, width = 10 + (cn - 1) * 16, height = 1)
+        cn = int(str(column).replace("#", ""))
+        rn = int(str(row).replace("I", ""))
+        entryedit = tk.Text(self.frame, width=10 + (cn - 1) * 16, height=1)
         entryedit.insert(0.0, self.treeView.set(item, column))
         entryedit.place(x=16 + (cn - 1) * 130, y=6 + rn * 20)
 
-
         def saveedit():
-            self.treeView.set(item, column=column, value=entryedit.get("1.0","end-1c"))
+            self.treeView.set(item, column=column, value=entryedit.get("1.0", "end-1c"))
             entryedit.destroy()
             okb.destroy()
             self.context.safe_status_update("Cell value updated.", level="info")
 
-        okb = ttk.Button(self.frame, text='OK', width=4, command=saveedit)
+        okb = ttk.Button(self.frame, text="OK", width=4, command=saveedit)
         okb.place(x=90 + (cn - 1) * 242, y=2 + rn * 20)
 
-        #%% Maybe we can use this someday, this lets you select row and col by mouse
+        # %% Maybe we can use this someday, this lets you select row and col by mouse
+
     def selectRow(self, event):
-        '''
+        """
         Not used: this lets you select row and col by mouse
 
         Parameters
@@ -123,23 +135,22 @@ class treeViewPanel:
         -------
         row and column.
 
-        '''
+        """
         self.curItem = self.treeView.item(self.treeView.focus())
         self.row = self.treeView.identify_row(event.y)
         self.col = self.treeView.identify_column(event.x)
 
-
-        #%% deleteEntry
+        # %% deleteEntry
 
     def deleteEntry(self):
-        '''
+        """
         Deletes the current selection from treeView table
 
         Returns
         -------
         None.
 
-        '''
+        """
         self.selectedItemList = self.treeView.selection()
         count = len(self.selectedItemList)
         if count:
@@ -147,9 +158,10 @@ class treeViewPanel:
         for item in self.selectedItemList:
             self.treeView.delete(item)
 
-        #addSliceToQueu,pass an instance of the treeView Table to the function when calling
+        # addSliceToQueu,pass an instance of the treeView Table to the function when calling
+
     def addSliceToQueue(self, firstEntry: int, lastEntry: int, resetState: bool):
-        '''
+        """
         Change the parameter for first and fast Slice in the TreeView-Table
 
         Parameters
@@ -165,7 +177,7 @@ class treeViewPanel:
         -------
         None.
 
-        '''
+        """
         self.firstEntry = firstEntry
         self.lastEntry = lastEntry
         if resetState == False:
@@ -173,15 +185,15 @@ class treeViewPanel:
         else:
             self.numOfSlices = int(lastEntry) - int(firstEntry) + 1
 
-        self.treeView.set(self.treeView.focus(), 'First', value=(str(self.firstEntry)))
-        self.treeView.set(self.treeView.focus(), 'Last', value=(str(self.lastEntry)))
-        self.treeView.set(self.treeView.focus(), 'NumSlices', value=(str(self.numOfSlices)))
+        self.treeView.set(self.treeView.focus(), "First", value=(str(self.firstEntry)))
+        self.treeView.set(self.treeView.focus(), "Last", value=(str(self.lastEntry)))
+        self.treeView.set(self.treeView.focus(), "NumSlices", value=(str(self.numOfSlices)))
         self.context.safe_status_update("Slice range updated.", level="info")
 
-    #setdBVal
+    # setdBVal
 
     def setdBVal(self, mdB: int, adB: int):
-        '''
+        """
         Sets the dBValue according to the sliders.
 
         Parameters
@@ -195,19 +207,19 @@ class treeViewPanel:
         -------
         None.
 
-        '''
+        """
         self.scaleMdB = mdB
         self.scaleAdB = adB
 
-        if self.treeView.focus() == '':
+        if self.treeView.focus() == "":
             pass
         else:
-            self.treeView.set(self.treeView.focus(), 'dB min', value=(str(self.scaleMdB)))
-            self.treeView.set(self.treeView.focus(), 'dB max', value=(str(self.scaleAdB)))
+            self.treeView.set(self.treeView.focus(), "dB min", value=(str(self.scaleMdB)))
+            self.treeView.set(self.treeView.focus(), "dB max", value=(str(self.scaleAdB)))
             self.context.safe_status_update("dB range updated.", level="info")
 
-    def getChildren(self)->list:
-        '''
+    def getChildren(self) -> list:
+        """
         Returns a (ID) list of all entry in the Treeview
 
         Returns: List of ID's'
@@ -215,11 +227,11 @@ class treeViewPanel:
         TYPE
             List.
 
-        '''
+        """
         return self.treeView.get_children()
 
     def setValue(self, column: str, value: str):
-        '''
+        """
         Sets value in given row and column in the treeFrame
 
         Parameters
@@ -233,11 +245,11 @@ class treeViewPanel:
         -------
         None.
 
-        '''
+        """
         self.treeView.set(self.treeView.focus(), column, value=value)
 
-    def getFocus(self)-> int:
-        '''
+    def getFocus(self) -> int:
+        """
         Returns the current selected Row ID of TreeView
 
         Returns
@@ -245,11 +257,11 @@ class treeViewPanel:
         int
             position of row.
 
-        '''
+        """
         return self.treeView.focus()
 
-    def getValue(self, column: int)-> str:
-        '''
+    def getValue(self, column: int) -> str:
+        """
         Returns the value of specified column
 
         Parameters
@@ -262,11 +274,11 @@ class treeViewPanel:
         str:
             Value in Column as string .
 
-        '''
+        """
         return self.treeView.set(self.treeView.focus(), column)
 
-    def getValueFromRow(self, item, column: int)-> str:
-        '''
+    def getValueFromRow(self, item, column: int) -> str:
+        """
         Returns from a given row (Child)
 
         Parameters
@@ -281,11 +293,11 @@ class treeViewPanel:
         str
             DESCRIPTION.
 
-        '''
+        """
         return self.treeView.set(item, column)
 
     def setValueFromRow(self, item, column: str, value: str):
-        '''
+        """
         Sets value in given row and column in the treeFrame
 
         Parameters
@@ -299,11 +311,11 @@ class treeViewPanel:
         -------
         None.
 
-        '''
+        """
         self.treeView.set(item, column, value=value)
 
     def setMultipleValues(self, tmpFileList: list):
-        '''
+        """
         Sets multiple Values from a given list into the treeView table
 
         Parameters
@@ -322,42 +334,73 @@ class treeViewPanel:
         -------
         None.
 
-        '''
+        """
 
-        for i ,(name, first, last, dBMin, dBMax, NumSlices, RefrInd, DispCoeff, imgSliceDir, dataType, status, path) in enumerate(tmpFileList, start=1):
-            self.treeView.insert('','end', values=(i, name, first, last, dBMin, dBMax, NumSlices, RefrInd, DispCoeff, imgSliceDir, dataType, status, path))
+        for i, (
+            name,
+            first,
+            last,
+            dBMin,
+            dBMax,
+            NumSlices,
+            RefrInd,
+            DispCoeff,
+            imgSliceDir,
+            dataType,
+            status,
+            path,
+        ) in enumerate(tmpFileList, start=1):
+            self.treeView.insert(
+                "",
+                "end",
+                values=(
+                    i,
+                    name,
+                    first,
+                    last,
+                    dBMin,
+                    dBMax,
+                    NumSlices,
+                    RefrInd,
+                    DispCoeff,
+                    imgSliceDir,
+                    dataType,
+                    status,
+                    path,
+                ),
+            )
 
     def _collect_queue_item_from_row(self, item_id) -> QueueItem:
         """
         Collect current row values into a QueueItem model.
-        
+
         Parameters
         ----------
         item_id : str
             TreeView item ID
-            
+
         Returns
         -------
         QueueItem
             Model containing row data
         """
         return queue_item_from_treeview_values(
-            name=self.treeView.set(item_id, 'Name'),
-            first=self.treeView.set(item_id, 'First'),
-            last=self.treeView.set(item_id, 'Last'),
-            db_min=self.treeView.set(item_id, 'dB min'),
-            db_max=self.treeView.set(item_id, 'dB max'),
-            num_slices=self.treeView.set(item_id, 'NumSlices'),
-            refr_ind=self.treeView.set(item_id, 'Refr. Ind.'),
-            disp_coeff=self.treeView.set(item_id, 'Disp. Coeff'),
-            slice_dir=self.treeView.set(item_id, 'Img. Slice Dir.'),
-            data_type=self.treeView.set(item_id, 'Data Type'),
-            status=self.treeView.set(item_id, 'Status'),
-            path=self.treeView.set(item_id, 'Path'),
+            name=self.treeView.set(item_id, "Name"),
+            first=self.treeView.set(item_id, "First"),
+            last=self.treeView.set(item_id, "Last"),
+            db_min=self.treeView.set(item_id, "dB min"),
+            db_max=self.treeView.set(item_id, "dB max"),
+            num_slices=self.treeView.set(item_id, "NumSlices"),
+            refr_ind=self.treeView.set(item_id, "Refr. Ind."),
+            disp_coeff=self.treeView.set(item_id, "Disp. Coeff"),
+            slice_dir=self.treeView.set(item_id, "Img. Slice Dir."),
+            data_type=self.treeView.set(item_id, "Data Type"),
+            status=self.treeView.set(item_id, "Status"),
+            path=self.treeView.set(item_id, "Path"),
         )
 
     def addequiDistToQueue(self, numSlices: str, allFiles: bool):
-        '''
+        """
         Add equidistant Slice number to treeView Table
 
         Parameters
@@ -372,31 +415,33 @@ class treeViewPanel:
         -------
         None.
 
-        '''
+        """
         if allFiles == False:
-            first_slice = int(self.getValue(column='First'))
-            last_slice = int(self.getValue(column='Last'))
-            
+            first_slice = int(self.getValue(column="First"))
+            last_slice = int(self.getValue(column="Last"))
+
             # Use QueueService for validation
             validation = self._queue_service.validate_equidistant_slices(
                 num_slices=int(numSlices),
                 first_slice=first_slice,
                 last_slice=last_slice,
             )
-            
+
             if not validation.is_valid:
-                dialogs.show_error(self.root, 'Value Error', validation.errors[0])
+                dialogs.show_error(self.root, "Value Error", validation.errors[0])
             else:
-                self.treeView.set(self.treeView.focus(), 'NumSlices', value=numSlices)
-                self.context.safe_status_update("Equidistant slices set for selection.", level="info")
+                self.treeView.set(self.treeView.focus(), "NumSlices", value=numSlices)
+                self.context.safe_status_update(
+                    "Equidistant slices set for selection.", level="info"
+                )
 
         else:
             for item in enumerate(self.treeView.get_children()):
-                self.treeView.set(item[1], 'NumSlices', value=numSlices)
+                self.treeView.set(item[1], "NumSlices", value=numSlices)
             self.context.safe_status_update("Equidistant slices set for all entries.", level="info")
 
     def addToMultipleColsnRows(self, colNames: list, values: list):
-        '''
+        """
         Add values to multiple columns to all rows. Provide a list of column names
         and in the same order a list of values to add.
 
@@ -407,7 +452,7 @@ class treeViewPanel:
         value : list
             List of values in order.
 
-        '''
+        """
         for item in enumerate(self.treeView.get_children()):
             for name in enumerate(colNames):
                 self.treeView.set(item[1], str(name[1]), values[name[0]])
@@ -426,23 +471,25 @@ class treeViewPanel:
         -------
         None
         """
-        path = self.getValue('Path')
+        path = self.getValue("Path")
         if not path:
             # Early exit if there's no path selected to avoid errors
-            dialogs.show_warning(self.root, "Missing Selection", "Please select a valid entry in the queue table before changing the slice direction.")
+            dialogs.show_warning(
+                self.root,
+                "Missing Selection",
+                "Please select a valid entry in the queue table before changing the slice direction.",
+            )
             return
 
-        self.setValue('Img. Slice Dir.', expDir)
+        self.setValue("Img. Slice Dir.", expDir)
 
         # Use QueueService to get dimension key
         dim_key = self._queue_service.get_dimension_key_for_direction(expDir)
         if dim_key:
             self.newLastSliceToExport = octF.getXMLvalue(path, dim_key)
-            self.setValue('Last', self.newLastSliceToExport)
-            self.setValue('NumSlices', self.newLastSliceToExport)
+            self.setValue("Last", self.newLastSliceToExport)
+            self.setValue("NumSlices", self.newLastSliceToExport)
         self.context.safe_status_update("Slice direction updated.", level="info")
-
-
 
     def updateImgSliceDirectionForAllEntries(self, expDir: str):
         """
@@ -461,23 +508,31 @@ class treeViewPanel:
         # Use QueueService to get dimension key
         dim_key = self._queue_service.get_dimension_key_for_direction(expDir)
         if not dim_key:
-            dialogs.show_warning(self.root, "Invalid Direction", f"'{expDir}' is not a recognized slice direction.")
+            dialogs.show_warning(
+                self.root, "Invalid Direction", f"'{expDir}' is not a recognized slice direction."
+            )
             return
 
         items_updated = 0
 
         for item in self.treeView.get_children():
-            path = self.treeView.set(item, 'Path')
+            path = self.treeView.set(item, "Path")
             if not path:
                 continue  # skip entries with missing path
 
             last_slice = octF.getXMLvalue(path, dim_key)
-            self.treeView.set(item, 'Img. Slice Dir.', expDir)
-            self.treeView.set(item, 'Last', last_slice)
-            self.treeView.set(item, 'NumSlices', last_slice)
+            self.treeView.set(item, "Img. Slice Dir.", expDir)
+            self.treeView.set(item, "Last", last_slice)
+            self.treeView.set(item, "NumSlices", last_slice)
             items_updated += 1
 
         if items_updated == 0:
-            dialogs.show_warning(self.root, "No Entries Updated", "No entries had a valid path to apply the slice direction.")
+            dialogs.show_warning(
+                self.root,
+                "No Entries Updated",
+                "No entries had a valid path to apply the slice direction.",
+            )
         else:
-            self.context.safe_status_update(f"Slice direction updated for {items_updated} entries.", level="success")
+            self.context.safe_status_update(
+                f"Slice direction updated for {items_updated} entries.", level="success"
+            )

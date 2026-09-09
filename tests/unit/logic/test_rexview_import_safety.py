@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Import-safety tests enforcing the logic/view boundary for RexView.
 
 The ``app/logic/rexview`` package must never import tkinter, so it can be

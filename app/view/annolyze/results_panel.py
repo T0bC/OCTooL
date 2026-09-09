@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze Results Panel.
 
@@ -35,11 +34,12 @@ Author: Tobias Meissner
 ****
 """
 
-
-from app.view.shared.error_handler import handle_errors
 from tksheet import Sheet
+
 from app.logic.annolyze.display_service import DisplayService
 from app.view.shared import dialogs
+from app.view.shared.error_handler import handle_errors
+
 
 class resultsPanel:
     @handle_errors("ResultsPanel.__init__")
@@ -57,7 +57,14 @@ class resultsPanel:
         self.load_frame = context.get_frame("load")
         self.display_service = DisplayService()
 
-        self.static_col_names = ['SPECIMEN_NAME', 'SLICE', 'OPERATOR', 'MEASUREMENT', 'SYSTEM', 'DATE_TIME']
+        self.static_col_names = [
+            "SPECIMEN_NAME",
+            "SLICE",
+            "OPERATOR",
+            "MEASUREMENT",
+            "SYSTEM",
+            "DATE_TIME",
+        ]
         self.dynamic_col_specs: list[tuple[str, str]] = []  # List of (col_name, color)
         self.dynamic_insert_index = 2  # Insert after 'SLICE'
 
@@ -83,12 +90,10 @@ class resultsPanel:
             width=800,
             height=180,
             empty_horizontal=0,
-            empty_vertical=50
+            empty_vertical=50,
         )
 
-        self.sheet.enable_bindings(
-            "copy", "delete", "right_click_popup_menu", "single_select"
-        )
+        self.sheet.enable_bindings("copy", "delete", "right_click_popup_menu", "single_select")
 
         self.sheet.grid(row=0, column=0, sticky="nsew")
         self.frame.grid_rowconfigure(0, weight=1)
@@ -99,16 +104,10 @@ class resultsPanel:
         font_color = self.choose_font_color(STATIC_BG_COLOR)
         static_indices = list(range(len(self.static_col_names)))
 
-        self.sheet.highlight_columns(
-            columns=static_indices,
-            bg=STATIC_BG_COLOR,
-            fg=font_color
-        )
+        self.sheet.highlight_columns(columns=static_indices, bg=STATIC_BG_COLOR, fg=font_color)
 
         self.sheet.highlight_rows(
-            rows=list(range(self.sheet.total_rows())),
-            bg=STATIC_BG_COLOR,
-            fg=font_color
+            rows=list(range(self.sheet.total_rows())), bg=STATIC_BG_COLOR, fg=font_color
         )
 
     @handle_errors("ResultsPanel.reset_table")
@@ -124,10 +123,9 @@ class resultsPanel:
         self.sheet.highlight_columns(columns=static_indices, bg="#2b2b2b", fg=font_color)
         self.sheet.highlight_rows(rows=[], bg="#2b2b2b", fg=font_color)
 
-
     @handle_errors("ResultsPanel._set_column_widths")
     def _set_column_widths(self) -> None:
-        """ Set column widths based on header length. """
+        """Set column widths based on header length."""
         column_names = self.sheet.headers()
 
         for i, header in enumerate(column_names):
@@ -156,7 +154,7 @@ class resultsPanel:
             dialogs.show_warning(
                 self.root,
                 "Duplicate Column",
-                f"The column '{col_name}' already exists in the table."
+                f"The column '{col_name}' already exists in the table.",
             )
             return
 
@@ -167,10 +165,9 @@ class resultsPanel:
                     dialogs.show_warning(
                         self.root,
                         "Duplicate Key Binding",
-                        f"The key binding '{keyBind}' is already assigned to column '{existing_col}'. Please choose a unique key."
+                        f"The key binding '{keyBind}' is already assigned to column '{existing_col}'. Please choose a unique key.",
                     )
                     return
-
 
         # Insert the column
         self.sheet.insert_column(
@@ -179,7 +176,7 @@ class resultsPanel:
             fill=True,
             undo=True,
             emit_event=False,
-            redraw=False
+            redraw=False,
         )
 
         # Set header name
@@ -190,11 +187,7 @@ class resultsPanel:
         font_color = self.choose_font_color(color)
 
         # Highlight column
-        self.sheet.highlight_columns(
-            columns=[self.dynamic_insert_index],
-            bg=color,
-            fg=font_color
-        )
+        self.sheet.highlight_columns(columns=[self.dynamic_insert_index], bg=color, fg=font_color)
 
         # Track column
         self.dynamic_col_specs.append((col_name, color))
@@ -211,8 +204,6 @@ class resultsPanel:
 
         # Update insert index for next column
         self.dynamic_insert_index += 1
-
-
 
     @handle_errors("ResultsPanel.remove_last_dynamic_column")
     def remove_last_dynamic_column(self):
@@ -235,16 +226,16 @@ class resultsPanel:
                 spec for spec in self.dynamic_col_specs_full if spec[0] != last_col_name
             ]
 
-
         if last_col_name in column_names:
             col_index = column_names.index(last_col_name)
             self.sheet.delete_column(col_index)
             self.dynamic_insert_index -= 1
             return last_col_name
         else:
-            self.context.status_bar.update(f"Column: {last_col_name} not found in headers.", level="warning")
+            self.context.status_bar.update(
+                f"Column: {last_col_name} not found in headers.", level="warning"
+            )
             return None
-
 
     @handle_errors("ResultsPanel.populate_sample_data")
     def populate_sample_data(self) -> None:
@@ -254,7 +245,7 @@ class resultsPanel:
         sample_data = [
             ["Specimen A", "1", "Alice", "Length", "System X", "2023-01-01 10:00"],
             ["Specimen B", "2", "Bob", "Width", "System Y", "2023-01-02 11:00"],
-            ["Specimen C", "3", "Charlie", "Height", "System Z", "2023-01-03 12:00"]
+            ["Specimen C", "3", "Charlie", "Height", "System Z", "2023-01-03 12:00"],
         ]
         self.sheet.set_sheet_data(sample_data)
 
@@ -277,11 +268,8 @@ class resultsPanel:
         else:
             self.context.status_bar.update(f"Column: {col_name} not found.", level="error")
 
-
     def get_luminance(self, hex_color: str) -> float:
         return self.display_service.luminance(hex_color)
 
     def choose_font_color(self, bg_color: str) -> str:
         return self.display_service.choose_font_color(bg_color)
-
-

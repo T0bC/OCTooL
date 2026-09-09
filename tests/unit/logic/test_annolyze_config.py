@@ -1,6 +1,7 @@
 """
 Unit tests for app/logic/annolyze/config_service.py
 """
+
 import json
 
 import pytest

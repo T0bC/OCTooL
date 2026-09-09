@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CarlQuant Tab.
 
@@ -33,15 +32,16 @@ Author: Tobias Meissner
 ****
 """
 
-
 import tkinter as tk
 from tkinter import ttk
-from app.view.shared.error_handler import handle_errors
+
+from app.view.carlquant.image_viewer_panel import image_viewer_panel as imagePanel
 from app.view.carlquant.load_images_panel import loadImagePanel as loadImage
+from app.view.carlquant.results_panel import resultsPanel as resultsPanel
 from app.view.carlquant.settings_panel import settingsPanel as settingsPanel
 from app.view.carlquant.specimen_panel import specimenPanel as specimenPanel
-from app.view.carlquant.results_panel import resultsPanel as resultsPanel
-from app.view.carlquant.image_viewer_panel import image_viewer_panel as imagePanel
+from app.view.shared.error_handler import handle_errors
+
 
 @handle_errors("carlQuantTab.addContent")
 def addContent(self, frame):
@@ -62,50 +62,49 @@ def addContent(self, frame):
     # Row 2 → Bottom row (Status bar, if present)
     self.carlQuantTabFrame.rowconfigure(2, weight=0)
 
-
     # Controls container
     self.controlsContainer = ttk.Frame(self.carlQuantTabFrame)
     self.controlsContainer.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
 
     # Load Frame
-    self.loadFrame = ttk.LabelFrame(self.controlsContainer, text='Load Data', relief=tk.RIDGE)
+    self.loadFrame = ttk.LabelFrame(self.controlsContainer, text="Load Data", relief=tk.RIDGE)
     self.loadFrame.pack(fill="x", pady=(0, 2))
     self.context.register_frame("carl_load", self.loadFrame)
 
     # Settings Frame
-    self.settingsFrame = ttk.LabelFrame(self.controlsContainer, text='Settings', relief=tk.RIDGE)
+    self.settingsFrame = ttk.LabelFrame(self.controlsContainer, text="Settings", relief=tk.RIDGE)
     self.settingsFrame.pack(fill="x", pady=(0, 2))
     self.context.register_frame("carl_settings", self.settingsFrame)
 
     # PanedWindow for Specimen and Results
     # Styled to match dark theme
     self.tablePane = tk.PanedWindow(
-        self.carlQuantTabFrame, 
+        self.carlQuantTabFrame,
         orient=tk.HORIZONTAL,
         sashwidth=6,
         sashpad=2,
         bd=0,  # Remove border
         bg="#2b2b2b",  # Dark background to match theme
         sashrelief=tk.FLAT,  # Flat sash for modern look
-        relief=tk.FLAT  # Flat relief for the pane itself
+        relief=tk.FLAT,  # Flat relief for the pane itself
     )
     self.tablePane.grid(row=0, column=1, columnspan=2, sticky="nsew", padx=5, pady=5)
 
     # Specimen Frame
-    self.specimenFrame = ttk.LabelFrame(self.tablePane, text='Specimen', relief=tk.RIDGE)
+    self.specimenFrame = ttk.LabelFrame(self.tablePane, text="Specimen", relief=tk.RIDGE)
     self.context.register_frame("carl_specimen", self.specimenFrame)
     self.tablePane.add(self.specimenFrame)
 
     # Results Frame
-    self.resultsFrame = ttk.LabelFrame(self.tablePane, text='Results', relief=tk.RIDGE)
+    self.resultsFrame = ttk.LabelFrame(self.tablePane, text="Results", relief=tk.RIDGE)
     self.context.register_frame("carl_results", self.resultsFrame)
     self.tablePane.add(self.resultsFrame)
-    
+
     # Set initial pane proportions (30% specimen, 70% results)
     self.tablePane.after(100, lambda: self.tablePane.sash_place(0, 400, 0))
 
     # Viewer Frame
-    self.viewerFrame = ttk.LabelFrame(self.carlQuantTabFrame, text='Image Viewer', relief=tk.RIDGE)
+    self.viewerFrame = ttk.LabelFrame(self.carlQuantTabFrame, text="Image Viewer", relief=tk.RIDGE)
     self.viewerFrame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("carl_image", self.viewerFrame)
 
@@ -127,5 +126,3 @@ def addContent(self, frame):
 
     self.imagePanel = imagePanel(self.context)
     self.context.register_panel("carl_image", self.imagePanel)
-
-

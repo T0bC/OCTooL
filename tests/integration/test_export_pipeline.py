@@ -4,17 +4,16 @@ Integration tests for RexView export pipeline wiring.
 Tests the panel → service → output chain to verify that the ExportService
 is correctly wired into the execution_panel.mainRoutines() flow.
 """
-import pytest
-import numpy as np
-from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
 
-from app.logic.rexview import ExportConfig, SliceExportParams, ExportService
+import numpy as np
+import pytest
+
+from app.logic.rexview import ExportConfig, ExportService, SliceExportParams
+from app.logic.shared import OCTMetadata
 from app.view.rexview.gui_adapters import (
     export_config_from_gui_state,
     slice_export_params_from_treeview_row,
 )
-from app.logic.shared import OCTMetadata
 
 
 class TestExportPipelineWiring:
@@ -46,54 +45,54 @@ class TestExportPipelineWiring:
         """Verify prepare_export returns all required keys for mainRoutines."""
         result = export_service.prepare_export(sample_params, sample_config, sample_metadata)
 
-        assert 'selected_slices' in result
-        assert 'slices_to_load' in result
-        assert 'sel_data_type' in result
-        assert 'export_dir' in result
+        assert "selected_slices" in result
+        assert "slices_to_load" in result
+        assert "sel_data_type" in result
+        assert "export_dir" in result
 
     def test_prepare_export_slice_calculation_xz(
         self, export_service, sample_config, sample_metadata
     ):
         """Verify XZ direction uses selected_slices for loading."""
         params = SliceExportParams(
-            file_path='/test/file.oct',
-            name='TestScan',
+            file_path="/test/file.oct",
+            name="TestScan",
             first_slice=1,
             last_slice=10,
             num_slices=5,
-            slice_direction='XZ',
+            slice_direction="XZ",
             db_min=20,
             db_max=80,
             refractive_index=1.0,
-            dispersion=('None', '0'),
+            dispersion=("None", "0"),
         )
 
         result = export_service.prepare_export(params, sample_config, sample_metadata)
 
         # For XZ, slices_to_load should equal selected_slices
-        np.testing.assert_array_equal(result['slices_to_load'], result['selected_slices'])
+        np.testing.assert_array_equal(result["slices_to_load"], result["selected_slices"])
 
     def test_prepare_export_slice_calculation_yz(
         self, export_service, sample_config, sample_metadata
     ):
         """Verify YZ direction loads all Y slices."""
         params = SliceExportParams(
-            file_path='/test/file.oct',
-            name='TestScan',
+            file_path="/test/file.oct",
+            name="TestScan",
             first_slice=1,
             last_slice=10,
             num_slices=5,
-            slice_direction='YZ',
+            slice_direction="YZ",
             db_min=20,
             db_max=80,
             refractive_index=1.0,
-            dispersion=('None', '0'),
+            dispersion=("None", "0"),
         )
 
         result = export_service.prepare_export(params, sample_config, sample_metadata)
 
         # For YZ, slices_to_load should span all Y dimension
-        assert len(result['slices_to_load']) == sample_metadata.dim_y
+        assert len(result["slices_to_load"]) == sample_metadata.dim_y
 
     def test_prepare_export_data_type_selection_raw(
         self, export_service, sample_params, sample_metadata
@@ -103,8 +102,8 @@ class TestExportPipelineWiring:
             resize_enabled=True,
             prefer_raw=True,
             advanced_filter=False,
-            export_format='.tiff',
-            averaging='coherent',
+            export_format=".tiff",
+            averaging="coherent",
             tukey_window_size=0.9,
             scale_enabled=True,
             scale_length_um=500,
@@ -113,7 +112,7 @@ class TestExportPipelineWiring:
 
         result = export_service.prepare_export(sample_params, config, sample_metadata)
 
-        assert result['sel_data_type'] == 'Raw'
+        assert result["sel_data_type"] == "Raw"
 
     def test_prepare_export_data_type_selection_processed(
         self, export_service, sample_params, sample_metadata
@@ -123,8 +122,8 @@ class TestExportPipelineWiring:
             resize_enabled=True,
             prefer_raw=False,
             advanced_filter=False,
-            export_format='.tiff',
-            averaging='coherent',
+            export_format=".tiff",
+            averaging="coherent",
             tukey_window_size=0.9,
             scale_enabled=True,
             scale_length_um=500,
@@ -133,7 +132,7 @@ class TestExportPipelineWiring:
 
         result = export_service.prepare_export(sample_params, config, sample_metadata)
 
-        assert result['sel_data_type'] == 'Processed'
+        assert result["sel_data_type"] == "Processed"
 
     def test_process_slice_returns_pil_image(
         self, export_service, sample_params, sample_config, sample_metadata, sample_3d_image_stack
@@ -157,16 +156,16 @@ class TestExportPipelineWiring:
     ):
         """Verify DPI calculation for XZ direction."""
         params = SliceExportParams(
-            file_path='/test/file.oct',
-            name='TestScan',
+            file_path="/test/file.oct",
+            name="TestScan",
             first_slice=1,
             last_slice=10,
             num_slices=5,
-            slice_direction='XZ',
+            slice_direction="XZ",
             db_min=20,
             db_max=80,
             refractive_index=1.0,
-            dispersion=('None', '0'),
+            dispersion=("None", "0"),
         )
 
         dpi = export_service.calculate_dpi(sample_grayscale_image, params, sample_metadata)
@@ -206,22 +205,22 @@ class TestConfigCollectionIntegration:
     def test_export_config_from_gui_state(self):
         """Verify ExportConfig.from_gui_state creates valid config."""
         config = export_config_from_gui_state(
-            resize_state='selected',
-            prefer_raw_state=('selected',),
-            advanced_filter_state='',
-            export_format='.tiff',
-            averaging='coherent',
-            tukey_size='0.9',
-            scale_state=('selected',),
-            scale_length='500',
-            scale_font_size='30',
+            resize_state="selected",
+            prefer_raw_state=("selected",),
+            advanced_filter_state="",
+            export_format=".tiff",
+            averaging="coherent",
+            tukey_size="0.9",
+            scale_state=("selected",),
+            scale_length="500",
+            scale_font_size="30",
         )
 
         assert config.resize_enabled is True
         assert config.prefer_raw is True
         assert config.advanced_filter is False
-        assert config.export_format == '.tiff'
-        assert config.averaging == 'coherent'
+        assert config.export_format == ".tiff"
+        assert config.averaging == "coherent"
         assert config.tukey_window_size == 0.9
         assert config.scale_enabled is True
         assert config.scale_length_um == 500
@@ -230,24 +229,24 @@ class TestConfigCollectionIntegration:
     def test_slice_params_from_treeview_row(self):
         """Verify SliceExportParams.from_treeview_row creates valid params."""
         params = slice_export_params_from_treeview_row(
-            path='/test/file.oct',
-            name='TestScan',
-            first='1',
-            last='10',
-            num_slices='5',
-            slice_dir='XZ',
-            db_min='20',
-            db_max='80',
-            refr_ind='1.0',
-            dispersion=('None', '0'),
+            path="/test/file.oct",
+            name="TestScan",
+            first="1",
+            last="10",
+            num_slices="5",
+            slice_dir="XZ",
+            db_min="20",
+            db_max="80",
+            refr_ind="1.0",
+            dispersion=("None", "0"),
         )
 
-        assert params.file_path == '/test/file.oct'
-        assert params.name == 'TestScan'
+        assert params.file_path == "/test/file.oct"
+        assert params.name == "TestScan"
         assert params.first_slice == 1
         assert params.last_slice == 10
         assert params.num_slices == 5
-        assert params.slice_direction == 'XZ'
+        assert params.slice_direction == "XZ"
         assert params.db_min == 20
         assert params.db_max == 80
         assert params.refractive_index == 1.0

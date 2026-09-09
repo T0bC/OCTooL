@@ -35,20 +35,18 @@ Author: Tobias Meissner
 ****
 """
 
-from typing import Optional, Tuple
-
 from app.logic.rexview.models import (
-    SettingsConfig,
     ExportConfig,
-    SliceExportParams,
-    QueueItem,
     ImageDisplayConfig,
+    QueueItem,
+    SettingsConfig,
+    SliceExportParams,
 )
 
 
-def _parse_optional_slice(value: Optional[str], placeholder: str) -> Optional[int]:
+def _parse_optional_slice(value: str | None, placeholder: str) -> int | None:
     """Parse an optional slice entry, treating placeholders/blanks as ``None``."""
-    if value and value not in (placeholder, ''):
+    if value and value not in (placeholder, ""):
         try:
             return int(value)
         except ValueError:
@@ -67,30 +65,30 @@ def settings_config_from_gui_state(
     scale_state: tuple,
     scale_length: str,
     scale_font_size: str,
-    first_slice: Optional[str] = None,
-    last_slice: Optional[str] = None,
-    num_equidistant_slices: str = '25',
+    first_slice: str | None = None,
+    last_slice: str | None = None,
+    num_equidistant_slices: str = "25",
     db_min: int = 30,
     db_max: int = 100,
-    dispersion_type: str = 'Quadratic',
-    dispersion_coefficient: str = '-100',
-    slice_direction: str = 'XZ',
-    refractive_index: str = '1.0',
+    dispersion_type: str = "Quadratic",
+    dispersion_coefficient: str = "-100",
+    slice_direction: str = "XZ",
+    refractive_index: str = "1.0",
 ) -> SettingsConfig:
     """Build a :class:`SettingsConfig` from tkinter widget states."""
     return SettingsConfig(
-        resize_enabled=resize_state == 'selected',
-        prefer_raw=prefer_raw_state == ('selected',),
-        advanced_filter=advanced_filter_state == 'selected',
+        resize_enabled=resize_state == "selected",
+        prefer_raw=prefer_raw_state == ("selected",),
+        advanced_filter=advanced_filter_state == "selected",
         export_format=export_format,
         averaging=averaging,
         tukey_window_size=float(tukey_size),
-        show_error=error_state == 'selected',
-        scale_enabled=scale_state == ('selected',),
+        show_error=error_state == "selected",
+        scale_enabled=scale_state == ("selected",),
         scale_length_um=int(scale_length),
         scale_font_size=int(scale_font_size),
-        first_slice=_parse_optional_slice(first_slice, 'First'),
-        last_slice=_parse_optional_slice(last_slice, 'Last'),
+        first_slice=_parse_optional_slice(first_slice, "First"),
+        last_slice=_parse_optional_slice(last_slice, "Last"),
         num_equidistant_slices=int(num_equidistant_slices),
         db_min=db_min,
         db_max=db_max,
@@ -111,17 +109,17 @@ def export_config_from_gui_state(
     scale_state: tuple,
     scale_length: str,
     scale_font_size: str,
-    worker_count: Optional[int] = None,
+    worker_count: int | None = None,
 ) -> ExportConfig:
     """Build an :class:`ExportConfig` from tkinter widget states."""
     return ExportConfig(
-        resize_enabled=resize_state == 'selected',
-        prefer_raw=prefer_raw_state == ('selected',),
-        advanced_filter=advanced_filter_state == 'selected',
+        resize_enabled=resize_state == "selected",
+        prefer_raw=prefer_raw_state == ("selected",),
+        advanced_filter=advanced_filter_state == "selected",
         export_format=export_format,
         averaging=averaging,
         tukey_window_size=float(tukey_size),
-        scale_enabled=scale_state == ('selected',),
+        scale_enabled=scale_state == ("selected",),
         scale_length_um=int(scale_length),
         scale_font_size=int(scale_font_size),
         worker_count=worker_count,
@@ -138,7 +136,7 @@ def slice_export_params_from_treeview_row(
     db_min: str,
     db_max: str,
     refr_ind: str,
-    dispersion: Tuple[str, str],
+    dispersion: tuple[str, str],
 ) -> SliceExportParams:
     """Build :class:`SliceExportParams` from TreeView row string values."""
     return SliceExportParams(
@@ -200,7 +198,7 @@ def image_display_config_from_gui_state(
     averaging: str,
     tukey_size: str,
     advanced_filter_state: str,
-    dispersion: Tuple[str, str],
+    dispersion: tuple[str, str],
     canvas_width: int,
     canvas_height: int,
 ) -> ImageDisplayConfig:
@@ -210,15 +208,15 @@ def image_display_config_from_gui_state(
         slice_direction=slice_direction,
         db_min=int(db_min),
         db_max=int(db_max),
-        resize_enabled=resize_state == 'selected',
+        resize_enabled=resize_state == "selected",
         refractive_index=float(refractive_index),
-        scale_enabled=scale_state == ('selected',),
+        scale_enabled=scale_state == ("selected",),
         scale_length_um=int(scale_length),
         scale_font_size=int(scale_font_size),
         data_type=data_type,
         averaging=averaging,
         tukey_window_size=float(tukey_size),
-        advanced_filter=advanced_filter_state == 'selected',
+        advanced_filter=advanced_filter_state == "selected",
         dispersion=dispersion,
         canvas_width=canvas_width,
         canvas_height=canvas_height,

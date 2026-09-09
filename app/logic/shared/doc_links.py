@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Documentation Link Opener.
 
@@ -37,21 +36,18 @@ Author: Tobias Meissner
 ****
 """
 
-
-
 import os
-import webbrowser
 import urllib.request
+import webbrowser
 
-from app.logic.shared.paths import resource_path
 from app.logic.shared.app_config import NETWORK_TIMEOUT
+from app.logic.shared.paths import resource_path
 
 
 def _url_reachable(url):
     """Quick reachability probe for the remote document. Never raises."""
     try:
-        req = urllib.request.Request(url, method="HEAD",
-                                     headers={"User-Agent": "OCTooL"})
+        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "OCTooL"})
         with urllib.request.urlopen(req, timeout=NETWORK_TIMEOUT) as resp:
             return 200 <= getattr(resp, "status", resp.getcode()) < 400
     except Exception:

@@ -4,6 +4,7 @@ Unit tests for app/logic/shared/logging_utils.py.
 Exercises log_error_to_file with a monkeypatched project root so the daily log
 file is written under tmp_path rather than the real project directory.
 """
+
 import os
 
 import pytest

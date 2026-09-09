@@ -1,6 +1,7 @@
 """
 Unit tests for app/logic/annolyze/display_service.py
 """
+
 import pytest
 
 from app.logic.annolyze.display_service import DisplayService

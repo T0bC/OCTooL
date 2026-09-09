@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze Annotate Images Panel.
 
@@ -35,21 +34,19 @@ Author: Tobias Meissner
 ****
 """
 
-
 import logging
-import tkinter as tk
-from tkinter import ttk
-from app.view.shared.tool_tip import Tooltip
-from PIL import Image, ImageTk, ImageDraw
-from app.view.shared.error_handler import handle_errors
-from app.view.shared.instruction_renderer import InstructionRenderer
-from pathlib import Path
 from datetime import datetime
-from app.view.shared.base_canvas_panel import BaseCanvasPanel
+from pathlib import Path
+
+from PIL import Image, ImageDraw
+
 from app.logic.annolyze.annotation_service import AnnotationService
 from app.logic.annolyze.data_service import DataService
+from app.view.shared.base_canvas_panel import BaseCanvasPanel
+from app.view.shared.error_handler import handle_errors
 
 logger = logging.getLogger(__name__)
+
 
 class annotatePanel(BaseCanvasPanel):
     @handle_errors("error in annotatePanel")
@@ -68,24 +65,24 @@ class annotatePanel(BaseCanvasPanel):
         self.dragging_point_index = None
         self.point_handles = []
         self.overlay_handles = []  # for non drawn overlays for boolean, categorial data types
-        
+
         # Drag an existing point check
         self.dragging_started = False
         self.hovered_point_index = None  # used for hover detection
-        
+
         # Initialize base class (sets up canvas, zoom, pan, navigation, etc.)
-        super().__init__(context, "anno_image", canvas_bg='#505050')
-    
+        super().__init__(context, "anno_image", canvas_bg="#505050")
+
     # ============================================================================
     # HOOK METHOD IMPLEMENTATIONS
     # ============================================================================
-    
+
     def setup_specialized_bindings(self):
         """Setup annotation-specific mouse and keyboard bindings."""
         # Annotation toggle (use base class method) - just 'h' key
         # Only bind to canvas (gets focus on mouse enter via base class)
         self.canvas.bind("<h>", self.toggle_overlays)
-        
+
         # Mouse bindings for annotation
         # Use add=True to preserve base class focus management
         self.canvas.bind("<ButtonPress-1>", self.on_drag_start, add=True)
@@ -93,23 +90,23 @@ class annotatePanel(BaseCanvasPanel):
         self.canvas.bind("<ButtonRelease-1>", self.on_drag_end)
         self.canvas.bind("<Motion>", self.on_mouse_motion)
         self.canvas.bind("<Button-3>", self.on_right_click)
-        
+
         # Curve fitting
         self.window.bind("<KeyPress-f>", self.fit_bezier_curve)
-    
+
     def get_instruction_key(self):
         """Return instruction key for analyze panel."""
-        return 'annolyze_getting_started'
-    
+        return "annolyze_getting_started"
+
     def get_image_list(self):
         """Return the image list from context."""
         return getattr(self.context, "image_list", [])
-    
+
     def draw_specialized_overlays(self):
         """Draw annotations and overlays after image rendering."""
         # Always draw annotations (draw_annotation handles visibility internally)
         self.draw_annotation()
-        
+
         # Only draw non-drawn overlays (boolean, categorical) if visible
         if self.overlays_visible:
             self.draw_overlay_annotations()
@@ -119,7 +116,11 @@ class annotatePanel(BaseCanvasPanel):
     # ============================================================================
     @handle_errors("annotatePanel.on_canvas_click")
     def on_canvas_click(self, event):
-        if not hasattr(self, 'rawImage') or self.rawImage is None or not hasattr(self, 'fitted_width'):
+        if (
+            not hasattr(self, "rawImage")
+            or self.rawImage is None
+            or not hasattr(self, "fitted_width")
+        ):
             return None  # Prevent crash
         if self.dragging_started:
             return  # Skip adding point if drag was initiated
@@ -128,19 +129,14 @@ class annotatePanel(BaseCanvasPanel):
         img_coords = self.canvas_to_image_coords(x, y)
         if img_coords is None or img_coords == (None, None):
             return
-        
+
         img_x, img_y = img_coords
 
         if not (0 <= img_x < self.rawImage.width and 0 <= img_y < self.rawImage.height):
             return
 
         if self.current_annotation is None:
-            self.current_annotation = {
-                "id": None,
-                "points": [],
-                "mode": "line",
-                "locked": False
-            }
+            self.current_annotation = {"id": None, "points": [], "mode": "line", "locked": False}
 
         self.current_annotation["points"].append((img_x, img_y))
         self.draw_annotation()
@@ -154,11 +150,11 @@ class annotatePanel(BaseCanvasPanel):
 
         # Build list of annotations to draw
         annotations = []
-        
+
         # Only include committed annotations if overlays are visible
         if self.overlays_visible:
             annotations = self.slice_annotations.get(index, [])
-        
+
         # Always include current annotation being edited (even if overlays are hidden)
         if self.current_annotation:
             annotations = annotations + [self.current_annotation]
@@ -174,39 +170,53 @@ class annotatePanel(BaseCanvasPanel):
             # Always draw the line/curve
             if len(canvas_pts) >= 2:
                 if mode == "line":
-                    for i in range(len(canvas_pts)-1):
-                        self.canvas.create_line(*canvas_pts[i], *canvas_pts[i+1],
-                                                fill=color,
-                                                width=2,
-                                                tags="annotation")
+                    for i in range(len(canvas_pts) - 1):
+                        self.canvas.create_line(
+                            *canvas_pts[i],
+                            *canvas_pts[i + 1],
+                            fill=color,
+                            width=2,
+                            tags="annotation",
+                        )
                 else:
                     # Spline mode: requires at least 4 points for cubic spline
                     # Fall back to line drawing if not enough points
                     if len(canvas_pts) < 4:
                         # Draw as lines with visual feedback that spline needs more points
-                        for i in range(len(canvas_pts)-1):
-                            self.canvas.create_line(*canvas_pts[i], *canvas_pts[i+1],
-                                                    fill=color,
-                                                    width=2,
-                                                    dash=(4, 2),  # Dashed line to indicate "waiting for spline"
-                                                    tags="annotation")
+                        for i in range(len(canvas_pts) - 1):
+                            self.canvas.create_line(
+                                *canvas_pts[i],
+                                *canvas_pts[i + 1],
+                                fill=color,
+                                width=2,
+                                dash=(4, 2),  # Dashed line to indicate "waiting for spline"
+                                tags="annotation",
+                            )
                     else:
                         # Spline points computed by the service (falls back to input on failure)
                         spline_pts = self.annotation_service.spline_points(canvas_pts, num=500)
                         for i in range(len(spline_pts) - 1):
-                            self.canvas.create_line(*spline_pts[i], *spline_pts[i + 1],
-                                                    fill=color,
-                                                    width=2,
-                                                    tags="annotation")
+                            self.canvas.create_line(
+                                *spline_pts[i],
+                                *spline_pts[i + 1],
+                                fill=color,
+                                width=2,
+                                tags="annotation",
+                            )
 
             # Only draw point handles if annotation is editable
             if not locked:
                 for x, y in canvas_pts:
-                    handle = self.canvas.create_oval(x-3, y-3, x+3, y+3,
-                                                     fill=color,
-                                                     outline="#ffff00",
-                                                     width=2,
-                                                     tags="annotation")
+                    handle = self.canvas.create_oval(
+                        x - 3,
+                        y - 3,
+                        x + 3,
+                        y + 3,
+                        fill=color,
+                        outline="#ffff00",
+                        width=2,
+                        tags="annotation",
+                    )
                     self.point_handles.append(handle)
 
     @handle_errors("annotatePanel.get_annotation_length")
@@ -243,10 +253,10 @@ class annotatePanel(BaseCanvasPanel):
             self.slice_annotations[index].append(self.current_annotation)
             committed_id = self.current_annotation["id"]
             self.current_annotation = None
-            
+
             # Mark this slice as modified for auto-save on navigation
             self.mark_slice_modified()
-            
+
             # Flash annotation will show the committed annotation briefly, then hide it
             self.flash_annotation()
             return committed_id
@@ -319,10 +329,7 @@ class annotatePanel(BaseCanvasPanel):
 
             # Create text temporarily to measure its width
             temp_id = self.canvas.create_text(
-                label_x, label_y,
-                text=text,
-                anchor="nw",
-                font=("Helvetica", 10)
+                label_x, label_y, text=text, anchor="nw", font=("Helvetica", 10)
             )
             bbox = self.canvas.bbox(temp_id)
             self.canvas.delete(temp_id)
@@ -337,12 +344,13 @@ class annotatePanel(BaseCanvasPanel):
         # Draw all labels
         for label_x, label_y, text, color in label_positions:
             text_id = self.canvas.create_text(
-                label_x, label_y,
+                label_x,
+                label_y,
                 text=text,
                 anchor="nw",
                 fill=color,
                 font=("Helvetica", 10),
-                tags="annotation"
+                tags="annotation",
             )
             self.overlay_handles.append(text_id)
 
@@ -376,23 +384,23 @@ class annotatePanel(BaseCanvasPanel):
         # Toggle mode for the current annotation only
         current_mode = self.current_annotation["mode"]
         num_points = len(self.current_annotation["points"])
-        
+
         if current_mode == "line":
             # Switching to spline mode
             if num_points < 4:
                 # Show user feedback about minimum points needed
-                if hasattr(self.context, 'status_bar') and self.context.status_bar:
+                if hasattr(self.context, "status_bar") and self.context.status_bar:
                     self.context.status_bar.update(
                         f"Spline mode activated. Add {4 - num_points} more point(s) for smooth curve (currently {num_points}/4)",
-                        level="info"
+                        level="info",
                     )
             self.current_annotation["mode"] = "spline"
         else:
             # Switching back to line mode
             self.current_annotation["mode"] = "line"
-            if hasattr(self.context, 'status_bar') and self.context.status_bar:
+            if hasattr(self.context, "status_bar") and self.context.status_bar:
                 self.context.status_bar.update("Line mode activated", level="info")
-        
+
         self.draw_annotation()
 
     # %% drag existing points to new position
@@ -403,7 +411,7 @@ class annotatePanel(BaseCanvasPanel):
         # Early return if no image is loaded
         if self.rawImage is None:
             return
-        
+
         x, y = event.x, event.y
 
         img_coords = self.canvas_to_image_coords(x, y)
@@ -416,12 +424,7 @@ class annotatePanel(BaseCanvasPanel):
             return
 
         if self.current_annotation is None:
-            self.current_annotation = {
-                "id": None,
-                "points": [],
-                "mode": "line",
-                "locked": False
-            }
+            self.current_annotation = {"id": None, "points": [], "mode": "line", "locked": False}
 
         self.current_annotation["points"].append((img_x, img_y))
         self.draw_annotation()
@@ -433,13 +436,13 @@ class annotatePanel(BaseCanvasPanel):
             # Early return if no image is loaded
             if self.rawImage is None:
                 return
-            
+
             self.dragging_started = True
 
             img_coords = self.canvas_to_image_coords(event.x, event.y)
             if img_coords is None or img_coords == (None, None):
                 return
-            
+
             img_x, img_y = img_coords
 
             # Constrain to image bounds
@@ -447,7 +450,9 @@ class annotatePanel(BaseCanvasPanel):
                 return
 
             # Update point in current annotation
-            if self.current_annotation and self.dragging_point_index < len(self.current_annotation["points"]):
+            if self.current_annotation and self.dragging_point_index < len(
+                self.current_annotation["points"]
+            ):
                 self.current_annotation["points"][self.dragging_point_index] = (img_x, img_y)
                 self.draw_annotation()
         else:
@@ -489,7 +494,7 @@ class annotatePanel(BaseCanvasPanel):
 
         self.dragging_started = False
 
-# %% hover over point logic
+    # %% hover over point logic
     @handle_errors("annotatePanel.get_point_near_cursor")
     def get_point_near_cursor(self, canvas_x, canvas_y, hit_radius=15):
         """
@@ -504,7 +509,9 @@ class annotatePanel(BaseCanvasPanel):
                 handle_center_y = (coords[1] + coords[3]) / 2
 
                 # Calculate distance from cursor to handle center
-                distance = ((canvas_x - handle_center_x) ** 2 + (canvas_y - handle_center_y) ** 2) ** 0.5
+                distance = (
+                    (canvas_x - handle_center_x) ** 2 + (canvas_y - handle_center_y) ** 2
+                ) ** 0.5
 
                 if distance <= hit_radius:
                     return i
@@ -518,7 +525,9 @@ class annotatePanel(BaseCanvasPanel):
         # If we're hovering over a different point than before
         if point_index != self.hovered_point_index:
             # Reset previous hovered point
-            if self.hovered_point_index is not None and self.hovered_point_index < len(self.point_handles):
+            if self.hovered_point_index is not None and self.hovered_point_index < len(
+                self.point_handles
+            ):
                 handle = self.point_handles[self.hovered_point_index]
                 self.canvas.itemconfig(handle, outline="red", width=1)
 
@@ -567,7 +576,6 @@ class annotatePanel(BaseCanvasPanel):
 
         self.draw_annotation()
 
-
     # ============================================================================
     # SAVE/LOAD ANNOTATIONS
     # ============================================================================
@@ -575,7 +583,9 @@ class annotatePanel(BaseCanvasPanel):
     def save_current_annotations(self):
         image_folder = getattr(self.context, "image_folder", None)
         if not image_folder or not isinstance(image_folder, Path):
-            self.context.status_bar.update("Image folder not set. Cannot save annotations.", level="warning")
+            self.context.status_bar.update(
+                "Image folder not set. Cannot save annotations.", level="warning"
+            )
             return
 
         json_path = image_folder / "annotations" / "annotations.json"
@@ -590,19 +600,19 @@ class annotatePanel(BaseCanvasPanel):
         )
         # Don't mark as modified on load - only when user adds new annotations
         self.draw_annotation()
-    
+
     # ============================================================================
     # IMAGE SAVING HOOK IMPLEMENTATIONS
     # ============================================================================
-    
+
     @handle_errors("annotatePanel.get_render_image_with_overlays")
     def get_render_image_with_overlays(self, slice_index):
         """
         Render annotations on image for saving.
-        
+
         Args:
             slice_index: 0-based slice index
-            
+
         Returns:
             PIL.Image: RGBA image with annotations drawn
         """
@@ -610,66 +620,70 @@ class annotatePanel(BaseCanvasPanel):
         if slice_index not in self.slice_annotations:
             logger.debug(f"Slice {slice_index} not in slice_annotations")
             return None
-        
+
         annotations = self.slice_annotations[slice_index]
         if not annotations:
             logger.debug(f"Slice {slice_index} has empty annotations list")
             return None
-        
+
         logger.info(f"Rendering {len(annotations)} annotation(s) for slice {slice_index}")
-        
+
         # Load the original image to get dimensions
         img_path = self.get_image_path(slice_index)
         if not img_path:
             return None
-        
+
         original_img = Image.open(img_path)
         width, height = original_img.size
-        
+
         # Create transparent overlay
-        overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
-        
+
         # Draw each annotation
         for ann in annotations:
             pts = ann["points"]
             mode = ann["mode"]
             color = ann.get("color", "#ffffb2")
-            
+
             # Convert hex color to RGBA via the service
             rgb_color = self.annotation_service.hex_to_rgba(color)
 
             if len(pts) >= 2:
                 if mode == "line" or len(pts) < 4:
                     # Draw as lines - convert tuples to proper format
-                    for i in range(len(pts)-1):
+                    for i in range(len(pts) - 1):
                         # Ensure coordinates are tuples of floats/ints
                         pt1 = tuple(pts[i]) if isinstance(pts[i], (list, tuple)) else pts[i]
-                        pt2 = tuple(pts[i+1]) if isinstance(pts[i+1], (list, tuple)) else pts[i+1]
+                        pt2 = (
+                            tuple(pts[i + 1])
+                            if isinstance(pts[i + 1], (list, tuple))
+                            else pts[i + 1]
+                        )
                         draw.line([pt1, pt2], fill=rgb_color, width=3)
                 else:
                     # Draw as spline (service falls back to input points on failure)
                     spline_pts = self.annotation_service.spline_points(pts, num=500)
-                    for i in range(len(spline_pts)-1):
-                        draw.line([spline_pts[i], spline_pts[i+1]], fill=rgb_color, width=3)
-                
+                    for i in range(len(spline_pts) - 1):
+                        draw.line([spline_pts[i], spline_pts[i + 1]], fill=rgb_color, width=3)
+
                 # Note: Control points are NOT drawn in saved images
                 # (only shown in interactive canvas for editing)
-        
+
         return overlay
-    
+
     @handle_errors("annotatePanel.get_metadata_text")
     def get_metadata_text(self):
         """
         Get metadata text from the metadata panel.
-        
+
         Returns:
             str: Formatted metadata text
         """
         metadata_panel = self.context.get_panel("metadata")
         if not metadata_panel:
             return None
-        
+
         try:
             operator = metadata_panel.operatorEntry.get()
             measurement = metadata_panel.measurementEntry.get()

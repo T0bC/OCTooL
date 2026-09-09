@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 RexView Pick Files Panel.
 
@@ -36,17 +35,16 @@ Author: Tobias Meissner
 ****
 """
 
-
 import tkinter as tk
-from tkinter import ttk
-from app.view.shared.tool_tip import Tooltip
-from tkinter import filedialog
-from pathlib import Path
 from concurrent import futures
-from app.view.shared.error_handler import handle_errors
-from app.logic.shared import oct_functions as octF
+from pathlib import Path
+from tkinter import filedialog, ttk
+
 from app.logic.rexview import FileDiscoveryService
+from app.logic.shared import oct_functions as octF
 from app.view.shared import dialogs
+from app.view.shared.error_handler import handle_errors
+from app.view.shared.tool_tip import Tooltip
 
 
 class pickFilesPanel:
@@ -58,7 +56,9 @@ class pickFilesPanel:
         self.globalSettings = self.context.get_panel("global_settings")
 
         # Initialize FileDiscoveryService with XML reader
-        self._file_discovery_service = FileDiscoveryService(xml_dict_reader=octF.getXMLDiscoveryInfo)
+        self._file_discovery_service = FileDiscoveryService(
+            xml_dict_reader=octF.getXMLDiscoveryInfo
+        )
 
         # Reused single-worker executor for the picker background thread.
         # max_workers=1 already serializes runs, so one long-lived executor
@@ -67,71 +67,81 @@ class pickFilesPanel:
         self.context.register_executor(self._picker_executor)
 
         # Add buttons and instructions here
-        self.pickFolderToolTip = 'Choose a folder whichs contains at least one OCT file. ' \
-            'All OCT Files inside this folder and subfolders are detected and added to the queue. \n\n' \
-            'To supply export range, equidistant slices and refractive index for an OCT file, place a ' \
-            'text file with the exact same name (e.g. scan.oct -> scan.txt) in the same folder. \n\n' \
-            'If no exact match exists, a text file named after the specimen base name (the file name ' \
-            'without a trailing run-counter/mode suffix, e.g. scan_0002_Mode3D.oct -> scan.txt) is used ' \
-            'instead, as long as it is unambiguous. If several scans in the folder share that base name ' \
-            'and none of them has its own exact-named text file, the base-name text file is applied only ' \
-            'to the scan with the highest run counter (the newest kept attempt); the others fall back to ' \
-            'default settings. \n\n' \
-            'Each line defines one export direction as VIEW:START-END:COUNT:RI (all parts but the range ' \
-            'are optional): \n' \
-            ' 33-444\n' \
-            ' 33-444:25\n' \
-            ' XZ:33-444:25\n' \
-            ' XZ:33-444:25:1.35'
-        self.pickFolderBtn = ttk.Button(self.frame,
-                                        text='Select Folder',
-                                        width=14,
-                                        command=lambda: self.globalPickerThread(1),
-                                        bootstyle="primary")
+        self.pickFolderToolTip = (
+            "Choose a folder whichs contains at least one OCT file. "
+            "All OCT Files inside this folder and subfolders are detected and added to the queue. \n\n"
+            "To supply export range, equidistant slices and refractive index for an OCT file, place a "
+            "text file with the exact same name (e.g. scan.oct -> scan.txt) in the same folder. \n\n"
+            "If no exact match exists, a text file named after the specimen base name (the file name "
+            "without a trailing run-counter/mode suffix, e.g. scan_0002_Mode3D.oct -> scan.txt) is used "
+            "instead, as long as it is unambiguous. If several scans in the folder share that base name "
+            "and none of them has its own exact-named text file, the base-name text file is applied only "
+            "to the scan with the highest run counter (the newest kept attempt); the others fall back to "
+            "default settings. \n\n"
+            "Each line defines one export direction as VIEW:START-END:COUNT:RI (all parts but the range "
+            "are optional): \n"
+            " 33-444\n"
+            " 33-444:25\n"
+            " XZ:33-444:25\n"
+            " XZ:33-444:25:1.35"
+        )
+        self.pickFolderBtn = ttk.Button(
+            self.frame,
+            text="Select Folder",
+            width=14,
+            command=lambda: self.globalPickerThread(1),
+            bootstyle="primary",
+        )
         self.pickFolderBtn.grid(row=0, column=0, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
-        Tooltip(self.pickFolderBtn, text=self.pickFolderToolTip , wraplength=200)
+        Tooltip(self.pickFolderBtn, text=self.pickFolderToolTip, wraplength=200)
 
-        self.button_label = ttk.Label(self.frame, text='  ')
+        self.button_label = ttk.Label(self.frame, text="  ")
         self.button_label.grid(row=0, column=1, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
 
-        self.pickFileToolTip = 'Choose a single OCT file.'
-        self.pickFileBtn = ttk.Button(self.frame,
-                                      text='Select File',
-                                      width=14,
-                                      command=lambda: self.globalPickerThread(0),
-                                      bootstyle="info")
+        self.pickFileToolTip = "Choose a single OCT file."
+        self.pickFileBtn = ttk.Button(
+            self.frame,
+            text="Select File",
+            width=14,
+            command=lambda: self.globalPickerThread(0),
+            bootstyle="info",
+        )
         self.pickFileBtn.grid(row=0, column=2, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
-        Tooltip(self.pickFileBtn, text=self.pickFileToolTip , wraplength=200)
+        Tooltip(self.pickFileBtn, text=self.pickFileToolTip, wraplength=200)
 
-        self.button_label = ttk.Label(self.frame, text='  ')
-        self.button_label.grid( row=0, column=3, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
+        self.button_label = ttk.Label(self.frame, text="  ")
+        self.button_label.grid(row=0, column=3, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
 
-        self.deleteFileToolTip = 'Delete one or more selected items in the queue.'
-        self.deleteEntryBtn = ttk.Button(self.frame,
-                                         text='Delete Entry(s)',
-                                         width=14,
-                                         command=self.treeView.deleteEntry,
-                                         bootstyle="warning")
+        self.deleteFileToolTip = "Delete one or more selected items in the queue."
+        self.deleteEntryBtn = ttk.Button(
+            self.frame,
+            text="Delete Entry(s)",
+            width=14,
+            command=self.treeView.deleteEntry,
+            bootstyle="warning",
+        )
         self.deleteEntryBtn.grid(row=0, column=4, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
-        Tooltip(self.deleteEntryBtn, text=self.deleteFileToolTip , wraplength=200)
+        Tooltip(self.deleteEntryBtn, text=self.deleteFileToolTip, wraplength=200)
 
-        self.button_label = ttk.Label(self.frame, text='  ')
-        self.button_label.grid( row=0, column=5, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
+        self.button_label = ttk.Label(self.frame, text="  ")
+        self.button_label.grid(row=0, column=5, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
 
-        self.showBtnToolTip = 'Select a OCT-Scan from the queue and display it.'
-        self.showBtn = ttk.Button(self.frame,
-                                  text='Show',
-                                  width=14,
-                                  command=lambda: self.context.get_panel("rex_image").dispImageInCanvas(),
-                                  bootstyle="success")
+        self.showBtnToolTip = "Select a OCT-Scan from the queue and display it."
+        self.showBtn = ttk.Button(
+            self.frame,
+            text="Show",
+            width=14,
+            command=lambda: self.context.get_panel("rex_image").dispImageInCanvas(),
+            bootstyle="success",
+        )
         self.showBtn.grid(row=0, column=6, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
-        Tooltip(self.showBtn, text=self.showBtnToolTip , wraplength=200)
+        Tooltip(self.showBtn, text=self.showBtnToolTip, wraplength=200)
 
-        #%% folder/file Picker
+        # %% folder/file Picker
 
     @handle_errors("pickFilesPanel")
     def globalPickerThread(self, var):
-        '''
+        """
         To prevent GUII from freezing during a loop or time consuming function
         call, we need to set up threads.
         In this thread we call the mainRoutines.
@@ -140,16 +150,15 @@ class pickFilesPanel:
         -------
         None.
 
-        '''
-        #print('starting')
+        """
+        # print('starting')
         self.running = 0
         # run on the shared background executor to keep UI responsive
         self._picker_executor.submit(self.globalPicker, var)
 
-
     @handle_errors("pickFilesPanel")
     def globalPicker(self, isFolder: bool):
-        '''
+        """
         Uses file open or ask directory dialog to list oct file(s) in the
         directory.
 
@@ -163,12 +172,13 @@ class pickFilesPanel:
         -------
         None
 
-        '''
+        """
 
         global dir
         if isFolder == 1:
-            selected_path = filedialog.askdirectory(initialdir=dir,
-                                                     title='Select the Folder Containing Your OCT Files!')
+            selected_path = filedialog.askdirectory(
+                initialdir=dir, title="Select the Folder Containing Your OCT Files!"
+            )
             if not selected_path:
                 return
 
@@ -179,9 +189,11 @@ class pickFilesPanel:
                 dialogs.show_info(
                     self.root,
                     "No OCT Files Found",
-                    f"No OCT files were found in:\n{self.folderPath}\n\nPlease choose another folder."
+                    f"No OCT files were found in:\n{self.folderPath}\n\nPlease choose another folder.",
                 )
-                self.context.safe_status_update("No OCT files found in selected folder.", level="warning")
+                self.context.safe_status_update(
+                    "No OCT files found in selected folder.", level="warning"
+                )
                 return
 
             self.tmpFileList = []
@@ -196,11 +208,11 @@ class pickFilesPanel:
                 return
 
         else:
-
-            selected_path = filedialog.askopenfilename(initialdir=dir,
-                                                        title='Select One OCT File!',
-                                                        filetypes=(('All Files', '*.*'),
-                                                                   ('OCT Files', '*.oct')))
+            selected_path = filedialog.askopenfilename(
+                initialdir=dir,
+                title="Select One OCT File!",
+                filetypes=(("All Files", "*.*"), ("OCT Files", "*.oct")),
+            )
 
             if not selected_path:
                 return
@@ -211,7 +223,7 @@ class pickFilesPanel:
                 dialogs.show_error(
                     self.root,
                     "File Not Found",
-                    f"The selected file could not be located:\n{self.filePath}"
+                    f"The selected file could not be located:\n{self.filePath}",
                 )
                 self.context.safe_status_update("Selected file not found.", level="error")
                 return
@@ -226,17 +238,16 @@ class pickFilesPanel:
         self.context.safe_status_update(f"Added {count} item(s) to export queue.", level="success")
         self.root.destroy
 
-
-    #%%
+    # %%
     def _collect_oct_files(self, folder_path: Path):
         """
         Collect OCT files from a directory using FileDiscoveryService.
-        
+
         Parameters
         ----------
         folder_path : Path
             Directory to scan for OCT files
-            
+
         Returns
         -------
         list
@@ -250,33 +261,37 @@ class pickFilesPanel:
         self._progress_total = total_files
         self._progress_step = max(1, total_files // 100)
         self.popup = tk.Toplevel(self.root)
-        tk.Label(self.popup, text="Searching for OCT files in selected folder. This might take a while.").grid(row=0, column=0)
+        tk.Label(
+            self.popup, text="Searching for OCT files in selected folder. This might take a while."
+        ).grid(row=0, column=0)
         self.progress_var = tk.DoubleVar(value=0)
-        self.progressBar = ttk.Progressbar(self.popup,
-                                           variable=self.progress_var,
-                                           maximum=total_files,
-                                           orient='horizontal',
-                                           mode='determinate',
-                                           length=280)
+        self.progressBar = ttk.Progressbar(
+            self.popup,
+            variable=self.progress_var,
+            maximum=total_files,
+            orient="horizontal",
+            mode="determinate",
+            length=280,
+        )
         self.progressBar.grid(row=1, column=0)
-        self.cancelButton = ttk.Button(self.popup, text='Cancel!', command=self.breakAll)
+        self.cancelButton = ttk.Button(self.popup, text="Cancel!", command=self.breakAll)
         self.cancelButton.grid(column=0, row=2, padx=10, pady=10, sticky=tk.E)
         self.popup.pack_slaves()
 
     def _update_progress_popup(self, value: int):
-        if hasattr(self, 'progress_var'):
+        if hasattr(self, "progress_var"):
             self.progress_var.set(value)
         # A full Tk redraw per file is expensive and dominates the loop for
         # large folders. Throttle to every Nth file (and always the last one).
-        total = getattr(self, '_progress_total', None)
-        step = getattr(self, '_progress_step', 1)
+        total = getattr(self, "_progress_total", None)
+        step = getattr(self, "_progress_step", 1)
         if value % step != 0 and value != total:
             return
-        if hasattr(self, 'popup') and self.popup.winfo_exists():
+        if hasattr(self, "popup") and self.popup.winfo_exists():
             self.popup.update()
 
     def _destroy_progress_popup(self):
-        if hasattr(self, 'popup'):
+        if hasattr(self, "popup"):
             try:
                 if self.popup.winfo_exists():
                     self.popup.destroy()
@@ -337,14 +352,14 @@ class pickFilesPanel:
     def _build_entries_for_file(self, file_path: Path):
         """
         Build queue entries for a single OCT file.
-        
+
         Uses FileDiscoveryService for metadata extraction and default values.
-        
+
         Parameters
         ----------
         file_path : Path
             Path to OCT file
-            
+
         Returns
         -------
         list
@@ -365,7 +380,7 @@ class pickFilesPanel:
 
         return [list(item.to_treeview_values()) for item in items]
 
-    def getFilePath(self)->str:
+    def getFilePath(self) -> str:
         """
 
 
@@ -377,17 +392,17 @@ class pickFilesPanel:
         """
         return self.filePath
 
-# %%
+    # %%
 
     def breakAll(self):
-        '''
+        """
         Var for MainRoutine to break the export cycle.
 
         Returns
         -------
         None.
 
-        '''
+        """
         self.running = 1
         self.context.safe_status_update("File scan cancelled.", level="warning")
         self.popup.destroy()

@@ -4,37 +4,37 @@ Unit tests for app/logic/carlquant/carl_quant_core.py numeric helpers.
 Focuses on the pure fitting/detection helpers and their guarded fallback
 branches using small synthetic profiles (no real instrument data, no GUI).
 """
+
 import numpy as np
 import pytest
 from PIL import Image
 
 from app.logic.carlquant import carl_quant_core as core
 from app.logic.carlquant.carl_quant_core import (
-    knee_pt,
-    exp2_model,
-    sigmoid_model,
-    fit_exp2_to_profile,
-    detect_depth_sigmoid_fit,
-    compute_stable_combined_depth,
-    select_depth_method,
-    is_method_stable,
     NO_LESION_METHOD,
+    DepthDetectionMethod,
+    calculate_air_threshold,
     cluster_surface_points,
-    fit_surface_curve,
+    compute_stable_combined_depth,
+    detect_cavitation,
+    detect_depth_sigmoid_fit,
+    exp2_model,
+    find_surface_peak,
+    fit_exp2_to_profile,
     fit_lesion_depth_curve_robust,
     fit_reference_surface,
-    detect_cavitation,
-    find_surface_peak,
-    calculate_air_threshold,
+    fit_surface_curve,
+    is_method_stable,
+    knee_pt,
     process_slice_parallel,
-    DepthDetectionMethod,
+    sigmoid_model,
 )
-from app.logic.carlquant.specimen_model import RegionConfig, Surface, AirConfig
-
+from app.logic.carlquant.specimen_model import AirConfig, RegionConfig, Surface
 
 # ---------------------------------------------------------------------------
 # Simple math models
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_exp2_model():
@@ -53,6 +53,7 @@ def test_sigmoid_model_monotonic_decay():
 # ---------------------------------------------------------------------------
 # knee_pt
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_knee_pt_too_few_points():
@@ -74,6 +75,7 @@ def test_knee_pt_finds_bend():
 # fit_exp2_to_profile
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 def test_fit_exp2_success():
     depth = np.arange(60, dtype=float)
@@ -94,6 +96,7 @@ def test_fit_exp2_failure_returns_none():
 # detect_depth_sigmoid_fit
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 def test_sigmoid_fit_insufficient_data():
     depth, idx, meta = detect_depth_sigmoid_fit(np.array([1, 2, 3]), np.array([0, 1, 2]))
@@ -113,6 +116,7 @@ def test_sigmoid_fit_success():
 # ---------------------------------------------------------------------------
 # is_method_stable
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_stability_needs_at_least_three_columns():
@@ -143,6 +147,7 @@ def test_stability_threshold_is_the_boundary():
 # compute_stable_combined_depth
 # ---------------------------------------------------------------------------
 
+
 def _ldd(knee, inflection, shoulder, half_span=np.nan, n_columns=5):
     """A slice whose every column carries the same depths.
 
@@ -166,8 +171,7 @@ def _ldd(knee, inflection, shoulder, half_span=np.nan, n_columns=5):
 
 def _ldd_scattered(method_key, spread, n_columns=5, **fixed):
     """A slice where one method wobbles laterally and the rest hold steady."""
-    ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan,
-               n_columns=n_columns)
+    ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan, n_columns=n_columns)
     for i, x in enumerate(sorted(ldd)):
         metadata = ldd[x]["detection_metadata"]
         metadata.update(fixed)
@@ -195,9 +199,11 @@ def test_half_span_wins_when_stable():
 def test_shoulder_never_contributes():
     # The shoulder is deliberately not a term; a wild value must not move it.
     base, _ = compute_stable_combined_depth(
-        _ldd(knee=60.0, inflection=20.0, shoulder=90.0, half_span=40.0), ascan_x=0)
+        _ldd(knee=60.0, inflection=20.0, shoulder=90.0, half_span=40.0), ascan_x=0
+    )
     wild, _ = compute_stable_combined_depth(
-        _ldd(knee=60.0, inflection=20.0, shoulder=9000.0, half_span=40.0), ascan_x=0)
+        _ldd(knee=60.0, inflection=20.0, shoulder=9000.0, half_span=40.0), ascan_x=0
+    )
     assert base == pytest.approx(wild)
 
 
@@ -205,8 +211,7 @@ def test_shoulder_never_contributes():
 def test_unstable_half_span_falls_back_to_mean_of_two():
     # Knee reads deep and inflection shallow, so their mean cancels the two
     # biases -- the only case where terms are averaged.
-    ldd = _ldd_scattered("half_span_depth", spread=40.0,
-                         knee_depth=60.0, inflection_depth=20.0)
+    ldd = _ldd_scattered("half_span_depth", spread=40.0, knee_depth=60.0, inflection_depth=20.0)
     depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
     assert depth == pytest.approx(40.0)
     assert method == "mean+knee_point+sigmoid_fit"
@@ -216,8 +221,7 @@ def test_unstable_half_span_falls_back_to_mean_of_two():
 def test_falls_through_to_knee_when_inflection_also_unstable():
     ldd = _ldd_scattered("half_span_depth", spread=40.0, knee_depth=55.0)
     for i, x in enumerate(sorted(ldd)):
-        ldd[x]["detection_metadata"]["inflection_depth"] = (
-            10.0 + (40.0 if i % 2 else -40.0))
+        ldd[x]["detection_metadata"]["inflection_depth"] = 10.0 + (40.0 if i % 2 else -40.0)
     depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
     assert depth == pytest.approx(55.0)
     assert method == "knee_point"
@@ -228,8 +232,7 @@ def test_inflection_alone_is_the_last_resort():
     # Biased shallow by design, but a biased depth beats reporting none.
     ldd = _ldd_scattered("half_span_depth", spread=40.0, inflection_depth=18.0)
     for i, x in enumerate(sorted(ldd)):
-        ldd[x]["detection_metadata"]["knee_depth"] = (
-            70.0 + (40.0 if i % 2 else -40.0))
+        ldd[x]["detection_metadata"]["knee_depth"] = 70.0 + (40.0 if i % 2 else -40.0)
     depth, method = compute_stable_combined_depth(ldd, ascan_x=0)
     assert depth == pytest.approx(18.0)
     assert method == "sigmoid_fit"
@@ -265,19 +268,18 @@ def test_combined_depth_offset_shifts_one_to_one(offset):
 # Half-span crossing
 # ---------------------------------------------------------------------------
 
+
 def _step_profile(edge=50, high=200.0, low=60.0, length=200):
     """Bright plateau, linear decay, then background."""
     decay = np.linspace(high, low, 20)
-    return np.concatenate([
-        np.full(edge, high), decay, np.full(length - edge - decay.size, low)
-    ])
+    return np.concatenate([np.full(edge, high), decay, np.full(length - edge - decay.size, low)])
 
 
 @pytest.mark.unit
 def test_half_span_finds_the_crossing():
     depth, meta = core.detect_depth_half_span(_step_profile(edge=50))
     assert meta["success"]
-    assert 50 <= depth <= 75          # within the decay, not before it
+    assert 50 <= depth <= 75  # within the decay, not before it
     assert meta["span"] == pytest.approx(140.0, abs=5.0)
 
 
@@ -316,7 +318,8 @@ def test_half_span_ignores_single_speckle_dip():
 @pytest.mark.unit
 def test_half_span_fraction_falls_with_contrast():
     assert core.half_span_fraction(core.HALF_SPAN_REFERENCE_SPAN) == pytest.approx(
-        core.HALF_SPAN_BASE_FRACTION)
+        core.HALF_SPAN_BASE_FRACTION
+    )
     assert core.half_span_fraction(200.0) < core.HALF_SPAN_BASE_FRACTION
     assert core.half_span_fraction(20.0) > core.HALF_SPAN_BASE_FRACTION
 
@@ -341,6 +344,7 @@ def test_half_span_higher_fraction_reads_shallower():
 # No-lesion gate
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 def test_no_lesion_gate_quiet_on_smooth_boundary():
     # A real boundary is laterally smooth.
@@ -355,7 +359,7 @@ def test_no_lesion_gate_fires_on_scatter():
 
 @pytest.mark.unit
 def test_no_lesion_gate_threshold_is_the_boundary():
-    values = [0.0, 20.0] * 50          # SD == 10
+    values = [0.0, 20.0] * 50  # SD == 10
     assert not core.is_no_lesion_slice(values, no_lesion_sd=15.0)
     assert core.is_no_lesion_slice(values, no_lesion_sd=5.0)
 
@@ -377,6 +381,7 @@ def test_no_lesion_gate_quiet_on_perfectly_flat_boundary():
 # cluster_surface_points
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 def test_cluster_surface_points_empty():
     pts, labels = cluster_surface_points([])
@@ -394,6 +399,7 @@ def test_cluster_surface_points_dense_cluster():
 # ---------------------------------------------------------------------------
 # fit_surface_curve / fit_lesion_depth_curve_robust / fit_reference_surface
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_fit_surface_curve_too_few_points():
@@ -426,8 +432,9 @@ def test_fit_lesion_depth_curve_all_outliers_fallback():
     # Alternating values create large residuals -> inlier_mask may drop below 4,
     # exercising the median-filtered fallback branch.
     pts = [(x, 100 if x % 2 == 0 else 200) for x in range(20)]
-    curve = fit_lesion_depth_curve_robust(pts, 0, 20, outlier_threshold=0.1,
-                                          curve_name="smoothed_depth")
+    curve = fit_lesion_depth_curve_robust(
+        pts, 0, 20, outlier_threshold=0.1, curve_name="smoothed_depth"
+    )
     assert isinstance(curve, dict)
 
 
@@ -454,6 +461,7 @@ def test_fit_reference_surface_success():
 # detect_cavitation
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 def test_detect_cavitation_empty_inputs():
     assert detect_cavitation([], [], None) == (False, 0.0)
@@ -471,8 +479,7 @@ def test_detect_cavitation_detected():
     # Primary surface dips well below reference across the lesion span.
     primary = [(x, 150) for x in range(60)]
     reference = [(x, 100) for x in range(60)]
-    is_cav, depth = detect_cavitation(primary, reference, region,
-                                      cavitation_threshold=10.0)
+    is_cav, depth = detect_cavitation(primary, reference, region, cavitation_threshold=10.0)
     assert is_cav is True
     assert depth == pytest.approx(50.0)
 
@@ -480,6 +487,7 @@ def test_detect_cavitation_detected():
 # ---------------------------------------------------------------------------
 # find_surface_peak / calculate_air_threshold
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.unit
 def test_find_surface_peak_empty_region():
@@ -514,6 +522,7 @@ def test_calculate_air_threshold_with_region():
 # process_slice_parallel (module-level worker)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.unit
 def test_process_slice_parallel_no_region(tmp_path):
     img = np.full((128, 128), 10, dtype=np.uint8)
@@ -522,7 +531,12 @@ def test_process_slice_parallel_no_region(tmp_path):
     Image.fromarray(img, mode="L").save(path)
 
     slice_idx, region_stats, surface, lesion_depth, error = process_slice_parallel(
-        0, str(path), None, None, num_sound=2, num_lesion=2,
+        0,
+        str(path),
+        None,
+        None,
+        num_sound=2,
+        num_lesion=2,
     )
     assert error is None
     assert slice_idx == 0
@@ -533,7 +547,12 @@ def test_process_slice_parallel_no_region(tmp_path):
 @pytest.mark.unit
 def test_process_slice_parallel_bad_path_returns_error():
     slice_idx, region_stats, surface, lesion_depth, error = process_slice_parallel(
-        3, "does_not_exist.png", None, None, num_sound=1, num_lesion=1,
+        3,
+        "does_not_exist.png",
+        None,
+        None,
+        num_sound=1,
+        num_lesion=1,
     )
     assert slice_idx == 3
     assert error is not None
@@ -544,15 +563,15 @@ def test_process_slice_parallel_bad_path_returns_error():
 # calculate_lesion_depth end to end (synthetic images)
 # ---------------------------------------------------------------------------
 
-def _synthetic_slice(lesion_thickness=40, width=160, height=220, noise=0.0,
-                     seed=0):
+
+def _synthetic_slice(lesion_thickness=40, width=160, height=220, noise=0.0, seed=0):
     """Bright surface, a bright lesion band, then darker sound enamel."""
     rng = np.random.default_rng(seed)
     surface_y = 40
     img = np.full((height, width), 30.0)
-    img[surface_y:surface_y + 3, :] = 255.0
-    img[surface_y + 3:surface_y + 3 + lesion_thickness, :] = 200.0
-    img[surface_y + 3 + lesion_thickness:, :] = 60.0
+    img[surface_y : surface_y + 3, :] = 255.0
+    img[surface_y + 3 : surface_y + 3 + lesion_thickness, :] = 200.0
+    img[surface_y + 3 + lesion_thickness :, :] = 60.0
     if noise:
         img += rng.normal(0.0, noise, img.shape)
     img = np.clip(img, 0, 255).astype(np.uint8)
@@ -576,12 +595,12 @@ def _synthetic_slice(lesion_thickness=40, width=160, height=220, noise=0.0,
 def test_calculate_lesion_depth_emits_half_span_metadata():
     img, surface, region = _synthetic_slice()
     result = core.calculate_lesion_depth(
-        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN)
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+    )
     assert result is not None
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
     # shoulder_depth is still emitted: renderers and stored configs read it.
-    for key in ("half_span_depth", "knee_depth", "inflection_depth",
-                "shoulder_depth"):
+    for key in ("half_span_depth", "knee_depth", "inflection_depth", "shoulder_depth"):
         assert key in meta
     assert meta["depth_method_used"] == "half_span"
 
@@ -611,15 +630,19 @@ def test_half_span_construction_terms_are_stored():
     """
     img, surface, region = _synthetic_slice()
     result = core.calculate_lesion_depth(
-        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN)
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+    )
     assert result is not None
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
-    for key in ("half_span_background", "half_span_peak",
-                "half_span_threshold", "half_span_smooth_window"):
+    for key in (
+        "half_span_background",
+        "half_span_peak",
+        "half_span_threshold",
+        "half_span_smooth_window",
+    ):
         assert key in meta, key
     # The threshold has to sit between the two levels that define it.
-    assert (meta["half_span_background"] <= meta["half_span_threshold"]
-            <= meta["half_span_peak"])
+    assert meta["half_span_background"] <= meta["half_span_threshold"] <= meta["half_span_peak"]
 
 
 @pytest.mark.unit
@@ -628,10 +651,10 @@ def test_stored_threshold_matches_background_plus_fraction_of_span():
     # than being recorded from some other pass over the profile.
     img, surface, region = _synthetic_slice()
     result = core.calculate_lesion_depth(
-        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN)
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+    )
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
-    expected = (meta["half_span_background"]
-                + meta["half_span_fraction"] * meta["half_span_span"])
+    expected = meta["half_span_background"] + meta["half_span_fraction"] * meta["half_span_span"]
     assert meta["half_span_threshold"] == pytest.approx(expected)
 
 
@@ -649,8 +672,8 @@ def test_calculate_lesion_depth_tracks_lesion_thickness():
     def depth_for(thickness):
         img, surface, region = _synthetic_slice(lesion_thickness=thickness)
         return core.calculate_lesion_depth(
-            surface, region, img,
-            detection_method=DepthDetectionMethod.COMBINED_MEAN)
+            surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+        )
 
     thin, thick = depth_for(25), depth_for(70)
     assert thin is not None and thick is not None
@@ -661,11 +684,11 @@ def test_calculate_lesion_depth_tracks_lesion_thickness():
 def test_calculate_lesion_depth_offset_shifts_result():
     img, surface, region = _synthetic_slice()
     base = core.calculate_lesion_depth(
-        surface, region, img,
-        detection_method=DepthDetectionMethod.COMBINED_MEAN)
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+    )
     shifted = core.calculate_lesion_depth(
-        surface, region, img, depth_offset=10.0,
-        detection_method=DepthDetectionMethod.COMBINED_MEAN)
+        surface, region, img, depth_offset=10.0, detection_method=DepthDetectionMethod.COMBINED_MEAN
+    )
     assert base is not None and shifted is not None
     # Offset is applied before the refractive-index division.
     expected = 10.0 / core.TOOTH_REFRACTIVE_INDEX
@@ -678,7 +701,7 @@ def test_calculate_lesion_depth_no_lesion_gate_reports_surface():
     rng = np.random.default_rng(3)
     width, height, surface_y = 160, 220, 40
     img = np.clip(rng.normal(120.0, 45.0, (height, width)), 0, 255)
-    img[surface_y:surface_y + 3, :] = 255.0
+    img[surface_y : surface_y + 3, :] = 255.0
     img = img.astype(np.uint8)
     surface = Surface(
         raw_points=[(x, surface_y) for x in range(width)],
@@ -686,13 +709,19 @@ def test_calculate_lesion_depth_no_lesion_gate_reports_surface():
     )
     region = RegionConfig(
         slice_index=0,
-        specimen_start=(0, surface_y), lesion_start=(20, surface_y),
-        lesion_end=(width - 20, surface_y), tooth_end=(width - 1, surface_y),
+        specimen_start=(0, surface_y),
+        lesion_start=(20, surface_y),
+        lesion_end=(width - 20, surface_y),
+        tooth_end=(width - 1, surface_y),
         buffer_pixels=0,
     )
     result = core.calculate_lesion_depth(
-        surface, region, img, no_lesion_sd=1.0,   # force the gate
-        detection_method=DepthDetectionMethod.COMBINED_MEAN)
+        surface,
+        region,
+        img,
+        no_lesion_sd=1.0,  # force the gate
+        detection_method=DepthDetectionMethod.COMBINED_MEAN,
+    )
     assert result is not None
     assert result.mean_depth == pytest.approx(0.0)
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
@@ -703,8 +732,8 @@ def test_calculate_lesion_depth_no_lesion_gate_reports_surface():
 def test_calculate_lesion_depth_gate_quiet_on_clean_lesion():
     img, surface, region = _synthetic_slice(noise=6.0)
     result = core.calculate_lesion_depth(
-        surface, region, img,
-        detection_method=DepthDetectionMethod.COMBINED_MEAN)
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+    )
     assert result is not None
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
     assert meta["depth_method_used"] != "no_lesion_surface"

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Unit tests for the validation-mode marking logic in image_viewer_panel.
 
 The panel is tkinter-bound, so these tests exercise its mark-editing methods
@@ -8,7 +7,7 @@ That covers the parts that decide *what is stored* -- adding, deleting,
 undoing, clearing, and the specimen-switch guard -- which is where a bug would
 silently corrupt ground truth.
 """
-from pathlib import Path
+
 from types import SimpleNamespace
 
 import pytest
@@ -208,12 +207,12 @@ def test_mismatched_ground_truth_file_is_refused(tmp_path):
     panel, specimen = make_panel(tmp_path)
     path = gt.ground_truth_path(specimen)
     path.parent.mkdir(parents=True)
-    path.write_text('{"specimen_id": "some_other_specimen", '
-                    '"lesion_end": {"0": [[1.0, 2.0]]}}')
+    path.write_text('{"specimen_id": "some_other_specimen", "lesion_end": {"0": [[1.0, 2.0]]}}')
 
     messages = []
     panel.context.status_bar = SimpleNamespace(
-        update=lambda text, level=None: messages.append((text, level)))
+        update=lambda text, level=None: messages.append((text, level))
+    )
 
     panel.load_ground_truth_marks()
 
@@ -248,8 +247,7 @@ class FakeAScanViewer:
 def attach_ascan_viewer(panel, viewer):
     """Give the panel a results panel exposing an active A-Scan viewer."""
     results_panel = SimpleNamespace(active_ascan_viewer=viewer)
-    panel.context.get_panel = lambda name: (
-        results_panel if name == "carl_results" else None)
+    panel.context.get_panel = lambda name: results_panel if name == "carl_results" else None
 
 
 @pytest.mark.unit
@@ -440,8 +438,9 @@ def test_lesion_bounds_pad_into_the_sound_enamel(tmp_path):
 def test_lesion_bounds_are_clamped_to_the_image(tmp_path):
     """GIVEN a lesion at the image edge, WHEN bounding, THEN padding is clipped."""
     panel, specimen = make_indicator_panel(tmp_path)
-    add_region_config(specimen, lesion_start=10,
-                      lesion_end=make_indicator_panel(tmp_path)[0].rawImage.width - 10)
+    add_region_config(
+        specimen, lesion_start=10, lesion_end=make_indicator_panel(tmp_path)[0].rawImage.width - 10
+    )
 
     x_start, x_end = panel.lesion_region_bounds(specimen, 0)
 
@@ -553,9 +552,7 @@ def test_overlays_survive_a_partially_initialised_panel():
 def add_surface(specimen, slice_index=0, surface_y=100):
     """Give a specimen a detected surface, as the zoom framing reads it."""
     curves = {"interpolated_surface": [(x, surface_y) for x in range(300, 900, 50)]}
-    specimen.results = {
-        slice_index: SimpleNamespace(surface=SimpleNamespace(fitted_curves=curves))
-    }
+    specimen.results = {slice_index: SimpleNamespace(surface=SimpleNamespace(fitted_curves=curves))}
     return specimen
 
 

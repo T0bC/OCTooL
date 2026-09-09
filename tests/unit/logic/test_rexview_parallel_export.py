@@ -4,23 +4,24 @@ Unit tests for app/logic/rexview/parallel_export.py
 Tests the ParallelExportCoordinator logic without spawning real processes by
 injecting a fake executor factory.
 """
+
 from concurrent.futures import Future
 from unittest.mock import Mock
 
 import pytest
 
+from app.logic.rexview.models import ExportConfig, ExportResult, SliceExportParams
 from app.logic.rexview.parallel_export import ParallelExportCoordinator
-from app.logic.rexview.models import ExportConfig, SliceExportParams, ExportResult
 
 
-def _params(path='C:/data/scan.oct'):
+def _params(path="C:/data/scan.oct"):
     return SliceExportParams(
         file_path=path,
-        name='S',
+        name="S",
         first_slice=1,
         last_slice=10,
         num_slices=5,
-        slice_direction='XZ',
+        slice_direction="XZ",
     )
 
 
@@ -87,16 +88,20 @@ class TestComputeWorkerCount:
     def test_memory_cap_limits_workers(self):
         # 5 GB available, 2 GB per worker -> at most 2 workers despite 7 cpu cores.
         coord = ParallelExportCoordinator(
-            cpu_count=8, max_workers_cap=16,
-            available_memory_gb=5.0, gb_per_worker=2.0,
+            cpu_count=8,
+            max_workers_cap=16,
+            available_memory_gb=5.0,
+            gb_per_worker=2.0,
         )
         assert coord.compute_worker_count(queue_len=20) == 2
 
     @pytest.mark.unit
     def test_memory_cap_never_below_one(self):
         coord = ParallelExportCoordinator(
-            cpu_count=8, max_workers_cap=16,
-            available_memory_gb=1.0, gb_per_worker=8.0,
+            cpu_count=8,
+            max_workers_cap=16,
+            available_memory_gb=1.0,
+            gb_per_worker=8.0,
         )
         assert coord.compute_worker_count(queue_len=20) == 1
 
@@ -105,13 +110,15 @@ class TestRun:
     @pytest.mark.unit
     def test_runs_all_files(self):
         def worker(file_path, params, config):
-            return ExportResult(file_path=file_path, exported_files=['x.tiff'])
+            return ExportResult(file_path=file_path, exported_files=["x.tiff"])
 
         coord = ParallelExportCoordinator(
-            worker_fn=worker, executor_factory=FakeExecutor, cpu_count=4,
+            worker_fn=worker,
+            executor_factory=FakeExecutor,
+            cpu_count=4,
         )
         config = ExportConfig()
-        tasks = [(f'C:/d/{i}.oct', _params(f'C:/d/{i}.oct'), config) for i in range(3)]
+        tasks = [(f"C:/d/{i}.oct", _params(f"C:/d/{i}.oct"), config) for i in range(3)]
 
         results = coord.run(tasks)
 
@@ -125,10 +132,12 @@ class TestRun:
             return ExportResult(file_path=file_path)
 
         coord = ParallelExportCoordinator(
-            worker_fn=worker, executor_factory=FakeExecutor, cpu_count=4,
+            worker_fn=worker,
+            executor_factory=FakeExecutor,
+            cpu_count=4,
         )
         config = ExportConfig()
-        tasks = [(f'C:/d/{i}.oct', _params(), config) for i in range(2)]
+        tasks = [(f"C:/d/{i}.oct", _params(), config) for i in range(2)]
         cb = Mock()
 
         coord.run(tasks, progress_callback=cb)
@@ -138,12 +147,14 @@ class TestRun:
 
     @pytest.mark.unit
     def test_cancellation_submits_no_tasks(self):
-        worker = Mock(return_value=ExportResult(file_path='x'))
+        worker = Mock(return_value=ExportResult(file_path="x"))
         coord = ParallelExportCoordinator(
-            worker_fn=worker, executor_factory=FakeExecutor, cpu_count=4,
+            worker_fn=worker,
+            executor_factory=FakeExecutor,
+            cpu_count=4,
         )
         config = ExportConfig()
-        tasks = [(f'C:/d/{i}.oct', _params(), config) for i in range(3)]
+        tasks = [(f"C:/d/{i}.oct", _params(), config) for i in range(3)]
 
         coord.cancel()
         results = coord.run(tasks)
@@ -154,18 +165,20 @@ class TestRun:
     @pytest.mark.unit
     def test_worker_exception_becomes_error_result(self):
         def worker(file_path, params, config):
-            raise RuntimeError('kaboom')
+            raise RuntimeError("kaboom")
 
         coord = ParallelExportCoordinator(
-            worker_fn=worker, executor_factory=FakeExecutor, cpu_count=4,
+            worker_fn=worker,
+            executor_factory=FakeExecutor,
+            cpu_count=4,
         )
         config = ExportConfig()
-        tasks = [('C:/d/bad.oct', _params('C:/d/bad.oct'), config)]
+        tasks = [("C:/d/bad.oct", _params("C:/d/bad.oct"), config)]
 
         results = coord.run(tasks)
 
         assert len(results) == 1
         assert results[0].error is not None
-        assert 'kaboom' in results[0].error
-        assert results[0].file_path == 'C:/d/bad.oct'
+        assert "kaboom" in results[0].error
+        assert results[0].file_path == "C:/d/bad.oct"
         assert results[0].exported_files == []

@@ -4,13 +4,14 @@ Unit tests for app/logic/carlquant/interpolation_service.py.
 Keyframe interpolation behaviour: single-keyframe propagation, linear
 interpolation between keyframes, backfill, and forward-fill.
 """
+
 import pytest
 
 from app.logic.carlquant.interpolation_service import (
-    InterpolationService,
     REGION_DESCRIPTOR,
+    InterpolationService,
 )
-from app.logic.carlquant.models import RegionConfig, AirConfig
+from app.logic.carlquant.models import AirConfig, RegionConfig
 
 
 def _region(slice_index, x, *, keyframe=False):
@@ -27,6 +28,7 @@ def _region(slice_index, x, *, keyframe=False):
 
 def _collect(config_dict, total_slices):
     """Run region interpolation, writing results back into config_dict."""
+
     def update(idx, cfg, is_keyframe):
         # Reconstruct so the stored slice_index reflects its own slot.
         config_dict[idx] = RegionConfig(
@@ -37,6 +39,7 @@ def _collect(config_dict, total_slices):
             tooth_end=cfg.tooth_end,
             is_keyframe=is_keyframe,
         )
+
     InterpolationService.interpolate_regions(config_dict, total_slices, update)
     return config_dict
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Update Checker.
 
@@ -38,24 +37,29 @@ Author: Tobias Meissner
 ****
 """
 
-
-
 import json
 import threading
 import urllib.request
 
 from app.logic.shared.app_config import (
-    __version__,
-    VERSION_MANIFEST_URL,
     NETWORK_TIMEOUT,
+    VERSION_MANIFEST_URL,
+    __version__,
 )
 
 
 class UpdateInfo:
     """Result of an update check."""
 
-    def __init__(self, available, latest_version=None, download_url=None,
-                 changelog_url=None, notes=None, error=None):
+    def __init__(
+        self,
+        available,
+        latest_version=None,
+        download_url=None,
+        changelog_url=None,
+        notes=None,
+        error=None,
+    ):
         self.available = available
         self.latest_version = latest_version
         self.download_url = download_url

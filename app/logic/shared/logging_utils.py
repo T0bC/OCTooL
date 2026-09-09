@@ -32,9 +32,8 @@ Author: Tobias Meissner
 ****
 """
 
-
-from datetime import datetime
 import os
+from datetime import datetime
 
 
 def _project_root():
@@ -44,11 +43,7 @@ def _project_root():
     deep), so the project root is four directory levels up.
     """
     return os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))
-            )
-        )
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
 
 
@@ -79,15 +74,15 @@ def log_error_to_file(function_name, args, kwargs, custom_message, traceback_tex
     kwargs_str = ", ".join(f"{k}={repr(v)}" for k, v in kwargs.items())
 
     log_entry = (
-        f"\n{'='*80}\n"
+        f"\n{'=' * 80}\n"
         f"🕒 Timestamp: {date_str} {time_str}\n"
         f"🔧 Function: {function_name}\n"
         f"📌 Message: {custom_message or 'Unhandled exception'}\n"
         f"🧩 Args: {args_str}\n"
         f"🧩 Kwargs: {kwargs_str}\n"
-        f"{'-'*80}\n"
+        f"{'-' * 80}\n"
         f"{traceback_text}\n"
-        f"{'='*80}\n"
+        f"{'=' * 80}\n"
     )
 
     with open(log_path, "a", encoding="utf-8") as log_file:

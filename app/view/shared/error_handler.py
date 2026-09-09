@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Error Handler.
 
@@ -35,10 +34,9 @@ Author: Tobias Meissner
 ****
 """
 
-
 import threading
-import traceback
 import tkinter as tk
+import traceback
 from tkinter import ttk
 
 from app.logic.shared.logging_utils import log_error_to_file
@@ -80,7 +78,7 @@ def _build_error_popup(root, title, message):
     popup.geometry("600x400")
     popup.resizable(True, True)
     popup.transient(root)  # Keep popup on top of root
-    popup.grab_set()       # Make it modal
+    popup.grab_set()  # Make it modal
 
     label = ttk.Label(popup, text="An error occurred:", font=("Arial", 12, "bold"))
     label.pack(pady=(10, 5))
@@ -100,6 +98,7 @@ def _build_error_popup(root, title, message):
     close_btn = ttk.Button(popup, text="Close", command=popup.destroy)
     close_btn.pack(pady=10)
 
+
 def install_tk_exception_handler(root):
     """
     Install a global handler for uncaught exceptions raised inside Tkinter
@@ -115,12 +114,11 @@ def install_tk_exception_handler(root):
     Args:
         root (tkinter.Tk): The application root window.
     """
+
     def report_callback_exception(exc_type, exc_value, exc_tb):
         tb = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         popup_message = (
-            "An unexpected error occurred:\n\n"
-            f"Exception: {exc_value}\n\n"
-            f"Traceback:\n{tb}"
+            f"An unexpected error occurred:\n\nException: {exc_value}\n\nTraceback:\n{tb}"
         )
         try:
             show_error_popup("Error", popup_message)
@@ -142,6 +140,7 @@ def handle_errors(custom_message=None):
     Returns:
         Callable: Wrapped function with error handling.
     """
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             try:
@@ -160,5 +159,7 @@ def handle_errors(custom_message=None):
 
                 show_error_popup("Error", popup_message)
                 log_error_to_file(function_name, args, kwargs, custom_message, tb)
+
         return wrapper
+
     return decorator

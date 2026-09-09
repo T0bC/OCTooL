@@ -4,6 +4,7 @@ Unit tests for app/logic/carlquant/annotation_colors.py.
 Covers the hex/named color conversion helpers, including the named-color
 passthrough branch and the round-trip between hex_to_rgb and rgb_to_hex.
 """
+
 import pytest
 
 from app.logic.carlquant import annotation_colors as ac

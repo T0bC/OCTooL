@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze Add Columns Panel.
 
@@ -34,16 +33,15 @@ Author: Tobias Meissner
 ****
 """
 
-
 import tkinter as tk
 from tkinter import ttk
-from app.logic.shared import oct_functions as octF
-from app.view.shared.tool_tip import Tooltip
-from app.view.shared.error_handler import handle_errors
-from tkinter import colorchooser
-import customtkinter as ctk
+
 from CTkColorPicker import AskColor
+
 from app.logic.annolyze.measurement_service import MeasurementService
+from app.view.shared.error_handler import handle_errors
+from app.view.shared.tool_tip import Tooltip
+
 
 class addColumnsPanel:
     @handle_errors("error in addColumnsPanel.__init__")
@@ -59,22 +57,18 @@ class addColumnsPanel:
         self.column_colors = {}
         self.selectedColor = "#FFFFFF"
 
-        self.columnNameToolTip = 'Enter the name of the column. e.g GapInterface.'
+        self.columnNameToolTip = "Enter the name of the column. e.g GapInterface."
 
         self.columnNameEntry = ttk.Entry(self.frame, width=15, bootstyle="success")
-        self.columnNameEntry.insert(0, 'GAP')
+        self.columnNameEntry.insert(0, "GAP")
         self.columnNameEntry.grid(row=0, column=0, sticky="ew", padx=(0, 3), pady=3)
-        Tooltip(self.columnNameEntry, text=self.columnNameToolTip , wraplength=200)
+        Tooltip(self.columnNameEntry, text=self.columnNameToolTip, wraplength=200)
 
-        self.keyBindToolTip = 'Select a unique key to bind this column.'
+        self.keyBindToolTip = "Select a unique key to bind this column."
 
         self.keyBindVar = tk.StringVar()
         self.keyBindDropdown = ttk.Combobox(
-            self.frame,
-            textvariable=self.keyBindVar,
-            state="readonly",
-            width=4,
-            bootstyle="success"
+            self.frame, textvariable=self.keyBindVar, state="readonly", width=4, bootstyle="success"
         )
         self.keyBindDropdown.grid(row=0, column=1, sticky="ew", padx=3, pady=3)
         Tooltip(self.keyBindDropdown, text=self.keyBindToolTip, wraplength=200)
@@ -98,12 +92,18 @@ class addColumnsPanel:
             self.frame,
             textvariable=self.dataTypeVar,
             values=[
-                "Continuous", "Percentage", "Boolean", "Categorical", "Ordinal",
-                "Integer", "Float", "Text/String",
+                "Continuous",
+                "Percentage",
+                "Boolean",
+                "Categorical",
+                "Ordinal",
+                "Integer",
+                "Float",
+                "Text/String",
             ],
             state="readonly",
             width=15,
-            bootstyle="success"
+            bootstyle="success",
         )
         self.dataTypeDropdown.set("Continuous")  # Default selection
         self.dataTypeDropdown.grid(row=0, column=2, sticky="ew", padx=3, pady=3)
@@ -113,11 +113,7 @@ class addColumnsPanel:
         # swatch (its background shows the selected color) and opens the color
         # picker popup on double-click.
         self.colorEntry = tk.Entry(
-            self.frame,
-            width=9,
-            justify="center",
-            relief=tk.SUNKEN,
-            borderwidth=2
+            self.frame, width=9, justify="center", relief=tk.SUNKEN, borderwidth=2
         )
         self.colorEntry.insert(0, self.selectedColor)
         self.colorEntry.grid(row=0, column=3, sticky="ew", padx=(3, 0), pady=3)
@@ -128,30 +124,31 @@ class addColumnsPanel:
         Tooltip(
             self.colorEntry,
             text="Type a hex color (e.g. #FF8800) or double-click to open the color picker.",
-            wraplength=200
+            wraplength=200,
         )
 
-        self.addColumnAndBindingToTableToolTip = 'Add a new custom column to the results table with the specified name, keybinding, data type, and color. The keybinding allows quick data entry using keyboard shortcuts during image annotation.'
+        self.addColumnAndBindingToTableToolTip = "Add a new custom column to the results table with the specified name, keybinding, data type, and color. The keybinding allows quick data entry using keyboard shortcuts during image annotation."
 
         self.addColumnAndBindingToTable = ttk.Button(
             self.frame,
-            text='Add Column',
+            text="Add Column",
             command=lambda: self.addColumnToTable(
                 self.columnNameEntry.get(),
                 self.keyBindVar.get(),
                 self.dataTypeDropdown.get(),
-                self.selectedColor
-                ),
-            bootstyle="success"
-            )
+                self.selectedColor,
+            ),
+            bootstyle="success",
+        )
         self.addColumnAndBindingToTable.grid(row=1, column=0, sticky="ew", padx=(0, 3), pady=3)
-        Tooltip(self.addColumnAndBindingToTable, text=self.addColumnAndBindingToTableToolTip , wraplength=300)
+        Tooltip(
+            self.addColumnAndBindingToTable,
+            text=self.addColumnAndBindingToTableToolTip,
+            wraplength=300,
+        )
 
         self.removeColumnButton = ttk.Button(
-            self.frame,
-            text='Remove Column',
-            command=self.removeColumnFromTable,
-            bootstyle="danger"
+            self.frame, text="Remove Column", command=self.removeColumnFromTable, bootstyle="danger"
         )
         self.removeColumnButton.grid(row=1, column=2, sticky="ew", padx=3, pady=3)
         Tooltip(self.removeColumnButton, text="Remove the last added custom column", wraplength=300)
@@ -180,29 +177,26 @@ class addColumnsPanel:
         value = value.strip()
         if not value:
             return None
-        if not value.startswith('#'):
-            value = '#' + value
+        if not value.startswith("#"):
+            value = "#" + value
         body = value[1:]
-        hex_digits = '0123456789abcdefABCDEF'
+        hex_digits = "0123456789abcdefABCDEF"
         if len(body) == 3 and all(c in hex_digits for c in body):
-            body = ''.join(c * 2 for c in body)
+            body = "".join(c * 2 for c in body)
         if len(body) == 6 and all(c in hex_digits for c in body):
-            return '#' + body.upper()
+            return "#" + body.upper()
         return None
 
     def _apply_color_to_entry(self, color):
         self.colorEntry.configure(
-            bg=color,
-            fg=self._contrast_color(color),
-            insertbackground=self._contrast_color(color)
+            bg=color, fg=self._contrast_color(color), insertbackground=self._contrast_color(color)
         )
 
     def _contrast_color(self, hex_color):
-        body = hex_color.lstrip('#')
+        body = hex_color.lstrip("#")
         r, g, b = int(body[0:2], 16), int(body[2:4], 16), int(body[4:6], 16)
         luminance = 0.299 * r + 0.587 * g + 0.114 * b
         return "#000000" if luminance > 140 else "#FFFFFF"
-
 
     def update_available_keys(self):
         # Pull used keys from centralized context
@@ -222,7 +216,6 @@ class addColumnsPanel:
         viewer = getattr(self.context, "keyboard_layout_viewer", None)
         if viewer and viewer.window.winfo_exists():
             viewer.update_highlights()
-
 
     @handle_errors("addColumnsPanel.addColumnToTable")
     def addColumnToTable(self, colName, keyBind, dataType, color):
@@ -248,8 +241,6 @@ class addColumnsPanel:
 
         self.update_available_keys()
 
-
-
     @handle_errors("addColumnsPanel.removeColumnFromTable")
     def removeColumnFromTable(self) -> None:
         """
@@ -270,7 +261,10 @@ class addColumnsPanel:
                     manager.unregister(removed_key)
 
             # Ensure keybinding_specs exists
-            if not hasattr(self.context, "keybinding_specs") or self.context.keybinding_specs is None:
+            if (
+                not hasattr(self.context, "keybinding_specs")
+                or self.context.keybinding_specs is None
+            ):
                 self.context.keybinding_specs = []
 
             # Remove from keybinding_specs
@@ -281,6 +275,3 @@ class addColumnsPanel:
             self.context.status_bar.update("No column was removed.", level="warning")
 
         self.update_available_keys()
-
-
-

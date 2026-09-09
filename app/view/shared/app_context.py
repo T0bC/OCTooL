@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Application Context.
 
@@ -43,7 +42,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 Author: Tobias Meissner
 ****
 """
-
 
 
 class AppContext:
@@ -131,7 +129,7 @@ class AppContext:
         if root is None:
             return
         try:
-            pending_ids = root.tk.call('after', 'info')
+            pending_ids = root.tk.call("after", "info")
         except Exception:
             return
         for after_id in pending_ids:
@@ -150,6 +148,6 @@ class AppContext:
         if root is None:
             return
         try:
-            root.tk.call('proc', 'bgerror', 'msg', '')
+            root.tk.call("proc", "bgerror", "msg", "")
         except Exception:
             pass

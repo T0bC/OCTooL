@@ -5,12 +5,13 @@ Focus on the service contract (the per-slice pipeline extracted from
 run_carl_quant): surface detection, the no-region placeholder path, image
 loading, sequential iteration, progress callbacks, and cancellation.
 """
+
 import numpy as np
 import pytest
 from PIL import Image
 
 from app.logic.carlquant.analysis_service import AnalysisService, SliceAnalysis
-from app.logic.carlquant.models import Surface, RegionConfig, LesionDepth
+from app.logic.carlquant.models import LesionDepth, RegionConfig, Surface
 
 
 @pytest.fixture
@@ -31,10 +32,10 @@ def lesion_image() -> np.ndarray:
     h, w = 256, 256
     img = np.full((h, w), 10, dtype=np.uint8)
     surface_y = 100
-    img[surface_y:surface_y + 5, :] = 230  # surface band
+    img[surface_y : surface_y + 5, :] = 230  # surface band
     depths = np.arange(h - (surface_y + 5))
     profile = (200 * np.exp(-depths / 25.0)).astype(np.uint8)
-    img[surface_y + 5:, :] = np.clip(profile[:, None] + 10, 0, 255)
+    img[surface_y + 5 :, :] = np.clip(profile[:, None] + 10, 0, 255)
     return img
 
 
@@ -83,8 +84,12 @@ class TestAnalyzeSliceNoRegion:
     def test_returns_placeholder_region_stats(self, bright_band_image):
         """GIVEN no region config, WHEN analyze_slice, THEN placeholder stats are returned."""
         result = AnalysisService.analyze_slice(
-            bright_band_image, region_config=None, air_config=None,
-            num_sound=3, num_lesion=4, slice_index=7,
+            bright_band_image,
+            region_config=None,
+            air_config=None,
+            num_sound=3,
+            num_lesion=4,
+            slice_index=7,
         )
         assert isinstance(result, SliceAnalysis)
         assert result.slice_index == 7
@@ -98,7 +103,9 @@ class TestAnalyzeSliceNoRegion:
     def test_lesion_depth_none_without_region(self, bright_band_image):
         """GIVEN no region config, WHEN analyze_slice, THEN lesion_depth is None."""
         result = AnalysisService.analyze_slice(
-            bright_band_image, region_config=None, air_config=None,
+            bright_band_image,
+            region_config=None,
+            air_config=None,
         )
         assert result.lesion_depth is None
         assert isinstance(result.surface, Surface)
@@ -111,7 +118,10 @@ class TestAnalyzeImage:
         path = tmp_path / "tooth_005.png"
         Image.fromarray(bright_band_image, mode="L").save(path)
         result = AnalysisService.analyze_image(
-            path, region_config=None, air_config=None, slice_index=5,
+            path,
+            region_config=None,
+            air_config=None,
+            slice_index=5,
         )
         assert isinstance(result, SliceAnalysis)
         assert result.slice_index == 5
@@ -173,18 +183,25 @@ class TestComputeDelegators:
         """GIVEN a surface + region, WHEN extract_regions, THEN stats are returned."""
         surface = _flat_surface(5, 250)
         stats = AnalysisService.extract_regions(
-            lesion_image, surface, full_width_region,
-            num_sound_regions=4, num_lesion_regions=4,
+            lesion_image,
+            surface,
+            full_width_region,
+            num_sound_regions=4,
+            num_lesion_regions=4,
         )
         assert isinstance(stats, list)
         assert len(stats) > 0
 
     @pytest.mark.unit
-    def test_extract_regions_without_fitted_curve_returns_empty(self, lesion_image, full_width_region):
+    def test_extract_regions_without_fitted_curve_returns_empty(
+        self, lesion_image, full_width_region
+    ):
         """GIVEN a surface lacking actual_surface, WHEN extract_regions, THEN empty list."""
         empty_surface = Surface(raw_points=[], fitted_curves={})
         stats = AnalysisService.extract_regions(
-            lesion_image, empty_surface, full_width_region,
+            lesion_image,
+            empty_surface,
+            full_width_region,
         )
         assert stats == []
 
@@ -193,7 +210,9 @@ class TestComputeDelegators:
         """GIVEN a surface + region, WHEN calculate_lesion_depth, THEN a result returns."""
         surface = _flat_surface(5, 250)
         depth = AnalysisService.calculate_lesion_depth(
-            surface, full_width_region, lesion_image,
+            surface,
+            full_width_region,
+            lesion_image,
         )
         assert depth is None or isinstance(depth, LesionDepth)
 
@@ -203,8 +222,12 @@ class TestAnalyzeSliceWithRegion:
     def test_region_path_extracts_regions_and_depth(self, lesion_image, full_width_region):
         """GIVEN a region config, WHEN analyze_slice, THEN regions + depth are computed."""
         result = AnalysisService.analyze_slice(
-            lesion_image, region_config=full_width_region, air_config=None,
-            num_sound=4, num_lesion=4, slice_index=2,
+            lesion_image,
+            region_config=full_width_region,
+            air_config=None,
+            num_sound=4,
+            num_lesion=4,
+            slice_index=2,
         )
         assert isinstance(result, SliceAnalysis)
         assert len(result.region_stats) > 0
@@ -221,11 +244,10 @@ class TestDepthTuningIsReachable:
 
     @pytest.mark.unit
     @pytest.mark.parametrize("param", ["depth_offset", "no_lesion_sd"])
-    @pytest.mark.parametrize(
-        "func", ["calculate_lesion_depth", "analyze_slice", "analyze_image"]
-    )
+    @pytest.mark.parametrize("func", ["calculate_lesion_depth", "analyze_slice", "analyze_image"])
     def test_entry_points_accept_tuning_params(self, func, param):
         import inspect
+
         signature = inspect.signature(getattr(AnalysisService, func))
         assert param in signature.parameters
 
@@ -234,10 +256,15 @@ class TestDepthTuningIsReachable:
         """GIVEN an offset, WHEN analyze_slice, THEN the reported depth shifts."""
         surface = _flat_surface(5, 250)
         base = AnalysisService.calculate_lesion_depth(
-            surface, full_width_region, lesion_image,
+            surface,
+            full_width_region,
+            lesion_image,
         )
         shifted = AnalysisService.calculate_lesion_depth(
-            surface, full_width_region, lesion_image, depth_offset=10.0,
+            surface,
+            full_width_region,
+            lesion_image,
+            depth_offset=10.0,
         )
         if base is None or shifted is None:
             pytest.skip("synthetic image yielded no depth points")
@@ -253,7 +280,10 @@ class TestDepthTuningIsReachable:
         """
         surface = _flat_surface(5, 250)
         gated = AnalysisService.calculate_lesion_depth(
-            surface, full_width_region, lesion_image, no_lesion_sd=-1.0,
+            surface,
+            full_width_region,
+            lesion_image,
+            no_lesion_sd=-1.0,
         )
         if gated is None:
             pytest.skip("synthetic image yielded no depth points")

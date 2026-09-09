@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze Keyboard Layout Viewer.
 
@@ -34,9 +33,9 @@ Author: Tobias Meissner
 ****
 """
 
-
 import tkinter as tk
 from tkinter import ttk
+
 
 class KeyboardLayoutViewer:
     def __init__(self, context):
@@ -64,9 +63,7 @@ class KeyboardLayoutViewer:
         self.table_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
         self.table = ttk.Treeview(
-            self.table_frame,
-            columns=("Key", "Column", "DataType", "Status"),
-            show="headings"
+            self.table_frame, columns=("Key", "Column", "DataType", "Status"), show="headings"
         )
         self.table.heading("Key", text="Key")
         self.table.heading("Column", text="Column Name")
@@ -82,14 +79,11 @@ class KeyboardLayoutViewer:
 
         self.draw_keyboard()
 
-
-
-
     def draw_keyboard(self):
         layout = [
             ("", "q", "w", "e", "r", "t", "z", "u", "i", "o", "p"),
             ("", "a", "s", "d", "f", "g", "h", "j", "k", "l"),
-            ("", "", "y", "x", "c", "v", "b", "n", "m")
+            ("", "", "y", "x", "c", "v", "b", "n", "m"),
         ]
 
         for row_index, row in enumerate(layout):
@@ -104,11 +98,10 @@ class KeyboardLayoutViewer:
                     font=("Segoe UI", 12, "bold"),
                     relief="raised",
                     bd=2,
-                    anchor="center"
+                    anchor="center",
                 )
                 btn.grid(row=row_index, column=col_index, padx=2, pady=2)
                 self.key_buttons[key] = btn
-
 
         self.update_highlights()
 
@@ -126,11 +119,11 @@ class KeyboardLayoutViewer:
 
         # Reserved keys - hardcoded system bindings
         reserved_bindings = {
-            'f': ('Fit Bezier Curve', 'System Function'),
-            'h': ('Toggle Annotation Overlays', 'System Function')
+            "f": ("Fit Bezier Curve", "System Function"),
+            "h": ("Toggle Annotation Overlays", "System Function"),
         }
-        
-        for key in ['f', 'h']:
+
+        for key in ["f", "h"]:
             if key in self.key_buttons and self.key_buttons[key].winfo_exists():
                 self.key_buttons[key].config(bg="black", fg="white", text=key.upper())
 
@@ -141,7 +134,9 @@ class KeyboardLayoutViewer:
         for key, (purpose, data_type) in reserved_bindings.items():
             tag = f"tag_reserved_{key}"
             self.apply_row_color(tag, "black", fg="white")
-            self.table.insert("", "end", values=(key.upper(), purpose, data_type, "Reserved"), tags=(tag,))
+            self.table.insert(
+                "", "end", values=(key.upper(), purpose, data_type, "Reserved"), tags=(tag,)
+            )
 
         # Populate user-defined keybindings
         for col_name, color, key, data_type in self.key_specs:
@@ -151,7 +146,9 @@ class KeyboardLayoutViewer:
 
             tag = f"tag_{key}"
             self.apply_row_color(tag, color)
-            self.table.insert("", "end", values=(key.upper(), col_name, data_type, "User-defined"), tags=(tag,))
+            self.table.insert(
+                "", "end", values=(key.upper(), col_name, data_type, "User-defined"), tags=(tag,)
+            )
 
         self.table.update_idletasks()
         self.window.update_idletasks()
@@ -160,7 +157,6 @@ class KeyboardLayoutViewer:
         width = self.window.winfo_reqwidth()
         height = self.window.winfo_reqheight()
         self.window.geometry(f"{width}x{height}")
-
 
     def apply_row_color(self, tag, color, fg=None):
         style_name = f"{tag}.Treeview"
@@ -172,8 +168,6 @@ class KeyboardLayoutViewer:
             style.configure(style_name, background=color)
             self.table.tag_configure(tag, background=color)
 
-
     def on_close(self):
         self.context.keyboard_layout_viewer = None
         self.window.destroy()
-

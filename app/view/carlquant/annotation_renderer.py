@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CarlQuant Annotation Renderer.
 
@@ -37,41 +36,45 @@ Author: Tobias Meissner
 ****
 """
 
-
-import tkinter as tk
 import numpy as np
 
 # Import centralized color definitions
 from app.logic.carlquant.annotation_colors import (
-    INTERPOLATED_SURFACE_COLOR,
     ACTUAL_SURFACE_COLOR,
-    LESION_DEPTH_PRIMARY_COLOR,
-    KNEE_POINT_COLOR,
-    INFLECTION_POINT_COLOR,
-    SHOULDER_POINT_COLOR,
-    HALF_SPAN_POINT_COLOR,
+    AIR_REGION_COLOR,
     EXTRACTION_REGION_COLOR,
     EXTRACTION_REGION_LESION_COLOR,
-    EXTRACTION_REGION_TEXT_COLOR,
-    SPECIMEN_BOUNDARY_COLOR,
+    HALF_SPAN_POINT_COLOR,
+    INFLECTION_POINT_COLOR,
+    INTERPOLATED_SURFACE_COLOR,
+    KNEE_POINT_COLOR,
     LESION_BOUNDARY_COLOR,
-    AIR_REGION_COLOR
+    LESION_DEPTH_PRIMARY_COLOR,
+    SHOULDER_POINT_COLOR,
+    SPECIMEN_BOUNDARY_COLOR,
 )
 
 
 class CoordinateConverter:
     """
     Handles conversion between image and canvas coordinate systems.
-    
+
     This class encapsulates the logic for transforming coordinates based on
     zoom level and pan offset, making it reusable across all annotation types.
     """
-    
-    def __init__(self, raw_image, zoom_level, image_offset_x, image_offset_y, 
-                 fitted_width=None, fitted_height=None):
+
+    def __init__(
+        self,
+        raw_image,
+        zoom_level,
+        image_offset_x,
+        image_offset_y,
+        fitted_width=None,
+        fitted_height=None,
+    ):
         """
         Initialize coordinate converter.
-        
+
         Args:
             raw_image: PIL Image object (the original image)
             zoom_level: Current zoom level (1.0 = fit to canvas)
@@ -86,38 +89,38 @@ class CoordinateConverter:
         self.image_offset_y = image_offset_y
         self.fitted_width = fitted_width or raw_image.width
         self.fitted_height = fitted_height or raw_image.height
-        
+
         # Calculate current zoom factor
         if self.zoom_level == 1.0:
             self.current_zoom = self.fitted_width / self.raw_image.width
         else:
             self.current_zoom = self.zoom_level
-    
+
     def image_to_canvas(self, image_x, image_y):
         """
         Convert single point from image to canvas coordinates.
-        
+
         Args:
             image_x: X coordinate in image space
             image_y: Y coordinate in image space
-        
+
         Returns:
             tuple: (canvas_x, canvas_y)
         """
         canvas_x = image_x * self.current_zoom + self.image_offset_x
         canvas_y = image_y * self.current_zoom + self.image_offset_y
         return canvas_x, canvas_y
-    
+
     def image_to_canvas_rect(self, start_x, start_y, end_x, end_y):
         """
         Convert rectangle from image to canvas coordinates.
-        
+
         Args:
             start_x: Start X coordinate in image space
             start_y: Start Y coordinate in image space
             end_x: End X coordinate in image space
             end_y: End Y coordinate in image space
-        
+
         Returns:
             tuple: (canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y)
         """
@@ -126,182 +129,186 @@ class CoordinateConverter:
         canvas_end_x = end_x * self.current_zoom + self.image_offset_x
         canvas_end_y = end_y * self.current_zoom + self.image_offset_y
         return canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y
-    
+
     def canvas_to_image(self, canvas_x, canvas_y):
         """
         Convert canvas coordinates to image coordinates.
-        
+
         Args:
             canvas_x: X coordinate on canvas
             canvas_y: Y coordinate on canvas
-        
+
         Returns:
             tuple: (image_x, image_y) as integers, or (None, None) if out of bounds
         """
         # Convert to image-relative coordinates
         rel_x = (canvas_x - self.image_offset_x) / self.current_zoom
         rel_y = (canvas_y - self.image_offset_y) / self.current_zoom
-        
+
         # Check if click is within image bounds
-        if rel_x < 0 or rel_x >= self.raw_image.width or rel_y < 0 or rel_y >= self.raw_image.height:
+        if (
+            rel_x < 0
+            or rel_x >= self.raw_image.width
+            or rel_y < 0
+            or rel_y >= self.raw_image.height
+        ):
             return None, None
-        
+
         return int(rel_x), int(rel_y)
 
 
 class BaseAnnotationRenderer:
     """
     Base class for annotation rendering.
-    
+
     Provides common functionality for all annotation types including
     coordinate conversion and canvas drawing utilities.
     """
-    
+
     def __init__(self, canvas, converter):
         """
         Initialize annotation renderer.
-        
+
         Args:
             canvas: Tkinter canvas to draw on
             converter: CoordinateConverter instance
         """
         self.canvas = canvas
         self.converter = converter
-    
+
     def draw_point(self, image_x, image_y, color="white", size=2, tags="annotation"):
         """
         Draw a single point (small circle) at image coordinates.
-        
+
         Args:
             image_x: X coordinate in image space
             image_y: Y coordinate in image space
             color: Fill color
             size: Radius of the point
             tags: Canvas tags
-        
+
         Returns:
             Canvas item ID
         """
         canvas_x, canvas_y = self.converter.image_to_canvas(image_x, image_y)
         return self.canvas.create_oval(
-            canvas_x - size, canvas_y - size,
-            canvas_x + size, canvas_y + size,
-            fill=color, outline=color,
-            tags=tags
+            canvas_x - size,
+            canvas_y - size,
+            canvas_x + size,
+            canvas_y + size,
+            fill=color,
+            outline=color,
+            tags=tags,
         )
-    
+
     def draw_line(self, points, color="white", width=2, tags="annotation"):
         """
         Draw a line connecting multiple points.
-        
+
         Args:
             points: List of (x, y) tuples in image coordinates
             color: Line color
             width: Line width
             tags: Canvas tags
-        
+
         Returns:
             List of canvas item IDs
         """
         if len(points) < 2:
             return []
-        
+
         items = []
         for i in range(len(points) - 1):
             x1, y1 = points[i]
             x2, y2 = points[i + 1]
             canvas_x1, canvas_y1 = self.converter.image_to_canvas(x1, y1)
             canvas_x2, canvas_y2 = self.converter.image_to_canvas(x2, y2)
-            
+
             item = self.canvas.create_line(
-                canvas_x1, canvas_y1, canvas_x2, canvas_y2,
-                fill=color, width=width,
-                tags=tags
+                canvas_x1, canvas_y1, canvas_x2, canvas_y2, fill=color, width=width, tags=tags
             )
             items.append(item)
-        
+
         return items
-    
+
     def draw_vertical_line(self, image_x, color="white", width=2, tags="annotation"):
         """
         Draw a vertical line spanning the full canvas height.
-        
+
         Args:
             image_x: X coordinate in image space
             color: Line color
             width: Line width
             tags: Canvas tags
-        
+
         Returns:
             Canvas item ID
         """
         canvas_x, _ = self.converter.image_to_canvas(image_x, 0)
         canvas_height = self.canvas.winfo_height()
-        
+
         return self.canvas.create_line(
-            canvas_x, 0, canvas_x, canvas_height,
-            fill=color, width=width,
-            tags=tags
+            canvas_x, 0, canvas_x, canvas_height, fill=color, width=width, tags=tags
         )
-    
+
     def draw_rectangle(self, x1, y1, x2, y2, outline="white", width=2, tags="annotation"):
         """
         Draw a rectangle from image coordinates.
-        
+
         Args:
             x1, y1: Top-left corner in image space
             x2, y2: Bottom-right corner in image space
             outline: Outline color
             width: Line width
             tags: Canvas tags
-        
+
         Returns:
             Canvas item ID
         """
-        canvas_x1, canvas_y1, canvas_x2, canvas_y2 = self.converter.image_to_canvas_rect(x1, y1, x2, y2)
-        
-        return self.canvas.create_rectangle(
-            canvas_x1, canvas_y1, canvas_x2, canvas_y2,
-            outline=outline, width=width,
-            tags=tags
+        canvas_x1, canvas_y1, canvas_x2, canvas_y2 = self.converter.image_to_canvas_rect(
+            x1, y1, x2, y2
         )
-    
+
+        return self.canvas.create_rectangle(
+            canvas_x1, canvas_y1, canvas_x2, canvas_y2, outline=outline, width=width, tags=tags
+        )
+
     def draw_polygon(self, corners, outline="white", width=2, tags="annotation"):
         """
         Draw a polygon from corner points.
-        
+
         Args:
             corners: List of (x, y) tuples in image coordinates
             outline: Outline color
             width: Line width
             tags: Canvas tags
-        
+
         Returns:
             List of canvas item IDs (one per edge)
         """
         items = []
         num_corners = len(corners)
-        
+
         for i in range(num_corners):
             x1, y1 = corners[i]
             x2, y2 = corners[(i + 1) % num_corners]
-            
+
             canvas_x1, canvas_y1 = self.converter.image_to_canvas(x1, y1)
             canvas_x2, canvas_y2 = self.converter.image_to_canvas(x2, y2)
-            
+
             item = self.canvas.create_line(
-                canvas_x1, canvas_y1, canvas_x2, canvas_y2,
-                fill=outline, width=width,
-                tags=tags
+                canvas_x1, canvas_y1, canvas_x2, canvas_y2, fill=outline, width=width, tags=tags
             )
             items.append(item)
-        
+
         return items
-    
-    def draw_text(self, image_x, image_y, text, color="white", font=("Arial", 12, "bold"), tags="annotation"):
+
+    def draw_text(
+        self, image_x, image_y, text, color="white", font=("Arial", 12, "bold"), tags="annotation"
+    ):
         """
         Draw text at image coordinates.
-        
+
         Args:
             image_x: X coordinate in image space
             image_y: Y coordinate in image space
@@ -309,22 +316,20 @@ class BaseAnnotationRenderer:
             color: Text color
             font: Font tuple (family, size, style)
             tags: Canvas tags
-        
+
         Returns:
             Canvas item ID
         """
         canvas_x, canvas_y = self.converter.image_to_canvas(image_x, image_y)
-        
+
         return self.canvas.create_text(
-            canvas_x, canvas_y,
-            text=text, fill=color, font=font,
-            tags=tags
+            canvas_x, canvas_y, text=text, fill=color, font=font, tags=tags
         )
-    
+
     def draw_cross(self, image_x, image_y, color="white", size=2, width=2, tags="annotation"):
         """
         Draw a cross marker at image coordinates.
-        
+
         Args:
             image_x: X coordinate in image space
             image_y: Y coordinate in image space
@@ -332,53 +337,49 @@ class BaseAnnotationRenderer:
             size: Half-size of the cross arms
             width: Line width
             tags: Canvas tags
-        
+
         Returns:
             List of canvas item IDs (horizontal and vertical lines)
         """
         canvas_x, canvas_y = self.converter.image_to_canvas(image_x, image_y)
-        
+
         items = []
-        
+
         # Horizontal line
         h_line = self.canvas.create_line(
-            canvas_x - size, canvas_y,
-            canvas_x + size, canvas_y,
-            fill=color, width=width,
-            tags=tags
+            canvas_x - size, canvas_y, canvas_x + size, canvas_y, fill=color, width=width, tags=tags
         )
         items.append(h_line)
-        
+
         # Vertical line
         v_line = self.canvas.create_line(
-            canvas_x, canvas_y - size,
-            canvas_x, canvas_y + size,
-            fill=color, width=width,
-            tags=tags
+            canvas_x, canvas_y - size, canvas_x, canvas_y + size, fill=color, width=width, tags=tags
         )
         items.append(v_line)
-        
+
         return items
 
 
 class SurfaceAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for surface detection results (peaks and fitted curves)."""
-    
+
     def draw(self, surface):
         """
         Draw surface detection results.
-        
+
         Args:
             surface: Surface detection result object
         """
         if not surface:
             return
-        
+
         # Draw interpolated surface curve (cyan, thin line) - bottom layer
         if surface.fitted_curves and "interpolated_surface" in surface.fitted_curves:
             for x, y in surface.fitted_curves["interpolated_surface"]:
-                self.draw_point(x, y, color=INTERPOLATED_SURFACE_COLOR, size=1, tags="surface_overlay")
-        
+                self.draw_point(
+                    x, y, color=INTERPOLATED_SURFACE_COLOR, size=1, tags="surface_overlay"
+                )
+
         # Draw actual surface curve (blue, thin line) - middle layer
         if surface.fitted_curves and "actual_surface" in surface.fitted_curves:
             for x, y in surface.fitted_curves["actual_surface"]:
@@ -387,19 +388,27 @@ class SurfaceAnnotationRenderer(BaseAnnotationRenderer):
 
 class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for lesion depth results."""
-    
+
     # Method visualization configuration (easily extensible for new methods)
     METHOD_COLORS = {
-        'knee_point': KNEE_POINT_COLOR,
-        'inflection_point': INFLECTION_POINT_COLOR,
-        'shoulder_point': SHOULDER_POINT_COLOR,
-        'half_span_point': HALF_SPAN_POINT_COLOR,
+        "knee_point": KNEE_POINT_COLOR,
+        "inflection_point": INFLECTION_POINT_COLOR,
+        "shoulder_point": SHOULDER_POINT_COLOR,
+        "half_span_point": HALF_SPAN_POINT_COLOR,
         # Add future methods here, e.g.:
         # 'gradient_method': 'orange',
         # 'threshold_method': 'lime',
     }
 
-    def draw(self, lesion_depth, show_component_methods=False, show_knee=False, show_inflection=False, show_shoulder=False, show_half_span=False):
+    def draw(
+        self,
+        lesion_depth,
+        show_component_methods=False,
+        show_knee=False,
+        show_inflection=False,
+        show_shoulder=False,
+        show_half_span=False,
+    ):
         """
         Draw lesion depth results.
 
@@ -415,26 +424,42 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         """
         if not lesion_depth:
             return
-        
+
         # Prefer smoothed depth points if available, otherwise use raw points
         points = None
-        if hasattr(lesion_depth, 'smoothed_depth_points') and lesion_depth.smoothed_depth_points:
+        if hasattr(lesion_depth, "smoothed_depth_points") and lesion_depth.smoothed_depth_points:
             points = lesion_depth.smoothed_depth_points
         elif lesion_depth.depth_points:
             points = lesion_depth.depth_points
-        
+
         if not points or len(points) < 2:
             return
-        
+
         # Draw individual component methods if any are enabled
-        if show_component_methods or show_knee or show_inflection or show_shoulder or show_half_span:
-            self._draw_component_methods(lesion_depth, show_knee, show_inflection,
-                                         show_shoulder, show_half_span)
+        if (
+            show_component_methods
+            or show_knee
+            or show_inflection
+            or show_shoulder
+            or show_half_span
+        ):
+            self._draw_component_methods(
+                lesion_depth, show_knee, show_inflection, show_shoulder, show_half_span
+            )
 
         # Draw smooth line connecting all points
-        self.draw_line(points, color=LESION_DEPTH_PRIMARY_COLOR, width=2, tags="lesion_depth_overlay")
+        self.draw_line(
+            points, color=LESION_DEPTH_PRIMARY_COLOR, width=2, tags="lesion_depth_overlay"
+        )
 
-    def _draw_component_methods(self, lesion_depth, show_knee=True, show_inflection=True, show_shoulder=True, show_half_span=True):
+    def _draw_component_methods(
+        self,
+        lesion_depth,
+        show_knee=True,
+        show_inflection=True,
+        show_shoulder=True,
+        show_half_span=True,
+    ):
         """
         Draw individual detection method results based on user selection.
 
@@ -447,58 +472,73 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
             show_inflection: If True, draw inflection point method line
             show_shoulder: If True, draw shoulder point method line
         """
-        if not hasattr(lesion_depth, 'lesion_detection_data') or not lesion_depth.lesion_detection_data:
+        if (
+            not hasattr(lesion_depth, "lesion_detection_data")
+            or not lesion_depth.lesion_detection_data
+        ):
             return
-        
+
         # Collect points for each method
         method_points = {
-            'knee_point': [],
-            'inflection_point': [],
-            'shoulder_point': [],
-            'half_span_point': []
+            "knee_point": [],
+            "inflection_point": [],
+            "shoulder_point": [],
+            "half_span_point": [],
         }
-        
+
         for x, data in sorted(lesion_depth.lesion_detection_data.items()):
-            metadata = data.get('detection_metadata', {})
-            surface_y = data.get('surface_y', 0)
-            
+            metadata = data.get("detection_metadata", {})
+            surface_y = data.get("surface_y", 0)
+
             # Extract knee point
             if show_knee:
-                knee_depth = metadata.get('knee_depth')
-                if knee_depth is not None and not (hasattr(knee_depth, '__iter__') and len(knee_depth) == 0):
+                knee_depth = metadata.get("knee_depth")
+                if knee_depth is not None and not (
+                    hasattr(knee_depth, "__iter__") and len(knee_depth) == 0
+                ):
                     try:
                         if not np.isnan(knee_depth):
-                            method_points['knee_point'].append((x, surface_y + knee_depth))
+                            method_points["knee_point"].append((x, surface_y + knee_depth))
                     except (TypeError, ValueError):
                         pass
-            
+
             # Extract inflection point
             if show_inflection:
-                inflection_depth = metadata.get('inflection_depth')
-                if inflection_depth is not None and not (hasattr(inflection_depth, '__iter__') and len(inflection_depth) == 0):
+                inflection_depth = metadata.get("inflection_depth")
+                if inflection_depth is not None and not (
+                    hasattr(inflection_depth, "__iter__") and len(inflection_depth) == 0
+                ):
                     try:
                         if not np.isnan(inflection_depth):
-                            method_points['inflection_point'].append((x, surface_y + inflection_depth))
+                            method_points["inflection_point"].append(
+                                (x, surface_y + inflection_depth)
+                            )
                     except (TypeError, ValueError):
                         pass
-            
+
             # Extract shoulder point
             if show_shoulder:
-                shoulder_depth = metadata.get('shoulder_depth')
-                if shoulder_depth is not None and not (hasattr(shoulder_depth, '__iter__') and len(shoulder_depth) == 0):
+                shoulder_depth = metadata.get("shoulder_depth")
+                if shoulder_depth is not None and not (
+                    hasattr(shoulder_depth, "__iter__") and len(shoulder_depth) == 0
+                ):
                     try:
                         if not np.isnan(shoulder_depth):
-                            method_points['shoulder_point'].append((x, surface_y + shoulder_depth))
+                            method_points["shoulder_point"].append((x, surface_y + shoulder_depth))
                     except (TypeError, ValueError):
                         pass
-            
+
             # Extract half-span crossing
             if show_half_span:
-                half_span_depth = metadata.get('half_span_depth')
-                if half_span_depth is not None and not (hasattr(half_span_depth, '__iter__') and len(half_span_depth) == 0):
+                half_span_depth = metadata.get("half_span_depth")
+                if half_span_depth is not None and not (
+                    hasattr(half_span_depth, "__iter__") and len(half_span_depth) == 0
+                ):
                     try:
                         if not np.isnan(half_span_depth):
-                            method_points['half_span_point'].append((x, surface_y + half_span_depth))
+                            method_points["half_span_point"].append(
+                                (x, surface_y + half_span_depth)
+                            )
                     except (TypeError, ValueError):
                         pass
 
@@ -508,7 +548,7 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
             #     gradient_depth = metadata.get('gradient_depth')
             #     if gradient_depth is not None and not np.isnan(gradient_depth):
             #         method_points['gradient_method'].append((x, surface_y + gradient_depth))
-        
+
         # Draw lines for each method that has data
         for method_name, points in method_points.items():
             if len(points) >= 2 and method_name in self.METHOD_COLORS:
@@ -518,131 +558,153 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
 
 class ExtractionRegionAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for extraction regions (rotated rectangles with numbers)."""
-    
+
     def draw(self, region_stats):
         """
         Draw extraction regions.
-        
+
         Args:
             region_stats: List of region statistics objects
         """
         if not region_stats:
             return
-        
+
         for stats in region_stats:
             if not stats.bounds or len(stats.bounds) == 0:
                 continue
-            
+
             # Choose color based on region type
             # Use bright mint green for sound regions, lesion color for non-sound regions
-            color = EXTRACTION_REGION_COLOR if stats.region_type == "sound" else EXTRACTION_REGION_LESION_COLOR
-            
+            color = (
+                EXTRACTION_REGION_COLOR
+                if stats.region_type == "sound"
+                else EXTRACTION_REGION_LESION_COLOR
+            )
+
             # Check if we have rotated corners (4 points) or simple bbox (4 values)
             if len(stats.bounds) == 4 and isinstance(stats.bounds[0], tuple):
                 # Rotated rectangle with 4 corner points
                 self.draw_polygon(stats.bounds, outline=color, width=2, tags="extraction_regions")
-                
+
                 # Calculate center from corners for label
                 canvas_corners = [self.converter.image_to_canvas(x, y) for x, y in stats.bounds]
                 center_x = sum(x for x, y in canvas_corners) / 4
                 center_y = sum(y for x, y in canvas_corners) / 4
-                
+
             else:
                 # Simple axis-aligned rectangle
                 left_x, top_y, right_x, bottom_y = stats.bounds
-                self.draw_rectangle(left_x, top_y, right_x, bottom_y, 
-                                  outline=color, width=2, tags="extraction_regions")
-                
+                self.draw_rectangle(
+                    left_x,
+                    top_y,
+                    right_x,
+                    bottom_y,
+                    outline=color,
+                    width=2,
+                    tags="extraction_regions",
+                )
+
                 # Calculate center
                 canvas_x1, canvas_y1 = self.converter.image_to_canvas(left_x, top_y)
                 canvas_x2, canvas_y2 = self.converter.image_to_canvas(right_x, bottom_y)
                 center_x = (canvas_x1 + canvas_x2) / 2
                 center_y = (canvas_y1 + canvas_y2) / 2
-            
+
             # Draw region number in center (use canvas coordinates directly)
             self.canvas.create_text(
-                center_x, center_y,
-                text=str(stats.region_index), fill=color,
+                center_x,
+                center_y,
+                text=str(stats.region_index),
+                fill=color,
                 font=("Arial", 12, "bold"),
-                tags="extraction_regions"
+                tags="extraction_regions",
             )
 
 
 class RegionBoundaryAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for region boundaries (4 vertical lines)."""
-    
+
     def draw(self, region):
         """
         Draw region boundaries.
-        
+
         Args:
             region: Region configuration object with boundary points
         """
         if not region:
             return
-        
+
         # Define boundaries with color scheme:
         # Bright mint green for specimen boundaries, Gold for lesion boundaries
         boundaries = [
             (region.specimen_start, SPECIMEN_BOUNDARY_COLOR, "Specimen Start"),
             (region.lesion_start, LESION_BOUNDARY_COLOR, "Lesion Start"),
             (region.lesion_end, LESION_BOUNDARY_COLOR, "Lesion End"),
-            (region.tooth_end, SPECIMEN_BOUNDARY_COLOR, "Tooth End")
+            (region.tooth_end, SPECIMEN_BOUNDARY_COLOR, "Tooth End"),
         ]
-        
-        for (point, color, label) in boundaries:
+
+        for point, color, label in boundaries:
             x, y = point
             self.draw_vertical_line(x, color=color, width=2, tags="region_visual")
 
 
 class AIRAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for AIR (Air Reference) regions.
-    
+
     AIR defines a rectangular area containing actual air (empty space) used as
     a reference for normalization and threshold calculations in OCT analysis.
     """
-    
+
     def draw(self, air_config):
         """
         Draw AIR reference area.
-        
+
         Args:
             air_config: AIR configuration object with point1 and point2
         """
         if not air_config:
             return
-        
+
         x1, y1 = air_config.point1
         x2, y2 = air_config.point2
-        
+
         # Draw AIR reference area using centralized color constant
         self.draw_rectangle(x1, y1, x2, y2, outline=AIR_REGION_COLOR, width=2, tags="air_visual")
 
 
 class RegionMarkerAnnotationRenderer(BaseAnnotationRenderer):
     """Renderer for temporary region selection markers."""
-    
+
     def draw(self, region_points):
         """
         Draw markers for region points during selection.
-        
+
         Args:
             region_points: List of (x, y) tuples in image coordinates
         """
         color = "cyan"
-        
+
         for i, (image_x, image_y) in enumerate(region_points):
             canvas_x, canvas_y = self.converter.image_to_canvas(image_x, image_y)
-            
+
             # Draw circle
             self.canvas.create_oval(
-                canvas_x - 6, canvas_y - 6, canvas_x + 6, canvas_y + 6,
-                fill=color, outline="white", width=2, tags="region_visual"
+                canvas_x - 6,
+                canvas_y - 6,
+                canvas_x + 6,
+                canvas_y + 6,
+                fill=color,
+                outline="white",
+                width=2,
+                tags="region_visual",
             )
-            
+
             # Draw number label (click order)
             self.canvas.create_text(
-                canvas_x, canvas_y,
-                text=str(i + 1), fill="black", font=("Arial", 10, "bold"),
-                tags="region_visual"
+                canvas_x,
+                canvas_y,
+                text=str(i + 1),
+                fill="black",
+                font=("Arial", 10, "bold"),
+                tags="region_visual",
             )

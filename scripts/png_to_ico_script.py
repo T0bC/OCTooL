@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue May 25 10:40:52 2021
 
@@ -7,10 +6,8 @@ Created on Tue May 25 10:40:52 2021
 
 from PIL import Image
 
-
-
-filename = r'icons\thumbnail_6.png'
+filename = r"icons\thumbnail_6.png"
 
 img = Image.open(filename)
 icon_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (255, 255)]
-img.save('icons/thumb_6.ico')
+img.save("icons/thumb_6.ico")

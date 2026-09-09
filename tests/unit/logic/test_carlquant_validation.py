@@ -8,14 +8,22 @@ The distinction guarded here is between the slice's final result
 (``lesion_depth_px`` at the top level of a column) and the raw knee point
 (``knee_depth`` inside ``detection_metadata``).
 """
+
 import numpy as np
 import pytest
 
 from app.logic.carlquant import validation as val
 
 
-def make_column(surface_y=100.0, combined=20.0, half_span=18.0, knee=25.0,
-                inflection=15.0, shoulder=40.0, method_used="half_span"):
+def make_column(
+    surface_y=100.0,
+    combined=20.0,
+    half_span=18.0,
+    knee=25.0,
+    inflection=15.0,
+    shoulder=40.0,
+    method_used="half_span",
+):
     """One entry of lesion_detection_data, shaped as carl_quant_core writes it."""
     return {
         "surface_y": surface_y,
@@ -129,8 +137,9 @@ def test_gated_no_lesion_slice_scores_without_error():
     Every depth is 0 (the surface line); this must not divide by zero and the
     gating must stay visible rather than looking like a real shallow lesion.
     """
-    data = make_slice(columns=(100, 101), surface_y=100.0, combined=0.0,
-                      method_used=val.NO_LESION_METHOD)
+    data = make_slice(
+        columns=(100, 101), surface_y=100.0, combined=0.0, method_used=val.NO_LESION_METHOD
+    )
     result = val.score_slice(data, [(100, 105.0), (101, 107.0)])
 
     assert result["gated"] is True
@@ -163,10 +172,12 @@ def test_score_specimen_reports_both_scales():
     because a consistently signed bias does not cancel under averaging.
     """
     slices = {
-        0: val.score_slice(make_slice(columns=(100,), surface_y=100.0, combined=20.0),
-                           [(100, 115.0)]),
-        1: val.score_slice(make_slice(columns=(100,), surface_y=100.0, combined=20.0),
-                           [(100, 125.0)]),
+        0: val.score_slice(
+            make_slice(columns=(100,), surface_y=100.0, combined=20.0), [(100, 115.0)]
+        ),
+        1: val.score_slice(
+            make_slice(columns=(100,), surface_y=100.0, combined=20.0), [(100, 125.0)]
+        ),
     }
     summary = val.score_specimen(slices)
     combined = summary["methods"]["combined"]
@@ -186,8 +197,8 @@ def test_score_specimen_exposes_signed_bias_that_survives_averaging():
     """GIVEN a consistently signed bias, WHEN aggregating, THEN specimen_error shows it."""
     slices = {
         index: val.score_slice(
-            make_slice(columns=(100,), surface_y=100.0, combined=20.0),
-            [(100, 110.0)])
+            make_slice(columns=(100,), surface_y=100.0, combined=20.0), [(100, 110.0)]
+        )
         for index in range(3)
     }
     combined = val.score_specimen(slices)["methods"]["combined"]
@@ -200,8 +211,9 @@ def test_score_specimen_exposes_signed_bias_that_survives_averaging():
 def test_score_specimen_ignores_unannotated_slices():
     """GIVEN slices with no marks, WHEN aggregating, THEN they do not dilute the score."""
     slices = {
-        0: val.score_slice(make_slice(columns=(100,), surface_y=100.0, combined=20.0),
-                           [(100, 115.0)]),
+        0: val.score_slice(
+            make_slice(columns=(100,), surface_y=100.0, combined=20.0), [(100, 115.0)]
+        ),
         1: val.score_slice(make_slice(columns=(100,)), []),
     }
     summary = val.score_specimen(slices)
@@ -214,8 +226,9 @@ def test_score_specimen_lists_gated_slices():
     """GIVEN a gated slice, WHEN aggregating, THEN its index is reported."""
     slices = {
         0: val.score_slice(make_slice(columns=(100,)), [(100, 115.0)]),
-        3: val.score_slice(make_slice(columns=(100,), method_used=val.NO_LESION_METHOD),
-                           [(100, 115.0)]),
+        3: val.score_slice(
+            make_slice(columns=(100,), method_used=val.NO_LESION_METHOD), [(100, 115.0)]
+        ),
     }
     assert val.score_specimen(slices)["gated_slices"] == [3]
 
@@ -359,8 +372,7 @@ def test_interpolation_never_overshoots_between_marks():
     deeper than the lesions being measured. The shape-preserving curve must
     not invent a lesion end no operator marked.
     """
-    marks = [(100.0, 50.0), (129.0, 50.0), (158.0, 85.0), (187.0, 85.0),
-             (216.0, 85.0)]
+    marks = [(100.0, 50.0), (129.0, 50.0), (158.0, 85.0), (187.0, 85.0), (216.0, 85.0)]
     _, y_values = val.interpolate_marks(marks)
 
     assert y_values.min() >= 50.0 - 0.01

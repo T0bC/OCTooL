@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Import-safety tests enforcing the logic/view boundary for CarlQuant.
 
 The ``app/logic/carlquant`` package must never import tkinter, so it can be

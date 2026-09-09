@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze Undo Panel.
 
@@ -35,14 +34,14 @@ Author: Tobias Meissner
 ****
 """
 
-
-from app.view.shared.error_handler import handle_errors
-from datetime import datetime
 import tkinter as tk
 from tkinter import ttk
+
 from tksheet import Sheet
-from ttkbootstrap import Style
+
 from app.logic.annolyze.display_service import DisplayService
+from app.view.shared.error_handler import handle_errors
+
 
 class UndoPanel:
     @handle_errors("UndoPanel.__init__")
@@ -59,14 +58,25 @@ class UndoPanel:
         self.frame.transient(self.root)
         self.frame.grab_set()
 
-        #äself.style = Style(theme="darkly")  # Or match your main theme
+        # äself.style = Style(theme="darkly")  # Or match your main theme
 
         self._setup_sheet()
         self._setup_controls()
 
     def _setup_sheet(self):
         """Configure and display the sheet widget for undo history."""
-        self.sheet = Sheet(self.frame, headers=["Time", "Slice", "Column", "Old Value", "New Value", "Feature", "Annotation ID"])
+        self.sheet = Sheet(
+            self.frame,
+            headers=[
+                "Time",
+                "Slice",
+                "Column",
+                "Old Value",
+                "New Value",
+                "Feature",
+                "Annotation ID",
+            ],
+        )
         self.sheet.header_font = ("Segoe UI", 12, "bold")
         self.sheet.set_options(header_fg="#F5F5F5", header_bg="#2B2B2B")
 
@@ -74,13 +84,15 @@ class UndoPanel:
         self.sheet.table_bg = "#1E1E1E"
         self.sheet.table_fg = "#E0E0E0"
 
-        self.sheet.enable_bindings((
-            "single_select",  # allows single cell selection
-            "row_select",     # enables row selection
-            "right_click_popup_menu",
-            "rc_select",
-            "copy",
-        ))
+        self.sheet.enable_bindings(
+            (
+                "single_select",  # allows single cell selection
+                "row_select",  # enables row selection
+                "right_click_popup_menu",
+                "rc_select",
+                "copy",
+            )
+        )
 
         self.sheet.grid(row=0, column=0, columnspan=2, sticky="nsew")
 
@@ -96,7 +108,6 @@ class UndoPanel:
         if clicked_row is not None:
             self._undo_to_index(clicked_row)
             self.frame.destroy()
-
 
     def _undo_to_index(self, index):
         annotate_panel = self.context.get_panel("anno_image")
@@ -120,14 +131,12 @@ class UndoPanel:
                 annotate_panel.draw_annotation()
                 annotate_panel.save_current_annotations()
 
-
     def _undo_to_selected(self):
         """Undo actions up to the currently selected row in the sheet."""
         selected = self.sheet.get_currently_selected()
         if selected:
             self._undo_to_index(selected[0])
             self.frame.destroy()
-
 
     def _populate_sheet(self):
         """Populate the sheet with undo history data and apply cell highlighting."""
@@ -144,7 +153,6 @@ class UndoPanel:
 
             data.append([ts, slice_str, col_name, old_value, new_value, feature, annotation_id])
 
-
         self.sheet.set_sheet_data(data)
 
         for i, entry in enumerate(self.undo_stack):
@@ -153,10 +161,7 @@ class UndoPanel:
 
             for col in range(len(self.sheet.headers())):
                 self.sheet.highlight_cells(
-                    cells=[(i, col)],
-                    bg=bg_color,
-                    fg=fg_color,
-                    overwrite=True
+                    cells=[(i, col)], bg=bg_color, fg=fg_color, overwrite=True
                 )
         self._set_column_widths()
         self._resize_to_fit_table()

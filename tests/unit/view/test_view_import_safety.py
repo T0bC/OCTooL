@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Import-smoke tests for the tkinter view layer.
 
 The ``app/view/**`` modules are tkinter-bound and are not unit-tested for
@@ -11,6 +10,7 @@ If the environment is headless (no display), tkinter import-time failures are
 skipped rather than failed, since the goal here is import-path safety, not GUI
 rendering.
 """
+
 import importlib
 from pathlib import Path
 

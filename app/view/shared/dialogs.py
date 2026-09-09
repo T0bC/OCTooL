@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Shared Dialog Helpers.
 
@@ -33,7 +32,6 @@ along with this program. If not, see http://www.gnu.org/licenses/.
 Author: Tobias Meissner
 ****
 """
-
 
 from tkinter import messagebox
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AnnoLyze View Data I/O.
 
@@ -33,11 +32,11 @@ Author: Tobias Meissner
 ****
 """
 
-
-from pathlib import Path
 import json
-from typing import Optional
+from pathlib import Path
+
 from app.logic.annolyze.data_service import DataService
+
 
 class DataLoader:
     def __init__(self, base_folder: Path, context):
@@ -46,7 +45,7 @@ class DataLoader:
         self.sample_name = base_folder.name
         self.data_service = DataService()
 
-    def find_file(self, pattern: str) -> Optional[Path]:
+    def find_file(self, pattern: str) -> Path | None:
         return self.data_service.find_file(self.base_folder, pattern, self.sample_name)
 
     def load_config(self):
@@ -60,24 +59,29 @@ class DataLoader:
                     results_panel.reset_table()
 
                 self.context.config_manager.apply_config(config, self.context)
-                self.context.safe_status_update(f"Config loaded from: {config_path}", level="success")
+                self.context.safe_status_update(
+                    f"Config loaded from: {config_path}", level="success"
+                )
             else:
-                self.context.safe_status_update("Config file found but failed to load.", level="error")
+                self.context.safe_status_update(
+                    "Config file found but failed to load.", level="error"
+                )
         else:
             self.context.safe_status_update("No config file found.", level="warning")
-
 
     def load_annotations(self):
         annotation_path = self.find_file("*annotations.json")
         if annotation_path:
             try:
-                with open(annotation_path, "r", encoding="utf-8") as f:
+                with open(annotation_path, encoding="utf-8") as f:
                     annotations = json.load(f)
                 self.context.loaded_annotations = annotations
                 annotate_panel = self.context.get_panel("anno_image")
                 if annotate_panel:
                     annotate_panel.load_annotations(annotations)
-                self.context.safe_status_update(f"Annotations loaded from: {annotation_path}", level="success")
+                self.context.safe_status_update(
+                    f"Annotations loaded from: {annotation_path}", level="success"
+                )
             except Exception as e:
                 self.context.safe_status_update(f"Failed to load annotations: {e}", level="error")
         else:
@@ -97,7 +101,9 @@ class DataLoader:
                     results_panel.sheet.set_sheet_data(data)
                     results_panel.sheet.refresh()
                     results_panel._set_column_widths()
-                    self.context.status_bar.update(f"Results loaded from: {results_path}", level="success")
+                    self.context.status_bar.update(
+                        f"Results loaded from: {results_path}", level="success"
+                    )
             except Exception as e:
                 self.context.status_bar.update(f"Failed to load results: {e}", level="error")
         else:
@@ -125,9 +131,7 @@ class DataSaver:
     def save_config(self):
         # Build config using centralized logic
         config = self.config_manager.build_config(
-            self.metadata_panel,
-            self.results_panel,
-            self.add_columns_panel
+            self.metadata_panel, self.results_panel, self.add_columns_panel
         )
 
         # Construct structured save path
@@ -139,11 +143,8 @@ class DataSaver:
         except Exception as e:
             self.context.status_bar.update(f"Failed to save config: {e}", level="error")
 
-
     def save_annotations(self):
-        json_path = (
-            self.data_folder / "annotations" / f"{self.sample_folder.name}_annotations.json"
-        )
+        json_path = self.data_folder / "annotations" / f"{self.sample_folder.name}_annotations.json"
 
         try:
             self.data_service.save_annotations(self.annotate_panel.slice_annotations, json_path)
@@ -168,4 +169,3 @@ class DataSaver:
         self.save_annotations()
         self.save_results()
         self.context.status_bar.update("All data saved successfully.", level="success")
-

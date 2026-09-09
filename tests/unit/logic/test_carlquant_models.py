@@ -4,13 +4,14 @@ Unit tests for app/logic/carlquant/models.py.
 Verifies the logic-layer model surface (re-homed dataclasses + enum) and the
 buffer-coordinate helpers on RegionConfig.
 """
+
 import pytest
 
 from app.logic.carlquant.models import (
-    RegionConfig,
     AirConfig,
-    SpecimenConfig,
     DepthDetectionMethod,
+    RegionConfig,
+    SpecimenConfig,
 )
 
 
@@ -83,8 +84,10 @@ class TestSpecimenConfig:
         cfg = SpecimenConfig(specimen_id="S1")
         cfg.regions[0] = RegionConfig(
             slice_index=0,
-            specimen_start=(0, 0), lesion_start=(1, 1),
-            lesion_end=(2, 2), tooth_end=(3, 3),
+            specimen_start=(0, 0),
+            lesion_start=(1, 1),
+            lesion_end=(2, 2),
+            tooth_end=(3, 3),
         )
         cfg.air[0] = AirConfig(slice_index=0, point1=(5, 5), point2=(9, 9))
         assert cfg.regions[0].slice_index == 0

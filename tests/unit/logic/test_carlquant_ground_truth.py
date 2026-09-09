@@ -5,6 +5,7 @@ Covers the ground-truth file convention, round-tripping operator marks, the
 refusal to load one specimen's marks for another, and the atomic save that
 protects existing marks from an interrupted write.
 """
+
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,8 +15,7 @@ import pytest
 from app.logic.carlquant import ground_truth as gt
 
 
-def make_specimen(tmp_path: Path, specimen_id="1_1.7_E_PBS_KIM",
-                  operator="TM", measurement=1):
+def make_specimen(tmp_path: Path, specimen_id="1_1.7_E_PBS_KIM", operator="TM", measurement=1):
     """Minimal stand-in for a Specimen: ground_truth only reads these fields."""
     return SimpleNamespace(
         specimen_id=specimen_id,
@@ -69,10 +69,14 @@ def test_load_converts_string_slice_keys_to_int(tmp_path):
     specimen = make_specimen(tmp_path)
     path = gt.ground_truth_path(specimen)
     path.parent.mkdir(parents=True)
-    path.write_text(json.dumps({
-        "specimen_id": specimen.specimen_id,
-        "lesion_end": {"0": [[1.0, 2.0]], "11": [[3.0, 4.0]]},
-    }))
+    path.write_text(
+        json.dumps(
+            {
+                "specimen_id": specimen.specimen_id,
+                "lesion_end": {"0": [[1.0, 2.0]], "11": [[3.0, 4.0]]},
+            }
+        )
+    )
 
     marks = gt.load_ground_truth(specimen)
     assert sorted(marks) == [0, 11]
@@ -89,10 +93,14 @@ def test_load_refuses_marks_from_another_specimen(tmp_path):
     specimen = make_specimen(tmp_path)
     path = gt.ground_truth_path(specimen)
     path.parent.mkdir(parents=True)
-    path.write_text(json.dumps({
-        "specimen_id": "mixed_carl_quant_test_data",
-        "lesion_end": {"0": [[1.0, 2.0]]},
-    }))
+    path.write_text(
+        json.dumps(
+            {
+                "specimen_id": "mixed_carl_quant_test_data",
+                "lesion_end": {"0": [[1.0, 2.0]]},
+            }
+        )
+    )
 
     with pytest.raises(gt.GroundTruthMismatchError):
         gt.load_ground_truth(specimen)
@@ -146,7 +154,9 @@ def test_load_ignores_corrupt_file(tmp_path):
 def test_save_never_touches_the_specimen_config(tmp_path):
     """GIVEN an existing config, WHEN saving ground truth, THEN the config is untouched."""
     specimen = make_specimen(tmp_path)
-    config_file = tmp_path / specimen.specimen_id / "Data_TM_1" / f"{specimen.specimen_id}_config.json"
+    config_file = (
+        tmp_path / specimen.specimen_id / "Data_TM_1" / f"{specimen.specimen_id}_config.json"
+    )
     config_file.parent.mkdir(parents=True)
     config_file.write_text('{"specimen_id": "1_1.7_E_PBS_KIM", "regions": {}}')
     before = config_file.read_text()
