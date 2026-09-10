@@ -37,7 +37,7 @@ import time
 import traceback
 from threading import Thread
 
-from app.logic.carlquant.parallel_analysis import ParallelSpecimenCoordinator
+from app.logic.carlquant import AnalysisService
 from app.view.carlquant.progress_dialog import ProgressDialog
 from app.view.shared.error_handler import log_error_to_file, show_error_popup
 
@@ -45,35 +45,14 @@ from app.view.shared.error_handler import log_error_to_file, show_error_popup
 def run_carl_quant(context):
     """Run CarlQuant analysis with a progress dialog and cancellation support.
 
-    Dispatches the loaded specimens to a single process pool via
-    :class:`ParallelSpecimenCoordinator` from a background thread -- one task per
-    specimen -- while a modal :class:`ProgressDialog` reflects progress and offers
-    a Cancel button. Progress is reported per specimen; each worker analyses all
-    of its specimen's slices and saves the results itself.
+    Iterates the loaded specimens on a background thread, delegating each
+    specimen's analysis to :meth:`AnalysisService.analyze_specimen` while a modal
+    :class:`ProgressDialog` reflects progress and offers a Cancel button.
     """
 
     def worker():
         specimen_list = list(context.specimen_data.items())
-
-        # Honour the user's reanalysis choice before sizing the dialog, so the
-        # overall progress bar counts only the specimens that will actually run.
-        pending = []
-        for specimen_id, specimen in specimen_list:
-            if getattr(specimen, "analysis_choice", "new") == "skip":
-                context.status_bar.update(
-                    f"Skipped specimen {specimen_id} (user choice)", level="info"
-                )
-                specimen.status = "Skipped"
-                context.root.after(
-                    0, lambda sid=specimen_id: _set_row_status(context, sid, "Skipped")
-                )
-                continue
-            # overwrite / new: stamp metadata from the settings panel. This must
-            # happen before submission -- workers get a copy of the specimen and
-            # cannot reach back into the application context.
-            specimen.measurement = context.analysis_metadata.get("measurement", 1)
-            specimen.operator = context.analysis_metadata.get("operator", "OP")
-            pending.append((specimen_id, specimen))
+        specimen_ids = [sid for sid, _ in specimen_list]
 
         # Create the progress dialog on the main thread.
         progress_dialog = None
@@ -82,8 +61,8 @@ def run_carl_quant(context):
             nonlocal progress_dialog
             progress_dialog = ProgressDialog(
                 context.root,
-                total_specimens=max(len(pending), 1),
-                specimen_names=[sid for sid, _ in pending],
+                total_specimens=len(specimen_list),
+                specimen_names=specimen_ids,
             )
 
         context.root.after(0, create_dialog)
@@ -93,71 +72,76 @@ def run_carl_quant(context):
         cancelled = False
 
         try:
-            num_sound = context.region_config.get("sound", 3)
-            num_lesion = context.region_config.get("lesion", 3)
-            detection_method = getattr(context, "detection_method", "combined_mean")
+            for specimen_idx, (specimen_id, specimen) in enumerate(specimen_list):
+                if progress_dialog.is_cancelled():
+                    cancelled = True
+                    context.status_bar.update("Analysis cancelled by user", level="warning")
+                    break
 
-            by_id = {sid: specimen for sid, specimen in pending}
-            total_specimens = len(pending)
-            total_slices = sum(specimen.slices for _, specimen in pending)
-            coordinator = ParallelSpecimenCoordinator()
+                progress_dialog.update_specimen(specimen_idx, specimen_id, specimen.slices)
 
-            state = {"done": 0, "slices": 0}
-
-            def on_mode(mode, workers):
-                progress_dialog.set_processing_mode(mode, workers if mode == "parallel" else None)
-                progress_dialog.update_specimen(
-                    0, f"{total_specimens} specimens ({workers} workers)", max(total_slices, 1)
-                )
-
-            def on_specimen_done(result):
-                """Called on the coordinator thread as each specimen finishes."""
-                state["done"] += 1
-                state["slices"] += result.processed_count
-                done = state["done"]
-
-                # The worker mutated its own copy, so apply the status here.
-                specimen = by_id.get(result.specimen_id)
-                if specimen is not None:
-                    specimen.status = result.status
-
-                if result.status.startswith("Error"):
+                # Honour the user's reanalysis choice.
+                choice = getattr(specimen, "analysis_choice", "new")
+                if choice == "skip":
                     context.status_bar.update(
-                        f"Error processing {result.specimen_id}: {result.status}", level="error"
+                        f"Skipped specimen {specimen_id} (user choice)", level="info"
                     )
+                    specimen.status = "Skipped"
+                    context.root.after(
+                        0, lambda sid=specimen_id: _set_row_status(context, sid, "Skipped")
+                    )
+                    progress_dialog.complete_specimen(specimen_idx)
+                    continue
 
+                # overwrite / new: stamp metadata from the settings panel.
+                specimen.measurement = context.analysis_metadata.get("measurement", 1)
+                specimen.operator = context.analysis_metadata.get("operator", "OP")
+
+                num_sound = context.region_config.get("sound", 3)
+                num_lesion = context.region_config.get("lesion", 3)
+                detection_method = getattr(context, "detection_method", "combined_mean")
+
+                def on_mode(mode, workers):
+                    if mode == "parallel":
+                        progress_dialog.set_processing_mode("parallel", workers)
+                    else:
+                        progress_dialog.set_processing_mode("sequential")
+
+                try:
+                    result = AnalysisService.analyze_specimen(
+                        specimen,
+                        num_sound=num_sound,
+                        num_lesion=num_lesion,
+                        detection_method=detection_method,
+                        result_lock=getattr(context, "result_lock", None),
+                        save=True,
+                        on_status=lambda msg: progress_dialog.update_status(msg, color="blue"),
+                        on_slice_done=lambda done, total: progress_dialog.update_slice(done, total),
+                        on_mode=on_mode,
+                        on_error=lambda msg: context.status_bar.update(msg, level="error"),
+                        is_cancelled=progress_dialog.is_cancelled,
+                    )
+                except Exception as exc:
+                    context.status_bar.update(
+                        f"Error processing {specimen_id}: {exc}", level="error"
+                    )
+                    progress_dialog.complete_specimen(specimen_idx)
+                    continue
+
+                # Reflect the computed status in the specimen table (main thread).
                 was_cancelled = progress_dialog.is_cancelled()
                 context.root.after(
                     0,
-                    lambda sid=result.specimen_id, status=result.status, wc=was_cancelled: (
-                        _set_row_status(context, sid, status, lock_on_complete=not wc)
+                    lambda sid=specimen_id, status=result.status, wc=was_cancelled: _set_row_status(
+                        context, sid, status, lock_on_complete=not wc
                     ),
                 )
 
-                if state["slices"]:
-                    progress_dialog.update_slice(state["slices"] - 1, max(total_slices, 1))
-                progress_dialog.complete_specimen(done - 1)
-                progress_dialog.update_status(
-                    f"Completed {result.specimen_id} ({done}/{total_specimens})", color="blue"
-                )
+                progress_dialog.complete_specimen(specimen_idx)
 
-                # Cancellation is observed at specimen granularity: stop feeding
-                # the pool, let in-flight specimens finish.
-                if was_cancelled:
-                    coordinator.cancel()
-
-            if progress_dialog.is_cancelled():
-                cancelled = True
-            elif pending:
-                coordinator.run(
-                    [specimen for _, specimen in pending],
-                    num_sound=num_sound,
-                    num_lesion=num_lesion,
-                    detection_method=detection_method,
-                    on_mode=on_mode,
-                    progress_callback=on_specimen_done,
-                )
-                cancelled = progress_dialog.is_cancelled()
+                if progress_dialog.is_cancelled():
+                    cancelled = True
+                    break
 
             if cancelled:
                 context.status_bar.update("Analysis cancelled by user", level="warning")

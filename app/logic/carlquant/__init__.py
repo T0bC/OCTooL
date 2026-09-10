@@ -29,79 +29,29 @@ Author: Tobias Meissner
 ****
 """
 
-from typing import TYPE_CHECKING
-
-# Symbols are resolved lazily (PEP 562) so that importing a single submodule --
-# notably ``specimen_worker`` inside a spawned process pool worker -- does not
-# drag in the whole service layer (numpy, PIL, openpyxl, data_io). On Windows and
-# macOS ``multiprocessing`` uses the ``spawn`` start method, so every worker pays
-# this import cost from scratch; keeping it minimal is what makes batch analysis
-# fast there.
-_LAZY_EXPORTS = {
-    # Services
-    "AnalysisService": "app.logic.carlquant.analysis_service",
-    "SliceAnalysis": "app.logic.carlquant.analysis_service",
-    "SpecimenAnalysisResult": "app.logic.carlquant.analysis_service",
-    "DataLoader": "app.logic.carlquant.data_service",
-    "DataSaver": "app.logic.carlquant.data_service",
-    "InterpolationService": "app.logic.carlquant.interpolation_service",
-    # Interpolation descriptors
-    "CoordinateDescriptor": "app.logic.carlquant.interpolation_service",
-    "REGION_DESCRIPTOR": "app.logic.carlquant.interpolation_service",
-    "AIR_DESCRIPTOR": "app.logic.carlquant.interpolation_service",
-    # Models
-    "AirConfig": "app.logic.carlquant.models",
-    "DepthDetectionMethod": "app.logic.carlquant.models",
-    "LesionDepth": "app.logic.carlquant.models",
-    "RegionConfig": "app.logic.carlquant.models",
-    "RegionStats": "app.logic.carlquant.models",
-    "SliceResult": "app.logic.carlquant.models",
-    "Specimen": "app.logic.carlquant.models",
-    "SpecimenConfig": "app.logic.carlquant.models",
-    "Surface": "app.logic.carlquant.models",
-}
-
-if TYPE_CHECKING:  # pragma: no cover - import-time hints for type checkers only
-    from app.logic.carlquant.analysis_service import (
-        AnalysisService,
-        SliceAnalysis,
-        SpecimenAnalysisResult,
-    )
-    from app.logic.carlquant.data_service import DataLoader, DataSaver
-    from app.logic.carlquant.interpolation_service import (
-        AIR_DESCRIPTOR,
-        REGION_DESCRIPTOR,
-        CoordinateDescriptor,
-        InterpolationService,
-    )
-    from app.logic.carlquant.models import (
-        AirConfig,
-        DepthDetectionMethod,
-        LesionDepth,
-        RegionConfig,
-        RegionStats,
-        SliceResult,
-        Specimen,
-        SpecimenConfig,
-        Surface,
-    )
-
-
-def __getattr__(name: str):
-    """Import and cache a public symbol on first access (PEP 562)."""
-    module_path = _LAZY_EXPORTS.get(name)
-    if module_path is None:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    import importlib
-
-    value = getattr(importlib.import_module(module_path), name)
-    globals()[name] = value  # cache so later lookups skip __getattr__
-    return value
-
-
-def __dir__() -> list[str]:
-    return sorted(__all__)
-
+from app.logic.carlquant.analysis_service import (
+    AnalysisService,
+    SliceAnalysis,
+    SpecimenAnalysisResult,
+)
+from app.logic.carlquant.data_service import DataLoader, DataSaver
+from app.logic.carlquant.interpolation_service import (
+    AIR_DESCRIPTOR,
+    REGION_DESCRIPTOR,
+    CoordinateDescriptor,
+    InterpolationService,
+)
+from app.logic.carlquant.models import (
+    AirConfig,
+    DepthDetectionMethod,
+    LesionDepth,
+    RegionConfig,
+    RegionStats,
+    SliceResult,
+    Specimen,
+    SpecimenConfig,
+    Surface,
+)
 
 __all__ = [
     # Models
