@@ -176,7 +176,7 @@
           "▸ Place it in the same folder to auto-import its settings",
           "▸ No exact match? A base-name .txt (e.g. scan_0002_Mode3D.oct → scan.txt) is used instead when unambiguous",
           "▸ Multiple scans share that base name? It applies to the highest-numbered one only",
-          "▸ One line per view: VIEW:START-END:COUNT:RI (e.g. XZ:33-444:25:1.35)"
+          "▸ One line per view: VIEW:START-END:nSlices:RFI (e.g. XZ:33-444:25:1.5)"
         ]
       },
       {
