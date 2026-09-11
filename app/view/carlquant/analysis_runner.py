@@ -3,12 +3,15 @@ CarlQuant Analysis Runner.
 
 Background-thread orchestrator that runs the CarlQuant analysis pipeline across
 all loaded specimens. Displays a modal ProgressDialog and supports cancellation.
-Delegates per-specimen computation to AnalysisService.analyze_specimen.
+Delegates computation to BatchSliceCoordinator, which drives a single process
+pool over a flat queue holding every slice of every specimen, so that pool
+startup is paid once per batch instead of once per specimen and the parent saves
+one specimen while the workers already compute the next.
 
 Key contents:
 - run_carl_quant: Entry point that spawns the analysis worker thread.
-- worker: Iterates specimens, updates progress, and handles cancellation.
-- ProgressDialog integration: Thread-safe UI updates for specimen and slice progress.
+- worker: Prepares specimens, runs the batch coordinator, handles cancellation.
+- ProgressDialog integration: Thread-safe UI updates for batch slice progress.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -37,7 +40,7 @@ import time
 import traceback
 from threading import Thread
 
-from app.logic.carlquant import AnalysisService
+from app.logic.carlquant.parallel_analysis import BatchSliceCoordinator
 from app.view.carlquant.progress_dialog import ProgressDialog
 from app.view.shared.error_handler import log_error_to_file, show_error_popup
 
@@ -45,9 +48,10 @@ from app.view.shared.error_handler import log_error_to_file, show_error_popup
 def run_carl_quant(context):
     """Run CarlQuant analysis with a progress dialog and cancellation support.
 
-    Iterates the loaded specimens on a background thread, delegating each
-    specimen's analysis to :meth:`AnalysisService.analyze_specimen` while a modal
-    :class:`ProgressDialog` reflects progress and offers a Cancel button.
+    Stamps the settings-panel metadata onto every specimen the user wants
+    analysed, then hands the whole batch to :class:`BatchSliceCoordinator` on a
+    background thread while a modal :class:`ProgressDialog` reflects batch-wide
+    slice progress and offers a Cancel button.
     """
 
     def worker():
@@ -72,17 +76,16 @@ def run_carl_quant(context):
         cancelled = False
 
         try:
-            for specimen_idx, (specimen_id, specimen) in enumerate(specimen_list):
-                if progress_dialog.is_cancelled():
-                    cancelled = True
-                    context.status_bar.update("Analysis cancelled by user", level="warning")
-                    break
+            num_sound = context.region_config.get("sound", 3)
+            num_lesion = context.region_config.get("lesion", 3)
+            detection_method = getattr(context, "detection_method", "combined_mean")
+            measurement = context.analysis_metadata.get("measurement", 1)
+            operator = context.analysis_metadata.get("operator", "OP")
 
-                progress_dialog.update_specimen(specimen_idx, specimen_id, specimen.slices)
-
-                # Honour the user's reanalysis choice.
-                choice = getattr(specimen, "analysis_choice", "new")
-                if choice == "skip":
+            # Split the batch by the user's reanalysis choice before any compute.
+            queued = []
+            for specimen_id, specimen in specimen_list:
+                if getattr(specimen, "analysis_choice", "new") == "skip":
                     context.status_bar.update(
                         f"Skipped specimen {specimen_id} (user choice)", level="info"
                     )
@@ -90,59 +93,49 @@ def run_carl_quant(context):
                     context.root.after(
                         0, lambda sid=specimen_id: _set_row_status(context, sid, "Skipped")
                     )
-                    progress_dialog.complete_specimen(specimen_idx)
+                    progress_dialog.complete_specimen(specimen_id)
                     continue
 
                 # overwrite / new: stamp metadata from the settings panel.
-                specimen.measurement = context.analysis_metadata.get("measurement", 1)
-                specimen.operator = context.analysis_metadata.get("operator", "OP")
+                specimen.measurement = measurement
+                specimen.operator = operator
+                queued.append(specimen)
 
-                num_sound = context.region_config.get("sound", 3)
-                num_lesion = context.region_config.get("lesion", 3)
-                detection_method = getattr(context, "detection_method", "combined_mean")
+            def on_mode(mode, workers):
+                if mode == "parallel":
+                    progress_dialog.set_processing_mode("parallel", workers)
+                else:
+                    progress_dialog.set_processing_mode("sequential")
 
-                def on_mode(mode, workers):
-                    if mode == "parallel":
-                        progress_dialog.set_processing_mode("parallel", workers)
-                    else:
-                        progress_dialog.set_processing_mode("sequential")
-
-                try:
-                    result = AnalysisService.analyze_specimen(
-                        specimen,
-                        num_sound=num_sound,
-                        num_lesion=num_lesion,
-                        detection_method=detection_method,
-                        result_lock=getattr(context, "result_lock", None),
-                        save=True,
-                        on_status=lambda msg: progress_dialog.update_status(msg, color="blue"),
-                        on_slice_done=lambda done, total: progress_dialog.update_slice(done, total),
-                        on_mode=on_mode,
-                        on_error=lambda msg: context.status_bar.update(msg, level="error"),
-                        is_cancelled=progress_dialog.is_cancelled,
-                    )
-                except Exception as exc:
-                    context.status_bar.update(
-                        f"Error processing {specimen_id}: {exc}", level="error"
-                    )
-                    progress_dialog.complete_specimen(specimen_idx)
-                    continue
-
-                # Reflect the computed status in the specimen table (main thread).
+            def on_specimen_done(result):
+                # Specimens finish out of order, so the row is updated by id.
                 was_cancelled = progress_dialog.is_cancelled()
                 context.root.after(
                     0,
-                    lambda sid=specimen_id, status=result.status, wc=was_cancelled: _set_row_status(
-                        context, sid, status, lock_on_complete=not wc
+                    lambda sid=result.specimen_id, status=result.status, wc=was_cancelled: (
+                        _set_row_status(context, sid, status, lock_on_complete=not wc)
                     ),
                 )
+                progress_dialog.complete_specimen(result.specimen_id)
 
-                progress_dialog.complete_specimen(specimen_idx)
+            progress_dialog.start_batch(sum(s.slices for s in queued))
 
-                if progress_dialog.is_cancelled():
-                    cancelled = True
-                    break
+            BatchSliceCoordinator().run(
+                queued,
+                num_sound=num_sound,
+                num_lesion=num_lesion,
+                detection_method=detection_method,
+                save=True,
+                result_lock=getattr(context, "result_lock", None),
+                on_mode=on_mode,
+                on_status=lambda msg: progress_dialog.update_status(msg, color="blue"),
+                on_slice_done=progress_dialog.update_batch_slice,
+                on_specimen_done=on_specimen_done,
+                on_error=lambda msg: context.status_bar.update(msg, level="error"),
+                is_cancelled=progress_dialog.is_cancelled,
+            )
 
+            cancelled = progress_dialog.is_cancelled()
             if cancelled:
                 context.status_bar.update("Analysis cancelled by user", level="warning")
             else:
