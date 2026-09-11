@@ -470,14 +470,21 @@ class DataSaver:
     def save_results(specimen: Specimen):
         from openpyxl import Workbook
 
+        if not specimen.results:
+            return
+
         wb = Workbook()
 
         # === Sheet 1: Summary ===
         ws_summary = wb.active
         ws_summary.title = "Summary"
 
-        num_sound = sum(1 for r in specimen.results[0].region_stats if r.region_type == "sound")
-        num_lesion = sum(1 for r in specimen.results[0].region_stats if r.region_type == "lesion")
+        # Derive the column layout from the lowest completed slice rather than
+        # slice 0: a cancelled or partially failed run can leave any subset of
+        # slices behind, and slice 0 is not guaranteed to be one of them.
+        template = specimen.results[min(specimen.results)]
+        num_sound = sum(1 for r in template.region_stats if r.region_type == "sound")
+        num_lesion = sum(1 for r in template.region_stats if r.region_type == "lesion")
 
         headers = ["SLICE"]
         headers += [f"SOUND_{i + 1}_MEDIAN" for i in range(num_sound)]
