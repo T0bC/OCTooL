@@ -52,6 +52,7 @@ from app.logic.carlquant.models import (
     SpecimenConfig,
     Surface,
 )
+from app.logic.carlquant.parallel_analysis import BatchSliceCoordinator
 
 __all__ = [
     # Models
@@ -66,6 +67,7 @@ __all__ = [
     "DepthDetectionMethod",
     # Services
     "AnalysisService",
+    "BatchSliceCoordinator",
     "SliceAnalysis",
     "SpecimenAnalysisResult",
     "InterpolationService",
