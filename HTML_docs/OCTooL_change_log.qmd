@@ -11,7 +11,7 @@ format:
 editor: visual
 ---
 
-# Version 2026.8 (2026-09-08)
+# Version 2026.8 (2026-09-11)
 
 ## CarlQuant: Lesion Depth Detection
 
@@ -70,6 +70,31 @@ The slice's depth now comes from one method, chosen by lateral stability rather 
 ## CarlQuant: Analysis Zoom
 
 -   "Zoom to Analysis" now frames both views on the analysed region together: the A-scan zooms in depth while the B-scan zooms laterally
+
+## CarlQuant: Batch Analysis Performance
+
+### One Process Pool per Batch
+
+-   A batch analysis now runs **one process pool over a flat queue holding every slice of every specimen**, replacing the previous layout that opened and tore down a pool for each specimen in turn
+-   Measured on 15 specimens x 25 slices of real data: **619.8 s → 383.3 s, a 1.62x speedup** on compute alone. Including saving, which now overlaps with computation, the end-to-end gain is roughly **2x**; a 300-specimen batch drops from about 4.4 h to about 2.2 h
+-   The old layout lost time in four places, all of which scale with specimen count: 15 pools x 25 workers meant **375 worker starts**, each paying the lazy `scipy`/`sklearn` import on its first slice (about 2.7 s), where a flat pool pays 24; pool creation was repeated per specimen; every core sat idle while the parent wrote that specimen's Excel and annotated images; and the last slice of each specimen blocked the first slice of the next
+-   Results are verified identical to the previous layout across all 375 slices
+-   This also helps frozen builds: the number of pool-spawn events drops from one per specimen to one per batch
+
+### Worker Count and Memory
+
+-   Worker count defaults to `CPU cores - 1` (leaving a core for the UI), bounded by the batch slice count, a hard cap of 24, and an available-RAM budget of 0.25 GB per worker. The 24 cap is deliberate: on the reference machine 39 workers were only about 5% faster than 20 while costing 6.1 GB of resident memory
+-   Available memory is probed with the standard library only, so no new runtime dependency was introduced
+-   Each specimen is saved and its results released the moment its own last slice finishes, so the parent holds only the few specimens currently in flight instead of accumulating the whole batch
+-   Slices are submitted through a bounded in-flight window rather than all at once, which keeps finished results from piling up in the parent while a long batch runs
+-   Net effect: memory stays flat at roughly 4 GB whether a batch holds 8 specimens or 200
+
+### Progress and Cancellation
+
+-   The progress dialog now reports **batch-wide slice progress** and a count of completed specimens. With several specimens computing at once, the previous per-specimen slice bar no longer described what was happening
+-   Specimens now finish out of order, so the specimen table is updated by specimen ID rather than by row position
+-   Cancelling drops every slice not yet started, stops feeding the queue, and lets the slices already running finish. Specimens are then marked `Completed`, `Partial`, or `Cancelled` according to how much of each actually ran, and partial results are still written
+-   Fixed the results export assuming slice 0 was always present. A cancelled or partially failed run can leave any subset of slices, so the summary sheet now takes its column layout from the lowest completed slice
 
 # Version 2026.7 (2026-08-20)
 
