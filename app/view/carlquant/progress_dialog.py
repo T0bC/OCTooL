@@ -1,15 +1,18 @@
 """
 CarlQuant Progress Dialog.
 
-Modal progress dialog displayed during CarlQuant analysis. Shows the current
-specimen, slice progress within that specimen, and overall progress across all
-specimens. Provides a Cancel button for graceful interruption.
+Modal progress dialog displayed during CarlQuant analysis. The analysis drives
+one process pool over a flat queue of every slice in the batch, so several
+specimens are in flight at once and there is no single current specimen. The
+dialog therefore shows batch-wide slice progress plus a count of completed
+specimens, and provides a Cancel button for graceful interruption.
 
 Key contents:
-- ProgressDialog: Thread-safe modal dialog with per-specimen and overall progress.
-- update_progress: Called from the worker thread to advance bars and labels.
-- request_cancel: Sets the cancellation flag checked by the worker.
-- on_complete: Finalises the dialog when analysis finishes or is cancelled.
+- ProgressDialog: Thread-safe modal dialog with batch slice and specimen progress.
+- start_batch: Announces the total slice count before work begins.
+- update_batch_slice: Advances the batch-wide slice bar from the worker thread.
+- complete_specimen: Advances the specimen counter as each specimen is saved.
+- finish: Finalises the dialog when analysis finishes or is cancelled.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -44,9 +47,9 @@ class ProgressDialog:
     A modal progress dialog for CarlQuant analysis.
 
     Features:
-    - Shows current specimen being processed
-    - Shows slice progress within specimen
-    - Overall progress across all specimens
+    - Batch-wide slice progress (all specimens share one work queue)
+    - Count of specimens finished and saved so far
+    - Name of the most recently completed specimen
     - Cancel button with graceful interruption
     - Thread-safe updates from worker threads
     """
@@ -65,6 +68,7 @@ class ProgressDialog:
         self.specimen_names = specimen_names
         self.cancel_requested = False
         self._lock = threading.Lock()
+        self._specimens_done = 0
 
         # Create dialog window
         self.dialog = tk.Toplevel(parent)
@@ -139,8 +143,8 @@ class ProgressDialog:
         self.mode_label = ttk.Label(mode_frame, text="Initializing...", foreground="blue")
         self.mode_label.pack(side=tk.LEFT, padx=(5, 0))
 
-        # Current specimen section
-        specimen_frame = ttk.LabelFrame(main_frame, text="Current Specimen", padding=10)
+        # Batch slice section (every specimen feeds one shared slice queue)
+        specimen_frame = ttk.LabelFrame(main_frame, text="Slices", padding=10)
         specimen_frame.pack(fill=tk.X, pady=(0, 10))
 
         self.specimen_label = ttk.Label(specimen_frame, text="Waiting to start...")
@@ -177,41 +181,39 @@ class ProgressDialog:
         with self._lock:
             return self.cancel_requested
 
-    def update_specimen(self, specimen_index, specimen_id, total_slices):
+    def start_batch(self, total_slices):
         """
-        Update progress for a new specimen.
+        Announce the size of the batch before any slice is processed.
 
         Args:
-            specimen_index: 0-based index of current specimen
-            specimen_id: ID/name of the specimen
-            total_slices: Total number of slices in this specimen
+            total_slices: Total number of slices across every queued specimen
         """
 
         def _update():
-            self.overall_progress["value"] = specimen_index
-            self.overall_label.config(
-                text=f"Specimen {specimen_index + 1} of {self.total_specimens}"
-            )
-            self.specimen_label.config(text=f"Processing: {specimen_id}")
-            self.slice_progress["maximum"] = total_slices
+            self.slice_progress["maximum"] = max(total_slices, 1)
             self.slice_progress["value"] = 0
             self.slice_label.config(text=f"Slice 0 of {total_slices}")
+            self.specimen_label.config(text="Processing all specimens in parallel")
 
         # Schedule update on main thread
         self.dialog.after(0, _update)
 
-    def update_slice(self, slice_index, total_slices):
+    def update_batch_slice(self, completed_slices, total_slices):
         """
-        Update progress for slice processing.
+        Update batch-wide slice progress.
+
+        Slices from several specimens are in flight at once, so progress is a
+        count across the whole batch rather than a position within one specimen.
 
         Args:
-            slice_index: 0-based index of current slice
-            total_slices: Total number of slices
+            completed_slices: Number of slices finished so far in the batch
+            total_slices: Total number of slices in the batch
         """
 
         def _update():
-            self.slice_progress["value"] = slice_index + 1
-            self.slice_label.config(text=f"Slice {slice_index + 1} of {total_slices}")
+            self.slice_progress["maximum"] = max(total_slices, 1)
+            self.slice_progress["value"] = completed_slices
+            self.slice_label.config(text=f"Slice {completed_slices} of {total_slices}")
 
         # Schedule update on main thread
         self.dialog.after(0, _update)
@@ -252,19 +254,25 @@ class ProgressDialog:
         # Schedule update on main thread
         self.dialog.after(0, _update)
 
-    def complete_specimen(self, specimen_index):
+    def complete_specimen(self, specimen_id=None):
         """
-        Mark a specimen as complete.
+        Mark one more specimen as complete.
+
+        Specimens finish out of order under the flat queue, so completions are
+        counted rather than tracked by index.
 
         Args:
-            specimen_index: 0-based index of completed specimen
+            specimen_id: Optional ID of the specimen that just completed
         """
+        with self._lock:
+            self._specimens_done += 1
+            done = self._specimens_done
 
         def _update():
-            self.overall_progress["value"] = specimen_index + 1
-            self.overall_label.config(
-                text=f"Specimen {specimen_index + 1} of {self.total_specimens}"
-            )
+            self.overall_progress["value"] = done
+            self.overall_label.config(text=f"Specimen {done} of {self.total_specimens}")
+            if specimen_id is not None:
+                self.specimen_label.config(text=f"Last completed: {specimen_id}")
 
         # Schedule update on main thread
         self.dialog.after(0, _update)
