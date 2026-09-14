@@ -119,6 +119,7 @@ class DataLoader:
     @staticmethod
     def find_image_stacks(root_folder: Path) -> dict[str, Specimen]:
         specimen_data = {}
+        discovered = []
         # Include the selected folder itself so that selecting a folder which
         # directly contains images (a single specimen) works, not only parent
         # folders that contain specimen subfolders.
@@ -147,21 +148,42 @@ class DataLoader:
                 ]
 
                 if image_files:
-                    specimen_id = subdir.name
-                    specimen = Specimen(
-                        specimen_id=subdir.name,
-                        source=subdir,
-                        images=image_files,
-                        slices=len(image_files),
-                        status="New",
-                        date=subdir.stat().st_mtime,
-                        previous_runs=data_folders,
-                    )
+                    discovered.append((subdir, image_files, data_folders))
 
-                    # Don't load configuration here - it will be loaded after metadata is set
-                    # This ensures we load from the correct Data_{operator}_{measurement} folder
+        # Specimen folder names are not guaranteed unique across the scanned tree
+        # (e.g. the same specimen name reused under different day/assay folders).
+        # Keying specimen_data by name alone would let a later match silently
+        # overwrite an earlier one, so duplicates get a disambiguated key here.
+        name_counts = {}
+        for subdir, _, _ in discovered:
+            name_counts[subdir.name] = name_counts.get(subdir.name, 0) + 1
 
-                    specimen_data[specimen_id] = specimen
+        for subdir, image_files, data_folders in discovered:
+            specimen_id = subdir.name
+            if name_counts[specimen_id] > 1:
+                display_id = f"{specimen_id} [{subdir.parent.name}]"
+                if display_id in specimen_data:
+                    # Even the parent-qualified label collides - fall back to the
+                    # full path relative to the scan root, which is always unique.
+                    display_id = str(subdir.relative_to(root_folder))
+            else:
+                display_id = specimen_id
+
+            specimen = Specimen(
+                specimen_id=specimen_id,
+                source=subdir,
+                images=image_files,
+                slices=len(image_files),
+                status="New",
+                date=subdir.stat().st_mtime,
+                previous_runs=data_folders,
+                display_id=display_id,
+            )
+
+            # Don't load configuration here - it will be loaded after metadata is set
+            # This ensures we load from the correct Data_{operator}_{measurement} folder
+
+            specimen_data[display_id] = specimen
         return specimen_data
 
     @staticmethod
