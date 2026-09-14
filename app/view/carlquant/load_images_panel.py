@@ -202,7 +202,7 @@ class loadImagePanel:
         specimen_panel = self.context.get_panel("carl_specimen")
         rows = []
         for specimen in self.context.specimen_data.values():
-            rows.append([specimen.specimen_id, specimen.slices, specimen.status])
+            rows.append([specimen.display_id, specimen.slices, specimen.status])
         specimen_panel.sheet.set_sheet_data(rows)
         specimen_panel._set_column_widths()
 
