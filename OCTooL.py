@@ -39,6 +39,7 @@ Author: Tobias Meissner
 """
 
 import multiprocessing
+import sys
 import tkinter as tk
 import traceback
 
@@ -47,6 +48,9 @@ from app.view import MainGui as mainGui
 from app.view.shared.error_handler import show_error_popup
 
 if __name__ == "__main__":
+    if not hasattr(sys.modules["__main__"], "__spec__"):
+        sys.modules["__main__"].__spec__ = None
+
     # CRITICAL: Required for PyInstaller executables on Windows
     # Prevents worker processes from re-launching the GUI
     multiprocessing.freeze_support()
