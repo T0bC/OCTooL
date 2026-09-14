@@ -1170,7 +1170,9 @@ class image_viewer_panel(BaseCanvasPanel):
             self.ground_truth_marks = {}
             if getattr(self.context, "status_bar", None):
                 self.context.status_bar.update(str(error), level="error")
-        self.ground_truth_specimen_id = specimen.specimen_id
+        # Use display_id, not specimen_id: this is later used to look the
+        # specimen back up in specimen_data, which is keyed by display_id.
+        self.ground_truth_specimen_id = getattr(specimen, "display_id", specimen.specimen_id)
         self.ground_truth_dirty = False
 
     def sync_ground_truth_to_specimen(self):
@@ -1180,7 +1182,11 @@ class image_viewer_panel(BaseCanvasPanel):
         a specimen switch would write one specimen's marks into another's file.
         """
         specimen = self._current_specimen()
-        specimen_id = specimen.specimen_id if specimen is not None else None
+        specimen_id = (
+            getattr(specimen, "display_id", specimen.specimen_id)
+            if specimen is not None
+            else None
+        )
         if specimen_id == self.ground_truth_specimen_id:
             return
 
