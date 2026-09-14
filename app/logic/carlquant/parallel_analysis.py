@@ -365,7 +365,11 @@ class BatchSliceCoordinator:
             states.append(
                 _SpecimenState(
                     specimen=specimen,
-                    specimen_id=getattr(specimen, "specimen_id", "?"),
+                    # Prefer display_id: it's what the specimen table and row-status
+                    # matching (analysis_runner._set_row_status) key on, and it's
+                    # disambiguated when two specimens share a folder name.
+                    specimen_id=getattr(specimen, "display_id", None)
+                    or getattr(specimen, "specimen_id", "?"),
                     total=specimen.slices,
                     remaining=specimen.slices,
                 )
