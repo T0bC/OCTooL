@@ -13,6 +13,16 @@ editor: visual
 
 # Version 2026.8 (2026-09-11)
 
+## CarlQuant: Batch Specimen Discovery
+
+-   Fixed specimen folders being silently dropped when scanning a root that contains the same specimen name more than once (e.g. the same specimen ID reused under different day/assay subfolders). `find_image_stacks` keyed its result by folder name alone, so a later match overwrote an earlier one with the same name instead of both being kept
+-   Duplicate names are now disambiguated with their parent folder (e.g. `Specimen_01 [3_days]`), so a single "Select Folder" scan of a multi-folder root loads every specimen instead of requiring one subfolder at a time
+-   Saved results were never at risk from this bug: config/results files are located via each specimen's own folder path, not its name
+
+## Startup: Multiprocessing under Debuggers
+
+-   Fixed `AttributeError: module '__main__' has no attribute '__spec__'` when starting a batch analysis while running the app through a launcher that doesn't set `__main__.__spec__` (e.g. VS Code's Run/Debug). Python's `spawn` process start method reads that attribute unconditionally when starting worker processes
+
 ## CarlQuant: Lesion Depth Detection
 
 ### Half-Span Crossing as the Primary Measure
