@@ -391,8 +391,11 @@ class resultsPanel:
         rows = []
         # Sort by slice_index (ascending) for consistent display
         for slice_index, result in sorted(specimen.results.items(), key=lambda x: x[0]):
-            # Display slice as 1-based for humans (slice 0 becomes 1, etc.)
-            row = [specimen.specimen_id, slice_index + 1]
+            # Display slice as 1-based for humans (slice 0 becomes 1, etc.). Use
+            # display_id, not specimen_id: this value round-trips through the
+            # A-Scan viewer back into a specimen_data lookup, and specimen_data
+            # is keyed by display_id (unique even when folder names collide).
+            row = [specimen.display_id, slice_index + 1]
 
             # Sound region medians
             sound_regions = [r for r in result.region_stats if r.region_type == "sound"]
