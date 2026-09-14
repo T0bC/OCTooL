@@ -175,3 +175,13 @@ class Specimen:
     results: dict[int, SliceResult] = field(default_factory=dict)
     previous_runs: list[Path] = field(default_factory=list)
     config: SpecimenConfig | None = None  # Configuration for REGIONS and AIR
+    # Table/lookup key used across the UI and batch runner. Equal to specimen_id
+    # unless another specimen elsewhere in the scanned tree shares the same folder
+    # name, in which case it's disambiguated (e.g. "Specimen_01 [3_days]") so both
+    # stay addressable. Kept separate from specimen_id, which still drives saved
+    # config/results filenames, so existing analysis output stays discoverable.
+    display_id: str = ""
+
+    def __post_init__(self):
+        if not self.display_id:
+            self.display_id = self.specimen_id
