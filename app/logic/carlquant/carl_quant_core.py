@@ -887,7 +887,7 @@ def sigmoid_model(z, L, U, k, z0):
 # Constants calibrated against 328 operator marks over 20 specimens and
 # validated against 465 marks on a held-out specimen.
 
-HALF_SPAN_BASE_FRACTION = 0.48  # tunable: >0.50 reads shallower, <0.50 deeper
+HALF_SPAN_BASE_FRACTION = 0.40  # tunable: >0.50 reads shallower, <0.50 deeper
 HALF_SPAN_REFERENCE_SPAN = 110.0  # contrast at which the base fraction applies
 HALF_SPAN_CONTRAST_SLOPE = 0.10  # fraction drop per 100 grey values of extra span
 HALF_SPAN_FRACTION_LIMITS = (0.15, 0.90)
