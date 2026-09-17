@@ -36,6 +36,7 @@ Author: Tobias Meissner
 ****
 """
 
+import itertools
 import json
 import re
 from fnmatch import fnmatch
@@ -117,14 +118,29 @@ def natural_key(path):
 
 class DataLoader:
     @staticmethod
-    def find_image_stacks(root_folder: Path) -> dict[str, Specimen]:
+    def find_image_stacks(root_folder: Path, on_progress=None) -> dict[str, Specimen]:
+        """Recursively find image-stack folders under root_folder.
+
+        Args:
+            root_folder: Folder to scan (included itself, plus all subfolders).
+            on_progress: Optional callback ``(folders_scanned, specimens_found,
+                current_path)`` invoked as each folder is visited. The walk
+                (`rglob`) is consumed lazily rather than materialized up front
+                so this fires incrementally even while a slow disk is still
+                being walked, instead of only after the whole tree is read.
+        """
         specimen_data = {}
         discovered = []
         # Include the selected folder itself so that selecting a folder which
         # directly contains images (a single specimen) works, not only parent
         # folders that contain specimen subfolders.
-        for subdir in [root_folder, *root_folder.rglob("*")]:
+        folders_scanned = 0
+        for subdir in itertools.chain([root_folder], root_folder.rglob("*")):
             if subdir.is_dir():
+                folders_scanned += 1
+                if on_progress is not None:
+                    on_progress(folders_scanned, len(discovered), subdir)
+
                 # Skip 'annotations' folders - they contain processed images with overlays
                 if subdir.name.lower() == "annotations":
                     continue
