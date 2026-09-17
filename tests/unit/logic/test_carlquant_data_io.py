@@ -304,6 +304,48 @@ def test_find_image_stacks(tmp_path):
     assert "annotations" not in found
 
 
+@pytest.mark.unit
+def test_find_image_stacks_reports_progress(tmp_path):
+    """on_progress fires per folder visited, with a running specimens-found count.
+
+    The scan dialog relies on this to show live feedback instead of freezing
+    while a large/slow folder tree is walked.
+    """
+    for name in ("specimenA", "specimenB"):
+        stack_dir = tmp_path / name
+        stack_dir.mkdir()
+        Image.new("L", (10, 10)).save(stack_dir / "img_0.png")
+    (tmp_path / "empty_subfolder").mkdir()
+
+    calls = []
+    found = DataLoader.find_image_stacks(
+        tmp_path,
+        on_progress=lambda scanned, count, path: calls.append((scanned, count, path)),
+    )
+
+    # One call per directory visited (root + 3 subfolders), in increasing order.
+    assert [c[0] for c in calls] == [1, 2, 3, 4]
+    # specimens_found only increases once a folder's images have been recorded
+    # by an *earlier* iteration, so it's non-decreasing but always lags behind
+    # the folder currently being visited (that folder's own images, if any,
+    # aren't counted in its own callback).
+    counts = [c[1] for c in calls]
+    assert counts == sorted(counts)
+    assert counts[-1] <= len(found) == 2
+
+
+@pytest.mark.unit
+def test_find_image_stacks_progress_not_required(tmp_path):
+    """on_progress is optional; omitting it must not raise."""
+    stack_dir = tmp_path / "specimenA"
+    stack_dir.mkdir()
+    Image.new("L", (10, 10)).save(stack_dir / "img_0.png")
+
+    found = DataLoader.find_image_stacks(tmp_path)
+
+    assert "specimenA" in found
+
+
 # ---------------------------------------------------------------------------
 # Error / fallback branches
 # ---------------------------------------------------------------------------
