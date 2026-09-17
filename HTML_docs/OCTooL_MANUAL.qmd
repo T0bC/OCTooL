@@ -18,7 +18,7 @@ format:
     documentclass: article
     geometry: margin=1in
     fig-cap-location: bottom
-editor: visual
+editor: source
 ---
 
 # Introduction
@@ -740,13 +740,20 @@ The Settings Panel configures analysis parameters that apply to all specimens in
 
 **Options**:
 
--   **Combined (Recommended)**: Intelligently combines multiple methods using stability analysis. Filters out unstable methods (SD \> 20px) and uses weighted averaging to preserve natural lesion texture. Provides the most robust results across different lesion types.
+-   **Combined (Recommended)**: A deterministic cascade, not an average of everything. For every A-scan column the software always computes all three depth terms (Half-Span, Knee Point, Inflection); once per slice it then picks which one is trustworthy enough to report, based on how smooth ("laterally stable") each term's depths are across the slice's columns:
+
+    1.  **Half-Span crossing** is tried first and used alone whenever it is stable (lateral SD \<= 12px). It is the primary measure because it is fit-free — unlike a curve fit it cannot fail to converge — and it tracks the visible lesion boundary most closely.
+    2.  If Half-Span is unstable, the cascade falls back to the **mean of Knee Point and Inflection**, but only if both of those are themselves stable. The two are biased in opposite, known directions (Knee Point reads deeper than Half-Span, Inflection reads shallower), so averaging them cancels the bias.
+    3.  If only one of Knee Point / Inflection is stable, that one is reported alone — biased, but still more informative than no lesion at all.
+    4.  If nothing is stable, or the resulting depth is itself laterally noisy (SD \> 15px, a real lesion boundary is smooth), the slice is judged to have no usable lesion signal and the surface line is reported as the depth. This shows as **GATED** in [Validation Mode](#validation-mode).
 
 -   **Knee Point**: Two-line fitting to find the transition point where intensity decay changes slope. Best for sharp exponential decay patterns. Fits an exponential model and finds the 'elbow' point.
 
 -   **Inflection**: Sigmoid curve inflection point (50% transition, maximum rate of change). Ideal for smooth S-shaped intensity transitions.
 
 -   **Shoulder**: Sigmoid shoulder point (15% from upper asymptote). Detects the early transition region, useful for identifying the start of lesion penetration.
+
+**About Half-Span crossing**: Half-Span is the deterministic term the Combined method leans on. It smooths the intensity profile, takes the surface peak and the background (deep-tissue median) intensity, and finds the depth where the smoothed profile first drops below and *stays* below `background + fraction x (peak - background)` for several consecutive samples (so a single speckle dip cannot trigger it). The threshold fraction is not fixed: it is lowered for high-contrast lesions and raised for low-contrast ones, so a fixed-fraction bias toward reading high-contrast lesions too shallow is corrected automatically.
 
 **Default**: Combined
 
@@ -858,6 +865,51 @@ The table structure adapts based on the configured number of regions:
 -   **Dynamic Width**: Columns automatically adjust width based on content
 -   **Color Coding**: Dark theme with high-contrast text for readability
 
+## Validation Mode
+
+Validation Mode scores the automatic lesion-depth detection against operator-annotated "true lesion end" marks, so a chosen method's accuracy can be checked directly against expert judgement rather than assumed.
+
+### Enabling Validation Mode
+
+**Purpose**: Turn on ground-truth marking and scoring for the currently selected specimen.
+
+**Location**: **Validation Mode** checkbox at the top of the Results Panel.
+
+**Details**: Enabling it loads any existing ground-truth marks for the specimen and shows the scoring table below the checkbox. A hint label warns when the detection overlay is still visible, since marking against a visible overlay risks anchoring the click to the drawn line instead of the actual image. Press **H** to hide the overlay first.
+
+### Marking the True Lesion End
+
+**Purpose**: Record the operator's own judgement of where the lesion ends, independent of the automatic detection.
+
+**Method**: With Validation Mode enabled and the overlay hidden, click on the image at the true lesion boundary for the current slice. Marks are stored as absolute image pixel coordinates, per slice.
+
+**Keyboard/Mouse Shortcuts** (while Validation Mode is on):
+
+-   **Left Click**: Add a mark at the true lesion end
+-   **Right Click**: Delete the nearest mark on the current slice
+-   **U Key**: Undo the last mark placed on the current slice
+-   **C Key**: Clear all marks on the current slice
+
+**Details**: An operator typically places marks every ~10-20 pixels across the lesion width rather than one mark per column; the A-Scan Viewer's **Ground Truth** overlay interpolates a smooth curve through nearby marks for display, but only the real, clicked marks are ever used for scoring.
+
+**Storage**: Marks are saved automatically to `Data_{operator}_{measurement}/{specimen_id}_groundtruth.json` beside the specimen's analysis config, so they never overwrite or get overwritten by study data. A ground-truth file only ever applies to the specimen it was recorded on.
+
+### Validation Results Table
+
+**Purpose**: Compare every depth detection term against the recorded marks, both for the currently viewed slice and across the whole specimen.
+
+**Columns**:
+
+-   **METHOD**: One of Combined, Half-Span, Knee Point, Inflection, Shoulder — Combined is the value actually reported by the app; the rest are its ingredients
+-   **MEDIAN**: Signed median error for the current slice, in pixels (+ = detection too deep, - = too shallow)
+-   **\|MEDIAN\|**: Median of the absolute per-mark error for the current slice
+-   **P90**: 90th percentile of the absolute error for the current slice
+-   **N**: Number of marks scored on the current slice
+-   **SPECIMEN MEAN \|MED\|**: Mean of the per-slice \|MEDIAN\| values across every marked slice — the per-column accuracy an A-scan reader would see
+-   **SPECIMEN ERROR**: Specimen-wide mean detected depth minus the specimen-wide mean marked depth — the bias that reaches downstream statistics
+
+**Details**: Both scale readings (per-slice median vs. specimen-wide mean) are shown because a consistently signed bias does not cancel out under averaging, so the two can rank methods differently. A summary line below the table reports the mark and slice counts, the operator's mean marked depth, and flags slices where the no-lesion gate fired (**GATED**) — on those the depth reported is the surface line rather than a lesion measurement, which would otherwise look like a large, misleading error.
+
 ## A-Scan Viewer
 
 The A-Scan Viewer provides detailed visualization of intensity profiles for individual A-scans (vertical columns).
@@ -876,9 +928,12 @@ The A-Scan Viewer provides detailed visualization of intensity profiles for indi
 -   **Knee Point**: Show knee point depth detection (blue)
 -   **Sigmoid Inflection**: Show sigmoid inflection point (orange)
 -   **Sigmoid Shoulder**: Show sigmoid shoulder point (purple)
+-   **Half-Span**: Show the half-span crossing depth, the deterministic term the Combined method relies on
+-   **Half-Span Construction**: Show the background, peak and threshold lines the half-span crossing is built from, to explain how a given result was reached
 -   **Combined Depth**: Show combined depth result (magenta, bold)
 -   **Exp2 Fit Curve**: Show exponential fit curve overlay
 -   **Sigmoid Fit Curve**: Show sigmoid fit curve overlay
+-   **Ground Truth**: Show the operator-annotated ground-truth mark(s) for this slice, and an interpolated curve through nearby marks. Only available once [Validation Mode](#validation-mode) has marks recorded for the specimen
 -   **Zoom to Analysis**: Zoom plot to analysis region (surface to lesion depth)
 
 **Default Active**: Surface Points, Combined Depth
@@ -963,11 +1018,11 @@ Located in each specimen folder, this directory contains:
 
 ### Depth Detection Methods
 
-**Combined Method** (Recommended): - Uses stability analysis to filter unreliable methods - Weighted averaging of stable methods - Preserves natural lesion texture - Most robust across different lesion types
+**Combined Method** (Recommended): A deterministic cascade, not a blend of everything. Half-Span crossing (fit-free, cannot fail to converge) is reported alone whenever it is laterally stable across the slice; otherwise the mean of Knee Point and Inflection is used if both are stable, then whichever of the two is stable alone, and finally the surface line if nothing is stable. See [Method](#method) for the full cascade and [Validation Mode](#validation-mode) for how to score it against operator marks.
 
-**Individual Methods**: - **Knee Point**: Best for sharp transitions - **Inflection**: Best for smooth S-curves - **Shoulder**: Best for early transition detection
+**Individual Methods**: - **Half-Span**: Depth where the smoothed intensity profile crosses background + a contrast-adaptive threshold fraction of the span, sustained over several samples. The term Combined leans on; viewable in the A-Scan Viewer but not separately selectable as the primary Method - **Knee Point**: Best for sharp transitions - **Inflection**: Best for smooth S-curves - **Shoulder**: Best for early transition detection
 
-**Method Selection**: The Combined method automatically selects the most appropriate individual methods based on signal quality and stability metrics.
+**Method Selection**: The Combined method chooses per slice based on each term's lateral stability (how smoothly its depths hold together across A-scan columns), not on a per-column signal-quality score.
 
 ## Advanced Features
 
