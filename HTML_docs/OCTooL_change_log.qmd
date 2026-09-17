@@ -19,6 +19,12 @@ editor: visual
 -   Duplicate names are now disambiguated with their parent folder (e.g. `Specimen_01 [3_days]`), so a single "Select Folder" scan of a multi-folder root loads every specimen instead of requiring one subfolder at a time
 -   Saved results were never at risk from this bug: config/results files are located via each specimen's own folder path, not its name
 
+## CarlQuant: Folder Loading Feedback
+
+-   "Select Folder" now shows a progress dialog spanning both phases of loading: an indeterminate bar while the folder tree is scanned for image stacks, then a determinate `Specimen X of N` bar while each specimen's saved configuration is read from disk. Both phases can take long enough on a large folder tree or a slow/network drive that the app previously looked frozen with no feedback
+-   Folder scanning (`find_image_stacks`) now walks the directory tree lazily instead of materializing the full listing up front, so progress can be reported incrementally as slow disk access happens rather than only after the whole tree is already read
+-   Scanning and config loading both run on a background thread, keeping the UI responsive while a folder loads
+
 ## Startup: Multiprocessing under Debuggers
 
 -   Fixed `AttributeError: module '__main__' has no attribute '__spec__'` when starting a batch analysis while running the app through a launcher that doesn't set `__main__.__spec__` (e.g. VS Code's Run/Debug). Python's `spawn` process start method reads that attribute unconditionally when starting worker processes
