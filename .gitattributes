@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Quarto-rendered HTML output (build artifacts of the .qmd sources in the
+# same folder), not hand-authored HTML. Excluded from GitHub's language
+# stats and diffs so repo language percentages reflect actual source code.
+HTML_docs/*.html linguist-generated=true
