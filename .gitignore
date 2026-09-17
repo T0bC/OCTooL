@@ -16,11 +16,6 @@ logs/
 version.json
 scripts/build_and_deploy.ps1
 
-# Generated HTML assets (bundled libraries, not source)
-HTML_docs/OCTooL_change_log_files/
-HTML_docs/OCTooL_MANUAL_files/
-HTML_docs/forPublication/
-
 # PyInstaller
 build/
 dist/
