@@ -11,7 +11,6 @@ __pycache__/
 Thumbs.db
 
 # Local development data & logs
-testData/
 logs/
 *.log
 version.json
