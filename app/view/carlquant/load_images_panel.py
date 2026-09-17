@@ -35,13 +35,16 @@ Author: Tobias Meissner
 """
 
 import threading
+import time
+import traceback
 from pathlib import Path
 from tkinter import filedialog, ttk
 
 from app.logic.carlquant import DataLoader, DataSaver
 from app.view.carlquant.analysis_runner import run_carl_quant
+from app.view.carlquant.scan_progress_dialog import ScanProgressDialog
 from app.view.shared import dialogs
-from app.view.shared.error_handler import handle_errors
+from app.view.shared.error_handler import handle_errors, log_error_to_file, show_error_popup
 from app.view.shared.metadata_prompt import prompt_for_metadata
 from app.view.shared.tool_tip import Tooltip
 
@@ -153,6 +156,10 @@ class loadImagePanel:
         - If a matching folder exists, loads configuration and results from it
         - If no matching folder exists (different operator/measurement), specimen is marked as "New"
         - This allows re-analysis with different metadata without overwriting previous results
+
+        Scanning the folder tree (find_image_stacks) can be slow for a root with
+        many subfolders on a slow/network drive, so it runs on a background
+        thread behind a ScanProgressDialog rather than blocking the UI thread.
         """
         if not hasattr(self, "pending_folder_path"):
             return
@@ -168,35 +175,91 @@ class loadImagePanel:
         # Update settings panel entry fields
         self.update_settings_panel_metadata(operator, measurement)
 
-        # Load specimens (excludes 'annotations' folders automatically)
-        self.context.specimen_data = DataLoader.find_image_stacks(root)
+        scan_dialog = ScanProgressDialog(self.root, root.name)
 
-        # Check each specimen for matching Data_{operator}_{measurement} folder
-        for _specimen_id, specimen in self.context.specimen_data.items():
-            # Store metadata in specimen for saving operations
-            specimen.operator = operator
-            specimen.measurement = measurement
+        def worker():
+            last_update = 0.0
 
-            # Check if a Data folder exists for this specific operator/measurement combination
-            expected_data_folder = specimen.source / f"Data_{operator}_{measurement}"
+            def on_progress(folders_scanned, specimens_found, current_path):
+                nonlocal last_update
+                # Throttle UI updates so a fast local scan doesn't flood Tk's
+                # event queue with an .after() call per folder.
+                now = time.monotonic()
+                if now - last_update < 0.1:
+                    return
+                last_update = now
+                scan_dialog.update(folders_scanned, specimens_found, current_path)
 
-            if expected_data_folder.exists() and expected_data_folder.is_dir():
-                # Matching data folder found - reload config (lightweight, no annotations yet)
-                # This loads only regions/air coordinates, not the heavy 20MB annotation data
-                specimen.config = DataLoader.load_specimen_config(specimen, load_annotations=False)
-                # Check if annotations exist (without loading them)
-                if (
-                    specimen.config
-                    and hasattr(specimen, "_has_annotations")
-                    and specimen._has_annotations
-                ):
-                    specimen.status = "Analyzed"
-                    # Note: Annotations will be loaded on-demand when user clicks the specimen
-                    # This significantly speeds up initial folder loading
-            else:
-                # No matching Data folder - specimen will be analyzed fresh with current metadata
-                # Other Data folders (different operator/measurement) are preserved and ignored
-                pass
+            try:
+                specimen_data = DataLoader.find_image_stacks(root, on_progress=on_progress)
+
+                # Phase 2: read each specimen's config JSON. This is also disk
+                # I/O (same slow/network drive as the scan) so it stays on
+                # this thread and keeps driving the same dialog, now with a
+                # real determinate count since the specimen total is known.
+                total = len(specimen_data)
+                scan_dialog.start_config_phase(total)
+                last_update = 0.0
+                for i, specimen in enumerate(specimen_data.values(), start=1):
+                    specimen.operator = operator
+                    specimen.measurement = measurement
+
+                    expected_data_folder = specimen.source / f"Data_{operator}_{measurement}"
+                    if expected_data_folder.exists() and expected_data_folder.is_dir():
+                        # Lightweight load: only regions/air coordinates, not
+                        # the heavy annotation data (loaded on-demand later).
+                        specimen.config = DataLoader.load_specimen_config(
+                            specimen, load_annotations=False
+                        )
+                        if (
+                            specimen.config
+                            and hasattr(specimen, "_has_annotations")
+                            and specimen._has_annotations
+                        ):
+                            specimen.status = "Analyzed"
+
+                    now = time.monotonic()
+                    if now - last_update >= 0.1 or i == total:
+                        last_update = now
+                        scan_dialog.update_config(i, total, specimen.display_id)
+            except Exception as exc:
+                tb = traceback.format_exc()
+                log_error_to_file(
+                    "loadImagePanel.load_specimens_with_metadata",
+                    (),
+                    {},
+                    "Specimen loading failed",
+                    tb,
+                )
+                error_message = (
+                    f"Failed to load specimens from '{root}':\n\n{exc}\n\nTraceback:\n{tb}"
+                )
+                scan_dialog.finish()
+                self.context.root.after(
+                    0, lambda: show_error_popup("Specimen Loading Error", error_message)
+                )
+                self.context.root.after(
+                    0,
+                    lambda: self.context.status_bar.update(
+                        "Specimen loading failed.", level="error"
+                    ),
+                )
+                return
+
+            self.context.root.after(
+                0,
+                lambda: self._finish_loading_specimens(
+                    specimen_data, operator, measurement, scan_dialog
+                ),
+            )
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_loading_specimens(self, specimen_data, operator, measurement, scan_dialog):
+        """Populate the UI on the main thread once scanning and config loading finish."""
+        scan_dialog.finish()
+
+        self.context.specimen_data = specimen_data
 
         # Update specimen panel display
         specimen_panel = self.context.get_panel("carl_specimen")
