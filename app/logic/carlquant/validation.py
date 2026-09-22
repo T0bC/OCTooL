@@ -59,11 +59,12 @@ import numpy as np
 #: Depth measures compared against ground truth, in the order they are reported.
 #: "combined" is the value the app actually reports; the rest are its ingredients
 #: plus the shoulder, which is displayed but is not part of the rule.
-METHODS = ["combined", "half_span", "knee", "inflection", "shoulder"]
+METHODS = ["combined", "reverse_span", "half_span", "knee", "inflection", "shoulder"]
 
 #: Human-readable labels for the results table.
 METHOD_LABELS = {
     "combined": "Combined",
+    "reverse_span": "Reverse Span",
     "half_span": "Half-Span",
     "knee": "Knee Point",
     "inflection": "Inflection",
@@ -76,6 +77,7 @@ METHOD_LABELS = {
 #: is a separate top-level key (``lesion_depth_px``), so "combined" is absent
 #: from this map and read separately in ``method_depth``.
 _METADATA_KEYS = {
+    "reverse_span": "reverse_span_depth",
     "half_span": "half_span_depth",
     "knee": "knee_depth",
     "inflection": "inflection_depth",
