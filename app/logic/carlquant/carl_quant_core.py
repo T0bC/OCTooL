@@ -63,7 +63,7 @@ def process_slice_parallel(
     air_config,
     num_sound,
     num_lesion,
-    detection_method_str="combined_mean",
+    detection_method_str="combined",
 ):
     """
     Process a single slice by loading image on-demand in worker process.
@@ -76,7 +76,7 @@ def process_slice_parallel(
         air_config: AIR configuration for this slice
         num_sound: Number of sound regions to extract
         num_lesion: Number of lesion regions to extract
-        detection_method_str: Detection method string (default 'combined_mean')
+        detection_method_str: Detection method string (default 'combined')
 
     Returns:
         Tuple of (slice_idx, region_stats, surface, lesion_depth, error)
@@ -729,11 +729,11 @@ class DepthDetectionMethod(Enum):
     KNEE_POINT = "knee_point"  # Two-line fitting (best for exponential decay)
     SIGMOID_FIT = "sigmoid_fit"  # Sigmoid inflection point (50% transition)
     SIGMOID_SHOULDER = "sigmoid_shoulder"  # Sigmoid shoulder (15% from upper asymptote)
-    COMBINED_MEAN = "combined_mean"  # Mean of knee_point and sigmoid_fit
+    COMBINED = "combined"  # Per-column selection across all terms; see select_depth_method
 
     @classmethod
     def get_default(cls):
-        return cls.COMBINED_MEAN  # Use combined method as default
+        return cls.COMBINED  # The validated measurement; the rest are diagnostics
 
 
 def knee_pt(y, x):
@@ -978,6 +978,167 @@ def detect_depth_half_span(
     return float(below[0]), metadata
 
 
+# === Reverse (bottom-up) lesion end =========================================
+# The half-span crossing above walks each A-scan downward from the surface and
+# stops at the first depth that stays below the threshold. This detector walks
+# the same smoothed profile *upward* from the deepest analysed sample and stops
+# above the last depth still sustainably carrying signal. The two directions
+# fail differently: downward reads too deep when a bright speckle layer inside
+# the lesion holds the profile up, upward reads too deep when the background
+# estimate is too low. Where they disagree, the lateral scatter of the upward
+# trace says which one to believe -- see select_depth_method.
+#
+# Measured against operator ground truth on 338 marks over 20 specimens and
+# then on a held-out 268 marks over 17 specimens from two other studies: the
+# per-column rule built on this detector scores 4.59 / 5.01 px mean absolute
+# error against 6.14 / 6.78 px for the half-span cascade alone.
+
+#: Fraction of the contrast span the upward scan must exceed. Fixed, not
+#: contrast-adaptive: a fixed 0.40 beat half_span_fraction() in the upward
+#: direction on the calibration set (5.0 px against 6.0 px median absolute
+#: error, no marks unreached).
+#:
+#: This and REVERSE_SPAN_SUSTAIN are the only constants in the reverse rule
+#: fitted on the first specimen set. The held-out result quoted above is only
+#: meaningful while they stay fixed, so they are not tunable knobs.
+REVERSE_SPAN_FRACTION = 0.40
+
+#: Consecutive samples that must exceed the threshold before the run counts as
+#: lesion signal rather than speckle. Calibrated with REVERSE_SPAN_FRACTION.
+REVERSE_SPAN_SUSTAIN = 15
+
+
+def reverse_threshold(
+    smoothed: np.ndarray,
+    fraction: float | None = REVERSE_SPAN_FRACTION,
+    background_tail: int = HALF_SPAN_BACKGROUND_TAIL,
+    peak_window: int = HALF_SPAN_PEAK_WINDOW,
+) -> tuple[float, dict]:
+    """Intensity the upward scan must exceed, and every term it is built from.
+
+    The background is the *median* of the deepest samples rather than their
+    mean, because the tail can still clip the bottom of a deep lesion and a
+    single such sample would pull the threshold up into the lesion body.
+
+    Args:
+        smoothed: Already-smoothed profile; thresholding the raw profile would
+            measure speckle the detector never sees.
+        fraction: Fraction of the contrast span. None uses the production
+            contrast-adaptive :func:`half_span_fraction`.
+        background_tail: Deepest samples whose median is the background.
+        peak_window: Shallowest samples in which the peak is taken.
+
+    Returns:
+        (threshold, terms). threshold is NaN when the rule cannot be evaluated;
+        terms always carries every quantity it was built from, so a result
+        stays explainable without re-running the detector.
+    """
+    profile = np.asarray(smoothed, dtype=float)
+    if profile.size == 0:
+        return float("nan"), {"reason": "empty_profile", "threshold": float("nan")}
+
+    background = float(np.median(profile[-background_tail:]))
+    peak = float(profile[:peak_window].max())
+    span = peak - background
+    terms = {"background": background, "peak": peak, "span": span}
+
+    if span <= 1:
+        terms["reason"] = "no_contrast"
+        terms["threshold"] = float("nan")
+        return float("nan"), terms
+
+    used_fraction = half_span_fraction(span) if fraction is None else float(fraction)
+    threshold = background + used_fraction * span
+    terms.update({"fraction": used_fraction, "threshold": threshold})
+    return threshold, terms
+
+
+def detect_depth_reverse(
+    intensity_profile: np.ndarray,
+    fraction: float | None = REVERSE_SPAN_FRACTION,
+    sustain: int = REVERSE_SPAN_SUSTAIN,
+    smooth_window: int = HALF_SPAN_SMOOTH_WINDOW,
+    background_tail: int = HALF_SPAN_BACKGROUND_TAIL,
+    peak_window: int = HALF_SPAN_PEAK_WINDOW,
+) -> tuple[float, dict]:
+    """Deepest depth at which the profile still sustainably carries signal.
+
+    The profile is scanned from its deepest sample upward. The reported depth
+    is the first index *below* the deepest run of ``sustain`` consecutive
+    samples that all exceed the threshold, that is, the shallowest sample that
+    already belongs to background. This is the same convention as
+    :func:`detect_depth_half_span`, which also reports the first background
+    sample, so the two numbers are directly comparable and any difference
+    between them is a real disagreement rather than an off-by-one.
+
+    Args:
+        intensity_profile: Raw brightness from the surface downward.
+        fraction: Fraction of the contrast span the profile must exceed.
+        sustain: Consecutive samples that must exceed the threshold.
+        smooth_window: Boxcar width; must match what any plot redraws.
+        background_tail: Deepest samples whose median is the background.
+        peak_window: Shallowest samples in which the peak is taken.
+
+    Returns:
+        (depth_value, metadata_dict). depth_value is NaN when no boundary could
+        be established, with metadata["reason"] saying why. A NaN is deliberate
+        in every such case: a refusal the cascade can recover from, where a
+        wrong number would silently become the measurement.
+    """
+    profile = np.asarray(intensity_profile, dtype=float)
+    if profile.size == 0:
+        return np.nan, {"success": False, "method": "reverse_span", "reason": "empty_profile"}
+
+    sustain = max(1, int(sustain))
+    smoothed = boxcar(profile, smooth_window)
+    threshold, terms = reverse_threshold(
+        smoothed,
+        fraction=fraction,
+        background_tail=background_tail,
+        peak_window=peak_window,
+    )
+
+    metadata = {"success": False, "method": "reverse_span", "sustain": sustain, **terms}
+
+    if not np.isfinite(threshold):
+        metadata.setdefault("reason", "no_threshold")
+        return np.nan, metadata
+
+    above = smoothed > threshold
+    if not above.any():
+        metadata["reason"] = "never_above"
+        return np.nan, metadata
+
+    last_start = profile.size - sustain
+    if last_start < 0:
+        metadata["reason"] = "profile_shorter_than_sustain"
+        return np.nan, metadata
+
+    # Walk up from the deepest sample. The first window lying entirely above the
+    # threshold is the deepest surviving lesion signal; everything below it is
+    # background the scan has already passed through.
+    for start in range(last_start, -1, -1):
+        if above[start : start + sustain].all():
+            boundary = float(start + sustain)
+            if boundary >= profile.size:
+                # Signal never returns to background inside the search window,
+                # so the lesion is deeper than the analysed depth. Reporting the
+                # window edge would pass a truncation off as a measurement.
+                metadata["reason"] = "deeper_than_search_depth"
+                metadata["last_above_index"] = int(profile.size - 1)
+                return np.nan, metadata
+            metadata["success"] = True
+            metadata["last_above_index"] = int(start + sustain - 1)
+            return boundary, metadata
+
+    # Samples exceed the threshold but never for a full sustain window: the
+    # profile only ever spikes above background. Treated as no boundary rather
+    # than reporting the deepest isolated spike, which would be pure speckle.
+    metadata["reason"] = "never_sustained"
+    metadata["last_above_index"] = int(np.flatnonzero(above)[-1])
+    return np.nan, metadata
+
+
 def detect_depth_sigmoid_fit(
     intensity_profile: np.ndarray, depth_indices: np.ndarray
 ) -> tuple[float, int, dict]:
@@ -1105,10 +1266,32 @@ _FALLBACK_METHODS = ("knee_point", "sigmoid_fit")
 
 #: detection_metadata key holding each method's raw per-column depth.
 _METHOD_METADATA_KEY = {
+    "reverse_span": "reverse_span_depth",
     "half_span": "half_span_depth",
     "knee_point": "knee_depth",
     "sigmoid_fit": "inflection_depth",
 }
+
+#: Width, in columns, of the window whose scatter decides which detector
+#: supplies a column. 21 and 41 score within 0.05 px of each other on both
+#: specimen sets; 81 is clearly worse on the held-out one (5.34 against 4.95 px
+#: mean absolute error), because by then the window spans more lesion than the
+#: local boundary it is meant to judge.
+PER_COLUMN_WINDOW = 41
+
+#: Local scatter (px) above which the reverse detector is not trusted to supply
+#: *this column's* depth. The sweep is flat from 12 to 30 px on both specimen
+#: sets (first set 4.77 to 4.95, held-out 4.94 to 4.99), so this sits inside a
+#: broad plateau rather than on a fitted peak.
+PER_COLUMN_STABILITY_SD = NO_LESION_SD
+
+#: Minimum finite samples a window needs before its scatter means anything. A
+#: window at the edge of the analysed region, or one full of failed columns,
+#: reports no scatter rather than a scatter computed from two points.
+PER_COLUMN_MIN_SAMPLES = 5
+
+#: Slice label written when a slice mixes the two detectors column by column.
+MIXED_REVERSE_METHOD = "reverse_span+half_span"
 
 
 def method_depth_series(lesion_detection_data: dict, method: str) -> dict:
@@ -1137,36 +1320,135 @@ def is_method_stable(depth_series: dict, stability_sd: float = METHOD_STABILITY_
     return bool(np.std(values) <= stability_sd)
 
 
+def local_depth_scatter(depth_series: dict, window: int = PER_COLUMN_WINDOW) -> dict:
+    """Lateral scatter of one raw depth series in a window around each column.
+
+    The per-column analogue of what :func:`is_no_lesion_slice` measures for a
+    whole slice: a detector announces that it has not found a boundary by
+    scattering laterally. Measured on the *raw* per-column output, because the
+    smoothed curve has had exactly this scatter removed from it and would
+    report every column as calm.
+
+    Args:
+        depth_series: {ascan_x: depth_px}, as returned by
+            :func:`method_depth_series`. Columns the detector failed on are
+            simply absent, and count as missing samples in every window
+            covering them.
+        window: Width of the window, in columns.
+
+    Returns:
+        {ascan_x: sd_px} over the columns of ``depth_series``, NaN where the
+        window holds fewer than PER_COLUMN_MIN_SAMPLES finite depths -- at the
+        edges of the analysed region, or where the detector failed across a
+        stretch of columns. NaN means "untrusted", never "calm".
+    """
+    columns = sorted(depth_series.keys())
+    if not columns:
+        return {}
+
+    # Indexed over the contiguous column span rather than over the present
+    # columns, so a gap of failed columns shrinks its neighbours' windows
+    # instead of silently pulling in depths from further away.
+    x_start, x_end = columns[0], columns[-1]
+    values = np.array([depth_series.get(x, np.nan) for x in range(x_start, x_end + 1)], dtype=float)
+
+    half = max(1, int(window)) // 2
+    scatter = {}
+    for ascan_x in columns:
+        index = ascan_x - x_start
+        segment = values[max(0, index - half) : index + half + 1]
+        segment = segment[np.isfinite(segment)]
+        scatter[ascan_x] = (
+            float(np.std(segment)) if segment.size >= PER_COLUMN_MIN_SAMPLES else float("nan")
+        )
+    return scatter
+
+
 def select_depth_method(
     lesion_detection_data: dict, stability_sd: float = METHOD_STABILITY_SD
 ) -> tuple:
-    """Pick which method supplies this slice's lesion depth.
+    """Pick which detector supplies each column's lesion depth.
 
-    Half-span is the primary measure: it is fit-free, cannot fail to converge,
-    and tracks the visible lesion boundary most closely. It is used alone
-    whenever it is stable, rather than being averaged with the other terms --
-    a median over all three was measured to be *wobblier* than half-span by
-    itself (SD 12.83 vs 7.48 on one cavitated slice), because the terms are
-    near-ordered rather than independent, so an unstable term keeps dragging
-    the median off the good one.
+    The reverse scan is the primary measure. It walks each A-scan upward from
+    the deepest analysed sample and stops above the last depth still carrying
+    signal, where half-span walks downward and stops at the first depth that
+    does not. Scored against operator marks, selecting between the two per
+    column gives 4.59 px mean absolute error on the 338-mark calibration set
+    and 5.01 px on a held-out 268 marks from two other studies, against
+    6.14 / 6.78 px for the half-span cascade alone (Wilcoxon p < 0.0001 on
+    both). The two sets agree to 0.35 px, which is the result that matters:
+    the rule transfers rather than being fitted to one set.
 
-    The fallbacks exist because the two remaining terms are biased in opposite,
-    known directions: the knee reads deep (deeper than half-span in 81.5% of
-    8713 columns) and the sigmoid inflection reads shallow (shallower in 97.7%,
-    median ratio 0.455, since it marks the 50% intensity transition rather than
-    the lesion end). Averaging them cancels the two biases; either one alone is
-    a last resort, reported because a biased depth is still more informative
-    than reporting no lesion at all.
+    This is *selection*, not averaging. Averaging the two directions was
+    measured and rejected (5.79 / 6.36 px): they agree within 8 px on 82% of
+    marks, so the mean changes nothing where they agree, and in the 18% where
+    they disagree it splits the difference between a right answer and a wrong
+    one.
+
+    The choice is made at two levels. First per slice: if the reverse
+    detector's raw depths scatter laterally across the whole slice it has not
+    found a boundary anywhere, and the existing half-span cascade runs
+    untouched. Then per column: within a trusted slice, the reverse depth is
+    used where its scatter in a PER_COLUMN_WINDOW-wide window is calm, and
+    half-span supplies the rest -- a lesion can be deep enough for the upward
+    scan over most of its width and run out at one end.
+
+    Note the asymmetry, which is deliberate: the reverse tier is gated on
+    NO_LESION_SD (15 px), the other tiers on METHOD_STABILITY_SD (12 px). The
+    tighter limit scored better on the calibration set (4.57 px) and much worse
+    held out (6.17 px) -- it had been fitted to a single shallow slice. At 15 px
+    the two sets agree to 0.1 px, so the better-looking number is the one that
+    was rejected.
+
+    The remaining fallbacks are unchanged, and exist because the two other
+    terms are biased in opposite, known directions: the knee reads deep (deeper
+    than half-span in 81.5% of 8713 columns) and the sigmoid inflection reads
+    shallow (shallower in 97.7%, median ratio 0.455, since it marks the 50%
+    intensity transition rather than the lesion end). Averaging them cancels
+    the two biases; either one alone is a last resort, reported because a
+    biased depth is still more informative than reporting no lesion at all.
 
     Returns:
-        (method_name, depth_series) -- ``method_name`` is one of
+        (method_name, depth_series, source_by_column). ``method_name`` labels
+        the slice and is one of ``reverse_span``, ``reverse_span+half_span``,
         ``half_span``, ``mean+knee_point+sigmoid_fit``, ``knee_point``,
         ``sigmoid_fit``, or ``no_lesion_surface`` when nothing is stable.
         ``depth_series`` maps column x to raw depth, empty for the last case.
+        ``source_by_column`` maps column x to the detector that actually
+        supplied it, which is what each column records as its method.
     """
     half_span = method_depth_series(lesion_detection_data, "half_span")
+    reverse = method_depth_series(lesion_detection_data, "reverse_span")
+
+    # Tier 0: the reverse scan, per column, wherever it holds together.
+    if reverse and not is_no_lesion_slice(list(reverse.values()), no_lesion_sd=NO_LESION_SD):
+        scatter = local_depth_scatter(reverse)
+        depths, sources = {}, {}
+        for ascan_x in sorted(reverse.keys() | half_span.keys()):
+            local = scatter.get(ascan_x, float("nan"))
+            # An unmeasurable window is untrusted, so half-span supplies the
+            # column -- which is what it supplied before this tier existed.
+            trusted = np.isfinite(local) and local <= PER_COLUMN_STABILITY_SD
+            if trusted and ascan_x in reverse:
+                depths[ascan_x] = reverse[ascan_x]
+                sources[ascan_x] = "reverse_span"
+            elif ascan_x in half_span:
+                depths[ascan_x] = half_span[ascan_x]
+                sources[ascan_x] = "half_span"
+            elif ascan_x in reverse:
+                # No half-span to fall back to: an untrusted number beats none.
+                depths[ascan_x] = reverse[ascan_x]
+                sources[ascan_x] = "reverse_span"
+
+        if depths:
+            used = set(sources.values())
+            label = "reverse_span" if used == {"reverse_span"} else MIXED_REVERSE_METHOD
+            if used == {"half_span"}:
+                label = "half_span"
+            return label, depths, sources
+
     if is_method_stable(half_span, stability_sd):
-        return "half_span", half_span
+        return "half_span", half_span, dict.fromkeys(half_span, "half_span")
 
     stable = {}
     for method in _FALLBACK_METHODS:
@@ -1179,13 +1461,14 @@ def select_depth_method(
         shared = knee.keys() & inflection.keys()
         if shared:
             averaged = {x: (knee[x] + inflection[x]) / 2.0 for x in shared}
-            return "mean+" + "+".join(_FALLBACK_METHODS), averaged
+            label = "mean+" + "+".join(_FALLBACK_METHODS)
+            return label, averaged, dict.fromkeys(averaged, label)
 
     for method in _FALLBACK_METHODS:
         if method in stable:
-            return method, stable[method]
+            return method, stable[method], dict.fromkeys(stable[method], method)
 
-    return NO_LESION_METHOD, {}
+    return NO_LESION_METHOD, {}, {}
 
 
 def compute_stable_combined_depth(
@@ -1194,20 +1477,24 @@ def compute_stable_combined_depth(
     depth_offset: float = DEPTH_OFFSET,
     depth_series: dict | None = None,
     method_used: str | None = None,
+    source_by_column: dict | None = None,
 ) -> tuple:
     """
-    Look up one column's depth from the method chosen for the whole slice.
+    Look up one column's depth from the series chosen for this slice.
 
-    Which method that is comes from :func:`select_depth_method`, which needs
-    every column to judge lateral stability -- so it is decided once per slice
-    and passed in here, not re-derived per column.
+    Which detector supplies the slice comes from :func:`select_depth_method`,
+    which needs every column to judge lateral stability -- so it is decided
+    once per slice and passed in here, not re-derived per column.
 
     Args:
         lesion_detection_data: Per-column detection metadata
         ascan_x: Column to read
         depth_offset: Constant px offset added to the result (tunable, default 0)
-        depth_series: Chosen method's per-column depths
-        method_used: Name of the chosen method, recorded on each column
+        depth_series: Chosen per-column depths
+        method_used: Slice-level label, used when a column has no own source
+        source_by_column: Detector that actually supplied each column. The
+            reverse tier mixes two detectors within one slice, so the column's
+            own source is what gets recorded, not the slice label.
 
     Returns:
         (depth_value, method_used) tuple
@@ -1216,12 +1503,13 @@ def compute_stable_combined_depth(
         return np.nan, "none"
 
     if depth_series is None or method_used is None:
-        method_used, depth_series = select_depth_method(lesion_detection_data)
+        method_used, depth_series, source_by_column = select_depth_method(lesion_detection_data)
 
     if ascan_x not in depth_series:
         return np.nan, method_used
 
-    return float(depth_series[ascan_x]) + depth_offset, method_used
+    column_method = (source_by_column or {}).get(ascan_x, method_used)
+    return float(depth_series[ascan_x]) + depth_offset, column_method
 
 
 def is_no_lesion_slice(combined_depths, no_lesion_sd: float = NO_LESION_SD) -> bool:
@@ -1279,7 +1567,8 @@ def calculate_lesion_depth(
     - KNEE_POINT: Two-line fitting (best for exponential decay)
     - SIGMOID_FIT: Sigmoid inflection point (50% transition, maximum rate of change)
     - SIGMOID_SHOULDER: Sigmoid shoulder point (15% from upper asymptote, early transition)
-    - COMBINED_MEAN: Weighted combination of stable methods (preserves natural lesion texture)
+    - COMBINED: Per-column selection among the stable terms -- never a blend of them;
+      see select_depth_method for the cascade and why averaging was rejected
 
     Args:
         surface: Detected surface with fitted curve
@@ -1403,6 +1692,11 @@ def calculate_lesion_depth(
         # Method 3: Half-span crossing (fit-free, cannot fail to converge)
         half_span_depth, half_span_meta = detect_depth_half_span(intensity_profile)
 
+        # Method 4: Reverse span (same threshold, scanned upward from the
+        # deepest sample). Always computed, like every other term, so the
+        # A-Scan viewer and the combined cascade both have it available.
+        reverse_depth, reverse_meta = detect_depth_reverse(intensity_profile)
+
         # Store all method results in metadata (always available now)
         detection_metadata = {
             "knee_depth": knee_depth,
@@ -1427,6 +1721,20 @@ def calculate_lesion_depth(
             "half_span_sustained": half_span_meta.get("sustained", True),
             "half_span_success": half_span_meta.get("success", False),
             "half_span_reason": half_span_meta.get("reason"),
+            # The reverse scan, stored on the same terms and for the same
+            # reason: a saved config has to stay auditable, not merely
+            # re-runnable. The smoothed profile is again left out, being a
+            # boxcar of the stored intensity profile.
+            "reverse_span_depth": reverse_depth,
+            "reverse_span_span": reverse_meta.get("span", np.nan),
+            "reverse_span_fraction": reverse_meta.get("fraction", np.nan),
+            "reverse_span_background": reverse_meta.get("background", np.nan),
+            "reverse_span_peak": reverse_meta.get("peak", np.nan),
+            "reverse_span_threshold": reverse_meta.get("threshold", np.nan),
+            "reverse_span_sustain": reverse_meta.get("sustain", REVERSE_SPAN_SUSTAIN),
+            "reverse_span_success": reverse_meta.get("success", False),
+            "reverse_span_reason": reverse_meta.get("reason"),
+            "reverse_span_last_above_index": reverse_meta.get("last_above_index", -1),
             "sigmoid_success": sigmoid_meta.get("success", False),
             "fit_params": fit_params,
         }
@@ -1469,13 +1777,13 @@ def calculate_lesion_depth(
             )
             detection_metadata["method"] = "sigmoid_shoulder"
 
-        elif detection_method == DepthDetectionMethod.COMBINED_MEAN:
-            # For COMBINED_MEAN, use knee point as placeholder
+        elif detection_method == DepthDetectionMethod.COMBINED:
+            # For COMBINED, use knee point as placeholder
             # The actual combined depth will be computed AFTER all A-Scans are processed
             depth_value = knee_depth
             depth_idx = knee_idx
             fitted_curve = knee_fitted_curve
-            detection_metadata["method"] = "combined_mean"
+            detection_metadata["method"] = "combined"
 
         # Store result if valid
         if not np.isnan(depth_value) and depth_idx >= 0:
@@ -1514,7 +1822,7 @@ def calculate_lesion_depth(
 
             depth_points.append((ascan_x, lesion_bottom_y, actual_depth_from_surface))
 
-            # Collect raw points for all methods (used for stability analysis in COMBINED_MEAN)
+            # Collect raw points for all methods (used for stability analysis in COMBINED)
             method_depth_keys = {
                 "knee_point": "knee_depth",
                 "sigmoid_fit": "inflection_depth",
@@ -1546,13 +1854,15 @@ def calculate_lesion_depth(
         # No valid depth points found
         return None
 
-    # For COMBINED_MEAN method: combine per column, then apply the no-lesion gate.
-    if detection_method == DepthDetectionMethod.COMBINED_MEAN:
-        # Stage 1: choose one method for the whole slice, then read each column
-        # from it. The choice needs every column's depths to judge lateral
-        # stability, so it cannot be made per column.
+    # For COMBINED method: combine per column, then apply the no-lesion gate.
+    if detection_method == DepthDetectionMethod.COMBINED:
+        # Stage 1: choose which detector supplies each column, then read the
+        # column from it. Both levels of that choice -- whether the reverse
+        # scan is trusted on this slice, and its local scatter around each
+        # column -- need every column's depths, so it cannot be made inside the
+        # per-column loop above.
         ascan_xs = sorted(lesion_detection_data.keys())
-        chosen_method, chosen_series = select_depth_method(
+        chosen_method, chosen_series, source_by_column = select_depth_method(
             lesion_detection_data, stability_sd=method_stability_sd
         )
         combined_by_x = {}
@@ -1563,6 +1873,7 @@ def calculate_lesion_depth(
                 depth_offset=depth_offset,
                 depth_series=chosen_series,
                 method_used=chosen_method,
+                source_by_column=source_by_column,
             )
 
         # Stage 2: the gate acts on the combined depth's own lateral scatter,
