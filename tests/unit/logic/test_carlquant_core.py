@@ -148,12 +148,16 @@ def test_stability_threshold_is_the_boundary():
 # ---------------------------------------------------------------------------
 
 
-def _ldd(knee, inflection, shoulder, half_span=np.nan, n_columns=5):
+def _ldd(knee, inflection, shoulder, half_span=np.nan, reverse_span=np.nan, n_columns=5):
     """A slice whose every column carries the same depths.
 
     Constant depths mean SD is 0, so every method counts as stable unless a
     test deliberately adds scatter. The cascade judges stability across
     columns, so a single-column fixture cannot exercise it.
+
+    ``reverse_span`` defaults to NaN so the fixtures that predate the reverse
+    tier still exercise the half-span cascade: with no reverse depths at all,
+    tier 0 has nothing to select and is skipped.
     """
     return {
         x: {
@@ -163,6 +167,7 @@ def _ldd(knee, inflection, shoulder, half_span=np.nan, n_columns=5):
                 "inflection_depth": inflection,
                 "shoulder_depth": shoulder,
                 "half_span_depth": half_span,
+                "reverse_span_depth": reverse_span,
             },
         }
         for x in range(n_columns)
@@ -595,14 +600,22 @@ def _synthetic_slice(lesion_thickness=40, width=160, height=220, noise=0.0, seed
 def test_calculate_lesion_depth_emits_half_span_metadata():
     img, surface, region = _synthetic_slice()
     result = core.calculate_lesion_depth(
-        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED
     )
     assert result is not None
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
     # shoulder_depth is still emitted: renderers and stored configs read it.
-    for key in ("half_span_depth", "knee_depth", "inflection_depth", "shoulder_depth"):
+    for key in (
+        "reverse_span_depth",
+        "half_span_depth",
+        "knee_depth",
+        "inflection_depth",
+        "shoulder_depth",
+    ):
         assert key in meta
-    assert meta["depth_method_used"] == "half_span"
+    # A clean synthetic step is exactly the case the reverse scan reads best,
+    # and it is the first tier, so it supplies the column.
+    assert meta["depth_method_used"] == "reverse_span"
 
 
 @pytest.mark.unit
@@ -630,7 +643,7 @@ def test_half_span_construction_terms_are_stored():
     """
     img, surface, region = _synthetic_slice()
     result = core.calculate_lesion_depth(
-        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED
     )
     assert result is not None
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
@@ -651,7 +664,7 @@ def test_stored_threshold_matches_background_plus_fraction_of_span():
     # than being recorded from some other pass over the profile.
     img, surface, region = _synthetic_slice()
     result = core.calculate_lesion_depth(
-        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED
     )
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
     expected = meta["half_span_background"] + meta["half_span_fraction"] * meta["half_span_span"]
@@ -672,7 +685,7 @@ def test_calculate_lesion_depth_tracks_lesion_thickness():
     def depth_for(thickness):
         img, surface, region = _synthetic_slice(lesion_thickness=thickness)
         return core.calculate_lesion_depth(
-            surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+            surface, region, img, detection_method=DepthDetectionMethod.COMBINED
         )
 
     thin, thick = depth_for(25), depth_for(70)
@@ -684,10 +697,10 @@ def test_calculate_lesion_depth_tracks_lesion_thickness():
 def test_calculate_lesion_depth_offset_shifts_result():
     img, surface, region = _synthetic_slice()
     base = core.calculate_lesion_depth(
-        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED
     )
     shifted = core.calculate_lesion_depth(
-        surface, region, img, depth_offset=10.0, detection_method=DepthDetectionMethod.COMBINED_MEAN
+        surface, region, img, depth_offset=10.0, detection_method=DepthDetectionMethod.COMBINED
     )
     assert base is not None and shifted is not None
     # Offset is applied before the refractive-index division.
@@ -720,7 +733,7 @@ def test_calculate_lesion_depth_no_lesion_gate_reports_surface():
         region,
         img,
         no_lesion_sd=1.0,  # force the gate
-        detection_method=DepthDetectionMethod.COMBINED_MEAN,
+        detection_method=DepthDetectionMethod.COMBINED,
     )
     assert result is not None
     assert result.mean_depth == pytest.approx(0.0)
@@ -732,9 +745,231 @@ def test_calculate_lesion_depth_no_lesion_gate_reports_surface():
 def test_calculate_lesion_depth_gate_quiet_on_clean_lesion():
     img, surface, region = _synthetic_slice(noise=6.0)
     result = core.calculate_lesion_depth(
-        surface, region, img, detection_method=DepthDetectionMethod.COMBINED_MEAN
+        surface, region, img, detection_method=DepthDetectionMethod.COMBINED
     )
     assert result is not None
     meta = next(iter(result.lesion_detection_data.values()))["detection_metadata"]
     assert meta["depth_method_used"] != "no_lesion_surface"
     assert result.mean_depth > 0.0
+
+
+# ---------------------------------------------------------------------------
+# Reverse (bottom-up) span detector
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_reverse_finds_the_same_edge_as_half_span_on_a_clean_step():
+    # On a cleanly monotone profile the two directions must agree: the whole
+    # point of the shared "first background sample" convention is that any
+    # difference between them is a real disagreement, not a definition gap.
+    profile = _step_profile(edge=50)
+    reverse, meta = core.detect_depth_reverse(profile)
+    forward, _ = core.detect_depth_half_span(profile)
+    assert meta["success"]
+    assert reverse == pytest.approx(forward, abs=2.0)
+
+
+@pytest.mark.unit
+def test_reverse_tracks_edge_position():
+    shallow, _ = core.detect_depth_reverse(_step_profile(edge=30))
+    deep, _ = core.detect_depth_reverse(_step_profile(edge=80))
+    assert deep > shallow + 40
+
+
+@pytest.mark.unit
+def test_reverse_empty_profile():
+    depth, meta = core.detect_depth_reverse(np.array([]))
+    assert np.isnan(depth)
+    assert meta["reason"] == "empty_profile"
+
+
+@pytest.mark.unit
+def test_reverse_flat_profile_has_no_contrast():
+    depth, meta = core.detect_depth_reverse(np.full(200, 100.0))
+    assert np.isnan(depth)
+    assert meta["reason"] == "no_contrast"
+
+
+@pytest.mark.unit
+def test_reverse_refuses_a_profile_shorter_than_the_sustain_window():
+    depth, meta = core.detect_depth_reverse(np.linspace(200.0, 60.0, 10))
+    assert np.isnan(depth)
+    assert meta["reason"] == "profile_shorter_than_sustain"
+
+
+@pytest.mark.unit
+def test_reverse_refuses_an_isolated_spike():
+    # Signal above the threshold, but never for a full sustain window: the
+    # deepest isolated spike is speckle, and reporting it would be a depth.
+    spike = np.concatenate([np.full(10, 200.0), np.full(190, 60.0)])
+    depth, meta = core.detect_depth_reverse(spike)
+    assert np.isnan(depth)
+    assert meta["reason"] == "never_sustained"
+
+
+@pytest.mark.unit
+def test_reverse_refuses_a_truncated_lesion():
+    # Signal still above the threshold at the bottom of the analysed window:
+    # the lesion is deeper than the search depth, so the window edge is not a
+    # measurement and must not be reported as one.
+    truncated = np.concatenate(
+        [np.full(150, 200.0), np.full(30, 60.0), np.full(20, 200.0)]
+    )
+    depth, meta = core.detect_depth_reverse(truncated, smooth_window=1)
+    assert np.isnan(depth)
+    assert meta["reason"] == "deeper_than_search_depth"
+
+
+@pytest.mark.unit
+def test_reverse_higher_fraction_reads_shallower():
+    profile = _step_profile(edge=60)
+    shallow, _ = core.detect_depth_reverse(profile, fraction=0.70)
+    deep, _ = core.detect_depth_reverse(profile, fraction=0.20)
+    assert shallow < deep
+
+
+@pytest.mark.unit
+def test_reverse_constants_are_the_validated_ones():
+    # The held-out result is only meaningful while these stay fixed.
+    assert core.REVERSE_SPAN_FRACTION == 0.40
+    assert core.REVERSE_SPAN_SUSTAIN == 15
+
+
+# ---------------------------------------------------------------------------
+# Per-column scatter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_local_scatter_is_zero_on_a_flat_trace():
+    scatter = core.local_depth_scatter({x: 40.0 for x in range(30)})
+    assert set(scatter) == set(range(30))
+    assert all(value == pytest.approx(0.0) for value in scatter.values())
+
+
+@pytest.mark.unit
+def test_local_scatter_is_nan_when_the_window_is_too_thin():
+    # Fewer than PER_COLUMN_MIN_SAMPLES finite depths is not a scatter, and
+    # must not be reported as a calm one.
+    scatter = core.local_depth_scatter({0: 40.0, 1: 41.0})
+    assert all(np.isnan(value) for value in scatter.values())
+
+
+@pytest.mark.unit
+def test_local_scatter_is_nan_where_the_detector_failed_across_a_stretch():
+    # A single column far from the rest: its window spans failed columns, so
+    # it has nothing to judge itself against.
+    series = {x: 40.0 for x in range(30)}
+    series[200] = 40.0
+    scatter = core.local_depth_scatter(series)
+    assert np.isnan(scatter[200])
+    assert scatter[0] == pytest.approx(0.0)
+
+
+@pytest.mark.unit
+def test_local_scatter_follows_local_wobble():
+    series = {x: 40.0 for x in range(30)}
+    series.update({x: 40.0 + (20.0 if x % 2 else -20.0) for x in range(60, 90)})
+    scatter = core.local_depth_scatter(series)
+    assert scatter[0] == pytest.approx(0.0)
+    assert scatter[89] > core.PER_COLUMN_STABILITY_SD
+
+
+# ---------------------------------------------------------------------------
+# Reverse tier of the selection cascade
+# ---------------------------------------------------------------------------
+
+
+def _ldd_mixed_reverse(n_columns=60, switch=30, spread=20.0):
+    """A slice the reverse detector reads well over half its width.
+
+    Calm reverse depths on the first half, wobbling ones on the second. The
+    wobble is sized so the *slice* SD stays under NO_LESION_SD while the local
+    SD over the second half clears PER_COLUMN_STABILITY_SD -- which is exactly
+    the case the per-column tier exists for and the per-slice one cannot see.
+    """
+    ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan, n_columns=n_columns)
+    for x in sorted(ldd):
+        metadata = ldd[x]["detection_metadata"]
+        metadata["half_span_depth"] = 50.0
+        metadata["reverse_span_depth"] = (
+            40.0 if x < switch else 40.0 + (spread if x % 2 else -spread)
+        )
+    return ldd
+
+
+@pytest.mark.unit
+def test_reverse_supplies_the_slice_when_it_holds_together():
+    ldd = _ldd(knee=60.0, inflection=20.0, shoulder=np.nan, half_span=50.0, reverse_span=40.0)
+    method, series, sources = core.select_depth_method(ldd)
+    assert method == "reverse_span"
+    assert series[0] == pytest.approx(40.0)
+    assert set(sources.values()) == {"reverse_span"}
+
+
+@pytest.mark.unit
+def test_reverse_tier_is_skipped_when_it_scatters_over_the_slice():
+    # Reverse wobbles past NO_LESION_SD everywhere, so the half-span cascade
+    # runs exactly as it did before the tier existed.
+    ldd = _ldd(knee=60.0, inflection=20.0, shoulder=np.nan, half_span=50.0)
+    for x in sorted(ldd):
+        ldd[x]["detection_metadata"]["reverse_span_depth"] = 40.0 + (
+            40.0 if x % 2 else -40.0
+        )
+    method, series, sources = core.select_depth_method(ldd)
+    assert method == "half_span"
+    assert series[0] == pytest.approx(50.0)
+    assert set(sources.values()) == {"half_span"}
+
+
+@pytest.mark.unit
+def test_reverse_tier_uses_the_stability_limit_that_transferred():
+    # NO_LESION_SD (15), not METHOD_STABILITY_SD (12). The tighter limit scored
+    # better on the calibration set and much worse held out, so the asymmetry
+    # is deliberate and must not be quietly harmonised away.
+    assert core.PER_COLUMN_STABILITY_SD == core.NO_LESION_SD == 15.0
+    assert core.METHOD_STABILITY_SD == 12.0
+    # A reverse trace scattering by 13 px is rejected by the other tiers and
+    # accepted by this one.
+    ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan, half_span=50.0)
+    for x in sorted(ldd):
+        ldd[x]["detection_metadata"]["reverse_span_depth"] = 40.0 + (
+            13.0 if x % 2 else -13.0
+        )
+    assert core.select_depth_method(ldd)[0] == "reverse_span"
+
+
+@pytest.mark.unit
+def test_the_slice_label_records_a_mixed_slice():
+    method, _, sources = core.select_depth_method(_ldd_mixed_reverse())
+    assert method == core.MIXED_REVERSE_METHOD
+    assert sources[0] == "reverse_span"
+    assert sources[59] == "half_span"
+
+
+@pytest.mark.unit
+def test_each_column_records_the_detector_that_supplied_it():
+    ldd = _ldd_mixed_reverse()
+    method, series, sources = core.select_depth_method(ldd)
+    calm, calm_method = compute_stable_combined_depth(
+        ldd, ascan_x=0, depth_series=series, method_used=method, source_by_column=sources
+    )
+    wobbly, wobbly_method = compute_stable_combined_depth(
+        ldd, ascan_x=59, depth_series=series, method_used=method, source_by_column=sources
+    )
+    assert calm == pytest.approx(40.0) and calm_method == "reverse_span"
+    assert wobbly == pytest.approx(50.0) and wobbly_method == "half_span"
+
+
+@pytest.mark.unit
+def test_reverse_is_used_where_half_span_failed_entirely():
+    # Nothing to fall back to is not a reason to report nothing: an untrusted
+    # number still beats dropping the column.
+    ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan, reverse_span=40.0)
+    method, series, sources = core.select_depth_method(ldd)
+    assert method == "reverse_span"
+    assert series[0] == pytest.approx(40.0)
+    assert sources[0] == "reverse_span"
+
+
