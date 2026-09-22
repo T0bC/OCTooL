@@ -51,6 +51,7 @@ from app.logic.carlquant.annotation_colors import (
     INTERPOLATED_SURFACE_COLOR,
     KNEE_POINT_COLOR,
     LESION_DEPTH_PRIMARY_COLOR,
+    REVERSE_SPAN_POINT_COLOR,
     ROW_HIGHLIGHT_NAVIGATION_COLOR,
     SHOULDER_POINT_COLOR,
 )
@@ -106,6 +107,7 @@ class AScanViewer:
         self.show_sigmoid_inflection = tk.BooleanVar(value=False)
         self.show_sigmoid_shoulder = tk.BooleanVar(value=False)
         self.show_half_span = tk.BooleanVar(value=False)
+        self.show_reverse_span = tk.BooleanVar(value=False)
         self.show_combined_depth = tk.BooleanVar(value=True)
         self.show_exp2_fit = tk.BooleanVar(value=False)
         self.show_sigmoid_fit = tk.BooleanVar(value=False)
@@ -113,6 +115,10 @@ class AScanViewer:
         # background, peak and threshold. Drawn together because the number
         # only means something as a construction, not as four loose values.
         self.show_half_span_construction = tk.BooleanVar(value=False)
+        # The same four terms for the upward scan. Kept separate from the
+        # half-span construction because the two share a threshold but not
+        # a direction, and overlaying both at once reads as one method.
+        self.show_reverse_span_construction = tk.BooleanVar(value=False)
         # B-scan overlays driven from here so both views agree (good UX beats
         # hunting for the same toggle in two places).
         #
@@ -196,6 +202,7 @@ class AScanViewer:
                 "Detected Depths",
                 [
                     ("Combined Depth", self.show_combined_depth, None),
+                    ("Reverse Span", self.show_reverse_span, None),
                     ("Half-Span", self.show_half_span, None),
                     ("Knee Point", self.show_knee_point, None),
                     ("Sigmoid Inflection", self.show_sigmoid_inflection, None),
@@ -208,6 +215,11 @@ class AScanViewer:
                     ("Exp2 Fit Curve", self.show_exp2_fit, None),
                     ("Sigmoid Fit Curve", self.show_sigmoid_fit, None),
                     ("Half-Span Construction", self.show_half_span_construction, None),
+                    (
+                        "Reverse Span Construction",
+                        self.show_reverse_span_construction,
+                        None,
+                    ),
                 ],
             ),
             (
@@ -495,6 +507,7 @@ class AScanViewer:
                 self.show_combined_depth,
                 (lesion_detection_data or {}).get("lesion_depth_px"),
             ),
+            ("Reverse Span", self.show_reverse_span, metadata.get("reverse_span_depth")),
             ("Half-Span", self.show_half_span, metadata.get("half_span_depth")),
             ("Knee", self.show_knee_point, metadata.get("knee_depth")),
             ("Inflection", self.show_sigmoid_inflection, metadata.get("inflection_depth")),
@@ -831,6 +844,26 @@ class AScanViewer:
                             4,
                         )
 
+            # Reverse span crossing (relative to surface)
+            if self.show_reverse_span.get() and "reverse_span_depth" in metadata:
+                reverse_depth = metadata["reverse_span_depth"]
+                if reverse_depth is not None and not np.isnan(reverse_depth):
+                    absolute_depth = surface_y + reverse_depth
+                    if int(absolute_depth) < len(column_data):
+                        intensity = column_data[int(absolute_depth)]
+                        fraction = metadata.get("reverse_span_fraction", float("nan"))
+                        self._plot_point_with_hover(
+                            intensity,
+                            absolute_depth,
+                            f"Reverse Span\nX: {intensity:.1f}\nY: {absolute_depth:.1f}\n"
+                            f"Depth: {reverse_depth:.1f}px\nFraction: {fraction:.2f}",
+                            "Reverse Span",
+                            "s",
+                            REVERSE_SPAN_POINT_COLOR,
+                            10,
+                            4,
+                        )
+
             # Combined depth (final result, relative to surface)
             if self.show_combined_depth.get():
                 # Raw pixel depth, never the refractive-index-corrected one:
@@ -931,6 +964,14 @@ class AScanViewer:
                 # than taken on trust.
                 if self.show_half_span_construction.get():
                     self._plot_half_span_construction(
+                        metadata, intensity_profile, profile_start_y, len(column_data)
+                    )
+
+                # The same construction for the upward scan, whose threshold is
+                # built from the same background and peak but is read from the
+                # bottom of the profile up.
+                if self.show_reverse_span_construction.get():
+                    self._plot_reverse_span_construction(
                         metadata, intensity_profile, profile_start_y, len(column_data)
                     )
 
@@ -1075,6 +1116,96 @@ class AScanViewer:
                 transform=self.ax.transAxes,
                 fontsize=7,
                 color=HALF_SPAN_POINT_COLOR,
+                alpha=0.9,
+            )
+
+    @handle_errors("AScanViewer._plot_reverse_span_construction")
+    def _plot_reverse_span_construction(
+        self, metadata, intensity_profile, profile_start_y, image_height
+    ):
+        """Draw how the reverse span scan reached its depth.
+
+        The same four terms as the half-span construction -- smoothed profile,
+        background median, surface peak, and the threshold between them -- but
+        read the other way: the depth reported is the shallowest sample below
+        the deepest run that still stays above the threshold. The last such
+        sample is marked, so the run the detector accepted can be seen rather
+        than inferred from the threshold alone.
+        """
+        background = metadata.get("reverse_span_background")
+        peak = metadata.get("reverse_span_peak")
+        threshold = metadata.get("reverse_span_threshold")
+        window = metadata.get("half_span_smooth_window", HALF_SPAN_SMOOTH_WINDOW)
+
+        if len(intensity_profile) > 1 and window:
+            smoothed = boxcar(np.asarray(intensity_profile, dtype=float), int(window))
+            y_smooth = np.arange(len(smoothed)) + profile_start_y
+            visible = y_smooth < image_height
+            if np.any(visible):
+                self.ax.plot(
+                    smoothed[visible],
+                    y_smooth[visible],
+                    "-",
+                    color="#a29bfe",
+                    linewidth=1.8,
+                    label=f"Smoothed (w={int(window)})",
+                    alpha=0.9,
+                    zorder=2,
+                )
+
+        fraction = metadata.get("reverse_span_fraction")
+        sustain = metadata.get("reverse_span_sustain")
+        threshold_label = (
+            "Reverse Threshold"
+            if fraction is None or not np.isfinite(fraction)
+            else f"Reverse Threshold ({fraction:.2f})"
+        )
+        for value, color, style, label in (
+            (background, "#7f8c8d", ":", "Background"),
+            (peak, "#ffffff", ":", "Peak"),
+            (threshold, REVERSE_SPAN_POINT_COLOR, "--", threshold_label),
+        ):
+            if value is None or not np.isfinite(value):
+                continue
+            self.ax.axvline(
+                x=value,
+                color=color,
+                linestyle=style,
+                linewidth=1.4,
+                alpha=0.85,
+                label=label,
+                zorder=2,
+            )
+
+        # Deepest sample the scan accepted as signal; the reported depth is the
+        # one below it.
+        last_above = metadata.get("reverse_span_last_above_index", -1)
+        if last_above is not None and last_above >= 0:
+            self.ax.axhline(
+                y=profile_start_y + last_above,
+                color=REVERSE_SPAN_POINT_COLOR,
+                linestyle="-.",
+                linewidth=1.2,
+                alpha=0.7,
+                label=(
+                    "Last sustained sample"
+                    if not sustain
+                    else f"Last sustained sample (n={int(sustain)})"
+                ),
+                zorder=2,
+            )
+
+        # A refusal is not a shallow reading, so say which refusal it was
+        # instead of leaving the plot looking like a measurement.
+        reason = metadata.get("reverse_span_reason")
+        if not metadata.get("reverse_span_success", False) and reason:
+            self.ax.text(
+                0.02,
+                0.06,
+                f"reverse span: {str(reason).replace('_', ' ')}",
+                transform=self.ax.transAxes,
+                fontsize=7,
+                color=REVERSE_SPAN_POINT_COLOR,
                 alpha=0.9,
             )
 
