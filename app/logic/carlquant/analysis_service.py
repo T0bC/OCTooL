@@ -72,7 +72,7 @@ from app.logic.carlquant.models import (
 
 # Defaults mirror the values used by run_carl_quant / process_slice_parallel.
 DEFAULT_SEARCH_DEPTH = 200
-DEFAULT_DETECTION_METHOD = "combined_mean"
+DEFAULT_DETECTION_METHOD = "combined"
 
 
 @dataclass
@@ -145,7 +145,7 @@ class AnalysisService:
         image: np.ndarray,
         *,
         search_depth: int = DEFAULT_SEARCH_DEPTH,
-        detection_method: DepthDetectionMethod = DepthDetectionMethod.COMBINED_MEAN,
+        detection_method: DepthDetectionMethod = DepthDetectionMethod.COMBINED,
         method_stability_sd: float = METHOD_STABILITY_SD,
         depth_offset: float = DEPTH_OFFSET,
         no_lesion_sd: float = NO_LESION_SD,
