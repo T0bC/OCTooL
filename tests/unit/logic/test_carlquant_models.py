@@ -96,9 +96,9 @@ class TestSpecimenConfig:
 
 class TestDepthDetectionMethod:
     @pytest.mark.unit
-    def test_default_is_combined_mean(self):
-        """GIVEN the enum, WHEN get_default, THEN COMBINED_MEAN."""
-        assert DepthDetectionMethod.get_default() is DepthDetectionMethod.COMBINED_MEAN
+    def test_default_is_combined(self):
+        """GIVEN the enum, WHEN get_default, THEN COMBINED."""
+        assert DepthDetectionMethod.get_default() is DepthDetectionMethod.COMBINED
 
     @pytest.mark.unit
     def test_value_roundtrip(self):
