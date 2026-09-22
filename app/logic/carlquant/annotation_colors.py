@@ -56,7 +56,8 @@ LESION_DEPTH_PRIMARY_COLOR = "#f71134"  # Bright red - main lesion depth result 
 KNEE_POINT_COLOR = "yellow"  # Knee point detection method
 INFLECTION_POINT_COLOR = "cyan"  # Sigmoid inflection point method
 SHOULDER_POINT_COLOR = "magenta"  # Sigmoid shoulder point method
-HALF_SPAN_POINT_COLOR = "#FF9800"  # Half-span crossing method
+HALF_SPAN_POINT_COLOR = "#FF9800"  # Half-span crossing method (downward scan)
+REVERSE_SPAN_POINT_COLOR = "#7CFC00"  # Reverse span method (upward scan)
 
 # Extraction Region Colors
 EXTRACTION_REGION_COLOR = "#00FF88"  # Bright mint green for sound region boundaries
