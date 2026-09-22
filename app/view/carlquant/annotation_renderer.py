@@ -50,6 +50,7 @@ from app.logic.carlquant.annotation_colors import (
     KNEE_POINT_COLOR,
     LESION_BOUNDARY_COLOR,
     LESION_DEPTH_PRIMARY_COLOR,
+    REVERSE_SPAN_POINT_COLOR,
     SHOULDER_POINT_COLOR,
     SPECIMEN_BOUNDARY_COLOR,
 )
@@ -395,6 +396,7 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         "inflection_point": INFLECTION_POINT_COLOR,
         "shoulder_point": SHOULDER_POINT_COLOR,
         "half_span_point": HALF_SPAN_POINT_COLOR,
+        "reverse_span_point": REVERSE_SPAN_POINT_COLOR,
         # Add future methods here, e.g.:
         # 'gradient_method': 'orange',
         # 'threshold_method': 'lime',
@@ -408,6 +410,7 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         show_inflection=False,
         show_shoulder=False,
         show_half_span=False,
+        show_reverse_span=False,
     ):
         """
         Draw lesion depth results.
@@ -421,6 +424,7 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
             show_inflection: If True, draw only inflection point method line
             show_shoulder: If True, draw only shoulder point method line
             show_half_span: If True, draw only half-span crossing method line
+            show_reverse_span: If True, draw only reverse span method line
         """
         if not lesion_depth:
             return
@@ -442,9 +446,15 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
             or show_inflection
             or show_shoulder
             or show_half_span
+            or show_reverse_span
         ):
             self._draw_component_methods(
-                lesion_depth, show_knee, show_inflection, show_shoulder, show_half_span
+                lesion_depth,
+                show_knee,
+                show_inflection,
+                show_shoulder,
+                show_half_span,
+                show_reverse_span,
             )
 
         # Draw smooth line connecting all points
@@ -459,6 +469,7 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
         show_inflection=True,
         show_shoulder=True,
         show_half_span=True,
+        show_reverse_span=True,
     ):
         """
         Draw individual detection method results based on user selection.
@@ -484,6 +495,7 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
             "inflection_point": [],
             "shoulder_point": [],
             "half_span_point": [],
+            "reverse_span_point": [],
         }
 
         for x, data in sorted(lesion_depth.lesion_detection_data.items()):
@@ -538,6 +550,20 @@ class LesionDepthAnnotationRenderer(BaseAnnotationRenderer):
                         if not np.isnan(half_span_depth):
                             method_points["half_span_point"].append(
                                 (x, surface_y + half_span_depth)
+                            )
+                    except (TypeError, ValueError):
+                        pass
+
+            # Extract reverse span crossing
+            if show_reverse_span:
+                reverse_span_depth = metadata.get("reverse_span_depth")
+                if reverse_span_depth is not None and not (
+                    hasattr(reverse_span_depth, "__iter__") and len(reverse_span_depth) == 0
+                ):
+                    try:
+                        if not np.isnan(reverse_span_depth):
+                            method_points["reverse_span_point"].append(
+                                (x, surface_y + reverse_span_depth)
                             )
                     except (TypeError, ValueError):
                         pass
