@@ -18,6 +18,7 @@ from app.logic.carlquant import validation as val
 def make_column(
     surface_y=100.0,
     combined=20.0,
+    reverse_span=19.0,
     half_span=18.0,
     knee=25.0,
     inflection=15.0,
@@ -31,6 +32,7 @@ def make_column(
         "lesion_depth_px": combined,
         "detection_metadata": {
             # Nested: the raw component methods.
+            "reverse_span_depth": reverse_span,
             "half_span_depth": half_span,
             "knee_depth": knee,
             "inflection_depth": inflection,
