@@ -19,3 +19,8 @@ version.json
 build/
 dist/
 *.spec.bak
+
+# Lesion-depth validation harness output: regenerated from testData, not source.
+# The harness itself and the document it feeds live in HTML_docs/forPublication/,
+# which is ignored wholesale by its own .gitignore.
+testData/**/depth_method_comparison/
