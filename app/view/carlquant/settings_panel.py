@@ -102,7 +102,7 @@ class settingsPanel:
 
         # Map display names to internal values (shortened)
         self.method_display_to_value = {
-            "Combined": "combined_mean",
+            "Combined": "combined",
             "Knee Point": "knee_point",
             "Inflection": "sigmoid_fit",
             "Shoulder": "sigmoid_shoulder",
