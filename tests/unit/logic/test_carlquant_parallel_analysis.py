@@ -300,6 +300,57 @@ class TestResultAttribution:
         assert set(specimens[0].results.keys()) == {0, 1}
         assert set(specimens[1].results.keys()) == {0, 1}
 
+    @pytest.mark.unit
+    def test_a_finished_batch_resolves_in_submission_order(self, monkeypatch):
+        """GIVEN a batch handed back in the worst possible order, WHEN it is
+        resolved, THEN slices are still attributed in submission order.
+
+        ``concurrent.futures.wait`` returns ``done`` as a *set*, and a Future
+        hashes by identity, so its iteration order is memory-address order --
+        arbitrary, and different between two otherwise identical runs. That
+        decides the order specimens finalize and save in, and the insertion
+        order of ``specimen.results``. Handing the batch back reversed stands
+        in for that arbitrariness while staying reproducible.
+        """
+
+        class _TaggedImmediateExecutor(ImmediateExecutor):
+            """ImmediateExecutor whose futures remember which slice they ran.
+
+            ``_run_parallel`` passes the unpacked call args, never the task, so
+            the image path is the only handle on a future's origin from here.
+            """
+
+            def submit(self, fn, *args, **kwargs):
+                future = super().submit(fn, *args, **kwargs)
+                future._octool_key = _parse_marker(args[1].name)
+                return future
+
+        real_wait = pa.wait
+
+        def reversing_wait(fs, **kwargs):
+            done, not_done = real_wait(fs, **kwargs)
+            return sorted(done, key=lambda f: f._octool_key, reverse=True), not_done
+
+        monkeypatch.setattr(pa, "wait", reversing_wait)
+
+        specimens = [_make_specimen(0, 3), _make_specimen(1, 2)]
+        saver = _FakeDataSaver()
+        coordinator = BatchSliceCoordinator(
+            worker_fn=_marker_worker,
+            executor_factory=_TaggedImmediateExecutor,
+            data_saver=saver,
+            cpu_count=8,
+            available_memory_gb=1000,
+        )
+        coordinator.run(
+            specimens, num_sound=1, num_lesion=1, save=True, parallel_threshold=0
+        )
+
+        stored = [(entry[1], entry[2]) for entry in saver.call_log if entry[0] == "store"]
+        assert stored == [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)]
+        # And therefore the specimens are saved in the order they were given.
+        assert saver.save_results_calls == specimens
+
 
 # ----------------------------------------------------------------------
 # 2. Memory release
