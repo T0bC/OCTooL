@@ -1123,6 +1123,7 @@ class image_viewer_panel(BaseCanvasPanel):
             show_inflection=self.ascan_toggle("show_sigmoid_inflection"),
             show_shoulder=self.ascan_toggle("show_sigmoid_shoulder"),
             show_half_span=self.ascan_toggle("show_half_span"),
+            show_reverse_span=self.ascan_toggle("show_reverse_span"),
         )
 
     # ============================================================================
