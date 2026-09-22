@@ -78,7 +78,7 @@ def run_carl_quant(context):
         try:
             num_sound = context.region_config.get("sound", 3)
             num_lesion = context.region_config.get("lesion", 3)
-            detection_method = getattr(context, "detection_method", "combined_mean")
+            detection_method = getattr(context, "detection_method", "combined")
             measurement = context.analysis_metadata.get("measurement", 1)
             operator = context.analysis_metadata.get("operator", "OP")
 
