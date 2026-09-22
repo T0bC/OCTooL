@@ -454,7 +454,15 @@ class BatchSliceCoordinator:
                         if future not in done and future.cancel():
                             self._on_slice_resolved(in_flight.pop(future), None, context)
 
-                for future in done:
+                # wait() hands back a *set*, whose iteration order follows each
+                # future's identity hash -- its memory address, which differs
+                # between otherwise identical runs. Resolving in submission
+                # order instead makes a run reproducible: specimens finalize
+                # and save in the same sequence every time, and each
+                # specimen.results is built slice by slice in index order.
+                # in_flight is a dict, so its key order already is submission
+                # order; the snapshot is taken before the first pop below.
+                for future in [f for f in in_flight if f in done]:
                     task = in_flight.pop(future, None)
                     if task is None:
                         continue
