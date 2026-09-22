@@ -740,12 +740,17 @@ The Settings Panel configures analysis parameters that apply to all specimens in
 
 **Options**:
 
--   **Combined (Recommended)**: A deterministic cascade, not an average of everything. For every A-scan column the software always computes all three depth terms (Half-Span, Knee Point, Inflection); once per slice it then picks which one is trustworthy enough to report, based on how smooth ("laterally stable") each term's depths are across the slice's columns:
+-   **Combined (Recommended)**: A deterministic cascade, not an average of everything. For every A-scan column the software always computes all four depth terms (Reverse Span, Half-Span, Knee Point, Inflection); it then decides which of them may supply each depth point, based on how smooth ("laterally stable") a term's depths are across neighbouring columns. A real lesion boundary is laterally smooth — that is what makes it a boundary — so a term that scatters sideways is not tracking tissue and is not trusted.
 
-    1.  **Half-Span crossing** is tried first and used alone whenever it is stable (lateral SD \<= 12px). It is the primary measure because it is fit-free — unlike a curve fit it cannot fail to converge — and it tracks the visible lesion boundary most closely.
-    2.  If Half-Span is unstable, the cascade falls back to the **mean of Knee Point and Inflection**, but only if both of those are themselves stable. The two are biased in opposite, known directions (Knee Point reads deeper than Half-Span, Inflection reads shallower), so averaging them cancels the bias.
-    3.  If only one of Knee Point / Inflection is stable, that one is reported alone — biased, but still more informative than no lesion at all.
-    4.  If nothing is stable, or the resulting depth is itself laterally noisy (SD \> 15px, a real lesion boundary is smooth), the slice is judged to have no usable lesion signal and the surface line is reported as the depth. This shows as **GATED** in [Validation Mode](#validation-mode).
+    1.  **Reverse Span** is tried first. It is checked once for the whole slice: if its depths scatter across the slice (lateral SD \> 15px) it has not found a boundary anywhere, and the cascade moves on to step 2. Otherwise the choice is then made **per column**: Reverse Span supplies the depth wherever its scatter within a 41-column window around that column is calm (lateral SD \<= 15px), and **Half-Span** supplies the remaining columns. A lesion can be deep enough for the upward scan across most of its width and run out at one end, so one slice may legitimately be measured by both terms at once. The A-Scan Viewer records which term supplied each column.
+    2.  **Half-Span crossing** supplies the whole slice whenever Reverse Span was rejected for it and Half-Span is itself stable (lateral SD \<= 12px). It is fit-free — unlike a curve fit it cannot fail to converge — and it remains the fallback everywhere Reverse Span is not trusted.
+    3.  If Half-Span is unstable too, the cascade falls back to the **mean of Knee Point and Inflection**, but only if both of those are themselves stable. The two are biased in opposite, known directions (Knee Point reads deeper than Half-Span, Inflection reads shallower), so averaging them cancels the bias.
+    4.  If only one of Knee Point / Inflection is stable, that one is reported alone — biased, but still more informative than no lesion at all.
+    5.  If nothing is stable, or the resulting depth is itself laterally noisy (SD \> 15px), the slice is judged to have no usable lesion signal and the surface line is reported as the depth. This shows as **GATED** in [Validation Mode](#validation-mode).
+
+    This is **selection, not averaging**: exactly one term supplies each depth point, and nothing is blended. Averaging Reverse Span with Half-Span was measured against operator marks and came out clearly worse than choosing between them, on two independent specimen sets. Where the two terms agree — which is most of the lesion — an average changes nothing; where they disagree, it splits the difference between a right answer and a wrong one instead of picking the right one. Selecting per column, by contrast, cut the mean error against operator marks from 6.1px to 4.6px on the calibration specimens, and from 6.8px to 5.0px on a second set of specimens the settings had never been exposed to.
+
+    Selection also does not smooth anything. All depth points, whichever term supplied them, go through the same smoothing step afterwards, with the same settings as before.
 
 -   **Knee Point**: Two-line fitting to find the transition point where intensity decay changes slope. Best for sharp exponential decay patterns. Fits an exponential model and finds the 'elbow' point.
 
@@ -753,7 +758,11 @@ The Settings Panel configures analysis parameters that apply to all specimens in
 
 -   **Shoulder**: Sigmoid shoulder point (15% from upper asymptote). Detects the early transition region, useful for identifying the start of lesion penetration.
 
-**About Half-Span crossing**: Half-Span is the deterministic term the Combined method leans on. It smooths the intensity profile, takes the surface peak and the background (deep-tissue median) intensity, and finds the depth where the smoothed profile first drops below and *stays* below `background + fraction x (peak - background)` for several consecutive samples (so a single speckle dip cannot trigger it). The threshold fraction is not fixed: it is lowered for high-contrast lesions and raised for low-contrast ones, so a fixed-fraction bias toward reading high-contrast lesions too shallow is corrected automatically.
+**About Half-Span crossing**: Half-Span is the deterministic term the Combined method falls back on. It smooths the intensity profile, takes the surface peak and the background (deep-tissue median) intensity, and finds the depth where the smoothed profile first drops below and *stays* below `background + fraction x (peak - background)` for several consecutive samples (so a single speckle dip cannot trigger it). The threshold fraction is not fixed: it is lowered for high-contrast lesions and raised for low-contrast ones, so a fixed-fraction bias toward reading high-contrast lesions too shallow is corrected automatically.
+
+**About Reverse Span**: Reverse Span asks the same question as Half-Span from the other end. Instead of starting at the tooth surface and looking for the depth where brightness first drops away, it starts at the deepest analysed sample and works *upward*, looking for the deepest place where the profile is still convincingly brighter than the surrounding background. The depth it reports is the first sample below that — the shallowest one that already belongs to background — which is the same point Half-Span reports, so the two numbers are directly comparable. It uses the same smoothed profile, the same surface peak and the same background level, with a fixed threshold fraction rather than a contrast-adaptive one.
+
+The two directions fail in different places, which is why the software carries both. Scanning downward is misled by a bright speckle layer *inside* the lesion, which holds the profile up and makes the lesion read too deep. Scanning upward is misled when the deep background is brighter than usual, which makes the scan stop too early. Reverse Span reports nothing at all rather than a number when it cannot establish a boundary — for instance when signal is still strong at the bottom of the analysed depth, which means the lesion is deeper than the software looked and the bottom of the search window is not a measurement. Those columns fall back to Half-Span.
 
 **Default**: Combined
 
@@ -900,7 +909,7 @@ Validation Mode scores the automatic lesion-depth detection against operator-ann
 
 **Columns**:
 
--   **METHOD**: One of Combined, Half-Span, Knee Point, Inflection, Shoulder — Combined is the value actually reported by the app; the rest are its ingredients
+-   **METHOD**: One of Combined, Reverse Span, Half-Span, Knee Point, Inflection, Shoulder — Combined is the value actually reported by the app; the rest are its ingredients. **Reverse Span** is scored here as a term in its own right, so the two scan directions can be compared against the same marks
 -   **MEDIAN**: Signed median error for the current slice, in pixels (+ = detection too deep, - = too shallow)
 -   **\|MEDIAN\|**: Median of the absolute per-mark error for the current slice
 -   **P90**: 90th percentile of the absolute error for the current slice
@@ -928,8 +937,10 @@ The A-Scan Viewer provides detailed visualization of intensity profiles for indi
 -   **Knee Point**: Show knee point depth detection (blue)
 -   **Sigmoid Inflection**: Show sigmoid inflection point (orange)
 -   **Sigmoid Shoulder**: Show sigmoid shoulder point (purple)
--   **Half-Span**: Show the half-span crossing depth, the deterministic term the Combined method relies on
+-   **Half-Span**: Show the half-span crossing depth, the term the Combined method falls back on
 -   **Half-Span Construction**: Show the background, peak and threshold lines the half-span crossing is built from, to explain how a given result was reached
+-   **Reverse Span**: Show the reverse span depth, the term the Combined method tries first
+-   **Reverse Span Construction**: Show the background, peak and threshold lines the upward scan is built from, plus the deepest sample it accepted as lesion signal. When the upward scan refused to report a depth, the reason is shown here rather than left blank
 -   **Combined Depth**: Show combined depth result (magenta, bold)
 -   **Exp2 Fit Curve**: Show exponential fit curve overlay
 -   **Sigmoid Fit Curve**: Show sigmoid fit curve overlay
@@ -1018,11 +1029,11 @@ Located in each specimen folder, this directory contains:
 
 ### Depth Detection Methods
 
-**Combined Method** (Recommended): A deterministic cascade, not a blend of everything. Half-Span crossing (fit-free, cannot fail to converge) is reported alone whenever it is laterally stable across the slice; otherwise the mean of Knee Point and Inflection is used if both are stable, then whichever of the two is stable alone, and finally the surface line if nothing is stable. See [Method](#method) for the full cascade and [Validation Mode](#validation-mode) for how to score it against operator marks.
+**Combined Method** (Recommended): A deterministic cascade, not a blend of everything. Reverse Span is tried first and, on a slice where it holds together, supplies each column whose neighbourhood it reads calmly, with Half-Span supplying the rest. Where Reverse Span is rejected for the whole slice, Half-Span crossing (fit-free, cannot fail to converge) is reported alone whenever it is laterally stable; otherwise the mean of Knee Point and Inflection is used if both are stable, then whichever of the two is stable alone, and finally the surface line if nothing is stable. See [Method](#method) for the full cascade and [Validation Mode](#validation-mode) for how to score it against operator marks.
 
-**Individual Methods**: - **Half-Span**: Depth where the smoothed intensity profile crosses background + a contrast-adaptive threshold fraction of the span, sustained over several samples. The term Combined leans on; viewable in the A-Scan Viewer but not separately selectable as the primary Method - **Knee Point**: Best for sharp transitions - **Inflection**: Best for smooth S-curves - **Shoulder**: Best for early transition detection
+**Individual Methods**: - **Reverse Span**: Depth found by scanning upward from the deepest analysed sample to the deepest place still carrying lesion signal. The term Combined tries first; viewable in the A-Scan Viewer but not separately selectable as the primary Method - **Half-Span**: Depth where the smoothed intensity profile crosses background + a contrast-adaptive threshold fraction of the span, sustained over several samples. The term Combined falls back on; also viewable but not separately selectable - **Knee Point**: Best for sharp transitions - **Inflection**: Best for smooth S-curves - **Shoulder**: Best for early transition detection
 
-**Method Selection**: The Combined method chooses per slice based on each term's lateral stability (how smoothly its depths hold together across A-scan columns), not on a per-column signal-quality score.
+**Method Selection**: The Combined method decides at two levels, both on lateral stability (how smoothly a term's depths hold together across A-scan columns). Whether Reverse Span is used at all is decided once per slice; where it is used, which term supplies each individual depth point is then decided **per column**, from the scatter in a 41-column window around it. The remaining fallbacks are decided per slice. Nothing is ever averaged between Reverse Span and Half-Span — each depth point comes from exactly one term.
 
 ## Advanced Features
 
