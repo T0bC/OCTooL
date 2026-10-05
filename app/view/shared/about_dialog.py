@@ -39,6 +39,11 @@ from tkinter import ttk
 
 from app.logic.shared.app_config import CHANGELOG_URL
 from app.logic.shared.doc_links import open_doc
+from app.view.shared.dialog_utils import (
+    add_close_button,
+    create_scrolled_text,
+    create_themed_dialog,
+)
 from app.view.shared.error_handler import handle_errors
 
 SERVER_URL = "https://dentlab.medizin.uni-leipzig.de"
@@ -93,49 +98,18 @@ class AboutDialog:
     @handle_errors("AboutDialog.create_dialog")
     def _create_dialog(self, content):
         """Create a custom dark-themed About dialog."""
-        # Create modal dialog
-        dialog = tk.Toplevel(self.parent)
-        dialog.title("About OCTooL")
-        dialog.transient(self.parent)
-        dialog.grab_set()
-
-        # Set size and center the dialog
-        dialog_width = 550
-        dialog_height = 580
-        screen_width = dialog.winfo_screenwidth()
-        screen_height = dialog.winfo_screenheight()
-        x = (screen_width - dialog_width) // 2
-        y = (screen_height - dialog_height) // 2
-        dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
-
-        # Apply dark theme colors
-        bg_color = self.style.colors.bg
-        dialog.configure(bg=bg_color)
-
-        # Main frame
-        main_frame = ttk.Frame(dialog, padding=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        dialog, main_frame = create_themed_dialog(
+            self.parent, self.style, "About OCTooL", width=550, height=580
+        )
 
         # Content text widget with scrollbar
-        text_frame = ttk.Frame(main_frame)
-        text_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(0, 15))
-
-        scrollbar = ttk.Scrollbar(text_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        text_widget = tk.Text(
-            text_frame,
-            wrap=tk.WORD,
+        text_widget = create_scrolled_text(
+            main_frame,
+            self.style,
             font=("Segoe UI", 10),
-            bg=self.style.colors.inputbg,
-            fg=self.style.colors.inputfg,
-            relief=tk.FLAT,
-            padx=20,
-            pady=20,
-            yscrollcommand=scrollbar.set,
+            padding=20,
+            frame_pack_kwargs={"side": tk.TOP, "fill": tk.BOTH, "expand": True, "pady": (0, 15)},
         )
-        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=text_widget.yview)
 
         # Insert content with center alignment
         text_widget.tag_configure("center", justify="center")
@@ -170,17 +144,8 @@ class AboutDialog:
         )
         changelog_btn.pack(side=tk.LEFT, padx=(0, 10))
 
-        # Close button
-        close_btn = ttk.Button(
-            button_frame, text="Close", bootstyle="secondary", command=dialog.destroy
-        )
-        close_btn.pack(side=tk.RIGHT)
-
-        # Bind Escape key to close
-        dialog.bind("<Escape>", lambda e: dialog.destroy())
-
-        # Focus on close button
-        close_btn.focus_set()
+        # Close button (right-aligned, Escape closes, takes focus)
+        add_close_button(dialog, button_frame)
 
     @handle_errors("AboutDialog.open_changelog")
     def open_changelog(self):
