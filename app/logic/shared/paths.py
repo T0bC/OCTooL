@@ -1,13 +1,16 @@
 """
 Resource Path Resolution.
 
-Pure, tkinter-free helper for resolving asset paths in both development and
-PyInstaller-bundled environments. Provides resource_path, the canonical helper
-used throughout the application.
+Pure, tkinter-free helpers for resolving asset paths in both development and
+PyInstaller-bundled environments, plus the path conventions shared by all
+tools (natural file ordering and the Data_<operator>_<measurement> folder).
 
 Key contents:
 - resource_path: Resolves a project-relative path to an absolute path,
   switching between sys._MEIPASS (PyInstaller) and the normal project root.
+- natural_sort_key: Human-friendly sort key that handles embedded numbers in
+  file names (slice_2 before slice_10).
+- data_folder: Builds the Data_<operator>_<measurement> output folder path.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -33,7 +36,9 @@ Author: Tobias Meissner
 """
 
 import os
+import re
 import sys
+from pathlib import Path
 
 
 def resource_path(relative_path):
@@ -63,3 +68,34 @@ def resource_path(relative_path):
         )
 
     return os.path.join(base_path, relative_path)
+
+
+def natural_sort_key(path):
+    """
+    Sort key that orders file names the way a human would.
+
+    Digit runs compare numerically and text compares case-insensitively, so
+    ``slice_2.png`` sorts before ``slice_10.png``.
+
+    Args:
+        path: Path whose file name is used for sorting
+
+    Returns:
+        List usable as a ``key=`` argument to ``sorted``
+    """
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r"(\d+)", path.name)]
+
+
+def data_folder(source, operator, measurement) -> Path:
+    """
+    Return the ``Data_<operator>_<measurement>`` folder under a source folder.
+
+    Args:
+        source: Specimen/sample folder (str or Path)
+        operator: Operator identifier
+        measurement: Measurement number
+
+    Returns:
+        Path to the output folder (not created)
+    """
+    return Path(source) / f"Data_{operator}_{measurement}"
