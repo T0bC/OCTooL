@@ -30,7 +30,6 @@ Author: Tobias Meissner
 from app.logic.annolyze.annotation_service import AnnotationService
 from app.logic.annolyze.config_service import ConfigService
 from app.logic.annolyze.data_service import DataService
-from app.logic.annolyze.display_service import DisplayService
 from app.logic.annolyze.measurement_service import RESERVED_KEYS, MeasurementService
 from app.logic.annolyze.models import (
     NON_DRAWN_TYPES,
@@ -40,6 +39,7 @@ from app.logic.annolyze.models import (
     MetadataConfig,
     UndoAction,
 )
+from app.logic.shared.display_service import DisplayService
 
 __all__ = [
     # Models
