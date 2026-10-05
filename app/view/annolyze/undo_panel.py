@@ -37,6 +37,7 @@ Author: Tobias Meissner
 import tkinter as tk
 from tkinter import ttk
 
+from app.logic.shared.colors import choose_font_color
 from app.view.shared.error_handler import handle_errors
 from app.view.shared.sheet_panel import BaseSheetPanel
 
@@ -136,7 +137,7 @@ class UndoPanel(BaseSheetPanel):
 
         for i, entry in enumerate(self.undo_stack):
             bg_color = entry.get("color", "#2C2C2C")  # fallback to dark gray
-            fg_color = self.choose_font_color(bg_color)
+            fg_color = choose_font_color(bg_color)
 
             for col in range(len(self.sheet.headers())):
                 self.sheet.highlight_cells(
