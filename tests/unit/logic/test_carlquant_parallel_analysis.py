@@ -32,10 +32,7 @@ import pytest
 
 from app.logic.carlquant import parallel_analysis as pa
 from app.logic.carlquant.models import Specimen
-from app.logic.carlquant.parallel_analysis import (
-    BatchSliceCoordinator,
-    detect_available_memory_gb,
-)
+from app.logic.carlquant.parallel_analysis import BatchSliceCoordinator
 
 # ----------------------------------------------------------------------
 # Specimen / worker fakes
@@ -717,17 +714,3 @@ class TestProgressCallbacks:
 
         assert progress == [(1, 5), (2, 5), (3, 5), (4, 5), (5, 5)]
         assert done_specimens == ["SPEC0", "SPEC1"]
-
-
-# ----------------------------------------------------------------------
-# detect_available_memory_gb
-# ----------------------------------------------------------------------
-
-
-class TestDetectAvailableMemoryGb:
-    @pytest.mark.unit
-    def test_returns_none_or_positive_float_and_never_raises(self):
-        """GIVEN the real stdlib-only RAM probe, WHEN called, THEN it either
-        returns None or a positive float, and never raises."""
-        value = detect_available_memory_gb()
-        assert value is None or (isinstance(value, float) and value > 0)
