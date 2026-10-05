@@ -47,7 +47,7 @@ class customSettingsPanel:
         self.context = context
         self.root = self.context.root
         self.frame = self.context.get_frame("custom_settings")
-        self.treeView = self.context.get_panel("tree")
+        self.queuePanel = self.context.get_panel("queue")
         self._settings_service = SettingsService()
 
         # %% Buttons and Checkboxes
@@ -77,7 +77,7 @@ class customSettingsPanel:
         self.addNmbrsButton = ttk.Button(
             self.frame,
             text="Selection",
-            command=lambda: self.treeView.addSliceToQueue(
+            command=lambda: self.queuePanel.addSliceToQueue(
                 firstEntry=self.firstEntry.get(), lastEntry=self.lastEntry.get(), resetState=False
             ),
             bootstyle="secondary",
@@ -88,7 +88,7 @@ class customSettingsPanel:
         self.addAllRangeButton = ttk.Button(
             self.frame,
             text="Set All",
-            command=lambda: self.treeView.addToMultipleColsnRows(
+            command=lambda: self.queuePanel.addToMultipleColsnRows(
                 colNames=["First", "Last", "NumSlices"],
                 values=[
                     self.firstEntry.get(),
@@ -104,9 +104,9 @@ class customSettingsPanel:
         self.resetNumSlicesButton = ttk.Button(
             self.frame,
             text="Reset Sel",
-            command=lambda: self.treeView.addSliceToQueue(
+            command=lambda: self.queuePanel.addSliceToQueue(
                 firstEntry=1,
-                lastEntry=octF.getXMLvalue(self.treeView.getValue("Path"), "dimY"),
+                lastEntry=octF.getXMLvalue(self.queuePanel.getValue("Path"), "dimY"),
                 resetState=True,
             ),
             bootstyle="secondary",
@@ -136,7 +136,7 @@ class customSettingsPanel:
         self.addCurrSlicesButton = ttk.Button(
             self.frame,
             text="Selection",
-            command=lambda: self.treeView.addequiDistToQueue(self.numSlicesEntry.get(), False),
+            command=lambda: self.queuePanel.addequiDistToQueue(self.numSlicesEntry.get(), False),
             bootstyle="secondary",
         )
         self.addCurrSlicesButton.grid(row=4, column=2, sticky=tk.E + tk.W, pady=3)
@@ -145,7 +145,7 @@ class customSettingsPanel:
         self.addAllSlicesButton = ttk.Button(
             self.frame,
             text="Set All",
-            command=lambda: self.treeView.addequiDistToQueue(self.numSlicesEntry.get(), True),
+            command=lambda: self.queuePanel.addequiDistToQueue(self.numSlicesEntry.get(), True),
             bootstyle="secondary",
         )
         self.addAllSlicesButton.grid(row=4, column=3, sticky=tk.E + tk.W, pady=3)
@@ -154,11 +154,11 @@ class customSettingsPanel:
         self.resetCurSlicesButton = ttk.Button(
             self.frame,
             text="Reset Sel",
-            command=lambda: self.treeView.setValueFromRow(
-                item=self.treeView.getFocus(),
+            command=lambda: self.queuePanel.setValueFromRow(
+                item=self.queuePanel.getFocus(),
                 column="NumSlices",
-                value=int(self.treeView.getValueFromRow(self.treeView.getFocus(), "Last"))
-                - int(self.treeView.getValueFromRow(self.treeView.getFocus(), "First"))
+                value=int(self.queuePanel.getValueFromRow(self.queuePanel.getFocus(), "Last"))
+                - int(self.queuePanel.getValueFromRow(self.queuePanel.getFocus(), "First"))
                 + 1,
             ),
             bootstyle="secondary",
@@ -224,7 +224,7 @@ class customSettingsPanel:
         self.addDBAllSlicesButton = ttk.Button(
             self.frame,
             text="Set All",
-            command=lambda: self.treeView.addToMultipleColsnRows(
+            command=lambda: self.queuePanel.addToMultipleColsnRows(
                 colNames=["dB min", "dB max"],
                 values=[int(self.scaleMdB.get()), int(self.scaleAdB.get())],
             ),
@@ -277,7 +277,7 @@ class customSettingsPanel:
         self.addCurrDispButton = ttk.Button(
             self.frame,
             text="Selection",
-            command=lambda: self.treeView.setValue("Disp. Coeff", str(self.dispEntry.get())),
+            command=lambda: self.queuePanel.setValue("Disp. Coeff", str(self.dispEntry.get())),
             bootstyle="secondary",
         )
         self.addCurrDispButton.grid(row=6, column=2, sticky=tk.E + tk.W, pady=3)
@@ -287,7 +287,7 @@ class customSettingsPanel:
         self.addAllDispButton = ttk.Button(
             self.frame,
             text="Set All",
-            command=lambda: self.treeView.addToMultipleColsnRows(
+            command=lambda: self.queuePanel.addToMultipleColsnRows(
                 ["Disp. Coeff"], [str(self.dispEntry.get())]
             ),
             bootstyle="secondary",
@@ -299,7 +299,7 @@ class customSettingsPanel:
         self.resetCurDispButton = ttk.Button(
             self.frame,
             text="Reset Sel",
-            command=lambda: self.treeView.addToMultipleColsnRows([("Disp. Coeff")], [str(-100)]),
+            command=lambda: self.queuePanel.addToMultipleColsnRows([("Disp. Coeff")], [str(-100)]),
             bootstyle="secondary",
         )
         self.resetCurDispButton.grid(row=6, column=4, sticky=tk.E + tk.W, pady=3)
@@ -333,7 +333,7 @@ class customSettingsPanel:
         self.addCurrExpDirButton = ttk.Button(
             self.frame,
             text="Selection",
-            command=lambda: self.treeView.setImgSliceDirectionAndUpdateLastSliceInTreeview(
+            command=lambda: self.queuePanel.setImgSliceDirectionAndUpdateLastSlice(
                 str(self.expDirMenu.get())
             ),
             bootstyle="secondary",
@@ -345,7 +345,7 @@ class customSettingsPanel:
         self.addAllExpDirButton = ttk.Button(
             self.frame,
             text="Set All",
-            command=lambda: self.treeView.updateImgSliceDirectionForAllEntries(
+            command=lambda: self.queuePanel.updateImgSliceDirectionForAllEntries(
                 str(self.expDirMenu.get())
             ),
             bootstyle="secondary",
@@ -380,7 +380,7 @@ class customSettingsPanel:
         self.selectionButton = ttk.Button(
             self.frame,
             text="Selection",
-            command=lambda: self.treeView.setValue("Refr. Ind.", str(self.dispEntry.get())),
+            command=lambda: self.queuePanel.setValue("Refr. Ind.", str(self.dispEntry.get())),
             bootstyle="secondary",
         )
         self.selectionButton.grid(row=8, column=2, sticky=tk.E + tk.W, pady=3)
@@ -391,7 +391,7 @@ class customSettingsPanel:
         self.setAllButton = ttk.Button(
             self.frame,
             text="Set All",
-            command=lambda: self.treeView.addToMultipleColsnRows(
+            command=lambda: self.queuePanel.addToMultipleColsnRows(
                 ["Refr. Ind."], [str(self.dispEntry.get())]
             ),
             bootstyle="secondary",
@@ -414,7 +414,7 @@ class customSettingsPanel:
         None.
 
         """
-        self.treeView.setdBVal(int(self.scaleMdB.get()), int(self.scaleAdB.get()))
+        self.queuePanel.setdBVal(int(self.scaleMdB.get()), int(self.scaleAdB.get()))
         self.valueScale.set(
             str(str(int(self.scaleMdB.get())) + " - " + str(int(self.scaleAdB.get())))
         )
