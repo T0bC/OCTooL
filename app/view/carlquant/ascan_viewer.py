@@ -66,6 +66,7 @@ from app.logic.carlquant.ground_truth import (
     has_ground_truth,
     load_ground_truth,
 )
+from app.view.shared.dialog_utils import center_on_screen
 from app.view.shared.error_handler import handle_errors
 
 #: Columns stepped per Shift+arrow. Plain arrows move one column, which is the
@@ -168,13 +169,10 @@ class AScanViewer:
         # NOTE: No grab_set() to keep it non-blocking
 
         # Set size and position (narrower but taller, responsive to screen height)
-        screen_width = self.dialog.winfo_screenwidth()
         screen_height = self.dialog.winfo_screenheight()
         dialog_width = 570  # Fits the four toggle groups without dead space
         dialog_height = int(screen_height * 0.75)  # 75% of screen height
-        x = (screen_width - dialog_width) // 2
-        y = (screen_height - dialog_height) // 2
-        self.dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
+        center_on_screen(self.dialog, dialog_width, dialog_height)
 
         # Apply dark theme colors
         bg_color = self.style.colors.bg
