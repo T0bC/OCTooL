@@ -51,7 +51,6 @@ from app.logic.carlquant.interpolation import (
 from app.logic.carlquant.validation import interpolate_marks
 from app.view.carlquant.annotation_renderer import (
     AIRAnnotationRenderer,
-    CoordinateConverter,
     ExtractionRegionAnnotationRenderer,
     LesionDepthAnnotationRenderer,
     RegionBoundaryAnnotationRenderer,
@@ -510,25 +509,6 @@ class image_viewer_panel(BaseCanvasPanel):
             self.region_points = []  # Reset for next selection
             self.draw_region_boundaries(specimen, current_slice)
 
-    def _get_coordinate_converter(self):
-        """
-        Get a CoordinateConverter instance for current view state.
-
-        Returns:
-            CoordinateConverter instance or None if no image loaded
-        """
-        if not hasattr(self, "rawImage") or self.rawImage is None:
-            return None
-
-        return CoordinateConverter(
-            self.rawImage,
-            self.zoom_level,
-            self.image_offset_x,
-            self.image_offset_y,
-            getattr(self, "fitted_width", self.rawImage.width),
-            getattr(self, "fitted_height", self.rawImage.height),
-        )
-
     def canvas_to_image_coords(self, canvas_x, canvas_y):
         """
         Convert canvas coordinates to image coordinates.
@@ -543,7 +523,7 @@ class image_viewer_panel(BaseCanvasPanel):
         Returns:
             tuple: (image_x, image_y) as integers, or (None, None) if out of bounds
         """
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return None, None
 
@@ -912,7 +892,7 @@ class image_viewer_panel(BaseCanvasPanel):
         if not specimen.config or current_slice not in specimen.config.air:
             return
 
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return
 
@@ -939,7 +919,7 @@ class image_viewer_panel(BaseCanvasPanel):
         """
         self.clear_region_visuals()
 
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return
 
@@ -962,35 +942,12 @@ class image_viewer_panel(BaseCanvasPanel):
         if not specimen.config or current_slice not in specimen.config.regions:
             return
 
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return
 
         renderer = RegionBoundaryAnnotationRenderer(self.canvas, converter)
         renderer.draw(specimen.config.regions[current_slice])
-
-    def image_to_canvas_coords(self, start_x, start_y, end_x, end_y):
-        """
-        Convert image coordinates to canvas coordinates.
-
-        Takes into account current zoom level and pan offset. This is the
-        inverse operation of canvas_to_image_coords.
-
-        Args:
-            start_x: Start X coordinate in image space
-            start_y: Start Y coordinate in image space
-            end_x: End X coordinate in image space
-            end_y: End Y coordinate in image space
-
-        Returns:
-            tuple: (canvas_start_x, canvas_start_y, canvas_end_x, canvas_end_y)
-                   or None if no image is loaded
-        """
-        converter = self._get_coordinate_converter()
-        if converter is None:
-            return None
-
-        return converter.image_to_canvas_rect(start_x, start_y, end_x, end_y)
 
     def clear_region_visuals(self):
         """
@@ -1057,7 +1014,7 @@ class image_viewer_panel(BaseCanvasPanel):
         if not surface:
             return
 
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return
 
@@ -1082,7 +1039,7 @@ class image_viewer_panel(BaseCanvasPanel):
         if not region_stats:
             return
 
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return
 
@@ -1110,7 +1067,7 @@ class image_viewer_panel(BaseCanvasPanel):
         if not lesion_depth or not lesion_depth.depth_points:
             return
 
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return
 
@@ -1344,7 +1301,7 @@ class image_viewer_panel(BaseCanvasPanel):
         if not self.should_show_ground_truth():
             return
 
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return
 
@@ -1554,7 +1511,7 @@ class image_viewer_panel(BaseCanvasPanel):
         if not hasattr(self, "rawImage") or self.rawImage is None:
             return
 
-        converter = self._get_coordinate_converter()
+        converter = self._coordinate_converter()
         if converter is None:
             return
 
