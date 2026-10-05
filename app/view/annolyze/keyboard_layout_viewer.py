@@ -44,6 +44,7 @@ from app.logic.annolyze.keyboard_layout_image import (
     UNBOUND_KEY_FG,
     render_keyboard_layout,
 )
+from app.logic.shared.colors import choose_font_color
 from app.view.shared import dialogs
 from app.view.shared.sheet_panel import BaseSheetPanel
 
@@ -121,7 +122,7 @@ class KeyboardLayoutViewer(BaseSheetPanel):
         """Key -> (bg, fg) for every reserved and user-bound key."""
         colors = {key: ("black", "white") for key in RESERVED_BINDINGS}
         for _col_name, color, key, _data_type in self.key_specs:
-            colors[key] = (color, self.choose_font_color(color))
+            colors[key] = (color, choose_font_color(color))
         return colors
 
     def _table_rows(self) -> list[tuple[list[str], str, str]]:
@@ -135,7 +136,7 @@ class KeyboardLayoutViewer(BaseSheetPanel):
                 (
                     [key.upper(), col_name, data_type, "User-defined"],
                     color,
-                    self.choose_font_color(color),
+                    choose_font_color(color),
                 )
             )
         return rows
