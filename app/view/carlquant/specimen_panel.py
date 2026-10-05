@@ -35,6 +35,7 @@ Author: Tobias Meissner
 ****
 """
 
+from app.logic.shared.colors import choose_font_color
 from app.view.shared.error_handler import handle_errors
 from app.view.shared.sheet_panel import TABLE_BG, TABLE_FG, BaseSheetPanel
 
@@ -164,7 +165,7 @@ class specimenPanel(BaseSheetPanel):
             # Priority 3: Selected rows (golden highlight)
             elif row_idx in self.selected_rows:
                 highlight_bg = "#ffd966"
-                highlight_fg = self.choose_font_color(highlight_bg)
+                highlight_fg = choose_font_color(highlight_bg)
                 self.sheet.highlight_rows(
                     rows=[row_idx], bg=highlight_bg, fg=highlight_fg, redraw=False
                 )
@@ -223,7 +224,7 @@ class specimenPanel(BaseSheetPanel):
             # Priority 2: Selected rows (golden)
             elif row_idx in self.selected_rows:
                 highlight_bg = "#ffd966"
-                highlight_fg = self.choose_font_color(highlight_bg)
+                highlight_fg = choose_font_color(highlight_bg)
                 self.sheet.highlight_rows(
                     rows=[row_idx], bg=highlight_bg, fg=highlight_fg, redraw=False
                 )
