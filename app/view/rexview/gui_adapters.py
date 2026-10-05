@@ -8,8 +8,8 @@ from model construction details.
 Key contents:
 - settings_config_from_gui_state: Builds SettingsConfig from global/custom panel states.
 - export_config_from_gui_state: Builds ExportConfig from global panel states.
-- slice_export_params_from_treeview_row: Builds SliceExportParams from a TreeView row.
-- queue_item_from_treeview_values: Builds QueueItem from raw TreeView cell values.
+- slice_export_params_from_queue_row: Builds SliceExportParams from a queue table row.
+- queue_item_from_row_values: Builds QueueItem from raw queue table cell values.
 - image_display_config_from_gui_state: Builds ImageDisplayConfig for the preview canvas.
 
 This file is part of OCTooL.
@@ -126,7 +126,7 @@ def export_config_from_gui_state(
     )
 
 
-def slice_export_params_from_treeview_row(
+def slice_export_params_from_queue_row(
     path: str,
     name: str,
     first: str,
@@ -138,7 +138,7 @@ def slice_export_params_from_treeview_row(
     refr_ind: str,
     dispersion: tuple[str, str],
 ) -> SliceExportParams:
-    """Build :class:`SliceExportParams` from TreeView row string values."""
+    """Build :class:`SliceExportParams` from queue table row string values."""
     return SliceExportParams(
         file_path=path,
         name=name,
@@ -153,7 +153,7 @@ def slice_export_params_from_treeview_row(
     )
 
 
-def queue_item_from_treeview_values(
+def queue_item_from_row_values(
     name: str,
     first: str,
     last: str,
@@ -167,7 +167,7 @@ def queue_item_from_treeview_values(
     status: str,
     path: str,
 ) -> QueueItem:
-    """Build a :class:`QueueItem` from TreeView row string values."""
+    """Build a :class:`QueueItem` from queue table row string values."""
     return QueueItem(
         name=name,
         first_slice=int(first),
