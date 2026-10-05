@@ -39,6 +39,7 @@ import tkinter as tk
 
 from PIL import Image, ImageTk
 
+from app.logic.shared.json_io import read_json
 from app.logic.shared.paths import resource_path
 
 
@@ -91,8 +92,7 @@ class InstructionRenderer:
         """Load instruction data from JSON file with UTF-8 encoding."""
         try:
             instructions_path = resource_path(self.instructions_file)
-            with open(instructions_path, encoding="utf-8") as f:
-                return json.load(f)
+            return read_json(instructions_path)
         except FileNotFoundError:
             print(f"Instructions file not found: {instructions_path}")
             return {}
