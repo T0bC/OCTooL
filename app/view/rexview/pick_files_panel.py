@@ -9,7 +9,7 @@ pre-defined slice ranges. Uses FileDiscoveryService for headless scanning.
 Key contents:
 - pickFilesPanel: Panel with Select Folder / Select File(s) buttons.
 - globalPickerThread: Background thread for recursive OCT discovery.
-- populate_queue: Adds discovered files to the TreeView queue with default settings.
+- populate_queue: Adds discovered files to the queue table with default settings.
 - Text file import: Parses companion .txt files for slice range hints.
 
 This file is part of OCTooL.
@@ -52,7 +52,7 @@ class pickFilesPanel:
         self.context = context
         self.root = self.context.root
         self.frame = self.context.get_frame("pick_files")
-        self.treeView = self.context.get_panel("tree")
+        self.queuePanel = self.context.get_panel("queue")
         self.globalSettings = self.context.get_panel("global_settings")
 
         # Initialize FileDiscoveryService with XML reader
@@ -120,7 +120,7 @@ class pickFilesPanel:
             self.frame,
             text="Delete Entry(s)",
             width=14,
-            command=self.treeView.deleteEntry,
+            command=self.queuePanel.deleteEntry,
             bootstyle="warning",
         )
         self.deleteEntryBtn.grid(row=0, column=4, sticky=tk.E + tk.W + tk.N + tk.S, pady=3)
@@ -237,7 +237,7 @@ class pickFilesPanel:
         if not getattr(self, "tmpFileList", []):
             return
 
-        self.treeView.setMultipleValues(self.tmpFileList)
+        self.queuePanel.setMultipleValues(self.tmpFileList)
         count = len(self.tmpFileList)
         self.context.safe_status_update(f"Added {count} item(s) to export queue.", level="success")
 
@@ -310,7 +310,7 @@ class pickFilesPanel:
         Each file's zip/XML read and sidecar resolution (FileDiscoveryService
         .process_file, pure logic with no Tk calls) is dispatched to a small
         worker pool so their I/O overlaps instead of serializing, which
-        matters most on network drives. Error dialogs and TreeView value
+        matters most on network drives. Error dialogs and queue value
         conversion happen back on this (background picker) thread, since
         they must not run concurrently from multiple threads.
 
@@ -322,7 +322,7 @@ class pickFilesPanel:
         Returns
         -------
         list
-            Flattened list of entry tuples for TreeView, in file_paths order.
+            Flattened list of entry tuples for the queue table, in file_paths order.
         """
         show_errors = self.globalSettings.getErrorState() == "selected"
         max_workers = min(8, max(1, len(file_paths)))
@@ -347,7 +347,7 @@ class pickFilesPanel:
             items, error_msg = result
             if error_msg:
                 dialogs.show_error(self.root, "Metadata File Issue", error_msg)
-            entries.extend(list(item.to_treeview_values()) for item in items)
+            entries.extend(list(item.to_row_values()) for item in items)
         return entries
 
     def _build_entries_for_file(self, file_path: Path):
@@ -364,7 +364,7 @@ class pickFilesPanel:
         Returns
         -------
         list
-            List of entry tuples for TreeView
+            List of entry tuples for the queue table
         """
         file_path = Path(file_path)
         show_errors = self.globalSettings.getErrorState() == "selected"
@@ -379,7 +379,7 @@ class pickFilesPanel:
         if error_msg:
             dialogs.show_error(self.root, "Metadata File Issue", error_msg)
 
-        return [list(item.to_treeview_values()) for item in items]
+        return [list(item.to_row_values()) for item in items]
 
     def getFilePath(self) -> str:
         """
