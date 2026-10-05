@@ -37,10 +37,10 @@ Author: Tobias Meissner
 ****
 """
 
-import json
 from pathlib import Path
 
 from app.logic.annolyze.models import AnnotationConfig, ColumnSpec, MetadataConfig
+from app.logic.shared.json_io import read_json, write_json_atomic
 
 CONFIG_VERSION = "1.0"
 REQUIRED_KEYS = ("metadata", "columns", "config_info")
@@ -118,11 +118,7 @@ class ConfigService:
     # ------------------------------------------------------------------
     def save_config_to_file(self, config: dict, filepath: str | Path) -> Path:
         """Write ``config`` to ``filepath`` as JSON. Returns the path."""
-        path = Path(filepath)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=2, ensure_ascii=False)
-        return path
+        return write_json_atomic(filepath, config, indent=2, ensure_ascii=False)
 
     def load_config_from_file(self, filepath: str | Path) -> dict | None:
         """
@@ -134,6 +130,5 @@ class ConfigService:
         path = Path(filepath)
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
-        with open(path, encoding="utf-8") as f:
-            config = json.load(f)
+        config = read_json(path)
         return config if self.validate_config(config) else None
