@@ -39,6 +39,7 @@ from tkinter import ttk
 from CTkColorPicker import AskColor
 
 from app.logic.annolyze.measurement_service import MeasurementService
+from app.logic.shared.colors import choose_font_color
 from app.view.shared.error_handler import handle_errors
 from app.view.shared.tool_tip import Tooltip
 
@@ -200,15 +201,8 @@ class addColumnsPanel:
         return None
 
     def _apply_color_to_entry(self, color):
-        self.colorEntry.configure(
-            bg=color, fg=self._contrast_color(color), insertbackground=self._contrast_color(color)
-        )
-
-    def _contrast_color(self, hex_color):
-        body = hex_color.lstrip("#")
-        r, g, b = int(body[0:2], 16), int(body[2:4], 16), int(body[4:6], 16)
-        luminance = 0.299 * r + 0.587 * g + 0.114 * b
-        return "#000000" if luminance > 140 else "#FFFFFF"
+        font_color = choose_font_color(color)
+        self.colorEntry.configure(bg=color, fg=font_color, insertbackground=font_color)
 
     def update_available_keys(self):
         # Pull used keys from centralized context
