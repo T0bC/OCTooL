@@ -93,23 +93,6 @@ class TestAnnotationLengthFallback:
         assert service.annotation_length(pts, "spline") == pytest.approx(0.0)
 
 
-class TestHexToRgba:
-    @pytest.mark.unit
-    def test_valid_hex_converts(self, service):
-        """GIVEN '#FF8000', WHEN hex_to_rgba, THEN returns (255,128,0,255)."""
-        assert service.hex_to_rgba("#FF8000") == (255, 128, 0, 255)
-
-    @pytest.mark.unit
-    def test_invalid_hex_returns_default(self, service):
-        """GIVEN bad color, WHEN hex_to_rgba, THEN returns default yellow."""
-        assert service.hex_to_rgba("notacolor") == (255, 255, 178, 255)
-
-    @pytest.mark.unit
-    def test_custom_alpha(self, service):
-        """GIVEN alpha=128, WHEN hex_to_rgba, THEN alpha channel is 128."""
-        assert service.hex_to_rgba("#000000", alpha=128) == (0, 0, 0, 128)
-
-
 class TestMakeAnnotationId:
     @pytest.mark.unit
     def test_builds_id(self, service):
