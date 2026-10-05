@@ -41,6 +41,8 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
+from app.view.shared.dialog_utils import center_on_parent
+
 
 class ProgressDialog:
     """
@@ -81,33 +83,13 @@ class ProgressDialog:
         self.dialog.grab_set()
 
         # Center the dialog
-        self._center_dialog()
+        center_on_parent(self.dialog, self.parent)
 
         # Prevent closing via X button (use Cancel instead)
         self.dialog.protocol("WM_DELETE_WINDOW", self._on_cancel)
 
         # Build UI
         self._build_ui()
-
-    def _center_dialog(self):
-        """Center the dialog on the parent window."""
-        self.dialog.update_idletasks()
-
-        # Get parent position and size
-        parent_x = self.parent.winfo_x()
-        parent_y = self.parent.winfo_y()
-        parent_width = self.parent.winfo_width()
-        parent_height = self.parent.winfo_height()
-
-        # Get dialog size
-        dialog_width = self.dialog.winfo_width()
-        dialog_height = self.dialog.winfo_height()
-
-        # Calculate center position
-        x = parent_x + (parent_width - dialog_width) // 2
-        y = parent_y + (parent_height - dialog_height) // 2
-
-        self.dialog.geometry(f"+{x}+{y}")
 
     def _build_ui(self):
         """Build the dialog UI components."""
