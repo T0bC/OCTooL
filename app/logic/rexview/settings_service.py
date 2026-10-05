@@ -271,19 +271,6 @@ class SettingsService:
             warnings=warnings,
         )
 
-    def calculate_num_slices(self, first_slice: int, last_slice: int) -> int:
-        """
-        Calculate the number of slices in a range.
-
-        Args:
-            first_slice: First slice number (1-indexed)
-            last_slice: Last slice number (1-indexed)
-
-        Returns:
-            Number of slices in the range (inclusive)
-        """
-        return last_slice - first_slice + 1
-
     def calculate_equidistant_indices(
         self,
         first_slice: int,
