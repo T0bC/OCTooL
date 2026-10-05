@@ -53,7 +53,7 @@ class imagePanel:
         self.context = context
         self.root = self.context.root
         self.frame = self.context.get_frame("rex_image")
-        self.treeView = self.context.get_panel("tree")
+        self.queuePanel = self.context.get_panel("queue")
         self.globalSettingsFrame = self.context.get_panel("global_settings")
         self.customSettingsFrame = self.context.get_panel("custom_settings")
 
@@ -141,21 +141,21 @@ class imagePanel:
         """
         return image_display_config_from_gui_state(
             slice_index=max(0, int(self.scale.get() - 1)),
-            slice_direction=self.treeView.getValue(column="Img. Slice Dir."),
-            db_min=self.treeView.getValue(column="dB min"),
-            db_max=self.treeView.getValue(column="dB max"),
+            slice_direction=self.queuePanel.getValue(column="Img. Slice Dir."),
+            db_min=self.queuePanel.getValue(column="dB min"),
+            db_max=self.queuePanel.getValue(column="dB max"),
             resize_state=self.globalSettingsFrame.getResizeState(),
-            refractive_index=self.treeView.getValue(column="Refr. Ind."),
+            refractive_index=self.queuePanel.getValue(column="Refr. Ind."),
             scale_state=self.globalSettingsFrame.ScaleBox.state(),
             scale_length=self.globalSettingsFrame.scaleEntry.get(),
             scale_font_size=self.globalSettingsFrame.scaleTextSizeEntry.get(),
-            data_type=self.treeView.getValue(column="Data Type"),
+            data_type=self.queuePanel.getValue(column="Data Type"),
             averaging=self.globalSettingsFrame.averagingMenu.get(),
             tukey_size=self.globalSettingsFrame.getTukeyWinSize(),
             advanced_filter_state=self.globalSettingsFrame.getAdvancedFilter(),
             dispersion=(
                 self.customSettingsFrame.getDispersion()[0],
-                self.treeView.getValue(column="Disp. Coeff"),
+                self.queuePanel.getValue(column="Disp. Coeff"),
             ),
             canvas_width=self.canvas.winfo_width(),
             canvas_height=self.canvas.winfo_height(),
@@ -176,13 +176,13 @@ class imagePanel:
         None.
 
         """
-        if len(self.treeView.getFocus()) != 0:
-            file_path = self.treeView.getValue(column="Path")
+        if len(self.queuePanel.getFocus()) != 0:
+            file_path = self.queuePanel.getValue(column="Path")
 
             # Use ImageService to load OCT file and extract metadata
             self.image_service.load_oct_file(file_path)
 
-            self.treeView.setValue("Status", "displayed")
+            self.queuePanel.setValue("Status", "displayed")
 
             # Reconfigure the existing slice scale for this stack
             self.scale.configure(from_=0, to=self.image_service.total_slices)
@@ -193,7 +193,7 @@ class imagePanel:
 
             # if oct file is in processed format, load the entire stack into memory
             # to avoid loading it every time the user wants to display another slice
-            if self.treeView.getValue(column="Data Type") == "Processed":
+            if self.queuePanel.getValue(column="Data Type") == "Processed":
                 config = self._collect_display_config()
                 self.rawImage = self.image_service.load_processed_stack(config)
             else:
