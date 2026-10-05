@@ -9,10 +9,8 @@ with plain-data I/O that is fully testable headlessly.
 Key contents:
 - DataService: Pure file discovery and I/O for annotations, results, and configs.
 - find_file: Recursively locates a file matching a pattern under a base folder.
-- build_data_folder: Builds the Data_<operator>_<measurement> output path.
 - load_annotations / save_annotations: Reads/writes slice-indexed annotation JSON.
 - load_results / save_results: Reads/writes results CSV as (headers, rows) tuples.
-- save_config: Writes a config dict to JSON.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -38,10 +36,10 @@ Author: Tobias Meissner
 """
 
 import csv
-import json
 from pathlib import Path
 
 from app.logic.annolyze.annotation_service import AnnotationService
+from app.logic.shared.json_io import read_json, write_json_atomic
 
 
 class DataService:
@@ -75,23 +73,12 @@ class DataService:
                 return prioritized[0]
         return matches[0]
 
-    def build_data_folder(
-        self,
-        sample_folder: str | Path,
-        operator: str,
-        measurement: str,
-    ) -> Path:
-        """Return the ``Data_<operator>_<measurement>`` path under the sample folder."""
-        return Path(sample_folder) / f"Data_{operator}_{measurement}"
-
     # ------------------------------------------------------------------
     # Annotations
     # ------------------------------------------------------------------
     def load_annotations(self, filepath: str | Path) -> dict[int, list[dict]]:
         """Load annotations JSON and return ``{slice_index: [annotation_dict]}``."""
-        path = Path(filepath)
-        with open(path, encoding="utf-8") as f:
-            json_data = json.load(f)
+        json_data = read_json(filepath)
         return self.annotation_service.deserialize_annotations(json_data)
 
     def save_annotations(
@@ -100,12 +87,8 @@ class DataService:
         filepath: str | Path,
     ) -> Path:
         """Serialize ``slice_annotations`` to ``filepath`` as JSON. Returns the path."""
-        path = Path(filepath)
-        path.parent.mkdir(parents=True, exist_ok=True)
         json_data = self.annotation_service.serialize_slice_annotations(slice_annotations)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(json_data, f, indent=2)
-        return path
+        return write_json_atomic(filepath, json_data, indent=2, ensure_ascii=True)
 
     # ------------------------------------------------------------------
     # Results (CSV)
@@ -136,15 +119,4 @@ class DataService:
             writer = csv.writer(f)
             writer.writerow(headers)
             writer.writerows(data)
-        return path
-
-    # ------------------------------------------------------------------
-    # Config
-    # ------------------------------------------------------------------
-    def save_config(self, config: dict, filepath: str | Path) -> Path:
-        """Write a config dict to ``filepath`` as JSON. Returns the path."""
-        path = Path(filepath)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=2, ensure_ascii=False)
         return path
