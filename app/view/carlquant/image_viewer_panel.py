@@ -1184,9 +1184,7 @@ class image_viewer_panel(BaseCanvasPanel):
         """
         specimen = self._current_specimen()
         specimen_id = (
-            getattr(specimen, "display_id", specimen.specimen_id)
-            if specimen is not None
-            else None
+            getattr(specimen, "display_id", specimen.specimen_id) if specimen is not None else None
         )
         if specimen_id == self.ground_truth_specimen_id:
             return
