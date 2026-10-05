@@ -167,7 +167,7 @@ def _set_row_status(context, specimen_id, status, *, lock_on_complete=False):
         for row_idx in range(specimen_panel.sheet.total_rows()):
             if specimen_panel.sheet.get_cell_data(row_idx, 0) == specimen_id:
                 specimen_panel.sheet.set_cell_data(row_idx, 2, status)
-                specimen_panel._set_column_widths()
+                specimen_panel.fit_column_widths(include_content=True)
                 if status == "Completed":
                     specimen_panel.highlight_completed_row(row_idx)
                 break
