@@ -50,7 +50,7 @@ from app.logic.rexview import (
 )
 from app.view.rexview.gui_adapters import (
     export_config_from_gui_state,
-    slice_export_params_from_treeview_row,
+    slice_export_params_from_queue_row,
 )
 from app.view.shared.error_handler import handle_errors
 from app.view.shared.tool_tip import Tooltip
@@ -65,7 +65,7 @@ class executionPanel:
         self.context = context
         self.root = self.context.root
         self.frame = self.context.get_frame("execution")
-        self.treeView = self.context.get_panel("tree")
+        self.queuePanel = self.context.get_panel("queue")
         self.imageFrame = self.context.get_panel("rex_image")
         self.globalSettingsFrame = self.context.get_panel("global_settings")
         self.customSettingsFrame = self.context.get_panel("custom_settings")
@@ -75,7 +75,7 @@ class executionPanel:
         self.export_service = ExportService()
         # Coordinator for process-parallel, file-level export.
         self.export_coordinator = ParallelExportCoordinator()
-        # Maps a file path to the queued TreeView item ids awaiting a result.
+        # Maps a file path to the queued row ids awaiting a result.
         self._items_by_path = {}
 
         # Reused single-worker executor that drives the export coordinator
@@ -133,12 +133,12 @@ class executionPanel:
         config = self._collect_export_config()
         tasks = []
         self._items_by_path = {}
-        for item in self.treeView.getChildren():
-            file_path = self.treeView.getValueFromRow(item, column="Path")
+        for item in self.queuePanel.getChildren():
+            file_path = self.queuePanel.getValueFromRow(item, column="Path")
             params = self._collect_slice_params(item)
             tasks.append((file_path, params, config))
             self._items_by_path.setdefault(file_path, []).append(item)
-            self.treeView.setValueFromRow(item, "Status", "queued")
+            self.queuePanel.setValueFromRow(item, "Status", "queued")
 
         if not tasks:
             self.context.safe_status_update(
@@ -168,33 +168,33 @@ class executionPanel:
         """
 
         def on_result(result):
-            # Schedule the TreeView update on the main thread.
+            # Schedule the queue table update on the main thread.
             self.root.after(0, self._apply_result_status, result)
 
         self.export_coordinator.run(tasks, worker_count=worker_count, progress_callback=on_result)
         self.context.safe_status_update("Export completed.", level="success", duration=3000)
 
     def _apply_result_status(self, result):
-        """Translate an ExportResult into a TreeView status (UI thread only)."""
+        """Translate an ExportResult into a queue table status (UI thread only)."""
         items = self._items_by_path.get(result.file_path)
         if not items:
             return
         item = items.pop(0)
         file_name = Path(result.file_path).name
         if result.error:
-            self.treeView.setValueFromRow(item, "Status", "Error")
+            self.queuePanel.setValueFromRow(item, "Status", "Error")
             self.context.safe_status_update(
                 f"Export failed for {file_name}", level="error", duration=4000
             )
         elif result.failed_count > 0:
-            self.treeView.setValueFromRow(item, "Status", f"Done ({result.failed_count} failed)")
+            self.queuePanel.setValueFromRow(item, "Status", f"Done ({result.failed_count} failed)")
             self.context.safe_status_update(
                 f"Partial failure: {file_name} ({result.failed_count} slices failed)",
                 level="warning",
                 duration=3000,
             )
         else:
-            self.treeView.setValueFromRow(item, "Status", "Done")
+            self.queuePanel.setValueFromRow(item, "Status", "Done")
 
     def breakAll(self):
         """
@@ -258,26 +258,26 @@ class executionPanel:
 
     def _collect_slice_params(self, item_id: str) -> SliceExportParams:
         """
-        Gather TreeView row values into a SliceExportParams object.
+        Gather queue table row values into a SliceExportParams object.
 
         Args:
-            item_id: The TreeView item identifier
+            item_id: The queue row ID
 
         Returns:
-            SliceExportParams with values from the TreeView row
+            SliceExportParams with values from the queue table row
         """
-        return slice_export_params_from_treeview_row(
-            path=self.treeView.getValueFromRow(item_id, column="Path"),
-            name=self.treeView.getValueFromRow(item_id, "Name"),
-            first=self.treeView.getValueFromRow(item_id, "First"),
-            last=self.treeView.getValueFromRow(item_id, "Last"),
-            num_slices=self.treeView.getValueFromRow(item_id, "NumSlices"),
-            slice_dir=self.treeView.getValueFromRow(item_id, "Img. Slice Dir."),
-            db_min=self.treeView.getValueFromRow(item_id, column="dB min"),
-            db_max=self.treeView.getValueFromRow(item_id, column="dB max"),
-            refr_ind=self.treeView.getValueFromRow(item_id, "Refr. Ind."),
+        return slice_export_params_from_queue_row(
+            path=self.queuePanel.getValueFromRow(item_id, column="Path"),
+            name=self.queuePanel.getValueFromRow(item_id, "Name"),
+            first=self.queuePanel.getValueFromRow(item_id, "First"),
+            last=self.queuePanel.getValueFromRow(item_id, "Last"),
+            num_slices=self.queuePanel.getValueFromRow(item_id, "NumSlices"),
+            slice_dir=self.queuePanel.getValueFromRow(item_id, "Img. Slice Dir."),
+            db_min=self.queuePanel.getValueFromRow(item_id, column="dB min"),
+            db_max=self.queuePanel.getValueFromRow(item_id, column="dB max"),
+            refr_ind=self.queuePanel.getValueFromRow(item_id, "Refr. Ind."),
             dispersion=(
                 self.customSettingsFrame.getDispersion()[0],
-                self.treeView.getValueFromRow(item_id, "Disp. Coeff"),
+                self.queuePanel.getValueFromRow(item_id, "Disp. Coeff"),
             ),
         )
