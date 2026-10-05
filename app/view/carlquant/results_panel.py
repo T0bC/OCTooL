@@ -38,8 +38,6 @@ Author: Tobias Meissner
 import tkinter as tk
 from tkinter import ttk
 
-from tksheet import Sheet
-
 from app.logic.carlquant import DataLoader
 from app.logic.carlquant import validation as val
 from app.logic.carlquant.annotation_colors import (
@@ -48,9 +46,10 @@ from app.logic.carlquant.annotation_colors import (
 )
 from app.view.carlquant.ascan_viewer import AScanViewer
 from app.view.shared.error_handler import handle_errors
+from app.view.shared.sheet_panel import BaseSheetPanel, create_sheet
 
 
-class resultsPanel:
+class resultsPanel(BaseSheetPanel):
     @handle_errors("resultsPanel.__init__")
     def __init__(self, context):
         self.context = context
@@ -77,37 +76,7 @@ class resultsPanel:
 
     def _setup_sheet(self):
         self.headers = self.generate_headers()
-        self.sheet = Sheet(
-            self.frame,
-            headers=self.headers,
-            show_table=True,
-            show_row_index=True,
-            show_header=True,
-            show_x_scrollbar=True,
-            show_y_scrollbar=True,
-            height=180,
-        )
-
-        STATIC_BG_COLOR = "#2b2b2b"
-        STATIC_FG_COLOR = "#dcdcdc"
-        HEADER_BG_COLOR = "#3c3c3c"
-        HEADER_FG_COLOR = "#ffffff"
-        GRID_COLOR = "#444444"
-
-        self.sheet.set_options(
-            table_bg=STATIC_BG_COLOR,
-            table_fg=STATIC_FG_COLOR,
-            header_bg=HEADER_BG_COLOR,
-            header_fg=HEADER_FG_COLOR,
-            index_bg=HEADER_BG_COLOR,
-            index_fg=HEADER_FG_COLOR,
-            grid_color=GRID_COLOR,
-            outline_color="#666666",
-            selected_rows_bg="#44475a",
-            selected_rows_fg="#ffffff",
-        )
-
-        self.sheet.enable_bindings("copy", "delete", "single_select")
+        self._build_sheet(self.frame, self.headers, ("copy", "delete", "single_select"))
 
         # Bind click events
         self.sheet.bind("<Button-1>", self._on_single_click)  # Single-click for navigation
@@ -115,12 +84,8 @@ class resultsPanel:
             "<Double-Button-1>", self._on_double_click
         )  # Double-click for A-Scan viewer
 
-        self.sheet.grid(row=0, column=0, sticky="nsew")
-        self.frame.grid_rowconfigure(0, weight=1)
-        self.frame.grid_columnconfigure(0, weight=1)
-
         # Set initial column widths
-        self._set_column_widths()
+        self.fit_column_widths()
 
         self._setup_validation_ui()
 
@@ -250,9 +215,9 @@ class resultsPanel:
         if self.validationSheet is not None:
             return
 
-        self.validationSheet = Sheet(
+        self.validationSheet = create_sheet(
             self.validationResultsFrame,
-            headers=[
+            [
                 "METHOD",
                 "MEDIAN",
                 "|MEDIAN|",
@@ -261,22 +226,11 @@ class resultsPanel:
                 "SPECIMEN MEAN |MED|",
                 "SPECIMEN ERROR",
             ],
-            show_table=True,
+            ("copy", "single_select"),
             show_row_index=False,
-            show_header=True,
-            show_x_scrollbar=True,
             show_y_scrollbar=False,
             height=170,
         )
-        self.validationSheet.set_options(
-            table_bg="#2b2b2b",
-            table_fg="#dcdcdc",
-            header_bg="#3c3c3c",
-            header_fg="#ffffff",
-            grid_color="#444444",
-            outline_color="#666666",
-        )
-        self.validationSheet.enable_bindings("copy", "single_select")
         self.validationSheet.grid(row=0, column=0, sticky="nsew")
 
         self.validationSummaryLabel = ttk.Label(
@@ -385,7 +339,7 @@ class resultsPanel:
         # Regenerate headers based on loaded data
         self.headers = self.generate_headers()
         self.sheet.headers(self.headers)
-        self._set_column_widths()  # Set column widths after header change
+        self.fit_column_widths()  # Set column widths after header change
 
         # Populate results table with summary
         rows = []
@@ -418,7 +372,7 @@ class resultsPanel:
             rows.append(row)
 
         self.sheet.set_sheet_data(rows)
-        self._set_column_widths()  # Set column widths after loading data
+        self.fit_column_widths()  # Set column widths after loading data
         self.context.status_bar.update(
             f"Loaded {len(rows)} slice results for '{specimen_id}' "
             f"({num_sound} sound + {num_lesion} lesion regions).",
@@ -427,34 +381,6 @@ class resultsPanel:
 
         # Highlight current slice if image viewer is active
         self.sync_highlight_to_current_slice()
-
-    @handle_errors("resultsPanel._set_column_widths")
-    def _set_column_widths(self) -> None:
-        """Set column widths based on header length."""
-        column_names = self.sheet.headers()
-
-        for i, header in enumerate(column_names):
-            width = self._calculate_column_width(header)
-            self.sheet.column_width(i, width=width)
-
-        self.sheet.refresh()
-
-    def _calculate_column_width(self, header: str) -> int:
-        """
-        Calculate column width based on header length.
-
-        Args:
-            header (str): Column header text.
-
-        Returns:
-            int: Suggested column width.
-        """
-        base_width = 40  # Minimum width
-        char_width = 7  # Approximate width per character
-        padding = 20  # Extra space for clarity
-        max_width = 250
-
-        return min(max(base_width, len(header) * char_width + padding), max_width)
 
     @handle_errors("resultsPanel.refresh_display")
     def refresh_display(self):
@@ -468,7 +394,7 @@ class resultsPanel:
             # No specimen loaded, just update headers
             self.headers = self.generate_headers()
             self.sheet.headers(self.headers)
-            self._set_column_widths()
+            self.fit_column_widths()
             self.sheet.set_sheet_data([])  # Clear any existing data
 
     # ============================================================================
