@@ -16,7 +16,7 @@ from app.logic.rexview.file_discovery_service import (
     FileDiscoveryService,
 )
 from app.logic.rexview.models import ExportSettings, FileMetadata, QueueItem
-from app.view.rexview.gui_adapters import queue_item_from_treeview_values
+from app.view.rexview.gui_adapters import queue_item_from_row_values
 
 
 class TestFileDiscoveryServiceInit:
@@ -867,9 +867,9 @@ class TestQueueItemModel:
     """Tests for QueueItem model methods."""
 
     @pytest.mark.unit
-    def test_from_treeview_values(self):
-        """GIVEN string values, WHEN from_treeview_values, THEN creates QueueItem."""
-        item = queue_item_from_treeview_values(
+    def test_from_row_values(self):
+        """GIVEN string values, WHEN from_row_values, THEN creates QueueItem."""
+        item = queue_item_from_row_values(
             name="test",
             first="1",
             last="100",
@@ -889,8 +889,8 @@ class TestQueueItemModel:
         assert item.refractive_index == 1.0
 
     @pytest.mark.unit
-    def test_to_treeview_values(self):
-        """GIVEN QueueItem, WHEN to_treeview_values, THEN returns tuple."""
+    def test_to_row_values(self):
+        """GIVEN QueueItem, WHEN to_row_values, THEN returns tuple."""
         item = QueueItem(
             name="test",
             first_slice=1,
@@ -905,7 +905,7 @@ class TestQueueItemModel:
             status="in queue",
             file_path="/path/file.oct",
         )
-        values = item.to_treeview_values()
+        values = item.to_row_values()
         assert isinstance(values, tuple)
         assert values[0] == "test"
         assert values[1] == 1
