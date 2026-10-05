@@ -35,14 +35,19 @@ Author: Tobias Meissner
 ****
 """
 
-import json
 import tkinter as tk
 import webbrowser
 from tkinter import ttk
 
 from app.logic.shared.app_config import MANUAL_URL
 from app.logic.shared.doc_links import open_doc
+from app.logic.shared.json_io import read_json
 from app.logic.shared.paths import resource_path
+from app.view.shared.dialog_utils import (
+    add_close_button,
+    create_scrolled_text,
+    create_themed_dialog,
+)
 from app.view.shared.error_handler import handle_errors
 
 GITHUB_ISSUES_URL = "https://github.com/T0bC/OCTooL/issues"
@@ -80,8 +85,7 @@ class HelpDialog:
         try:
             json_path = resource_path("assets/instructions.json")
 
-            with open(json_path, encoding="utf-8") as f:
-                return json.load(f)
+            return read_json(json_path)
         except Exception:
             print(f"Instructions file not found: {json_path}")
             # Return empty dict as fallback
@@ -146,28 +150,9 @@ class HelpDialog:
     @handle_errors("HelpDialog.create_dialog")
     def _create_dialog(self, title, content):
         """Create a custom dark-themed help dialog."""
-        # Create modal dialog
-        dialog = tk.Toplevel(self.parent)
-        dialog.title(title)
-        dialog.transient(self.parent)
-        dialog.grab_set()
-
-        # Set size and center the dialog
-        dialog_width = 600
-        dialog_height = 550
-        screen_width = dialog.winfo_screenwidth()
-        screen_height = dialog.winfo_screenheight()
-        x = (screen_width - dialog_width) // 2
-        y = (screen_height - dialog_height) // 2
-        dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
-
-        # Apply dark theme colors
-        bg_color = self.style.colors.bg
-        dialog.configure(bg=bg_color)
-
-        # Main frame
-        main_frame = ttk.Frame(dialog, padding=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        dialog, main_frame = create_themed_dialog(
+            self.parent, self.style, title, width=600, height=550
+        )
 
         # Title label
         title_label = ttk.Label(
@@ -176,25 +161,13 @@ class HelpDialog:
         title_label.pack(pady=(0, 15))
 
         # Content text widget with scrollbar
-        text_frame = ttk.Frame(main_frame)
-        text_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
-
-        scrollbar = ttk.Scrollbar(text_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        text_widget = tk.Text(
-            text_frame,
-            wrap=tk.WORD,
+        text_widget = create_scrolled_text(
+            main_frame,
+            self.style,
             font=("Consolas", 10),
-            bg=self.style.colors.inputbg,
-            fg=self.style.colors.inputfg,
-            relief=tk.FLAT,
-            padx=15,
-            pady=15,
-            yscrollcommand=scrollbar.set,
+            padding=15,
+            frame_pack_kwargs={"fill": tk.BOTH, "expand": True, "pady": (0, 15)},
         )
-        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=text_widget.yview)
 
         # Insert content
         text_widget.insert("1.0", content)
@@ -222,17 +195,8 @@ class HelpDialog:
         )
         issues_btn.pack(side=tk.LEFT)
 
-        # Close button
-        close_btn = ttk.Button(
-            button_frame, text="Close", bootstyle="secondary", command=dialog.destroy
-        )
-        close_btn.pack(side=tk.RIGHT)
-
-        # Bind Escape key to close
-        dialog.bind("<Escape>", lambda e: dialog.destroy())
-
-        # Focus on close button
-        close_btn.focus_set()
+        # Close button (right-aligned, Escape closes, takes focus)
+        add_close_button(dialog, button_frame)
 
     @handle_errors("HelpDialog.open_documentation")
     def open_documentation(self):
