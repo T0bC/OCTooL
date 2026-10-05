@@ -12,7 +12,7 @@ from app.logic.rexview import ExportConfig, ExportService, SliceExportParams
 from app.logic.shared import OCTMetadata
 from app.view.rexview.gui_adapters import (
     export_config_from_gui_state,
-    slice_export_params_from_treeview_row,
+    slice_export_params_from_queue_row,
 )
 
 
@@ -226,9 +226,9 @@ class TestConfigCollectionIntegration:
         assert config.scale_length_um == 500
         assert config.scale_font_size == 30
 
-    def test_slice_params_from_treeview_row(self):
-        """Verify SliceExportParams.from_treeview_row creates valid params."""
-        params = slice_export_params_from_treeview_row(
+    def test_slice_params_from_queue_row(self):
+        """Verify SliceExportParams.from_queue_row creates valid params."""
+        params = slice_export_params_from_queue_row(
             path="/test/file.oct",
             name="TestScan",
             first="1",
