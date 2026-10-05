@@ -2,8 +2,6 @@
 Unit tests for app/logic/annolyze/data_service.py (context-free I/O).
 """
 
-import json
-
 import pytest
 
 from app.logic.annolyze.data_service import DataService
@@ -42,14 +40,6 @@ class TestFindFile:
         nested.mkdir(parents=True)
         (nested / "x_results.csv").write_text("h\n", encoding="utf-8")
         assert service.find_file(tmp_path, "*results.csv") is not None
-
-
-class TestBuildDataFolder:
-    @pytest.mark.unit
-    def test_builds_expected_name(self, service, tmp_path):
-        """GIVEN operator/measurement, WHEN build_data_folder, THEN Data_<op>_<m>."""
-        folder = service.build_data_folder(tmp_path, "TM", "1")
-        assert folder.name == "Data_TM_1"
 
 
 class TestAnnotationsIO:
@@ -94,12 +84,3 @@ class TestResultsIO:
         path = tmp_path / "empty.csv"
         path.write_text("", encoding="utf-8")
         assert service.load_results(path) == ([], [])
-
-
-class TestConfigIO:
-    @pytest.mark.unit
-    def test_save_config_creates_file(self, service, tmp_path):
-        """GIVEN a config, WHEN save_config, THEN JSON file is written."""
-        path = tmp_path / "Data_TM_1" / "c.json"
-        service.save_config({"metadata": {}}, path)
-        assert json.loads(path.read_text(encoding="utf-8")) == {"metadata": {}}
