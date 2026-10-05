@@ -342,9 +342,7 @@ class TestResultAttribution:
             cpu_count=8,
             available_memory_gb=1000,
         )
-        coordinator.run(
-            specimens, num_sound=1, num_lesion=1, save=True, parallel_threshold=0
-        )
+        coordinator.run(specimens, num_sound=1, num_lesion=1, save=True, parallel_threshold=0)
 
         stored = [(entry[1], entry[2]) for entry in saver.call_log if entry[0] == "store"]
         assert stored == [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)]
