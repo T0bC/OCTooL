@@ -12,7 +12,6 @@ Key contents:
 - EXTRACTION_REGION_COLOR / EXTRACTION_REGION_LESION_COLOR: Sound and lesion boundary colors.
 - SPECIMEN_BOUNDARY_COLOR / LESION_BOUNDARY_COLOR: Vertical line colors for region definition.
 - AIR_REGION_COLOR: AIR reference area color.
-- hex_to_rgb: Converts hex color strings to RGB tuples.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -81,40 +80,3 @@ GROUND_TRUTH_MARK_COLOR = "#00FF88"  # Bright mint green - operator lesion-end m
 # Results Panel Row Highlighting Colors
 ROW_HIGHLIGHT_NAVIGATION_COLOR = "#2d5016"  # Dark green - normal navigation highlighting
 ROW_HIGHLIGHT_ASCAN_COLOR = "#6a4c93"  # Purple/lavender - A-Scan viewer active highlighting
-
-# ============================================================================
-# Color Conversion Utilities (if needed for different rendering contexts)
-# ============================================================================
-
-
-def hex_to_rgb(hex_color):
-    """
-    Convert hex color string to RGB tuple.
-
-    Args:
-        hex_color: Color in hex format (e.g., '#FF0000' or 'red')
-
-    Returns:
-        tuple: (R, G, B) values (0-255)
-    """
-    # Handle named colors by returning them as-is (PIL supports them)
-    if not hex_color.startswith("#"):
-        # For named colors like 'red', 'cyan', etc., PIL can handle them directly
-        # But if you need RGB values, you'd need a color name lookup table
-        return hex_color
-
-    hex_color = hex_color.lstrip("#")
-    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
-
-
-def rgb_to_hex(r, g, b):
-    """
-    Convert RGB tuple to hex color string.
-
-    Args:
-        r, g, b: Red, green, blue values (0-255)
-
-    Returns:
-        str: Hex color string (e.g., '#FF0000')
-    """
-    return f"#{r:02x}{g:02x}{b:02x}"
