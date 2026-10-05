@@ -5,7 +5,8 @@ Pure business logic for OCT image export — no tkinter dependencies. Handles th
 core export pipeline logic extracted from execution_panel.py.
 
 Key contents:
-- ExportService: Pure business logic for OCT export operations.
+- ExportService: Pure business logic for OCT export operations (cancellation via the
+  shared Cancellable mixin).
 - prepare_export: Validates parameters and determines slices, data type, and output dir.
 - load_image_stack: Loads and processes the image stack from the OCT archive.
 - process_slice: Extracts, resizes, corrects, and optionally adds a scale bar.
@@ -45,32 +46,17 @@ from PIL import Image
 
 from app.logic.rexview.models import ExportConfig, ExportProgress, ExportResult, SliceExportParams
 from app.logic.shared import oct_functions as octF
+from app.logic.shared.concurrency import Cancellable
 from app.logic.shared.models import OCTMetadata
 
 
-class ExportService:
+class ExportService(Cancellable):
     """
     Pure business logic for OCT export operations.
 
     This service encapsulates all export logic without any GUI dependencies.
     It can be fully tested with pytest without requiring tkinter.
     """
-
-    def __init__(self):
-        self._cancelled = False
-
-    def cancel(self):
-        """Signal the export to stop."""
-        self._cancelled = True
-
-    def reset(self):
-        """Reset the cancellation flag."""
-        self._cancelled = False
-
-    @property
-    def is_cancelled(self) -> bool:
-        """Check if export has been cancelled."""
-        return self._cancelled
 
     def prepare_export(
         self,
