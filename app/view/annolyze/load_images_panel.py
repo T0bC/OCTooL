@@ -36,12 +36,12 @@ Author: Tobias Meissner
 
 import contextlib
 import os
-import re
 from concurrent import futures
 from fnmatch import fnmatch
 from pathlib import Path
 from tkinter import filedialog, ttk
 
+from app.logic.shared.paths import natural_sort_key
 from app.view.annolyze.data_io import DataLoader
 from app.view.shared import dialogs
 from app.view.shared.error_handler import handle_errors
@@ -124,12 +124,6 @@ class loadImagePanel:
         # Collect image files
         image_extensions = ["*.jpg", "*.png", "*.tif", "*.tiff"]
 
-        def natural_key(path):
-            return [
-                int(text) if text.isdigit() else text.lower()
-                for text in re.split(r"(\d+)", path.name)
-            ]
-
         tmpPathList = sorted(
             [
                 file
@@ -137,7 +131,7 @@ class loadImagePanel:
                 if file.is_file()
                 and any(fnmatch(file.name.lower(), ext) for ext in image_extensions)
             ],
-            key=natural_key,
+            key=natural_sort_key,
         )
 
         if not tmpPathList:
