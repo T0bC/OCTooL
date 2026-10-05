@@ -11,7 +11,7 @@ from app.logic.rexview.models import ExportConfig, ExportProgress, SliceExportPa
 from app.logic.shared.models import OCTMetadata
 from app.view.rexview.gui_adapters import (
     export_config_from_gui_state,
-    slice_export_params_from_treeview_row,
+    slice_export_params_from_queue_row,
 )
 
 
@@ -210,10 +210,10 @@ class TestSliceExportParams:
         assert params.export_dir_name == "MyScan_25_Slices_YZ"
 
     @pytest.mark.unit
-    def test_from_treeview_row(self):
-        """GIVEN TreeView row values, WHEN from_treeview_row is called, THEN params are
+    def test_from_queue_row(self):
+        """GIVEN queue table row values, WHEN from_queue_row is called, THEN params are
         created correctly."""
-        params = slice_export_params_from_treeview_row(
+        params = slice_export_params_from_queue_row(
             path="C:/data/scan.oct",
             name="Scan001",
             first="5",
