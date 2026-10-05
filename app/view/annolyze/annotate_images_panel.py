@@ -42,6 +42,7 @@ from PIL import Image, ImageDraw
 
 from app.logic.annolyze.annotation_service import AnnotationService
 from app.logic.annolyze.data_service import DataService
+from app.logic.shared.colors import hex_to_rgba
 from app.view.shared.base_canvas_panel import BaseCanvasPanel
 from app.view.shared.error_handler import handle_errors
 
@@ -646,8 +647,8 @@ class annotatePanel(BaseCanvasPanel):
             mode = ann["mode"]
             color = ann.get("color", "#ffffb2")
 
-            # Convert hex color to RGBA via the service
-            rgb_color = self.annotation_service.hex_to_rgba(color)
+            # Convert hex color to RGBA (yellow fallback for invalid colors)
+            rgb_color = hex_to_rgba(color, default=(255, 255, 178))
 
             if len(pts) >= 2:
                 if mode == "line" or len(pts) < 4:
