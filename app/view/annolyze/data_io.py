@@ -32,10 +32,12 @@ Author: Tobias Meissner
 ****
 """
 
-import json
 from pathlib import Path
 
+from app.logic.annolyze.config_service import ConfigService
 from app.logic.annolyze.data_service import DataService
+from app.logic.shared.json_io import read_json
+from app.logic.shared.paths import data_folder
 
 
 class DataLoader:
@@ -73,8 +75,7 @@ class DataLoader:
         annotation_path = self.find_file("*annotations.json")
         if annotation_path:
             try:
-                with open(annotation_path, encoding="utf-8") as f:
-                    annotations = json.load(f)
+                annotations = read_json(annotation_path)
                 self.context.loaded_annotations = annotations
                 annotate_panel = self.context.get_panel("anno_image")
                 if annotate_panel:
@@ -119,13 +120,12 @@ class DataSaver:
         self.add_columns_panel = context.get_panel("add_columns")
         self.config_manager = context.config_manager
         self.data_service = DataService()
+        self.config_service = ConfigService()
 
         self.operator = self.metadata_panel.operatorEntry.get()
         self.measurement = self.metadata_panel.measurementEntry.get()
         self.sample_folder = Path(context.image_folder)
-        self.data_folder = self.data_service.build_data_folder(
-            self.sample_folder, self.operator, self.measurement
-        )
+        self.data_folder = data_folder(self.sample_folder, self.operator, self.measurement)
         self.data_folder.mkdir(exist_ok=True)
 
     def save_config(self):
@@ -138,7 +138,7 @@ class DataSaver:
         config_path = self.data_folder / f"{self.sample_folder.name}_config.json"
 
         try:
-            self.data_service.save_config(config, config_path)
+            self.config_service.save_config_to_file(config, config_path)
             self.context.status_bar.update(f"Config saved to: {config_path}", level="success")
         except Exception as e:
             self.context.status_bar.update(f"Failed to save config: {e}", level="error")
