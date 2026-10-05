@@ -42,6 +42,8 @@ from tkinter import ttk
 
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 
+from app.logic.shared.coordinates import CoordinateConverter
+from app.logic.shared.paths import data_folder
 from app.view.shared.error_handler import handle_errors
 from app.view.shared.instruction_renderer import InstructionRenderer
 from app.view.shared.tool_tip import Tooltip
@@ -276,6 +278,25 @@ class BaseCanvasPanel:
     # COORDINATE CONVERSION
     # ============================================================================
 
+    def _coordinate_converter(self):
+        """
+        Get a CoordinateConverter instance for the current view state.
+
+        Returns:
+            CoordinateConverter instance or None if no image loaded
+        """
+        if not hasattr(self, "rawImage") or self.rawImage is None:
+            return None
+
+        return CoordinateConverter(
+            self.rawImage,
+            self.zoom_level,
+            self.image_offset_x,
+            self.image_offset_y,
+            getattr(self, "fitted_width", self.rawImage.width),
+            getattr(self, "fitted_height", self.rawImage.height),
+        )
+
     @handle_errors("BaseCanvasPanel.canvas_to_image_coords")
     def canvas_to_image_coords(self, canvas_x, canvas_y):
         """
@@ -290,19 +311,11 @@ class BaseCanvasPanel:
         Returns:
             tuple: (image_x, image_y) or (None, None) if no image loaded
         """
-        if not hasattr(self, "rawImage") or self.rawImage is None:
+        converter = self._coordinate_converter()
+        if converter is None:
             return None, None
 
-        # Use fitted size if zoom_level == 1.0
-        if self.zoom_level == 1.0:
-            current_zoom = self.fitted_width / self.rawImage.width if self.fitted_width else 1.0
-        else:
-            current_zoom = self.zoom_level
-
-        img_x = (canvas_x - self.image_offset_x) / current_zoom
-        img_y = (canvas_y - self.image_offset_y) / current_zoom
-
-        return img_x, img_y
+        return converter.canvas_to_image_unclamped(canvas_x, canvas_y)
 
     @handle_errors("BaseCanvasPanel.image_to_canvas_coords")
     def image_to_canvas_coords(self, img_x, img_y):
@@ -318,19 +331,11 @@ class BaseCanvasPanel:
         Returns:
             tuple: (canvas_x, canvas_y)
         """
-        if not hasattr(self, "rawImage") or self.rawImage is None:
+        converter = self._coordinate_converter()
+        if converter is None:
             return img_x, img_y
 
-        # Use fitted size if zoom_level == 1.0
-        if self.zoom_level == 1.0:
-            current_zoom = self.fitted_width / self.rawImage.width if self.fitted_width else 1.0
-        else:
-            current_zoom = self.zoom_level
-
-        x = img_x * current_zoom + self.image_offset_x
-        y = img_y * current_zoom + self.image_offset_y
-
-        return x, y
+        return converter.image_to_canvas(img_x, img_y)
 
     # ============================================================================
     # IMAGE RENDERING
@@ -747,9 +752,7 @@ class BaseCanvasPanel:
 
                 if operator and measurement:
                     # Use Data_<operator>_<measurement>/annotations convention
-                    output_folder = (
-                        Path(image_folder) / f"Data_{operator}_{measurement}" / "annotations"
-                    )
+                    output_folder = data_folder(image_folder, operator, measurement) / "annotations"
                     output_folder.mkdir(parents=True, exist_ok=True)
                     return output_folder
             except Exception:
