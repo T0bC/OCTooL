@@ -11,7 +11,8 @@ Key contents:
   - find_image_stacks: Recursively finds PNG/TIFF image folders under a root.
   - load_specimen_config: Loads region and AIR settings from JSON with backward compatibility.
 - DataSaver: Saves analysis results as Excel, JSON, and annotated PNG images.
-- natural_key: Human-friendly sort key that handles embedded numbers in filenames.
+- specimen_data_folder: Resolves a specimen's Data_<operator>_<measurement> folder
+  (defaults operator "OP", measurement 1 when the specimen has no metadata).
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -37,8 +38,6 @@ Author: Tobias Meissner
 """
 
 import itertools
-import json
-import re
 from fnmatch import fnmatch
 from pathlib import Path
 
@@ -65,6 +64,8 @@ from app.logic.carlquant.specimen_model import (
     SpecimenConfig,
     Surface,
 )
+from app.logic.shared.json_io import read_json, write_json_atomic
+from app.logic.shared.paths import data_folder, natural_sort_key
 
 
 def convert_to_json_serializable(obj):
@@ -112,8 +113,15 @@ def _optional_float(value):
     return None if np.isnan(number) else number
 
 
-def natural_key(path):
-    return [int(text) if text.isdigit() else text.lower() for text in re.split(r"(\d+)", path.name)]
+def specimen_data_folder(specimen) -> Path:
+    """Data_<operator>_<measurement> folder for a specimen.
+
+    Falls back to operator ``"OP"`` and measurement ``1`` when the specimen has
+    no metadata, matching what ``DataSaver.save_specimen_config`` writes.
+    """
+    operator = getattr(specimen, "operator", "OP")
+    measurement = getattr(specimen, "measurement", 1)
+    return data_folder(specimen.source, operator, measurement)
 
 
 class DataLoader:
@@ -156,7 +164,7 @@ class DataLoader:
                         if f.is_file()
                         and any(fnmatch(f.name.lower(), ext) for ext in IMAGE_EXTENSIONS)
                     ],
-                    key=natural_key,
+                    key=natural_sort_key,
                 )
 
                 data_folders = [
@@ -217,22 +225,22 @@ class DataLoader:
         try:
             # If specimen has operator/measurement metadata, look for specific folder first
             if hasattr(specimen, "operator") and hasattr(specimen, "measurement"):
-                target_folder = specimen.source / f"Data_{specimen.operator}_{specimen.measurement}"
+                target_folder = data_folder(
+                    specimen.source, specimen.operator, specimen.measurement
+                )
                 if target_folder.exists():
                     config_file = target_folder / f"{specimen.specimen_id}_config.json"
                     if config_file.exists():
-                        with open(config_file) as f:
-                            config_data = json.load(f)
+                        config_data = read_json(config_file)
                         return DataLoader._parse_config_data(
                             specimen, config_data, load_annotations=load_annotations
                         )
 
             # Fallback: Look for config file in any Data_ folder (legacy behavior)
-            for data_folder in specimen.previous_runs:
-                config_file = data_folder / f"{specimen.specimen_id}_config.json"
+            for run_folder in specimen.previous_runs:
+                config_file = run_folder / f"{specimen.specimen_id}_config.json"
                 if config_file.exists():
-                    with open(config_file) as f:
-                        config_data = json.load(f)
+                    config_data = read_json(config_file)
                     return DataLoader._parse_config_data(
                         specimen, config_data, load_annotations=load_annotations
                     )
@@ -428,7 +436,9 @@ class DataLoader:
 
             if hasattr(specimen, "operator") and hasattr(specimen, "measurement"):
                 # Look for specific Data_{operator}_{measurement} folder
-                target_folder = specimen.source / f"Data_{specimen.operator}_{specimen.measurement}"
+                target_folder = data_folder(
+                    specimen.source, specimen.operator, specimen.measurement
+                )
                 if not target_folder.exists():
                     return  # No matching folder for this operator/measurement
             else:
@@ -611,9 +621,7 @@ class DataSaver:
                     ws_surface.append([slice_index + 1, "lesion_depth", x, y])
 
         # === Save to disk ===
-        operator = getattr(specimen, "operator", "OP")
-        measurement = getattr(specimen, "measurement", 1)
-        save_folder = specimen.source / f"Data_{operator}_{measurement}"
+        save_folder = specimen_data_folder(specimen)
         save_folder.mkdir(exist_ok=True)
 
         target_file = save_folder / f"{specimen.specimen_id}_results.xlsx"
@@ -636,9 +644,7 @@ class DataSaver:
             return
 
         # Create save folder if it doesn't exist
-        operator = getattr(specimen, "operator", "OP")
-        measurement = getattr(specimen, "measurement", 1)
-        save_folder = specimen.source / f"Data_{operator}_{measurement}"
+        save_folder = specimen_data_folder(specimen)
         save_folder.mkdir(exist_ok=True)
 
         # Prepare data for JSON serialization
@@ -768,8 +774,9 @@ class DataSaver:
 
         # Save to JSON file
         config_file = save_folder / f"{specimen.specimen_id}_config.json"
-        with open(config_file, "w") as f:
-            json.dump(config_data, f, indent=2)
+        # TODO(compat): switch to ensure_ascii=False once older OCTooL builds (which read with
+        # the platform code page) no longer need to open these files.
+        write_json_atomic(config_file, config_data, indent=2, ensure_ascii=True)
 
     @staticmethod
     def update_specimen_region(
@@ -880,9 +887,7 @@ class DataSaver:
             return
 
         # Create annotations folder
-        operator = getattr(specimen, "operator", "OP")
-        measurement = getattr(specimen, "measurement", 1)
-        save_folder = specimen.source / f"Data_{operator}_{measurement}" / "annotations"
+        save_folder = specimen_data_folder(specimen) / "annotations"
         save_folder.mkdir(parents=True, exist_ok=True)
 
         # Process each slice
