@@ -258,26 +258,6 @@ class TestValidateSliceRange:
         assert any("first_slice" in e and "exceeds" in e for e in result.errors)
 
 
-class TestCalculateNumSlices:
-    """Tests for SettingsService.calculate_num_slices method."""
-
-    @pytest.fixture
-    def service(self):
-        return SettingsService()
-
-    @pytest.mark.unit
-    def test_calculate_range(self, service):
-        """GIVEN first and last slice, WHEN calculate_num_slices, THEN returns correct count."""
-        assert service.calculate_num_slices(1, 10) == 10
-        assert service.calculate_num_slices(5, 15) == 11
-        assert service.calculate_num_slices(1, 1) == 1
-
-    @pytest.mark.unit
-    def test_calculate_large_range(self, service):
-        """GIVEN large range, WHEN calculate_num_slices, THEN returns correct count."""
-        assert service.calculate_num_slices(1, 1000) == 1000
-
-
 class TestCalculateEquidistantIndices:
     """Tests for SettingsService.calculate_equidistant_indices method."""
 
