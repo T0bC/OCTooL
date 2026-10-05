@@ -267,7 +267,7 @@ class loadImagePanel:
         for specimen in self.context.specimen_data.values():
             rows.append([specimen.display_id, specimen.slices, specimen.status])
         specimen_panel.sheet.set_sheet_data(rows)
-        specimen_panel._set_column_widths()
+        specimen_panel.fit_column_widths(include_content=True)
 
         # Run validation check to identify specimens with missing coordinates
         is_valid, invalid_specimens = self.validate_specimen_coordinates()
@@ -355,7 +355,7 @@ class loadImagePanel:
             specimen_panel.sheet.delete_row(row_index)
 
         # Update column widths after deletion
-        specimen_panel._set_column_widths()
+        specimen_panel.fit_column_widths(include_content=True)
 
         # Clear current specimen if it was among the removed ones
         if (
