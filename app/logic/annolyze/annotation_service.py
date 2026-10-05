@@ -1,7 +1,7 @@
 """
 AnnoLyze Annotation Service.
 
-Pure annotation geometry, colour, and (de)serialization logic — no tkinter.
+Pure annotation geometry and (de)serialization logic — no tkinter.
 Extracted from the AnnoLyze annotation panel so it can be unit-tested
 headlessly.
 
@@ -9,7 +9,6 @@ Key contents:
 - AnnotationService: Pure logic for annotation geometry, color, and serialization.
 - polyline_length / annotation_length: Computes Euclidean length of line/spline annotations.
 - spline_points: Samples a cubic spline through a point set (fallback to lines).
-- hex_to_rgba: Converts hex color strings to RGBA tuples.
 - serialize_slice_annotations / deserialize_annotations: Converts between in-memory
   slice-indexed maps and the on-disk JSON format.
 
@@ -102,18 +101,6 @@ class AnnotationService:
             return float(np.sum(np.sqrt(np.diff(x_new) ** 2 + np.diff(y_new) ** 2)))
         except Exception:
             return self.polyline_length(points)
-
-    # ------------------------------------------------------------------
-    # Color
-    # ------------------------------------------------------------------
-    def hex_to_rgba(self, color: str, alpha: int = 255) -> tuple[int, int, int, int]:
-        """Convert a ``#RRGGBB`` hex string to an RGBA tuple."""
-        if isinstance(color, str) and color.startswith("#") and len(color) >= 7:
-            r = int(color[1:3], 16)
-            g = int(color[3:5], 16)
-            b = int(color[5:7], 16)
-            return (r, g, b, alpha)
-        return (255, 255, 178, alpha)  # default yellow
 
     # ------------------------------------------------------------------
     # Identity
