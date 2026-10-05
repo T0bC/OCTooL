@@ -41,6 +41,7 @@ from pathlib import Path
 from tkinter import filedialog, ttk
 
 from app.logic.carlquant import DataLoader, DataSaver
+from app.logic.shared.paths import data_folder
 from app.view.carlquant.analysis_runner import run_carl_quant
 from app.view.carlquant.scan_progress_dialog import ScanProgressDialog
 from app.view.shared import dialogs
@@ -204,7 +205,7 @@ class loadImagePanel:
                     specimen.operator = operator
                     specimen.measurement = measurement
 
-                    expected_data_folder = specimen.source / f"Data_{operator}_{measurement}"
+                    expected_data_folder = data_folder(specimen.source, operator, measurement)
                     if expected_data_folder.exists() and expected_data_folder.is_dir():
                         # Lightweight load: only regions/air coordinates, not
                         # the heavy annotation data (loaded on-demand later).
