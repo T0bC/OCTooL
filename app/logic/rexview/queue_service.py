@@ -3,7 +3,7 @@ RexView Queue Service.
 
 Pure business logic for export queue management — no tkinter dependencies.
 Handles queue item validation, manipulation, and calculations extracted from
-tree_view_panel.py.
+queue_panel.py.
 
 Key contents:
 - QueueService: Stateless utility for export queue validation and manipulation.
