@@ -27,9 +27,9 @@ without spawning real processes.
 
 Key contents:
 - BatchSliceCoordinator: Owns one pool and drives a flat queue of slice tasks.
-- compute_worker_count: CPU/RAM/queue-bounded worker-count policy.
+- compute_worker_count: Binds instance config (probing RAM if none injected) to the
+  shared worker-count policy in app.logic.shared.concurrency.
 - run: Submits every slice of every specimen, saves each specimen as it finishes.
-- detect_available_memory_gb: Stdlib-only available-RAM probe for the RAM cap.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -57,8 +57,6 @@ Author: Tobias Meissner
 from __future__ import annotations
 
 import gc
-import os
-import sys
 from collections.abc import Callable, Iterable
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from dataclasses import dataclass
@@ -70,50 +68,12 @@ from app.logic.carlquant.analysis_service import (
 )
 from app.logic.carlquant.carl_quant_core import process_slice_parallel
 from app.logic.carlquant.data_service import DataSaver
+from app.logic.shared.concurrency import compute_worker_count, detect_available_memory_gb
 
 #: Tasks kept in flight per worker. Large enough that a worker never waits for
 #: the parent to refill the queue, small enough that the Futures holding
 #: finished slice results (~1.4 MB each) do not accumulate over a long batch.
 WINDOW_PER_WORKER = 4
-
-
-def detect_available_memory_gb() -> float | None:
-    """Best-effort available-RAM probe in GiB, or None if it cannot be determined.
-
-    Deliberately stdlib-only: ``psutil`` is not a declared dependency of OCTooL
-    and adding one for a worker-count heuristic is not worth it. Any failure
-    yields None, which simply disables the RAM cap.
-    """
-    try:
-        if sys.platform == "win32":
-            import ctypes
-
-            class _MemoryStatusEx(ctypes.Structure):
-                _fields_ = [
-                    ("dwLength", ctypes.c_ulong),
-                    ("dwMemoryLoad", ctypes.c_ulong),
-                    ("ullTotalPhys", ctypes.c_ulonglong),
-                    ("ullAvailPhys", ctypes.c_ulonglong),
-                    ("ullTotalPageFile", ctypes.c_ulonglong),
-                    ("ullAvailPageFile", ctypes.c_ulonglong),
-                    ("ullTotalVirtual", ctypes.c_ulonglong),
-                    ("ullAvailVirtual", ctypes.c_ulonglong),
-                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
-                ]
-
-            status = _MemoryStatusEx()
-            status.dwLength = ctypes.sizeof(_MemoryStatusEx)
-            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
-                return None
-            return status.ullAvailPhys / (1024**3)
-
-        with open("/proc/meminfo") as handle:
-            for line in handle:
-                if line.startswith("MemAvailable:"):
-                    return int(line.split()[1]) / (1024**2)
-    except Exception:  # noqa: BLE001 - a probe must never break the analysis
-        return None
-    return None
 
 
 @dataclass
@@ -233,19 +193,17 @@ class BatchSliceCoordinator:
         memory budget. An explicit ``requested`` value replaces the CPU-based
         default but is still clamped.
         """
-        cpu = self._cpu_count if self._cpu_count is not None else (os.cpu_count() or 1)
-        base = requested if requested is not None else max(cpu - 1, 1)
-        bounded = min(base, self._max_workers_cap)
-        if queue_len > 0:
-            bounded = min(bounded, queue_len)
-
         memory_gb = self._available_memory_gb
         if memory_gb is None:
             memory_gb = detect_available_memory_gb()
-        if memory_gb is not None and self._gb_per_worker:
-            bounded = min(bounded, int(memory_gb // self._gb_per_worker))
-
-        return max(1, bounded)
+        return compute_worker_count(
+            queue_len,
+            requested,
+            max_workers_cap=self._max_workers_cap,
+            cpu_count=self._cpu_count,
+            available_memory_gb=memory_gb,
+            gb_per_worker=self._gb_per_worker,
+        )
 
     # ------------------------------------------------------------------
     # Batch pipeline
