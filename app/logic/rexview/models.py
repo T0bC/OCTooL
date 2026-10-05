@@ -179,9 +179,9 @@ class ExportConfig(BaseModel):
 
 class SliceExportParams(BaseModel):
     """
-    Parameters for a single export job from the TreeView.
+    Parameters for a single export job from the queue table.
 
-    Maps to a row in the export queue TreeView.
+    Maps to a row in the export queue table.
     """
 
     # File information
@@ -267,7 +267,7 @@ class QueueItem(BaseModel):
     """
     Represents a single item in the export queue.
 
-    Maps to a row in the TreeView table.
+    Maps to a row in the queue table.
     """
 
     name: str = Field(description="File name without extension")
@@ -306,8 +306,8 @@ class QueueItem(BaseModel):
             raise ValueError(error)
         return self
 
-    def to_treeview_values(self) -> tuple:
-        """Convert to tuple for TreeView insertion."""
+    def to_row_values(self) -> tuple:
+        """Convert to tuple for queue table insertion."""
         return (
             self.name,
             self.first_slice,
