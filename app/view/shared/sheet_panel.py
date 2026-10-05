@@ -125,15 +125,6 @@ class BaseSheetPanel:
             sheet.column_width(i, width=width)
         sheet.refresh()
 
-    # -- colours ------------------------------------------------------
-    def get_luminance(self, hex_color: str) -> float:
-        """Relative luminance of a hex color (delegates to DisplayService)."""
-        return self.display_service.luminance(hex_color)
-
-    def choose_font_color(self, bg_color: str) -> str:
-        """Contrast-aware font color (delegates to DisplayService)."""
-        return self.display_service.choose_font_color(bg_color)
-
     # -- lookup -------------------------------------------------------
     def column_index(self, col_name: str) -> int | None:
         """Index of a header name in ``self.sheet``, or None if absent."""
