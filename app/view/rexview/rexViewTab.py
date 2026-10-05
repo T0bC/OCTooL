@@ -41,7 +41,7 @@ from app.view.rexview.execution_panel import executionPanel as execution
 from app.view.rexview.global_settings_panel import globalSettingsPanel as globalSettings
 from app.view.rexview.image_panel import imagePanel as imagePanel
 from app.view.rexview.pick_files_panel import pickFilesPanel as pickFile
-from app.view.rexview.tree_view_panel import treeViewPanel as table
+from app.view.rexview.queue_panel import queuePanel
 
 
 def addContent(self, frame):
@@ -62,9 +62,9 @@ def addContent(self, frame):
     self.rexViewTabFrame.rowconfigure(9, weight=0)  # excFrame - fixed height
 
     # Create and register frames
-    self.treeFrame = ttk.LabelFrame(self.rexViewTabFrame, text="Queue", relief=tk.RIDGE)
-    self.treeFrame.grid(row=0, column=1, rowspan=5, sticky=tk.E + tk.W + tk.N + tk.S)
-    self.context.register_frame("tree", self.treeFrame)
+    self.queueFrame = ttk.LabelFrame(self.rexViewTabFrame, text="Queue", relief=tk.RIDGE)
+    self.queueFrame.grid(row=0, column=1, rowspan=5, sticky=tk.E + tk.W + tk.N + tk.S)
+    self.context.register_frame("queue", self.queueFrame)
 
     self.pickFrame = ttk.LabelFrame(self.rexViewTabFrame, text="Select File(s)", relief=tk.RIDGE)
     self.pickFrame.grid(row=0, column=0, sticky=tk.E + tk.W + tk.N + tk.S)
@@ -91,8 +91,8 @@ def addContent(self, frame):
     self.context.register_frame("execution", self.excFrame)
 
     # Create and register panels
-    self.treePanel = table(self.context)
-    self.context.register_panel("tree", self.treePanel)
+    self.queuePanel = queuePanel(self.context)
+    self.context.register_panel("queue", self.queuePanel)
 
     self.glblSttngsPanel = globalSettings(self.context)
     self.context.register_panel("global_settings", self.glblSttngsPanel)
