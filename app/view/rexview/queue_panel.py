@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-RexView Tree View Panel.
+RexView Queue Panel.
 
 Export queue displayed as a tksheet table with columns for slice range, dB,
 direction, refractive index, dispersion, and status. Only the parameter columns
 are editable in place; rows are addressed through stable opaque IDs.
 
 Key contents:
-- treeViewPanel: tksheet panel managing the export queue.
+- queuePanel: tksheet panel managing the export queue.
 - setMultipleValues / deleteEntry: Add and remove queue rows.
 - getValue / setValue / getValueFromRow / setValueFromRow: Cell accessors (str values).
 - getFocus / getChildren: Row ID of the current selection and of all rows.
@@ -37,12 +37,12 @@ Author: Tobias Meissner
 
 from app.logic.rexview import QueueItem, QueueService
 from app.logic.shared import oct_functions as octF
-from app.view.rexview.gui_adapters import queue_item_from_treeview_values
+from app.view.rexview.gui_adapters import queue_item_from_row_values
 from app.view.shared import dialogs
 from app.view.shared.sheet_panel import BaseSheetPanel
 
 
-class treeViewPanel(BaseSheetPanel):
+class queuePanel(BaseSheetPanel):
     COLS = (
         "Nr.",
         "Name",
@@ -64,7 +64,7 @@ class treeViewPanel(BaseSheetPanel):
     def __init__(self, context):
         self.context = context
         self.root = self.context.root
-        self.frame = self.context.get_frame("tree")
+        self.frame = self.context.get_frame("queue")
 
         # Initialize QueueService for business logic
         self._queue_service = QueueService()
@@ -229,7 +229,7 @@ class treeViewPanel(BaseSheetPanel):
 
     def setValue(self, column: str, value: str):
         """
-        Sets value in given row and column in the treeFrame
+        Sets value in given row and column in the queueFrame
 
         Parameters
         ----------
@@ -298,7 +298,7 @@ class treeViewPanel(BaseSheetPanel):
 
     def setValueFromRow(self, item, column: str, value: str):
         """
-        Sets value in given row and column in the treeFrame
+        Sets value in given row and column in the queueFrame
 
         Parameters
         ----------
@@ -316,7 +316,7 @@ class treeViewPanel(BaseSheetPanel):
 
     def setMultipleValues(self, tmpFileList: list):
         """
-        Sets multiple Values from a given list into the treeView table
+        Sets multiple Values from a given list into the queue table
 
         Parameters
         ----------
@@ -389,7 +389,7 @@ class treeViewPanel(BaseSheetPanel):
         QueueItem
             Model containing row data
         """
-        return queue_item_from_treeview_values(
+        return queue_item_from_row_values(
             name=self._get(item_id, "Name"),
             first=self._get(item_id, "First"),
             last=self._get(item_id, "Last"),
@@ -462,7 +462,7 @@ class treeViewPanel(BaseSheetPanel):
             for idx, name in enumerate(colNames):
                 self._set(item, str(name), values[idx])
 
-    def setImgSliceDirectionAndUpdateLastSliceInTreeview(self, expDir: str):
+    def setImgSliceDirectionAndUpdateLastSlice(self, expDir: str):
         """
         Updates the image slice direction and corresponding 'Last' slice value
         based on user selection.
@@ -500,7 +500,7 @@ class treeViewPanel(BaseSheetPanel):
     def updateImgSliceDirectionForAllEntries(self, expDir: str):
         """
         Updates the image slice direction and corresponding 'Last' value for
-        all entries in the treeView based on the selected direction.
+        all entries in the queue table based on the selected direction.
 
         Parameters
         ----------
