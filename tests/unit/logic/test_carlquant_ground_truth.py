@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.logic.carlquant import ground_truth as gt
+from app.logic.shared import json_io
 
 
 def make_specimen(tmp_path: Path, specimen_id="1_1.7_E_PBS_KIM", operator="TM", measurement=1):
@@ -126,7 +127,7 @@ def test_save_is_atomic_when_interrupted(tmp_path, monkeypatch):
     def explode(*args, **kwargs):
         raise OSError("disk full")
 
-    monkeypatch.setattr(gt.os, "replace", explode)
+    monkeypatch.setattr(json_io.os, "replace", explode)
     with pytest.raises(OSError):
         gt.save_ground_truth(specimen, {0: [(9.0, 9.0)], 1: [(8.0, 8.0)]})
 
