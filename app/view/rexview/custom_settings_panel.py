@@ -39,6 +39,7 @@ from tkinter import ttk
 
 from app.logic.rexview.settings_service import SettingsService
 from app.logic.shared import oct_functions as octF
+from app.view.shared.range_slider import RangeSlider
 from app.view.shared.tool_tip import Tooltip
 
 
@@ -180,42 +181,23 @@ class customSettingsPanel:
         self.dynRangeLabel.grid(row=5, column=0, sticky=tk.W, pady=3)
         Tooltip(self.dynRangeLabel, text=self.dynRangeLabelToolTip, wraplength=200)
 
-        # we need to define the value variable for the scale output label befor creating the scale
+        # the value variable for the range output label must exist before the slider
+        # is created, because the slider's command updates it
         self.valueScale = tk.StringVar()
 
-        self.scaleMdB = ttk.Scale(
-            self.frame,
-            from_=0,
-            to=50,
-            orient="horizontal",
-            command=self.setDBValue,
-            bootstyle="success",
+        self.dbRangeSlider = RangeSlider(
+            self.frame, from_=0, to=120, low=30, high=100, command=self.setDBValue
         )
-
-        self.scaleMdB.grid(row=5, column=1, sticky=tk.E + tk.W)
-        self.lowerdbScaleToolTip = "Lower dB-Value"
-        Tooltip(self.scaleMdB, text=self.lowerdbScaleToolTip, wraplength=200)
-
-        self.scaleAdB = ttk.Scale(
-            self.frame,
-            from_=50,
-            to=120,
-            orient="horizontal",
-            command=self.setDBValue,
-            bootstyle="success",
+        self.dbRangeSlider.grid(row=5, column=1, columnspan=2, sticky=tk.E + tk.W)
+        self.dbRangeSliderToolTip = (
+            "Drag the left knob (blue ring) for the lower and the right knob (orange ring) "
+            "for the upper dB value. Double-click a knob to reset it to its default."
         )
-        self.scaleAdB.grid(row=5, column=2, sticky=tk.E + tk.W)
-        self.upperdbScaleToolTip = "Upper dB-Value"
-        Tooltip(self.scaleAdB, text=self.upperdbScaleToolTip, wraplength=200)
+        Tooltip(self.dbRangeSlider, text=self.dbRangeSliderToolTip, wraplength=200)
 
-        # set the scale standards after the scale is created
-        self.scaleAdB.set(100)
-        self.scaleMdB.set(30)
-
-        self.valueScale = tk.StringVar()
-        self.valueScale.set(
-            str(str(int(self.scaleMdB.get())) + " - " + str(int(self.scaleAdB.get())))
-        )
+        # the initial values do not fire the slider's command, so set the label here
+        low, high = self.dbRangeSlider.get()
+        self.valueScale.set(f"{low} - {high}")
         self.scaleValue = ttk.Label(self.frame, textvariable=self.valueScale)
         self.scaleValue.grid(row=5, column=3, sticky=tk.E + tk.W)
         self.bothdbScaleToolTip = "Lower and upper dB-Values"
@@ -226,7 +208,7 @@ class customSettingsPanel:
             text="Set All",
             command=lambda: self.queuePanel.addToMultipleColsnRows(
                 colNames=["dB min", "dB max"],
-                values=[int(self.scaleMdB.get()), int(self.scaleAdB.get())],
+                values=list(self.dbRangeSlider.get()),
             ),
             bootstyle="secondary",
         )
@@ -400,24 +382,26 @@ class customSettingsPanel:
         Tooltip(self.setAllButton, text=self.setAllButtonTooltip, wraplength=200)
 
     # %% Functions
-    def setDBValue(self, value: int):
+    def setDBValue(self, low: int, high: int):
         """
-        Sets the chosen dB - Value for min or max dB
+        Sets the chosen dB range (min and max) and updates the range label.
 
-        Parameters ,
+        Called by the range slider whenever one of its knobs changes.
+
+        Parameters
         ----------
-        value : (int)
-            current state (position) of scale.
+        low : int
+            Lower dB value (left knob).
+        high : int
+            Upper dB value (right knob).
 
         Returns
         -------
         None.
 
         """
-        self.queuePanel.setdBVal(int(self.scaleMdB.get()), int(self.scaleAdB.get()))
-        self.valueScale.set(
-            str(str(int(self.scaleMdB.get())) + " - " + str(int(self.scaleAdB.get())))
-        )
+        self.queuePanel.setdBVal(low, high)
+        self.valueScale.set(f"{low} - {high}")
 
     def getDispersion(self):
         """
@@ -473,7 +457,7 @@ class customSettingsPanel:
 
     def getDbMin(self) -> int:
         """
-        Returns the minimum dB value from scale.
+        Returns the minimum dB value from the range slider.
 
         Returns
         -------
@@ -481,11 +465,11 @@ class customSettingsPanel:
             Minimum dB value.
 
         """
-        return int(self.scaleMdB.get())
+        return self.dbRangeSlider.get()[0]
 
     def getDbMax(self) -> int:
         """
-        Returns the maximum dB value from scale.
+        Returns the maximum dB value from the range slider.
 
         Returns
         -------
@@ -493,7 +477,7 @@ class customSettingsPanel:
             Maximum dB value.
 
         """
-        return int(self.scaleAdB.get())
+        return self.dbRangeSlider.get()[1]
 
     def getSliceDirection(self) -> str:
         """
