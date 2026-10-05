@@ -45,10 +45,10 @@ Author: Tobias Meissner
 ****
 """
 
-import json
-import os
-import tempfile
 from pathlib import Path
+
+from app.logic.carlquant.data_io import specimen_data_folder
+from app.logic.shared.json_io import read_json, write_json_atomic
 
 #: Filename suffix identifying a ground-truth file within a Data_ folder.
 GROUND_TRUTH_SUFFIX = "_groundtruth.json"
@@ -68,21 +68,14 @@ class GroundTruthMismatchError(ValueError):
     """
 
 
-def _data_folder(specimen) -> Path:
-    """Data_<operator>_<measurement> folder for a specimen.
-
-    Mirrors the convention used by ``DataLoader.save_specimen_config`` --
-    including its defaults -- so ground truth lands beside the config it
-    describes rather than in a folder of its own.
-    """
-    operator = getattr(specimen, "operator", "OP")
-    measurement = getattr(specimen, "measurement", 1)
-    return Path(specimen.source) / f"Data_{operator}_{measurement}"
-
-
 def ground_truth_path(specimen) -> Path:
-    """Path of the ground-truth file for a specimen (may not exist)."""
-    return _data_folder(specimen) / f"{specimen.specimen_id}{GROUND_TRUTH_SUFFIX}"
+    """Path of the ground-truth file for a specimen (may not exist).
+
+    Uses the same Data_<operator>_<measurement> folder (including its defaults)
+    as ``DataSaver.save_specimen_config``, so ground truth lands beside the
+    config it describes rather than in a folder of its own.
+    """
+    return specimen_data_folder(specimen) / f"{specimen.specimen_id}{GROUND_TRUTH_SUFFIX}"
 
 
 def has_ground_truth(specimen) -> bool:
@@ -105,8 +98,7 @@ def load_ground_truth(specimen) -> Marks:
         return {}
 
     try:
-        with open(path) as handle:
-            payload = json.load(handle)
+        payload = read_json(path)
     except (OSError, ValueError):
         # An unreadable or corrupt file must not stop the specimen from opening.
         return {}
@@ -154,7 +146,6 @@ def save_ground_truth(specimen, marks: Marks) -> Path:
         The path written to.
     """
     path = ground_truth_path(specimen)
-    path.parent.mkdir(parents=True, exist_ok=True)
 
     payload = {
         "description": GROUND_TRUTH_DESCRIPTION,
@@ -168,25 +159,6 @@ def save_ground_truth(specimen, marks: Marks) -> Path:
         },
     }
 
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".tmp",
-        prefix=f"{specimen.specimen_id}_groundtruth_",
-        dir=str(path.parent),
-        delete=False,
-    ) as handle:
-        temp_path = Path(handle.name)
-        try:
-            json.dump(payload, handle, indent=2)
-            handle.flush()
-            os.fsync(handle.fileno())
-        except BaseException:
-            handle.close()
-            temp_path.unlink(missing_ok=True)
-            raise
-    try:
-        os.replace(temp_path, path)
-    except BaseException:
-        temp_path.unlink(missing_ok=True)
-        raise
-    return path
+    # TODO(compat): switch to ensure_ascii=False once older OCTooL builds (which read with
+    # the platform code page) no longer need to open these files.
+    return write_json_atomic(path, payload, indent=2, ensure_ascii=True)
