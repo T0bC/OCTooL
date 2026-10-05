@@ -34,6 +34,7 @@ Author: Tobias Meissner
 ****
 """
 
+from app.logic.shared.colors import choose_font_color
 from app.view.shared import dialogs
 from app.view.shared.error_handler import handle_errors
 from app.view.shared.sheet_panel import TABLE_BG, BaseSheetPanel
@@ -85,7 +86,7 @@ class resultsPanel(BaseSheetPanel):
 
         self.fit_column_widths()
 
-        font_color = self.choose_font_color(TABLE_BG)
+        font_color = choose_font_color(TABLE_BG)
         static_indices = list(range(len(self.static_col_names)))
 
         self.sheet.highlight_columns(columns=static_indices, bg=TABLE_BG, fg=font_color)
@@ -101,7 +102,7 @@ class resultsPanel(BaseSheetPanel):
         self.sheet.headers(self.static_col_names.copy())
         self.fit_column_widths()
 
-        font_color = self.choose_font_color(TABLE_BG)
+        font_color = choose_font_color(TABLE_BG)
         static_indices = list(range(len(self.static_col_names)))
 
         self.sheet.highlight_columns(columns=static_indices, bg=TABLE_BG, fg=font_color)
@@ -154,7 +155,7 @@ class resultsPanel(BaseSheetPanel):
         column_names[self.dynamic_insert_index] = col_name
         self.sheet.headers(column_names)
 
-        font_color = self.choose_font_color(color)
+        font_color = choose_font_color(color)
 
         # Highlight column
         self.sheet.highlight_columns(columns=[self.dynamic_insert_index], bg=color, fg=font_color)
