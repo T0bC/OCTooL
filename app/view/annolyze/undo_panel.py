@@ -37,20 +37,17 @@ Author: Tobias Meissner
 import tkinter as tk
 from tkinter import ttk
 
-from tksheet import Sheet
-
-from app.logic.annolyze.display_service import DisplayService
 from app.view.shared.error_handler import handle_errors
+from app.view.shared.sheet_panel import BaseSheetPanel
 
 
-class UndoPanel:
+class UndoPanel(BaseSheetPanel):
     @handle_errors("UndoPanel.__init__")
     def __init__(self, context, undo_stack):
         """Initialize the UndoPanel with context and undo stack, and set up the UI components."""
         self.context = context
         self.root = context.root
         self.undo_stack = undo_stack
-        self.display_service = DisplayService()
 
         self.frame = tk.Toplevel(self.root)
         self.frame.title("Undo History")
@@ -65,9 +62,9 @@ class UndoPanel:
 
     def _setup_sheet(self):
         """Configure and display the sheet widget for undo history."""
-        self.sheet = Sheet(
+        self._build_sheet(
             self.frame,
-            headers=[
+            [
                 "Time",
                 "Slice",
                 "Column",
@@ -76,28 +73,10 @@ class UndoPanel:
                 "Feature",
                 "Annotation ID",
             ],
+            ("single_select", "row_select", "right_click_popup_menu", "rc_select", "copy"),
+            columnspan=2,
+            show_row_index=False,
         )
-        self.sheet.header_font = ("Segoe UI", 12, "bold")
-        self.sheet.set_options(header_fg="#F5F5F5", header_bg="#2B2B2B")
-
-        self.sheet.grid_color = "#444444"
-        self.sheet.table_bg = "#1E1E1E"
-        self.sheet.table_fg = "#E0E0E0"
-
-        self.sheet.enable_bindings(
-            (
-                "single_select",  # allows single cell selection
-                "row_select",  # enables row selection
-                "right_click_popup_menu",
-                "rc_select",
-                "copy",
-            )
-        )
-
-        self.sheet.grid(row=0, column=0, columnspan=2, sticky="nsew")
-
-        self.frame.rowconfigure(0, weight=1)
-        self.frame.columnconfigure(0, weight=1)
 
         self._populate_sheet()
         self.sheet.bind("<Double-Button-1>", self._on_double_click)
@@ -163,7 +142,7 @@ class UndoPanel:
                 self.sheet.highlight_cells(
                     cells=[(i, col)], bg=bg_color, fg=fg_color, overwrite=True
                 )
-        self._set_column_widths()
+        self.fit_column_widths()
         self._resize_to_fit_table()
 
     def _setup_controls(self):
@@ -173,32 +152,6 @@ class UndoPanel:
 
         close_btn = ttk.Button(self.frame, text="Close", command=self.frame.destroy)
         close_btn.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
-
-    # %% font color calulation
-    def get_luminance(self, hex_color: str) -> float:
-        """Relative luminance of a hex color (delegates to DisplayService)."""
-        return self.display_service.luminance(hex_color)
-
-    def choose_font_color(self, bg_color: str) -> str:
-        """Contrast-aware font color (delegates to DisplayService)."""
-        return self.display_service.choose_font_color(bg_color)
-
-    # %% Column width logic
-
-    def _set_column_widths(self) -> None:
-        """Set the width of each column in the sheet based on header text length."""
-        """ Set column widths based on header length. """
-        column_names = self.sheet.headers()
-
-        for i, header in enumerate(column_names):
-            width = self._calculate_column_width(header)
-            self.sheet.column_width(i, width=width)
-
-        self.sheet.refresh()
-
-    def _calculate_column_width(self, header: str) -> int:
-        """Column width based on header length (delegates to DisplayService)."""
-        return self.display_service.calculate_column_width(header)
 
     # %% window size
 
