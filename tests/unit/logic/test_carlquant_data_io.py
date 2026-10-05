@@ -16,7 +16,6 @@ from app.logic.carlquant.data_io import (
     DataLoader,
     DataSaver,
     convert_to_json_serializable,
-    natural_key,
 )
 from app.logic.carlquant.specimen_model import (
     AirConfig,
@@ -28,6 +27,7 @@ from app.logic.carlquant.specimen_model import (
     SpecimenConfig,
     Surface,
 )
+from app.logic.shared.paths import natural_sort_key
 
 
 def _make_specimen(source, *, operator="OP", measurement=1, with_images=0):
@@ -115,12 +115,12 @@ def _populate_results(spec):
 
 
 @pytest.mark.unit
-def test_natural_key_sorts_numerically():
-    """natural_key should order names like a human (slice_2 before slice_10)."""
+def test_natural_sort_key_sorts_numerically():
+    """natural_sort_key should order names like a human (slice_2 before slice_10)."""
     from pathlib import Path
 
     names = [Path("slice_10.png"), Path("slice_2.png"), Path("slice_1.png")]
-    names.sort(key=natural_key)
+    names.sort(key=natural_sort_key)
     assert [p.name for p in names] == ["slice_1.png", "slice_2.png", "slice_10.png"]
 
 
