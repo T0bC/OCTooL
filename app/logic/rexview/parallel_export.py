@@ -10,7 +10,8 @@ real processes.
 
 Key contents:
 - ParallelExportCoordinator: Distributes per-file exports across a process pool.
-- compute_worker_count: Determines workers capped by CPU, queue length, and RAM.
+- compute_worker_count: Binds instance config to the shared worker-count policy.
+- Cancellation (cancel/reset/is_cancelled) comes from the shared Cancellable mixin.
 - run: Submits tasks to the executor and collects ExportResults with progress.
 
 This file is part of OCTooL.
@@ -38,18 +39,18 @@ Author: Tobias Meissner
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Iterable
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from app.logic.rexview.export_worker import export_one_file
 from app.logic.rexview.models import ExportConfig, ExportResult, SliceExportParams
+from app.logic.shared.concurrency import Cancellable, compute_worker_count
 
 # A task is a (file_path, params, config) tuple dispatched to a worker.
 ExportTask = tuple[str, SliceExportParams, ExportConfig]
 
 
-class ParallelExportCoordinator:
+class ParallelExportCoordinator(Cancellable):
     """Coordinate process-parallel export of multiple OCT files."""
 
     #: Hard upper bound on worker processes regardless of CPU count.
@@ -83,19 +84,6 @@ class ParallelExportCoordinator:
         self._max_workers_cap = max_workers_cap or self.DEFAULT_MAX_WORKERS_CAP
         self._available_memory_gb = available_memory_gb
         self._gb_per_worker = gb_per_worker
-        self._cancelled = False
-
-    def cancel(self) -> None:
-        """Signal the coordinator to stop submitting further tasks."""
-        self._cancelled = True
-
-    def reset(self) -> None:
-        """Clear the cancellation flag for reuse."""
-        self._cancelled = False
-
-    @property
-    def is_cancelled(self) -> bool:
-        return self._cancelled
 
     def compute_worker_count(
         self,
@@ -109,15 +97,14 @@ class ParallelExportCoordinator:
         queue length and a hard cap. An explicit ``requested`` value overrides the
         CPU-based default but is still clamped to ``[1, cap]`` and the queue length.
         """
-        cpu = self._cpu_count if self._cpu_count is not None else (os.cpu_count() or 1)
-        base = requested if requested is not None else max(cpu - 1, 1)
-        bounded = min(base, self._max_workers_cap)
-        if queue_len > 0:
-            bounded = min(bounded, queue_len)
-        if self._available_memory_gb is not None and self._gb_per_worker:
-            mem_workers = int(self._available_memory_gb // self._gb_per_worker)
-            bounded = min(bounded, mem_workers)
-        return max(1, bounded)
+        return compute_worker_count(
+            queue_len,
+            requested,
+            max_workers_cap=self._max_workers_cap,
+            cpu_count=self._cpu_count,
+            available_memory_gb=self._available_memory_gb,
+            gb_per_worker=self._gb_per_worker,
+        )
 
     def run(
         self,
