@@ -42,6 +42,8 @@ Author: Tobias Meissner
 import tkinter as tk
 from tkinter import ttk
 
+from app.view.shared.dialog_utils import center_on_parent
+
 
 class ScanProgressDialog:
     """Modal, indeterminate progress dialog for folder scanning."""
@@ -60,20 +62,8 @@ class ScanProgressDialog:
         # tearing down a dialog the worker thread is still writing to.
         self.dialog.protocol("WM_DELETE_WINDOW", lambda: None)
 
-        self._center_dialog()
+        center_on_parent(self.dialog, self.parent)
         self._build_ui(root_folder_name)
-
-    def _center_dialog(self):
-        self.dialog.update_idletasks()
-        parent_x = self.parent.winfo_x()
-        parent_y = self.parent.winfo_y()
-        parent_width = self.parent.winfo_width()
-        parent_height = self.parent.winfo_height()
-        dialog_width = self.dialog.winfo_width()
-        dialog_height = self.dialog.winfo_height()
-        x = parent_x + (parent_width - dialog_width) // 2
-        y = parent_y + (parent_height - dialog_height) // 2
-        self.dialog.geometry(f"+{x}+{y}")
 
     def _build_ui(self, root_folder_name):
         main_frame = ttk.Frame(self.dialog, padding=20)
