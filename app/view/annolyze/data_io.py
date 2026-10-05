@@ -100,7 +100,7 @@ class DataLoader:
                     results_panel.sheet.headers(headers)
                     results_panel.sheet.set_sheet_data(data)
                     results_panel.sheet.refresh()
-                    results_panel._set_column_widths()
+                    results_panel.fit_column_widths()
                     self.context.status_bar.update(
                         f"Results loaded from: {results_path}", level="success"
                     )
