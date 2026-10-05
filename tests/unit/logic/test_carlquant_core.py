@@ -813,9 +813,7 @@ def test_reverse_refuses_a_truncated_lesion():
     # Signal still above the threshold at the bottom of the analysed window:
     # the lesion is deeper than the search depth, so the window edge is not a
     # measurement and must not be reported as one.
-    truncated = np.concatenate(
-        [np.full(150, 200.0), np.full(30, 60.0), np.full(20, 200.0)]
-    )
+    truncated = np.concatenate([np.full(150, 200.0), np.full(30, 60.0), np.full(20, 200.0)])
     depth, meta = core.detect_depth_reverse(truncated, smooth_window=1)
     assert np.isnan(depth)
     assert meta["reason"] == "deeper_than_search_depth"
@@ -914,9 +912,7 @@ def test_reverse_tier_is_skipped_when_it_scatters_over_the_slice():
     # runs exactly as it did before the tier existed.
     ldd = _ldd(knee=60.0, inflection=20.0, shoulder=np.nan, half_span=50.0)
     for x in sorted(ldd):
-        ldd[x]["detection_metadata"]["reverse_span_depth"] = 40.0 + (
-            40.0 if x % 2 else -40.0
-        )
+        ldd[x]["detection_metadata"]["reverse_span_depth"] = 40.0 + (40.0 if x % 2 else -40.0)
     method, series, sources = core.select_depth_method(ldd)
     assert method == "half_span"
     assert series[0] == pytest.approx(50.0)
@@ -934,9 +930,7 @@ def test_reverse_tier_uses_the_stability_limit_that_transferred():
     # accepted by this one.
     ldd = _ldd(knee=np.nan, inflection=np.nan, shoulder=np.nan, half_span=50.0)
     for x in sorted(ldd):
-        ldd[x]["detection_metadata"]["reverse_span_depth"] = 40.0 + (
-            13.0 if x % 2 else -13.0
-        )
+        ldd[x]["detection_metadata"]["reverse_span_depth"] = 40.0 + (13.0 if x % 2 else -13.0)
     assert core.select_depth_method(ldd)[0] == "reverse_span"
 
 
@@ -971,5 +965,3 @@ def test_reverse_is_used_where_half_span_failed_entirely():
     assert method == "reverse_span"
     assert series[0] == pytest.approx(40.0)
     assert sources[0] == "reverse_span"
-
-
