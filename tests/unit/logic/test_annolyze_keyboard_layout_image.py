@@ -13,13 +13,9 @@ from app.logic.annolyze.keyboard_layout_image import (
     UNBOUND_KEY_BG,
     render_keyboard_layout,
 )
+from app.logic.shared.colors import hex_to_rgb
 
 HEADERS = ["Key", "Column Name", "Data Type", "Status"]
-
-
-def _hex_to_rgb(hex_color):
-    hex_color = hex_color.lstrip("#")
-    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
 
 def _key_sample_point(key):
@@ -37,7 +33,7 @@ def _key_sample_point(key):
 def test_bound_and_unbound_key_colours():
     image = render_keyboard_layout({"q": ("#ff0000", "#ffffff")}, HEADERS, [])
     assert image.getpixel(_key_sample_point("q")) == (255, 0, 0)
-    assert image.getpixel(_key_sample_point("w")) == _hex_to_rgb(UNBOUND_KEY_BG)
+    assert image.getpixel(_key_sample_point("w")) == hex_to_rgb(UNBOUND_KEY_BG)
 
 
 @pytest.mark.unit
