@@ -1,14 +1,11 @@
 """
 Shared Display Service.
 
-Pure presentation math (no tkinter): relative luminance, contrast-aware font
-colour, and header-based column-width estimation. Deduplicates identical
-helpers previously copied in results_panel.py and undo_panel.py.
+Pure presentation math (no tkinter): header-based column-width estimation.
+Colour helpers live in app/logic/shared/colors.py.
 
 Key contents:
-- DisplayService: Pure presentation math for colors, luminance, and column widths.
-- luminance: Computes WCAG relative luminance of a hex color in [0, 1].
-- choose_font_color: Returns black or white for best contrast against a background.
+- DisplayService: Pure presentation math for column widths.
 - calculate_column_width: Estimates pixel width from header text length.
 - calculate_column_width_for_content: Estimates pixel width from header and cell content.
 
@@ -43,22 +40,7 @@ MAX_WIDTH = 250
 
 
 class DisplayService:
-    """Pure color/luminance and column-width helpers."""
-
-    def luminance(self, hex_color: str) -> float:
-        """Relative luminance (WCAG) of a ``#RRGGBB`` color, in [0, 1]."""
-        hex_color = hex_color.lstrip("#")
-        r, g, b = (int(hex_color[i : i + 2], 16) / 255.0 for i in (0, 2, 4))
-
-        def adjust(c: float) -> float:
-            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-
-        r, g, b = adjust(r), adjust(g), adjust(b)
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-    def choose_font_color(self, bg_color: str) -> str:
-        """Return black or white for best contrast against ``bg_color``."""
-        return "#FFFFFF" if self.luminance(bg_color) < 0.5 else "#000000"
+    """Pure column-width helpers."""
 
     def calculate_column_width(self, header: str) -> int:
         """Estimate a column width (px) from the header text length."""
