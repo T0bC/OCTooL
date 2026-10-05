@@ -28,10 +28,10 @@ from app.view.rexview.global_settings_panel import globalSettingsPanel
 from app.view.rexview.image_panel import imagePanel
 from app.view.rexview.instruction_panel import instructionPanel
 from app.view.rexview.pick_files_panel import pickFilesPanel
-from app.view.rexview.tree_view_panel import treeViewPanel
+from app.view.rexview.queue_panel import queuePanel
 
 __all__ = [
-    "treeViewPanel",
+    "queuePanel",
     "pickFilesPanel",
     "globalSettingsPanel",
     "customSettingsPanel",
