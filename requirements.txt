@@ -5,6 +5,7 @@
 # Core Scientific Computing
 numpy>=1.24.0
 scipy>=1.10.0
+threadpoolctl>=3.1.0
 
 # Image Processing
 Pillow>=10.0.0
