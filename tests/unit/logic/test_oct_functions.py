@@ -258,6 +258,49 @@ class TestGetXMLValue:
         assert result == 5
 
 
+class TestGetXMLDiscoveryInfo:
+    """Tests for the fast discovery header reader used to fill the RexView queue."""
+
+    @staticmethod
+    def _write_oct(tmp_path, size_pixel_xml: str):
+        zip_path = tmp_path / "scan.oct"
+        xml = f"""<?xml version="1.0"?>
+<Ocity>
+    <Instrument><Serial>M00820696</Serial></Instrument>
+    <DataFiles><DataFile><Image Type="RawSpectra"/></DataFile></DataFiles>
+    {size_pixel_xml}
+</Ocity>"""
+        with ZipFile(zip_path, "w") as zf:
+            zf.writestr("Header.xml", xml)
+        return str(zip_path)
+
+    @pytest.mark.unit
+    def test_plain_text_size_pixel(self, tmp_path):
+        """GIVEN a newline-separated SizePixel, WHEN read, THEN dims are Z, X, Y in order."""
+        path = self._write_oct(tmp_path, "<SizePixel>1024\n1300\n1000</SizePixel>")
+        info = octF.getXMLDiscoveryInfo(path)
+        assert (info["dimZ"], info["dimX"], info["dimY"]) == (1024, 1300, 1000)
+
+    @pytest.mark.unit
+    def test_child_tag_size_pixel(self, tmp_path):
+        """GIVEN SizePixel with SizeZ/SizeX/SizeY children, WHEN read, THEN dims are not 1."""
+        path = self._write_oct(
+            tmp_path,
+            '<SizePixel Unit="px">\n  <SizeZ>1024</SizeZ>\n  <SizeX>1300</SizeX>\n'
+            "  <SizeY>1000</SizeY>\n</SizePixel>",
+        )
+        info = octF.getXMLDiscoveryInfo(path)
+        assert (info["dimZ"], info["dimX"], info["dimY"]) == (1024, 1300, 1000)
+        assert info["dataType"] == "RawSpectra"
+        assert info["Serialnumber"] == "M00820696"
+
+    @pytest.mark.unit
+    def test_missing_size_pixel_defaults_to_one(self, tmp_path):
+        """GIVEN no SizePixel element, WHEN read, THEN all dims fall back to 1."""
+        info = octF.getXMLDiscoveryInfo(self._write_oct(tmp_path, ""))
+        assert (info["dimZ"], info["dimX"], info["dimY"]) == (1, 1, 1)
+
+
 class TestGetXMLAttributesFallbacks:
     """Exercise the defensive fallback branches in getXMLAttributes."""
 
