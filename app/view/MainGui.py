@@ -4,10 +4,11 @@ Main GUI.
 
 Top-level application window orchestrator. Creates the themed Tkinter root,
 installs global exception handling, sets up the custom coloured tab bar, and
-assembles the three main tabs (RexView, AnnoLyze, CarlQuant). Also hosts the
+assembles the four main tabs (RexView, ScanAlign, AnnoLyze, CarlQuant). Also hosts the
 shared status bar and silent background update checker.
 
 Key contents:
+- _TabSpec: Declarative description of one main tab (label, style, help type, builder).
 - MainGui: Root window builder and tab orchestrator.
 - __init__: Builds the root, style, tab container, status bar, and all tabs.
 - create_colored_tab_buttons / switch_tab: Custom tab-bar UI with theme-aware colours.
@@ -40,6 +41,8 @@ Author: Tobias Meissner
 import contextlib
 import tkinter as tk
 import webbrowser
+from collections.abc import Callable
+from dataclasses import dataclass
 from tkinter import ttk
 
 from ttkbootstrap import Style
@@ -51,11 +54,25 @@ from app.logic.shared.update_checker import check_for_updates_async, check_for_u
 from app.view.annolyze import annoLyzeTab
 from app.view.carlquant import carlQuantTab
 from app.view.rexview import rexViewTab
+from app.view.scanalign import scanAlignTab
 from app.view.shared.about_dialog import AboutDialog
 from app.view.shared.app_context import AppContext
 from app.view.shared.error_handler import handle_errors, install_tk_exception_handler
 from app.view.shared.help_dialog import HelpDialog
 from app.view.shared.status_bar import StatusBar
+
+SCANALIGN_TAB_COLOR = "#8e44ad"
+SCANALIGN_TAB_COLOR_ACTIVE = "#9b59b6"
+SCANALIGN_TAB_COLOR_PRESSED = "#7d3c98"
+
+
+@dataclass(frozen=True)
+class _TabSpec:
+    label: str  # button + notebook text, e.g. "ScanAlign"
+    style: str  # e.g. "ScanAlign.TButton"
+    help_type: int  # HelpDialog tab type (0 RexView, 1 AnnoLyze, 2 CarlQuant, 3 ScanAlign)
+    frame_attr: str  # MainGui attribute name for the tab frame
+    add_content: Callable  # module.addContent
 
 
 def _reset_ttkbootstrap_state():
@@ -79,7 +96,53 @@ class MainGui:
         self.ENABLE_REXVIEW = True
         self.ENABLE_ANNOLYZE = True
         self.ENABLE_CARLQUANT = True
+        self.ENABLE_SCANALIGN = True
         # ========================================
+
+        # Enabled tabs in display order (workflow order); drives frames, buttons,
+        # style switching and context-aware help.
+        self._tabs = [
+            spec
+            for enabled, spec in (
+                (
+                    self.ENABLE_REXVIEW,
+                    _TabSpec(
+                        "RexView", "RexView.TButton", 0, "rexViewTabFrame", rexViewTab.addContent
+                    ),
+                ),
+                (
+                    self.ENABLE_SCANALIGN,
+                    _TabSpec(
+                        "ScanAlign",
+                        "ScanAlign.TButton",
+                        3,
+                        "scanAlignTabFrame",
+                        scanAlignTab.addContent,
+                    ),
+                ),
+                (
+                    self.ENABLE_ANNOLYZE,
+                    _TabSpec(
+                        "AnnoLyze",
+                        "AnnoLyze.TButton",
+                        1,
+                        "annoLyzeFrame",
+                        annoLyzeTab.addContent,
+                    ),
+                ),
+                (
+                    self.ENABLE_CARLQUANT,
+                    _TabSpec(
+                        "CarlQuant",
+                        "CarlQuant.TButton",
+                        2,
+                        "carlQuantTabFrame",
+                        carlQuantTab.addContent,
+                    ),
+                ),
+            )
+            if enabled
+        ]
 
         _reset_ttkbootstrap_state()
 
@@ -162,25 +225,12 @@ class MainGui:
         self.statusBar = StatusBar(self.statusFrame)
         self.statusBar.frame.grid(row=0, column=0, sticky="ew")
 
-        # %% EXPORT TAB
-        # create a frame holding the contents for the tab
-        if self.ENABLE_REXVIEW:
-            self.rexViewTabFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.rexViewTabFrame, text="RexView")
-            # Fill the tab with content defined in rexViewTab.py
-            rexViewTab.addContent(self, self.rexViewTabFrame)
-
-        # %% Anylyzing Tab
-        if self.ENABLE_ANNOLYZE:
-            self.annoLyzeFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.annoLyzeFrame, text="AnnoLyze")
-            annoLyzeTab.addContent(self, self.annoLyzeFrame)
-
-        # %% Carl Quant
-        if self.ENABLE_CARLQUANT:
-            self.carlQuantTabFrame = ttk.Frame(self.tabParent)
-            self.tabParent.add(self.carlQuantTabFrame, text="CarlQuant")
-            carlQuantTab.addContent(self, self.carlQuantTabFrame)
+        # %% Tabs (construction order = tab order; CarlQuant stays last)
+        for spec in self._tabs:
+            tab_frame = ttk.Frame(self.tabParent)
+            self.tabParent.add(tab_frame, text=spec.label)
+            setattr(self, spec.frame_attr, tab_frame)
+            spec.add_content(self, tab_frame)
 
         # Apply custom styles to individual tabs after all tabs are created
         self._apply_tab_colors()
@@ -251,6 +301,23 @@ class MainGui:
             padding=[20, 10],
         )
 
+        # ScanAlign tab - custom purple
+        self.style.configure(
+            "ScanAlign.TButton",
+            background=SCANALIGN_TAB_COLOR,
+            foreground="white",
+            borderwidth=0,
+            focuscolor="none",
+            padding=[20, 10],
+        )
+        self.style.map(
+            "ScanAlign.TButton",
+            background=[
+                ("pressed", SCANALIGN_TAB_COLOR_PRESSED),
+                ("active", SCANALIGN_TAB_COLOR_ACTIVE),
+            ],
+        )
+
         # Header tool buttons (Updates / Help / About) - consistent emoji font
         # so the glyphs all render at the same, larger size.
         self.style.configure(
@@ -272,58 +339,17 @@ class MainGui:
         tab_button_container = ttk.Frame(self.tabBar)
         tab_button_container.grid(row=0, column=0, sticky="w")
 
-        # Track column position for dynamic button placement
-        col_index = 0
-
-        # RexView button
-        if self.ENABLE_REXVIEW:
-            export_btn = ttk.Button(
+        last = len(self._tabs) - 1
+        for i, spec in enumerate(self._tabs):
+            btn = ttk.Button(
                 tab_button_container,
-                text="RexView",  # 📊
-                style="RexView.TButton",
-                command=lambda idx=col_index: self.switch_tab(idx),
+                text=spec.label,
+                style=spec.style,
+                command=lambda idx=i: self.switch_tab(idx),
                 takefocus=False,  # Prevent button from taking focus
             )
-            export_btn.grid(
-                row=0,
-                column=col_index,
-                padx=(
-                    0 if col_index == 0 else 2,
-                    2 if self.ENABLE_ANNOLYZE or self.ENABLE_CARLQUANT else 0,
-                ),
-            )
-            self.tab_buttons.append(export_btn)
-            col_index += 1
-
-        # AnnoLyze button
-        if self.ENABLE_ANNOLYZE:
-            analyze_btn = ttk.Button(
-                tab_button_container,
-                text="AnnoLyze",  # 🔬
-                style="AnnoLyze.TButton",
-                command=lambda idx=col_index: self.switch_tab(idx),
-                takefocus=False,  # Prevent button from taking focus
-            )
-            analyze_btn.grid(
-                row=0,
-                column=col_index,
-                padx=(0 if col_index == 0 else 2, 2 if self.ENABLE_CARLQUANT else 0),
-            )
-            self.tab_buttons.append(analyze_btn)
-            col_index += 1
-
-        # CarlQuant button
-        if self.ENABLE_CARLQUANT:
-            carlquant_btn = ttk.Button(
-                tab_button_container,
-                text="CarlQuant",  # ⚡
-                style="CarlQuant.TButton",
-                command=lambda idx=col_index: self.switch_tab(idx),
-                takefocus=False,  # Prevent button from taking focus
-            )
-            carlquant_btn.grid(row=0, column=col_index, padx=(0 if col_index == 0 else 2, 0))
-            self.tab_buttons.append(carlquant_btn)
-            col_index += 1
+            btn.grid(row=0, column=i, padx=(0 if i == 0 else 2, 2 if i < last else 0))
+            self.tab_buttons.append(btn)
 
         # Container for Help and About buttons (right side)
         help_button_container = ttk.Frame(self.tabBar)
@@ -389,12 +415,7 @@ class MainGui:
 
             if i == tab_index:
                 # Make selected button slightly darker
-                if i == 0:  # RexView
-                    btn.configure(style="RexView.TButton")
-                elif i == 1:  # AnnoLyze
-                    btn.configure(style="AnnoLyze.TButton")
-                elif i == 2:  # CarlQuant
-                    btn.configure(style="CarlQuant.TButton")
+                btn.configure(style=self._tabs[i].style)
 
     @handle_errors("MainGui.apply_tab_colors")
     def _apply_tab_colors(self):
@@ -439,21 +460,11 @@ class MainGui:
     @handle_errors("MainGui.onHelp")
     def onHelp(self):
         """Show context-aware help based on the currently active tab."""
-        # Build mapping of tab indices to tab types based on enabled tabs
-        tab_type_map = []
-        if self.ENABLE_REXVIEW:
-            tab_type_map.append(0)  # RexView
-        if self.ENABLE_ANNOLYZE:
-            tab_type_map.append(1)  # AnnoLyze
-        if self.ENABLE_CARLQUANT:
-            tab_type_map.append(2)  # CarlQuant
-
-        # Get the actual tab type for the current tab index
-        if self.current_tab < len(tab_type_map):
-            actual_tab_type = tab_type_map[self.current_tab]
+        if self.current_tab < len(self._tabs):
+            actual_tab_type = self._tabs[self.current_tab].help_type
         else:
             # Fallback to first available tab type
-            actual_tab_type = tab_type_map[0] if tab_type_map else 0
+            actual_tab_type = self._tabs[0].help_type if self._tabs else 0
 
         help_dialog = HelpDialog(self.mainWin, self.style, actual_tab_type)
         help_dialog.show()
