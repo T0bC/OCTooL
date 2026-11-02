@@ -475,6 +475,181 @@ class TestRunExportPerformance:
         assert spy.call_count == 1
 
 
+class TestRunExportStreaming:
+    """Per-slice progress, streaming writes and cancellation in run_export."""
+
+    @pytest.fixture
+    def service(self):
+        return ExportService()
+
+    def _params(self, tmp_path, direction="XZ", num=6):
+        return SliceExportParams(
+            file_path=str(tmp_path / "scan.oct"),
+            name="Scan",
+            first_slice=1,
+            last_slice=num,
+            num_slices=num,
+            slice_direction=direction,
+        )
+
+    def _run(self, service, sample_xml_dict, params, create, prefer_raw=True, **kwargs):
+        config = ExportConfig(resize_enabled=False, scale_enabled=False, prefer_raw=prefer_raw)
+        base = "app.logic.rexview.export_service.octF."
+        with (
+            patch(base + "unzipOCTData", return_value=MagicMock()),
+            patch(base + "readXMLContent", return_value=MagicMock()),
+            patch(base + "getXMLAttributes", return_value=sample_xml_dict),
+            patch(base + "createImageFromRaw", side_effect=create),
+            patch(base + "createVideoImageFromRaw", return_value=np.zeros((4, 4, 3), np.uint8)),
+        ):
+            return service.run_export(params.file_path, params, config, **kwargs)
+
+    @pytest.mark.unit
+    def test_raw_xz_streams_in_chunks_with_progress(self, service, tmp_path, sample_xml_dict):
+        params = self._params(tmp_path)
+        service.STREAM_CHUNK_SIZE = 2
+        calls = []
+        progress = []
+
+        def create(**kw):
+            calls.append([int(i) for i in kw["spectral"]])
+            return np.full((len(kw["spectral"]), 8, 8), 7, dtype=np.uint8)
+
+        result = self._run(
+            service,
+            sample_xml_dict,
+            params,
+            create,
+            slice_callback=lambda d, t: progress.append((d, t)),
+        )
+
+        assert calls == [[0, 1], [2, 3], [4, 5]]
+        assert progress == [(i, 6) for i in range(1, 7)]
+        assert len(result.exported_files) == 6
+        assert not result.cancelled
+        names = sorted(Path(f).name for f in result.exported_files)
+        assert "#1_0001" in names[0]
+        assert "#6_0006" in names[-1]
+
+    @pytest.mark.unit
+    def test_raw_xz_files_appear_before_next_chunk_is_loaded(
+        self, service, tmp_path, sample_xml_dict
+    ):
+        params = self._params(tmp_path, num=4)
+        service.STREAM_CHUNK_SIZE = 2
+        counts = []
+
+        def create(**kw):
+            counts.append(len(list(tmp_path.glob("*_Slices_XZ/*.tiff"))))
+            return np.zeros((len(kw["spectral"]), 8, 8), dtype=np.uint8)
+
+        self._run(service, sample_xml_dict, params, create)
+        assert counts == [0, 2]
+
+    @pytest.mark.unit
+    def test_single_slice_chunk_returns_2d_and_is_exported(
+        self, service, tmp_path, sample_xml_dict
+    ):
+        params = self._params(tmp_path, num=3)
+        service.STREAM_CHUNK_SIZE = 1
+
+        def create(**kw):
+            assert len(kw["spectral"]) == 1
+            return np.zeros((8, 8), dtype=np.uint8)
+
+        result = self._run(service, sample_xml_dict, params, create)
+        assert len(result.exported_files) == 3
+
+    @pytest.mark.unit
+    def test_processed_xz_loads_once_and_reports_progress(self, service, tmp_path, sample_xml_dict):
+        params = self._params(tmp_path, num=3)
+        calls = []
+        progress = []
+
+        def create(**kw):
+            calls.append(1)
+            return np.zeros((8, 8, 8), dtype=np.uint8)
+
+        result = self._run(
+            service,
+            sample_xml_dict,
+            params,
+            create,
+            prefer_raw=False,
+            slice_callback=lambda d, t: progress.append((d, t)),
+        )
+        # sample metadata has both raw+processed; prefer_raw=False selects Processed
+        assert len(calls) == 1
+        assert progress == [(1, 3), (2, 3), (3, 3)]
+        assert len(result.exported_files) == 3
+
+    @pytest.mark.unit
+    def test_non_xz_loads_full_stack_once_and_reports_progress(
+        self, service, tmp_path, sample_xml_dict
+    ):
+        params = self._params(tmp_path, direction="YZ", num=3)
+        calls = []
+        progress = []
+
+        def create(**kw):
+            calls.append(len(kw["spectral"]))
+            return np.zeros((8, 8, 8), dtype=np.uint8)
+
+        result = self._run(
+            service,
+            sample_xml_dict,
+            params,
+            create,
+            slice_callback=lambda d, t: progress.append((d, t)),
+        )
+
+        assert len(calls) == 1
+        assert progress == [(1, 3), (2, 3), (3, 3)]
+        assert len(result.exported_files) == 3
+
+    @pytest.mark.unit
+    def test_cancel_stops_after_current_slice(self, service, tmp_path, sample_xml_dict):
+        params = self._params(tmp_path, num=6)
+        service.STREAM_CHUNK_SIZE = 2
+        flag = {"stop": False}
+        progress = []
+
+        def on_slice(done, total):
+            progress.append(done)
+            if done == 3:
+                flag["stop"] = True
+
+        def create(**kw):
+            return np.zeros((len(kw["spectral"]), 8, 8), dtype=np.uint8)
+
+        result = self._run(
+            service,
+            sample_xml_dict,
+            params,
+            create,
+            slice_callback=on_slice,
+            should_cancel=lambda: flag["stop"],
+        )
+
+        assert progress == [1, 2, 3]
+        assert len(result.exported_files) == 3
+        assert result.cancelled
+        assert result.failed_count == 0
+
+    @pytest.mark.unit
+    def test_cancel_during_loading_aborts(self, service, tmp_path, sample_xml_dict):
+        params = self._params(tmp_path, direction="XY", num=3)
+
+        def create(**kw):
+            kw["update_callback"]("load: 1")
+            raise AssertionError("loading must have been aborted")
+
+        result = self._run(service, sample_xml_dict, params, create, should_cancel=lambda: True)
+
+        assert result.cancelled
+        assert result.exported_files == []
+
+
 class TestExportSingleSlice:
     """Tests for ExportService.export_single_slice method."""
 
