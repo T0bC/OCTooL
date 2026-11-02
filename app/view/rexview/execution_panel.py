@@ -10,7 +10,8 @@ Key contents:
 - executionPanel: Panel that drives the export workflow.
 - start_export: Builds ExportConfig / SliceExportParams and launches the coordinator.
 - cancel_export: Signals the running export to stop gracefully.
-- progress callback: Updates the UI progress bar during export.
+- progress callbacks: Per-slice progress (throttled, marshalled to the Tk thread) drives the
+  overall progress bar, a status label and the per-row queue status.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -36,6 +37,8 @@ Author: Tobias Meissner
 """
 
 import contextlib
+import threading
+import time
 import tkinter as tk
 from concurrent import futures
 from pathlib import Path
@@ -77,6 +80,14 @@ class executionPanel:
         self.export_coordinator = ParallelExportCoordinator()
         # Maps a file path to the queued row ids awaiting a result.
         self._items_by_path = {}
+        # Per-slice progress, written from the coordinator's helper thread.
+        self._progress_lock = threading.Lock()
+        self._progress = {}  # file path -> (slices done, slices total)
+        self._total_slices = 0
+        self._total_files = 0
+        self._files_done = 0
+        self._last_ui_push = 0.0
+        self.context.register_shutdown_hook(self.export_coordinator.shutdown)
 
         # Reused single-worker executor that drives the export coordinator
         # off the UI thread. One long-lived executor avoids leaking a fresh
@@ -111,6 +122,15 @@ class executionPanel:
         self.quitToolTip = "Exits the application."
         Tooltip(self.quitBtn, text=self.quitToolTip, wraplength=200)
 
+        self.progressBar = ttk.Progressbar(
+            self.frame, orient=tk.HORIZONTAL, mode="determinate", maximum=100
+        )
+        self.progressBar.grid(
+            row=1, column=0, columnspan=6, sticky=tk.E + tk.W, padx=3, pady=(3, 0)
+        )
+        self.progressLabel = ttk.Label(self.frame, text="")
+        self.progressLabel.grid(row=2, column=0, columnspan=6, sticky=tk.W, padx=3)
+
         # %%
 
     @handle_errors("executionPanel")
@@ -139,6 +159,15 @@ class executionPanel:
             tasks.append((file_path, params, config))
             self._items_by_path.setdefault(file_path, []).append(item)
             self.queuePanel.setValueFromRow(item, "Status", "queued")
+
+        with self._progress_lock:
+            self._progress = {}
+            self._total_slices = sum(task[1].num_slices for task in tasks)
+            self._total_files = len(tasks)
+            self._files_done = 0
+            self._last_ui_push = 0.0
+        self.progressBar["value"] = 0
+        self.progressLabel.config(text=f"Exporting: 0/{self._total_slices} slices")
 
         if not tasks:
             self.context.safe_status_update(
@@ -169,19 +198,96 @@ class executionPanel:
 
         def on_result(result):
             # Schedule the queue table update on the main thread.
-            self.root.after(0, self._apply_result_status, result)
+            self._post(self._apply_result_status, result)
 
-        self.export_coordinator.run(tasks, worker_count=worker_count, progress_callback=on_result)
-        self.context.safe_status_update("Export completed.", level="success", duration=3000)
+        try:
+            self.export_coordinator.run(
+                tasks,
+                worker_count=worker_count,
+                progress_callback=on_result,
+                slice_progress_callback=self._on_slice_progress,
+            )
+        finally:
+            self._post(self._finish_run)
+        if self.export_coordinator.is_cancelled:
+            self.context.safe_status_update("Export cancelled.", level="warning", duration=3000)
+        else:
+            self.context.safe_status_update("Export completed.", level="success", duration=3000)
+
+    def _post(self, func, *args):
+        """Run ``func`` on the Tk thread (safe from any thread, ignores a closed UI)."""
+        with contextlib.suppress(RuntimeError, tk.TclError):
+            self.root.after(0, func, *args)
+
+    def _on_slice_progress(self, file_path, done, total):
+        """Record one slice of progress (helper thread); push to the UI at most 10x/s."""
+        with self._progress_lock:
+            prev_done = self._progress.get(file_path, (0, total))[0]
+            self._progress[file_path] = (max(prev_done, done), total)
+            now = time.monotonic()
+            if now - self._last_ui_push < 0.1:
+                return
+            self._last_ui_push = now
+        self._post(self._refresh_progress)
+
+    def _refresh_progress(self):
+        """Update the progress bar, label and row statuses (UI thread only)."""
+        with self._progress_lock:
+            snapshot = dict(self._progress)
+            total_slices = self._total_slices
+            total_files = self._total_files
+            files_done = self._files_done
+        done_slices = sum(done for done, _ in snapshot.values())
+        percent = 100.0 * done_slices / total_slices if total_slices else 0.0
+        self.progressBar["value"] = min(percent, 100.0)
+        self.progressLabel.config(
+            text=(
+                f"Exporting: {done_slices}/{total_slices} slices"
+                f" - {files_done}/{total_files} files done"
+            )
+        )
+        for path, (done, total) in snapshot.items():
+            items = self._items_by_path.get(path)
+            if items and total:
+                self.queuePanel.setValueFromRow(
+                    items[0], "Status", f"exporting {100 * done // total}%"
+                )
+
+    def _finish_run(self):
+        """Final UI state once the coordinator returned (UI thread only)."""
+        cancelled = self.export_coordinator.is_cancelled
+        for items in self._items_by_path.values():
+            for item in items:
+                self.queuePanel.setValueFromRow(item, "Status", "Cancelled")
+        self._items_by_path = {}
+        with self._progress_lock:
+            done_slices = sum(done for done, _ in self._progress.values())
+            total_slices = self._total_slices
+            files_done = self._files_done
+            total_files = self._total_files
+        summary = f"{done_slices}/{total_slices} slices - {files_done}/{total_files} files done"
+        if cancelled:
+            self.progressLabel.config(text=f"Cancelled: {summary}")
+        else:
+            self.progressBar["value"] = 100
+            self.progressLabel.config(text=f"Completed: {summary}")
 
     def _apply_result_status(self, result):
         """Translate an ExportResult into a queue table status (UI thread only)."""
+        with self._progress_lock:
+            self._files_done += 1
+            if not result.error and not result.cancelled and result.file_path in self._progress:
+                total = self._progress[result.file_path][1]
+                self._progress[result.file_path] = (total, total)
+        self._refresh_progress()
         items = self._items_by_path.get(result.file_path)
         if not items:
             return
         item = items.pop(0)
         file_name = Path(result.file_path).name
-        if result.error:
+        if result.cancelled:
+            self.queuePanel.setValueFromRow(item, "Status", "Cancelled")
+        elif result.error:
             self.queuePanel.setValueFromRow(item, "Status", "Error")
             self.context.safe_status_update(
                 f"Export failed for {file_name}", level="error", duration=4000
