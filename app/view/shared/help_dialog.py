@@ -63,7 +63,8 @@ class HelpDialog:
         Args:
             parent: Parent tkinter window
             style: ttkbootstrap Style object for theming
-            current_tab: Index of currently active tab (0=RexView, 1=AnnoLyze, 2=CarlQuant)
+            current_tab: Tab type of the active tab (0=RexView, 1=AnnoLyze, 2=CarlQuant,
+                3=ScanAlign)
         """
         self.parent = parent
         self.style = style
@@ -74,6 +75,7 @@ class HelpDialog:
             0: "rexview_getting_started",
             1: "annolyze_getting_started",
             2: "carlquant_getting_started",
+            3: "scanalign_getting_started",
         }
 
         # Load instructions from JSON file
