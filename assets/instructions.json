@@ -202,5 +202,63 @@
         "📝 Sidecar .txt: exact name preferred, base-name fallback if unambiguous"
       ]
     }
+  },
+  "scanalign_getting_started": {
+    "layout": "comprehensive_guide",
+    "title": {
+      "text": "◆ SCAN ALIGN - GETTING STARTED",
+      "color": "header_workflow"
+    },
+    "workflow_steps": [
+      {
+        "number": "1",
+        "title": "Load Scans",
+        "panel": "Left Panel",
+        "actions": [
+          "▸ Load the RexView export of the earlier timepoint as Scan 1 (reference)",
+          "▸ Load the later timepoint as Scan 2",
+          "▸ Export: full stack, scale bar off, aspect resize on"
+        ]
+      },
+      {
+        "number": "2",
+        "title": "Compare & Scroll",
+        "panel": "Viewers",
+        "actions": [
+          "▸ Check the geometry comparison of both scans",
+          "▸ Scroll each scan independently",
+          "▸ Toggle Link to scroll both with a fixed offset Δ"
+        ]
+      },
+      {
+        "number": "3",
+        "title": "Set Range",
+        "panel": "Slice Matching",
+        "actions": [
+          "▸ Set first / Set last on matching anatomy in each scan",
+          "▸ Choose the number of slices N"
+        ]
+      },
+      {
+        "number": "4",
+        "title": "Export",
+        "panel": "Export Panel",
+        "actions": [
+          "▸ Writes <exp>_ScanAlign_<N> next to each .oct",
+          "▸ Pair index k is shared between both scans",
+          "▸ A JSON log is written"
+        ]
+      }
+    ],
+    "quick_tips": {
+      "header": "💡 QUICK TIPS",
+      "tips": [
+        "◄ ► Navigate slices",
+        "⊕ Ctrl+Wheel: Zoom in/out",
+        "✋ Ctrl+Drag: Pan image",
+        "🔗 Link: scroll both scans together",
+        "🚧 Under development"
+      ]
+    }
   }
 }
