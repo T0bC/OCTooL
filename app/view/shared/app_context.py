@@ -15,7 +15,7 @@ Key contents:
 - register_panel / get_panel: Named panel registration and lookup.
 - register_frame / get_frame: Named frame registration and lookup.
 - safe_status_update: Thread-safe status-bar message dispatch.
-- register_executor / register_timer / shutdown: Track and cleanly stop
+- register_executor / register_timer / register_shutdown_hook / shutdown: Track and cleanly stop
   background work and pending Tk callbacks.
 - silence_tcl_background_errors: Last-resort suppression of post-destroy Tcl
   background errors.
@@ -54,6 +54,7 @@ class AppContext:
         self.config_manager = None
         self._executors = []
         self._timers = []
+        self._shutdown_hooks = []
 
     def register_panel(self, name: str, panel):
         self.panels[name] = panel
@@ -88,6 +89,11 @@ class AppContext:
         shutdown if the window closes while one is still running."""
         self._executors.append(executor)
 
+    def register_shutdown_hook(self, hook):
+        """Register a zero-argument callable run first by shutdown() -- e.g. to
+        terminate worker processes that would otherwise outlive the app."""
+        self._shutdown_hooks.append(hook)
+
     def register_timer(self, timer, on_pending=None):
         """Track a threading.Timer (e.g. debounced autosave) for cancellation
         on exit. ``on_pending``, if given, runs immediately instead of losing
@@ -99,7 +105,11 @@ class AppContext:
         Pending timers run their on_pending callback then get cancelled.
         Each executor is shut down with queued work cancelled; a task already
         running gets up to wait_seconds to finish so Quit stays responsive
-        without killing normal work mid-write."""
+        without killing normal work mid-write. Shutdown hooks run first."""
+        for hook in self._shutdown_hooks:
+            with contextlib.suppress(Exception):
+                hook()
+
         for timer, on_pending in self._timers:
             if timer.is_alive():
                 timer.cancel()
