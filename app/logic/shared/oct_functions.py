@@ -152,8 +152,13 @@ def getXMLDiscoveryInfo(path: str) -> dict:
 
     dim_z = dim_x = dim_y = 1
     size_el = root.find(".//SizePixel")
-    if size_el is not None and size_el.text:
-        parts = [p.strip() for p in size_el.text.split("\n") if p.strip()]
+    # itertext() covers both header layouts: plain newline-separated text
+    # ("<SizePixel>1024\n1300\n1000</SizePixel>") and child tags
+    # ("<SizePixel><SizeZ>1024</SizeZ><SizeX>…"), whose values are not in
+    # size_el.text. Mirrors BeautifulSoup get_text() used by getXMLAttributes.
+    size_text = "".join(size_el.itertext()) if size_el is not None else ""
+    if size_text.strip():
+        parts = size_text.split()
 
         def _as_int(idx, default=1):
             try:
