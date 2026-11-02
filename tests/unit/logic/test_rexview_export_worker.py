@@ -5,10 +5,13 @@ Tests the top-level, picklable worker used for process-based parallel export.
 """
 
 import pickle
+import queue
+import threading
 from unittest.mock import patch
 
 import pytest
 
+from app.logic.rexview import export_worker
 from app.logic.rexview.export_worker import export_one_file
 from app.logic.rexview.models import ExportConfig, ExportResult, SliceExportParams
 
@@ -89,3 +92,59 @@ class TestExportOneFile:
         assert result.exported_files == []
         assert result.error is not None
         assert "boom" in result.error
+
+
+@pytest.fixture
+def clean_worker_state():
+    yield
+    export_worker.reset_worker_state()
+
+
+class TestWorkerState:
+    @pytest.mark.unit
+    def test_report_slice_without_queue_is_noop(self, clean_worker_state):
+        export_worker.report_slice("a.oct", 1, 2)  # must not raise
+
+    @pytest.mark.unit
+    def test_report_slice_puts_message(self, clean_worker_state):
+        q = queue.Queue()
+        export_worker.init_worker(q, threading.Event(), None)
+        export_worker.report_slice("a.oct", 1, 2)
+        assert q.get_nowait() == ("a.oct", 1, 2)
+
+    @pytest.mark.unit
+    def test_init_worker_applies_thread_limit(self, clean_worker_state):
+        with patch("threadpoolctl.threadpool_limits") as limits:
+            export_worker.init_worker(None, None, 3)
+        limits.assert_called_once_with(limits=3)
+
+    @pytest.mark.unit
+    def test_already_cancelled_returns_cancelled_without_exporting(
+        self, params, config, clean_worker_state
+    ):
+        event = threading.Event()
+        event.set()
+        export_worker.init_worker(None, event, None)
+        with patch("app.logic.rexview.export_worker.ExportService.run_export") as run:
+            result = export_one_file(params.file_path, params, config)
+        run.assert_not_called()
+        assert result.cancelled
+
+    @pytest.mark.unit
+    def test_worker_passes_callbacks_to_service(self, params, config, clean_worker_state):
+        q = queue.Queue()
+        event = threading.Event()
+        export_worker.init_worker(q, event, None)
+
+        def fake_run(self, file_path, params, config, slice_callback=None, should_cancel=None):
+            slice_callback(1, 5)
+            assert should_cancel() is False
+            event.set()
+            assert should_cancel() is True
+            return ExportResult(file_path=file_path, cancelled=True)
+
+        with patch("app.logic.rexview.export_worker.ExportService.run_export", fake_run):
+            result = export_one_file(params.file_path, params, config)
+
+        assert q.get_nowait() == (params.file_path, 1, 5)
+        assert result.cancelled
