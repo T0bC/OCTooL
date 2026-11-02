@@ -1,13 +1,11 @@
 """
 ScanAlign Tab.
 
-Composes the ScanAlign tab skeleton: a left controls column (Load / Slice Matching /
-Export) and two scan viewers stacked vertically. Phase 0 shows placeholders and the
-getting-started instructions only.
+Composes the ScanAlign tab: a left controls column (Load / Slice Matching / Export)
+and two scan viewers stacked vertically with a thin link strip between them.
 
 Key contents:
-- addContent: Lays out the ScanAlign frames and registers them in AppContext.
-- _add_instruction_canvas: Temporary instruction canvas for a viewer frame.
+- addContent: Lays out the ScanAlign frames, creates the panels and registers them.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -35,46 +33,10 @@ Author: Tobias Meissner
 import tkinter as tk
 from tkinter import ttk
 
-from app.logic.shared.paths import resource_path
+from app.view.scanalign.link_strip import LinkStrip
+from app.view.scanalign.load_panel import LoadPanel
+from app.view.scanalign.stack_viewer_panel import StackViewerPanel
 from app.view.shared.error_handler import handle_errors
-from app.view.shared.instruction_renderer import InstructionRenderer
-
-_INSTRUCTION_KEY = "scanalign_getting_started"
-
-
-@handle_errors("scanAlignTab._add_instruction_canvas")
-def _add_instruction_canvas(parent, instruction_key):
-    """Fill ``parent`` with a canvas showing the getting-started instructions.
-
-    Temporary stand-in until Phase 1's ``stack_viewer_panel`` replaces it.
-    The canvas requests a small size (480x360) so the stacked viewers fit on
-    smaller screens; Phase 1 must likewise shrink ``BaseCanvasPanel``'s 1024x480 request.
-    """
-    parent.columnconfigure(0, weight=1)
-    parent.rowconfigure(0, weight=1)
-
-    canvas = tk.Canvas(parent, width=480, height=360, highlightthickness=0, bg="#505050")
-    canvas.grid(row=0, column=0, sticky="nsew")
-
-    renderer = InstructionRenderer(canvas)
-    renderer.set_logo(resource_path("icons/WBM_UL_RGB_digital_Path.png"))
-
-    pending = {"id": None}
-
-    @handle_errors("scanAlignTab._render")
-    def _render():
-        pending["id"] = None
-        renderer.render(instruction_key)
-
-    @handle_errors("scanAlignTab._on_configure")
-    def _on_configure(_event=None):
-        if pending["id"] is not None:
-            canvas.after_cancel(pending["id"])
-        pending["id"] = canvas.after(100, _render)
-
-    canvas.bind("<Configure>", _on_configure)
-    pending["id"] = canvas.after(100, _render)
-    return canvas
 
 
 @handle_errors("scanAlignTab.addContent")
@@ -83,40 +45,56 @@ def addContent(self, frame):
     self.context.root = self.scanAlignTabFrame
     self.attach_status_bar(self.context)
 
-    # Column 0 -> controls (spanning both rows), column 1 -> the two viewers
-    # stacked vertically (B-scans are wider than tall, so stacking uses the
-    # screen height and gives each viewer the full width). Rows share height equally.
+    # Column 0 -> controls (spanning all rows), column 1 -> viewer 1, the link strip
+    # and viewer 2 stacked vertically (B-scans are wider than tall, so stacking uses
+    # the screen height and gives each viewer the full width). Viewers share height equally.
     frame.columnconfigure(0, weight=0)
     frame.columnconfigure(1, weight=1)
     frame.rowconfigure(0, weight=1, uniform="viewers")
-    frame.rowconfigure(1, weight=1, uniform="viewers")
+    frame.rowconfigure(1, weight=0)
+    frame.rowconfigure(2, weight=1, uniform="viewers")
 
     # Controls container (Load / Range / Export)
     self.scanControlsContainer = ttk.Frame(frame)
-    self.scanControlsContainer.grid(row=0, column=0, rowspan=2, sticky="nsw", padx=5, pady=5)
+    self.scanControlsContainer.grid(row=0, column=0, rowspan=3, sticky="nsw", padx=5, pady=5)
 
     sections = (
-        ("scanLoadFrame", "Load Scans", "scan_load"),
-        ("scanRangeFrame", "Slice Matching", "scan_range"),
-        ("scanExportFrame", "Export", "scan_export"),
+        ("scanLoadFrame", "Load Scans", "scan_load", False),
+        ("scanRangeFrame", "Slice Matching", "scan_range", True),
+        ("scanExportFrame", "Export", "scan_export", True),
     )
-    for attr, text, key in sections:
+    for attr, text, key, placeholder in sections:
         section = ttk.LabelFrame(self.scanControlsContainer, text=text, relief=tk.RIDGE)
         section.pack(fill="x", pady=(0, 2))
-        ttk.Label(section, text="Available in a later version", bootstyle="secondary").pack(
-            padx=10, pady=10
-        )
+        if placeholder:
+            ttk.Label(section, text="Available in a later version", bootstyle="secondary").pack(
+                padx=10, pady=10
+            )
         setattr(self, attr, section)
         self.context.register_frame(key, section)
 
-    # Viewers
+    # Viewers and the link strip between them
     self.scanViewer1Frame = ttk.LabelFrame(frame, text="Scan 1 (reference)")
     self.scanViewer1Frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("scan_viewer_1", self.scanViewer1Frame)
 
+    self.scanLinkFrame = ttk.Frame(frame)
+    self.scanLinkFrame.grid(row=1, column=1, sticky="ew", padx=5)
+    self.context.register_frame("scan_link", self.scanLinkFrame)
+
     self.scanViewer2Frame = ttk.LabelFrame(frame, text="Scan 2 (moving)")
-    self.scanViewer2Frame.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
+    self.scanViewer2Frame.grid(row=2, column=1, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("scan_viewer_2", self.scanViewer2Frame)
 
-    _add_instruction_canvas(self.scanViewer1Frame, _INSTRUCTION_KEY)
-    _add_instruction_canvas(self.scanViewer2Frame, _INSTRUCTION_KEY)
+    # Panels; the load panel is created last because it looks up the others.
+    self.scanViewer1 = StackViewerPanel(self.context, "scan_viewer_1", role=1)
+    self.context.register_panel("scan_viewer_1", self.scanViewer1)
+
+    self.scanViewer2 = StackViewerPanel(self.context, "scan_viewer_2", role=2)
+    self.context.register_panel("scan_viewer_2", self.scanViewer2)
+
+    self.scanLinkStrip = LinkStrip(self.context, "scan_link")
+    self.context.register_panel("scan_link", self.scanLinkStrip)
+
+    self.scanLoadPanel = LoadPanel(self.context, "scan_load")
+    self.context.register_panel("scan_load", self.scanLoadPanel)
