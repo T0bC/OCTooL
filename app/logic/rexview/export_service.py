@@ -8,6 +8,7 @@ Key contents:
 - ExportService: Pure business logic for OCT export operations (cancellation via the
   shared Cancellable mixin).
 - prepare_export: Validates parameters and determines slices, data type, and output dir.
+- run_export: Full pipeline; streams raw XZ slices in chunks, reports per-slice progress.
 - load_image_stack: Loads and processes the image stack from the OCT archive.
 - process_slice: Extracts, resizes, corrects, and optionally adds a scale bar.
 - export_single_slice: Saves a processed slice to disk with EXIF metadata.
@@ -50,6 +51,10 @@ from app.logic.shared.concurrency import Cancellable
 from app.logic.shared.models import OCTMetadata
 
 
+class _ExportCancelledError(Exception):
+    """Raised inside the load callback to abort loading on cancellation."""
+
+
 class ExportService(Cancellable):
     """
     Pure business logic for OCT export operations.
@@ -57,6 +62,10 @@ class ExportService(Cancellable):
     This service encapsulates all export logic without any GUI dependencies.
     It can be fully tested with pytest without requiring tkinter.
     """
+
+    #: Slices reconstructed per batch when streaming a raw XZ export. Amortises
+    #: the per-call setup cost of ``createImageFromRaw`` while keeping memory flat.
+    STREAM_CHUNK_SIZE = 4
 
     def prepare_export(
         self,
@@ -294,28 +303,82 @@ class ExportService(Cancellable):
         except Exception:
             return None
 
+    def _write_slice(
+        self,
+        stack: np.ndarray,
+        slice_idx: int,
+        image_idx: int,
+        export_idx: int,
+        export_dir: Path,
+        params: SliceExportParams,
+        config: ExportConfig,
+        metadata: OCTMetadata,
+        xml_dict: dict,
+    ) -> Path | None:
+        """Process one slice and save it; return its path, or None on failure.
+
+        ``slice_idx``/``image_idx`` keep their meaning from ``process_slice``
+        (XZ uses ``slice_idx`` into ``stack``, YZ/XY use ``image_idx``);
+        ``image_idx`` is also the slice number used for the file name.
+        """
+        try:
+            processed_img = self.process_slice(
+                img_stack=stack,
+                slice_idx=slice_idx,
+                image_idx=image_idx,
+                params=params,
+                config=config,
+                metadata=metadata,
+                xml_dict=xml_dict,
+            )
+            dpi = self.calculate_dpi(processed_img, params, metadata)
+            exif = self.add_exif_metadata(processed_img, metadata)
+            filename = self.generate_export_filename(
+                params, config, metadata, image_idx, export_idx
+            )
+            export_path = export_dir / filename
+            self.export_single_slice(processed_img, export_path, dpi, exif)
+            return export_path
+        except Exception:
+            traceback.print_exc()
+            return None  # Continue with other slices
+
     def run_export(
         self,
         file_path: str,
         params: SliceExportParams,
         config: ExportConfig,
         progress_callback: Callable[[ExportProgress], None] | None = None,
+        slice_callback: Callable[[int, int], None] | None = None,
+        should_cancel: Callable[[], bool] | None = None,
     ) -> ExportResult:
         """
         Execute the full export pipeline for a single OCT file.
+
+        For raw-spectral XZ exports the slices are reconstructed and written in
+        small chunks (``STREAM_CHUNK_SIZE``) so images appear on disk right
+        away and memory stays flat. Other directions (and processed data) need
+        the whole volume and load it first.
 
         Args:
             file_path: Path to the OCT file
             params: Export parameters
             config: Export configuration
             progress_callback: Optional callback for progress updates
+            slice_callback: Optional ``(done, total)`` callback invoked after
+                every processed slice.
+            should_cancel: Optional predicate polled between slices (and while
+                loading); returning True stops the export early.
 
         Returns:
             ExportResult with exported file paths (as strings), the number of
-            failed slices, and an optional error message.
+            failed slices, whether it was cancelled, and an optional error.
         """
         self.reset()
-        exported_files = []
+        exported_files: list[Path] = []
+
+        def stop_requested() -> bool:
+            return self.is_cancelled or (should_cancel is not None and should_cancel())
 
         # Open archive and read metadata
         archive = octF.unzipOCTData(file_path)
@@ -326,88 +389,104 @@ class ExportService(Cancellable):
         # instead of rebuilding it per slice / per stage.
         meta_xml_dict = metadata.to_xml_dict()
 
+        cancelled = False
+        done = 0
         try:
             # Prepare export
             prep = self.prepare_export(params, config, metadata)
-            prep["export_dir"].mkdir(parents=True, exist_ok=True)
+            export_dir = prep["export_dir"]
+            export_dir.mkdir(parents=True, exist_ok=True)
 
-            # Load image stack
             def load_callback(status: str):
+                if stop_requested():
+                    raise _ExportCancelledError
                 if progress_callback:
                     progress_callback(ExportProgress(status=f"Loading: {status}"))
 
-            img_stack = self.load_image_stack(
-                archive=archive,
-                metadata=metadata,
-                params=params,
-                config=config,
-                slices_to_load=prep["slices_to_load"],
-                sel_data_type=prep["sel_data_type"],
-                progress_callback=load_callback,
-                xml_dict=meta_xml_dict,
-            )
+            def load(slices_to_load: np.ndarray) -> np.ndarray:
+                return self.load_image_stack(
+                    archive=archive,
+                    metadata=metadata,
+                    params=params,
+                    config=config,
+                    slices_to_load=slices_to_load,
+                    sel_data_type=prep["sel_data_type"],
+                    progress_callback=load_callback,
+                    xml_dict=meta_xml_dict,
+                )
 
-            # Process and export each slice
             selected_slices = prep["selected_slices"]
             total_slices = len(selected_slices)
 
-            for idx, slice_num in enumerate(selected_slices):
-                if self.is_cancelled:
-                    break
-
-                try:
-                    # Process slice
-                    processed_img = self.process_slice(
-                        img_stack=img_stack,
-                        slice_idx=idx,
-                        image_idx=slice_num,
-                        params=params,
-                        config=config,
-                        metadata=metadata,
-                        xml_dict=meta_xml_dict,
-                    )
-
-                    # Calculate DPI and EXIF
-                    dpi = self.calculate_dpi(processed_img, params, metadata)
-                    exif = self.add_exif_metadata(processed_img, metadata)
-
-                    # Generate filename and save
-                    filename = self.generate_export_filename(
-                        params, config, metadata, slice_num, idx
-                    )
-                    export_path = prep["export_dir"] / filename
-
-                    self.export_single_slice(processed_img, export_path, dpi, exif)
-                    exported_files.append(export_path)
-
-                    # Update progress
-                    if progress_callback:
-                        progress_callback(
-                            ExportProgress(
-                                current_slice=idx + 1,
-                                total_slices=total_slices,
-                                status=f"Exported: {idx + 1}/{total_slices}",
-                            )
+            def finish_slice(path: Path | None, idx: int) -> None:
+                nonlocal done
+                done += 1
+                if path is not None:
+                    exported_files.append(path)
+                if progress_callback:
+                    progress_callback(
+                        ExportProgress(
+                            current_slice=idx + 1,
+                            total_slices=total_slices,
+                            status=f"Exported: {idx + 1}/{total_slices}",
                         )
+                    )
+                if slice_callback:
+                    slice_callback(done, total_slices)
 
-                except Exception:
-                    traceback.print_exc()
-                    continue  # Continue with other slices
+            def write(stack: np.ndarray, slice_idx: int, slice_num: int, idx: int) -> None:
+                path = self._write_slice(
+                    stack, slice_idx, slice_num, idx, export_dir, params, config, metadata,
+                    meta_xml_dict,
+                )  # fmt: skip
+                finish_slice(path, idx)
+
+            try:
+                if params.slice_direction == "XZ" and prep["sel_data_type"] == "Raw":
+                    # Streaming: reconstruct and save chunk by chunk.
+                    for start in range(0, total_slices, self.STREAM_CHUNK_SIZE):
+                        if stop_requested():
+                            cancelled = True
+                            break
+                        chunk = selected_slices[start : start + self.STREAM_CHUNK_SIZE]
+                        stack = load(chunk)
+                        for offset, slice_num in enumerate(chunk):
+                            if stop_requested():
+                                cancelled = True
+                                break
+                            write(stack, offset, slice_num, start + offset)
+                        del stack
+                        if cancelled:
+                            break
+                else:
+                    img_stack = load(prep["slices_to_load"])
+                    for idx, slice_num in enumerate(selected_slices):
+                        if stop_requested():
+                            cancelled = True
+                            break
+                        write(img_stack, idx, slice_num, idx)
+            except _ExportCancelledError:
+                cancelled = True
 
             # Export video image
-            self.export_video_image(
-                archive, metadata, params, prep["export_dir"], xml_dict=meta_xml_dict
-            )
+            if not cancelled:
+                self.export_video_image(
+                    archive, metadata, params, export_dir, xml_dict=meta_xml_dict
+                )
 
             # Single collection at the end of the file, not per slice.
             gc.collect()
         finally:
             archive.close()
 
-        failed_count = max(params.num_slices - len(exported_files), 0)
+        if cancelled:
+            failed_count = max(done - len(exported_files), 0)
+        else:
+            failed_count = max(params.num_slices - len(exported_files), 0)
         return ExportResult(
             file_path=file_path,
             exported_files=[str(p) for p in exported_files],
             failed_count=failed_count,
             error=None,
+            cancelled=cancelled,
         )
