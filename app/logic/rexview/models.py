@@ -376,6 +376,10 @@ class ExportResult(BaseModel):
         default=None,
         description="Error message if the export failed entirely",
     )
+    cancelled: bool = Field(
+        default=False,
+        description="True if the export was stopped early by a cancellation request",
+    )
 
 
 class ExportSettings(BaseModel):
