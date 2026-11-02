@@ -106,6 +106,17 @@ def compute_worker_count(
     return max(1, bounded)
 
 
+def compute_blas_threads(n_workers: int, cpu_count: int | None = None) -> int:
+    """BLAS/OpenMP threads each of ``n_workers`` processes may use.
+
+    Splits the CPUs evenly between the worker processes (never below 1) so the
+    pool does not oversubscribe the machine with ``n_workers * cpu_count``
+    threads.
+    """
+    cpu = cpu_count if cpu_count is not None else (os.cpu_count() or 1)
+    return max(1, cpu // max(1, n_workers))
+
+
 class Cancellable:
     """Mixin providing a cooperative cancellation flag.
 
