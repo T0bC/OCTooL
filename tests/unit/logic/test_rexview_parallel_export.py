@@ -5,11 +5,14 @@ Tests the ParallelExportCoordinator logic without spawning real processes by
 injecting a fake executor factory.
 """
 
+import queue
+import threading
 from concurrent.futures import Future
 from unittest.mock import Mock
 
 import pytest
 
+from app.logic.rexview import export_worker
 from app.logic.rexview.models import ExportConfig, ExportResult, SliceExportParams
 from app.logic.rexview.parallel_export import ParallelExportCoordinator
 
@@ -29,9 +32,15 @@ class FakeExecutor:
     """Synchronous stand-in for ProcessPoolExecutor that returns resolved futures."""
 
     instances = []
+    run_initializer = False
 
-    def __init__(self, max_workers=None):
+    def __init__(self, max_workers=None, initializer=None, initargs=()):
         self.max_workers = max_workers
+        self.initializer = initializer
+        self.initargs = initargs
+        self.shutdown_calls = []
+        if initializer is not None and FakeExecutor.run_initializer:
+            initializer(*initargs)
         self.submitted = []
         FakeExecutor.instances.append(self)
 
@@ -40,6 +49,9 @@ class FakeExecutor:
 
     def __exit__(self, *exc):
         return False
+
+    def shutdown(self, wait=True, cancel_futures=False):
+        self.shutdown_calls.append((wait, cancel_futures))
 
     def submit(self, fn, *args):
         self.submitted.append(args)
@@ -54,8 +66,11 @@ class FakeExecutor:
 @pytest.fixture(autouse=True)
 def _reset_fake():
     FakeExecutor.instances.clear()
+    FakeExecutor.run_initializer = False
     yield
     FakeExecutor.instances.clear()
+    FakeExecutor.run_initializer = False
+    export_worker.reset_worker_state()
 
 
 class TestComputeWorkerCount:
@@ -182,3 +197,140 @@ class TestRun:
         assert "kaboom" in results[0].error
         assert results[0].file_path == "C:/d/bad.oct"
         assert results[0].exported_files == []
+
+
+class _FakeProc:
+    def __init__(self, stubborn=False):
+        self.stubborn = stubborn
+        self.alive = True
+        self.terminated = False
+
+    def join(self, timeout=None):
+        if not self.stubborn:
+            self.alive = False
+
+    def is_alive(self):
+        return self.alive
+
+    def terminate(self):
+        self.terminated = True
+        self.alive = False
+
+
+def _ipc():
+    return queue.Queue(), threading.Event()
+
+
+class TestSliceProgress:
+    @pytest.mark.unit
+    def test_worker_slice_reports_reach_callback(self):
+        FakeExecutor.run_initializer = True
+
+        def worker(file_path, params, config):
+            for done in range(1, 4):
+                export_worker.report_slice(file_path, done, 3)
+            return ExportResult(file_path=file_path)
+
+        coord = ParallelExportCoordinator(
+            worker_fn=worker, executor_factory=FakeExecutor, cpu_count=4, ipc_factory=_ipc
+        )
+        events = []
+        coord.run(
+            [("C:/d/a.oct", _params(), ExportConfig())],
+            slice_progress_callback=lambda p, d, t: events.append((p, d, t)),
+        )
+
+        assert events == [("C:/d/a.oct", 1, 3), ("C:/d/a.oct", 2, 3), ("C:/d/a.oct", 3, 3)]
+
+    @pytest.mark.unit
+    def test_callback_errors_do_not_break_run(self):
+        FakeExecutor.run_initializer = True
+
+        def worker(file_path, params, config):
+            export_worker.report_slice(file_path, 1, 1)
+            return ExportResult(file_path=file_path)
+
+        coord = ParallelExportCoordinator(
+            worker_fn=worker, executor_factory=FakeExecutor, cpu_count=4, ipc_factory=_ipc
+        )
+        results = coord.run(
+            [("C:/d/a.oct", _params(), ExportConfig())],
+            slice_progress_callback=Mock(side_effect=RuntimeError("ui gone")),
+        )
+        assert len(results) == 1
+
+
+class TestThreadLimit:
+    @pytest.mark.unit
+    def test_initializer_gets_blas_thread_share(self):
+        coord = ParallelExportCoordinator(
+            worker_fn=lambda f, p, c: ExportResult(file_path=f),
+            executor_factory=FakeExecutor,
+            cpu_count=40,
+            max_workers_cap=8,
+            ipc_factory=_ipc,
+        )
+        tasks = [(f"C:/d/{i}.oct", _params(), ExportConfig()) for i in range(10)]
+        coord.run(tasks)
+
+        executor = FakeExecutor.instances[0]
+        assert executor.max_workers == 8
+        assert executor.initializer is export_worker.init_worker
+        assert executor.initargs[2] == 5  # 40 cpus // 8 workers
+
+    @pytest.mark.unit
+    def test_compute_blas_threads(self):
+        from app.logic.shared.concurrency import compute_blas_threads
+
+        assert compute_blas_threads(1, cpu_count=12) == 12
+        assert compute_blas_threads(8, cpu_count=40) == 5
+        assert compute_blas_threads(8, cpu_count=4) == 1
+
+
+class TestCancellation:
+    @pytest.mark.unit
+    def test_cancel_sets_shared_event_and_shuts_pool(self):
+        seen = []
+
+        def worker(file_path, params, config):
+            coord.cancel()
+            seen.append(export_worker.is_cancel_requested())
+            return ExportResult(file_path=file_path, cancelled=True)
+
+        FakeExecutor.run_initializer = True
+        coord = ParallelExportCoordinator(
+            worker_fn=worker, executor_factory=FakeExecutor, cpu_count=4, ipc_factory=_ipc
+        )
+        tasks = [(f"C:/d/{i}.oct", _params(), ExportConfig()) for i in range(3)]
+        results = coord.run(tasks)
+
+        assert seen == [True]  # worker saw the shared event
+        assert len(results) == 1  # remaining tasks never submitted
+        assert results[0].cancelled
+        assert FakeExecutor.instances[0].shutdown_calls == [(False, True)]
+
+    @pytest.mark.unit
+    def test_cancelled_future_becomes_cancelled_result(self):
+        fut = Future()
+        fut.cancel()
+        result = ParallelExportCoordinator._collect(fut, ("C:/d/a.oct", _params(), ExportConfig()))
+        assert result.cancelled
+        assert result.file_path == "C:/d/a.oct"
+
+    @pytest.mark.unit
+    def test_shutdown_terminates_stubborn_workers(self):
+        coord = ParallelExportCoordinator()
+        polite, stubborn = _FakeProc(), _FakeProc(stubborn=True)
+        coord._executor = Mock(_processes={1: polite, 2: stubborn})
+
+        coord.shutdown(grace_seconds=0.01)
+
+        assert coord.is_cancelled
+        assert stubborn.terminated
+        assert not polite.terminated
+
+    @pytest.mark.unit
+    def test_shutdown_without_run_is_safe(self):
+        coord = ParallelExportCoordinator()
+        coord.shutdown(grace_seconds=0.01)
+        assert coord.is_cancelled
