@@ -46,6 +46,10 @@ from app.view.shared.tool_tip import Tooltip
 
 DEFAULT_N = 25
 _NOT_SET = "not set"
+# Range label colours: red = still to do, green = set, amber = set but first >= last.
+_STYLE_UNSET = "danger"
+_STYLE_SET = "success"
+_STYLE_INVALID = "warning"
 _SHORTCUT_TIP = (
     "Use the slice currently shown in this scan. Shortcut: {key} while hovering the scan."
 )
@@ -88,9 +92,9 @@ class RangePanel:
             ttk.Label(block, text=f"Scan {slot}", font=("TkDefaultFont", 9, "bold")).grid(
                 row=0, column=0, sticky="w"
             )
-            first_label = ttk.Label(block, text=f"first: {_NOT_SET}", bootstyle="secondary")
+            first_label = ttk.Label(block, text=f"first: {_NOT_SET}", bootstyle=_STYLE_UNSET)
             first_label.grid(row=0, column=1, padx=(10, 0), sticky="w")
-            last_label = ttk.Label(block, text=f"last: {_NOT_SET}", bootstyle="secondary")
+            last_label = ttk.Label(block, text=f"last: {_NOT_SET}", bootstyle=_STYLE_UNSET)
             last_label.grid(row=0, column=2, padx=(10, 0), sticky="w")
             first_btn = ttk.Button(
                 block,
@@ -230,14 +234,17 @@ class RangePanel:
         for slot in (1, 2):
             first, last = self._first[slot], self._last[slot]
             first_label, last_label = self.range_labels[slot]
-            first_label.configure(
-                text="first: " + (_NOT_SET if first is None else f"#{self._number(slot, first)}")
-            )
-            last_label.configure(
-                text="last: " + (_NOT_SET if last is None else f"#{self._number(slot, last)}")
-            )
-            if first is not None and last is not None and first >= last:
+            invalid = first is not None and last is not None and first >= last
+            if invalid:
                 warnings.append(f"Scan {slot}: first slice must come before the last slice")
+            for label, name, index in ((first_label, "first", first), (last_label, "last", last)):
+                if index is None:
+                    label.configure(text=f"{name}: {_NOT_SET}", bootstyle=_STYLE_UNSET)
+                else:
+                    label.configure(
+                        text=f"{name}: #{self._number(slot, index)}",
+                        bootstyle=_STYLE_INVALID if invalid else _STYLE_SET,
+                    )
 
         r1, r2 = self._slot_range(1), self._slot_range(2)
         ranges = (r1, r2) if r1 is not None and r2 is not None else None
