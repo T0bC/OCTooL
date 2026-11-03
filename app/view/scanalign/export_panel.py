@@ -47,6 +47,7 @@ from app.logic.scanalign.export_service import (
     next_free_folder,
     output_folder_name,
     resolve_exp_number,
+    resolve_name,
 )
 from app.view.shared.error_handler import handle_errors, show_error_popup
 from app.view.shared.tool_tip import Tooltip
@@ -148,7 +149,7 @@ class ExportPanel:
         names = {}
         for slot, stack in zip((1, 2), stacks, strict=True):
             parent = stack.folder.parent
-            base = output_folder_name(resolve_exp_number(stack), len(pairs))
+            base = output_folder_name(resolve_exp_number(stack), resolve_name(stack), len(pairs))
             names[slot] = (next_free_folder(parent, base), parent)
         return names
 
