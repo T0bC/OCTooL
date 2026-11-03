@@ -7,7 +7,8 @@ core export pipeline logic extracted from execution_panel.py.
 Key contents:
 - ExportService: Pure business logic for OCT export operations (cancellation via the
   shared Cancellable mixin).
-- prepare_export: Validates parameters and determines slices, data type, and output dir.
+- prepare_export: Validates parameters and determines slices (shared equidistant_indices),
+  data type, and output dir.
 - run_export: Full pipeline; streams raw XZ slices in chunks, reports per-slice progress.
 - load_image_stack: Loads and processes the image stack from the OCT archive.
 - process_slice: Extracts, resizes, corrects, and optionally adds a scale bar.
@@ -49,6 +50,7 @@ from app.logic.rexview.models import ExportConfig, ExportProgress, ExportResult,
 from app.logic.shared import oct_functions as octF
 from app.logic.shared.concurrency import Cancellable
 from app.logic.shared.models import OCTMetadata
+from app.logic.shared.slice_math import equidistant_indices
 
 
 class _ExportCancelledError(Exception):
@@ -79,9 +81,15 @@ class ExportService(Cancellable):
         Returns a dict with computed values needed for export.
         """
         # Determine which slices to process
-        selected_slices = np.linspace(
-            params.first_slice - 1, params.last_slice - 1, params.num_slices
-        ).astype(int)
+        selected_slices = np.array(
+            [
+                i - 1
+                for i in equidistant_indices(
+                    params.first_slice, params.last_slice, params.num_slices
+                )
+            ],
+            dtype=int,
+        )
 
         # Determine slices to load based on direction
         if params.slice_direction == "XZ":
