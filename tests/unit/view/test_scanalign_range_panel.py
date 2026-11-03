@@ -280,3 +280,23 @@ class TestLinkStripRangeMode:
         v1.user_scroll(10)
         assert v2.current_index == 13
         assert link.delta_label.cget("text") == "Δ = +3 slices"
+
+    def test_range_label_colours(self, setup):
+        """GIVEN unset / set / invalid slices, THEN labels are red / green / amber."""
+        _, v1, _, _, panel = setup
+
+        def styles(slot):
+            return [str(label.cget("style")) for label in panel.range_labels[slot]]
+
+        assert all(s.startswith("danger") for s in styles(1))
+        v1.current_index = 10
+        panel.set_first(1)
+        first_style, last_style = styles(1)
+        assert first_style.startswith("success")
+        assert last_style.startswith("danger")
+        v1.current_index = 5
+        panel.set_last(1)
+        assert all(s.startswith("warning") for s in styles(1))
+        v1.current_index = 50
+        panel.set_last(1)
+        assert all(s.startswith("success") for s in styles(1))
