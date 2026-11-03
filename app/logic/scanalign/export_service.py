@@ -59,11 +59,18 @@ from app.logic.shared.json_io import write_json_atomic
 
 LOG_FILE_NAME = "scanalign_registration.json"
 _LEADING_EXP_RE = re.compile(r"^(\d+)_")
+_UNSAFE_PATH_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
-def output_folder_name(exp: int, n: int) -> str:
-    """Base name of an output folder, e.g. ``01_ScanAlign_25``."""
-    return f"{exp:02d}_ScanAlign_{n}"
+def output_folder_name(exp: int, name: str, n: int) -> str:
+    """Base name of an output folder, e.g. ``01_010RI_ScanAlign_25``.
+
+    ``name`` is the scan name (see ``resolve_name``); characters not allowed in Windows
+    paths are replaced by ``_``, and an empty name is left out (``01_ScanAlign_25``).
+    """
+    safe = _UNSAFE_PATH_CHARS_RE.sub("_", name or "").strip(" .")
+    middle = f"{safe}_" if safe else ""
+    return f"{exp:02d}_{middle}ScanAlign_{n}"
 
 
 def next_free_folder(parent: Path, base: str) -> str:
@@ -181,7 +188,7 @@ class RegistrationExporter(Cancellable):
     def _claim_folder(stack: StackInfo, n: int, created: list[Path]) -> Path:
         """Create a fresh output folder next to the export; never reuse an existing one."""
         parent = stack.folder.parent
-        base = output_folder_name(resolve_exp_number(stack), n)
+        base = output_folder_name(resolve_exp_number(stack), resolve_name(stack), n)
         while True:
             folder = parent / next_free_folder(parent, base)
             try:
