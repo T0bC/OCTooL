@@ -10,7 +10,7 @@ Key contents:
 - get_defaults: Returns a SettingsConfig populated with all default values.
 - validate_export_config: Checks ranges, combinations, and setting dependencies.
 - parse_dispersion: Converts the GUI tuple format into a validated (type, coeff) pair.
-- calculate_equidistant_indices: Computes evenly spaced slice indices for export.
+- calculate_equidistant_indices: Delegates to shared slice_math.equidistant_indices.
 
 This file is part of OCTooL.
 OCTooL is an open source software for export, analysis and quantification of
@@ -39,6 +39,7 @@ from typing import Any
 
 from app.logic.rexview.models import SettingsConfig
 from app.logic.rexview.validation import ValidationResult, db_range_error, slice_order_error
+from app.logic.shared.slice_math import equidistant_indices
 
 __all__ = ["SettingsService", "ValidationResult"]
 
@@ -277,32 +278,8 @@ class SettingsService:
         last_slice: int,
         num_slices: int,
     ) -> list[int]:
-        """
-        Calculate equidistant slice indices within a range.
-
-        Args:
-            first_slice: First slice number (1-indexed)
-            last_slice: Last slice number (1-indexed)
-            num_slices: Number of equidistant slices to calculate
-
-        Returns:
-            List of slice indices (1-indexed)
-        """
-        if num_slices <= 0:
-            return []
-
-        if num_slices == 1:
-            return [(first_slice + last_slice) // 2]
-
-        total_range = last_slice - first_slice
-        if num_slices > total_range + 1:
-            # More slices requested than available, return all
-            return list(range(first_slice, last_slice + 1))
-
-        step = total_range / (num_slices - 1)
-        indices = [round(first_slice + i * step) for i in range(num_slices)]
-
-        return indices
+        """Delegate to :func:`app.logic.shared.slice_math.equidistant_indices` (1-indexed)."""
+        return equidistant_indices(first_slice, last_slice, num_slices)
 
     def validate_db_range(self, db_min: int, db_max: int) -> ValidationResult:
         """
