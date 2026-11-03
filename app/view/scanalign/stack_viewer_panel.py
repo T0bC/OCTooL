@@ -68,7 +68,8 @@ class StackViewerPanel(BaseCanvasPanel):
     # ------------------------------------------------------------------ hooks
 
     def get_instruction_key(self):
-        return _INSTRUCTION_KEY
+        # The getting-started guide is shown once, in the Scan 1 viewer only.
+        return _INSTRUCTION_KEY if self.role == 1 else None
 
     def get_image_list(self):
         return self.stack.files if self.stack else []
