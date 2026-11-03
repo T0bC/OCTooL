@@ -36,6 +36,7 @@ from tkinter import ttk
 from app.view.scanalign.export_panel import ExportPanel
 from app.view.scanalign.link_strip import LinkStrip
 from app.view.scanalign.load_panel import LoadPanel
+from app.view.scanalign.overlay_panel import OverlayPanel
 from app.view.scanalign.range_panel import RangePanel
 from app.view.scanalign.stack_viewer_panel import StackViewerPanel
 from app.view.shared.error_handler import handle_errors
@@ -84,7 +85,7 @@ def addContent(self, frame):
     self.scanViewer2Frame.grid(row=2, column=1, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("scan_viewer_2", self.scanViewer2Frame)
 
-    # Panels; order matters: viewers -> link strip -> range -> export -> load (last, it
+    # Panels; order matters: viewers -> link strip -> overlay -> range -> export -> load (last, it
     # looks up the others).
     self.scanViewer1 = StackViewerPanel(self.context, "scan_viewer_1", role=1)
     self.context.register_panel("scan_viewer_1", self.scanViewer1)
@@ -94,6 +95,9 @@ def addContent(self, frame):
 
     self.scanLinkStrip = LinkStrip(self.context, "scan_link")
     self.context.register_panel("scan_link", self.scanLinkStrip)
+
+    self.scanOverlayPanel = OverlayPanel(self.context, "scan_viewer_2")
+    self.context.register_panel("scan_overlay", self.scanOverlayPanel)
 
     self.scanRangePanel = RangePanel(self.context, "scan_range")
     self.context.register_panel("scan_range", self.scanRangePanel)
