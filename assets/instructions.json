@@ -235,18 +235,30 @@
         "title": "Set Range",
         "panel": "Slice Matching",
         "actions": [
-          "▸ Set first / Set last on matching anatomy in each scan",
-          "▸ Choose the number of slices N"
+          "▸ Scroll both scans to the same anatomy at the start, click Set first (or press F)",
+          "▸ Do the same at the end with Set last (or L); the scans may have different slice counts",
+          "▸ With both ranges set, Link maps positions between the ranges"
         ]
       },
       {
         "number": "4",
+        "title": "Choose N & Check Pairs",
+        "panel": "Slice Matching",
+        "actions": [
+          "▸ Choose the number of pairs N (2 up to the shorter range)",
+          "▸ Click a row in the pair list to show that pair in both viewers",
+          "▸ Pair k is the same anatomy in Scan 1 and Scan 2"
+        ]
+      },
+      {
+        "number": "5",
         "title": "Export",
         "panel": "Export Panel",
         "actions": [
-          "▸ Writes <exp>_ScanAlign_<N> next to each .oct",
-          "▸ Pair index k is shared between both scans",
-          "▸ A JSON log is written"
+          "▸ The preview shows the target folders: <exp>_ScanAlign_<N> next to each scan's folder",
+          "▸ Existing folders are never overwritten; a suffix _2, _3 ... is added",
+          "▸ Export copies the slices unchanged and writes scanalign_registration.json into both folders",
+          "▸ Open both folders in AnnoLyze or CarlQuant; slice k matches between them"
         ]
       }
     ],
@@ -257,7 +269,7 @@
         "⊕ Ctrl+Wheel: Zoom in/out",
         "✋ Ctrl+Drag: Pan image",
         "🔗 Link: scroll both scans together",
-        "🚧 Under development"
+        "⌨ F / L: set first / last slice of the hovered scan"
       ]
     }
   }
