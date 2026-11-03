@@ -6,7 +6,6 @@ creates a real Tk root and is skipped when none is available; mouse events are
 simulated by calling the internal handlers with fake event objects.
 """
 
-import tkinter as tk
 from types import SimpleNamespace
 
 import pytest
@@ -94,18 +93,6 @@ def test_nearest_knob_overlap_at_ends():
 
 
 # %% Widget
-
-
-@pytest.fixture(scope="module")
-def tk_root():
-    """One shared Tk root per module (creating many roots on Windows is flaky)."""
-    try:
-        root = tk.Tk()
-    except tk.TclError:
-        pytest.skip("no display available")
-    root.withdraw()
-    yield root
-    root.destroy()
 
 
 @pytest.fixture
