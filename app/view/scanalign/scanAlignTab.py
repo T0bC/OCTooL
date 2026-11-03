@@ -33,8 +33,10 @@ Author: Tobias Meissner
 import tkinter as tk
 from tkinter import ttk
 
+from app.view.scanalign.export_panel import ExportPanel
 from app.view.scanalign.link_strip import LinkStrip
 from app.view.scanalign.load_panel import LoadPanel
+from app.view.scanalign.range_panel import RangePanel
 from app.view.scanalign.stack_viewer_panel import StackViewerPanel
 from app.view.shared.error_handler import handle_errors
 
@@ -59,17 +61,13 @@ def addContent(self, frame):
     self.scanControlsContainer.grid(row=0, column=0, rowspan=3, sticky="nsw", padx=5, pady=5)
 
     sections = (
-        ("scanLoadFrame", "Load Scans", "scan_load", False),
-        ("scanRangeFrame", "Slice Matching", "scan_range", True),
-        ("scanExportFrame", "Export", "scan_export", True),
+        ("scanLoadFrame", "Load Scans", "scan_load"),
+        ("scanRangeFrame", "Slice Matching", "scan_range"),
+        ("scanExportFrame", "Export", "scan_export"),
     )
-    for attr, text, key, placeholder in sections:
+    for attr, text, key in sections:
         section = ttk.LabelFrame(self.scanControlsContainer, text=text, relief=tk.RIDGE)
         section.pack(fill="x", pady=(0, 2))
-        if placeholder:
-            ttk.Label(section, text="Available in a later version", bootstyle="secondary").pack(
-                padx=10, pady=10
-            )
         setattr(self, attr, section)
         self.context.register_frame(key, section)
 
@@ -86,7 +84,8 @@ def addContent(self, frame):
     self.scanViewer2Frame.grid(row=2, column=1, sticky="nsew", padx=5, pady=5)
     self.context.register_frame("scan_viewer_2", self.scanViewer2Frame)
 
-    # Panels; the load panel is created last because it looks up the others.
+    # Panels; order matters: viewers -> link strip -> range -> export -> load (last, it
+    # looks up the others).
     self.scanViewer1 = StackViewerPanel(self.context, "scan_viewer_1", role=1)
     self.context.register_panel("scan_viewer_1", self.scanViewer1)
 
@@ -95,6 +94,12 @@ def addContent(self, frame):
 
     self.scanLinkStrip = LinkStrip(self.context, "scan_link")
     self.context.register_panel("scan_link", self.scanLinkStrip)
+
+    self.scanRangePanel = RangePanel(self.context, "scan_range")
+    self.context.register_panel("scan_range", self.scanRangePanel)
+
+    self.scanExportPanel = ExportPanel(self.context, "scan_export")
+    self.context.register_panel("scan_export", self.scanExportPanel)
 
     self.scanLoadPanel = LoadPanel(self.context, "scan_load")
     self.context.register_panel("scan_load", self.scanLoadPanel)
