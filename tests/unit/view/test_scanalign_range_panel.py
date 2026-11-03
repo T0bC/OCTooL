@@ -43,18 +43,6 @@ from app.view.scanalign.link_strip import LinkStrip
 from app.view.scanalign.range_panel import RangePanel
 
 
-@pytest.fixture(scope="module")
-def tk_root():
-    """One shared Tk root per module (creating many roots on Windows is flaky)."""
-    try:
-        root = tk.Tk()
-    except tk.TclError:
-        pytest.skip("no display available")
-    root.withdraw()
-    yield root
-    root.destroy()
-
-
 def make_stack(n):
     files = [
         SliceFile(path=Path(f"s_1_#{i + 1}_{i + 1:04d}.png"), slice_number=i + 1) for i in range(n)
@@ -77,6 +65,9 @@ class FakeViewer:
 
     def add_index_listener(self, callback):
         self.listeners.append(callback)
+
+    def add_view_listener(self, callback):
+        pass
 
     def show_index(self, index, notify=False):
         changed = index != self.current_index
