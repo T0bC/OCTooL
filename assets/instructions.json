@@ -252,6 +252,17 @@
       },
       {
         "number": "5",
+        "title": "Compare Visually",
+        "panel": "Viewers",
+        "actions": [
+          "▸ Sync zoom: Ctrl+wheel zooms, Ctrl+drag pans; both scans show the same region",
+          "▸ Show: Overlay in the Scan 2 viewer (or press O) lays Scan 2 over Scan 1",
+          "▸ Blend: opacity slider · Checkerboard: edges should continue across tiles",
+          "▸ Difference: dark where the scans match · Magenta/green: grey or white where they match"
+        ]
+      },
+      {
+        "number": "6",
         "title": "Export",
         "panel": "Export Panel",
         "actions": [
