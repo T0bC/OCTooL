@@ -62,9 +62,16 @@ class TestNaming:
 
     @pytest.mark.unit
     def test_output_folder_name(self):
-        """GIVEN exp and n, WHEN naming, THEN the exp is zero-padded."""
-        assert output_folder_name(1, 25) == "01_ScanAlign_25"
-        assert output_folder_name(12, 5) == "12_ScanAlign_5"
+        """GIVEN exp, name and n, WHEN naming, THEN exp is zero-padded and name included."""
+        assert output_folder_name(1, "010RI", 25) == "01_010RI_ScanAlign_25"
+        assert output_folder_name(12, "010RI_post", 5) == "12_010RI_post_ScanAlign_5"
+
+    @pytest.mark.unit
+    def test_output_folder_name_sanitises_name(self):
+        """GIVEN unsafe or empty names, WHEN naming, THEN they are replaced or left out."""
+        assert output_folder_name(1, 'a<b>:c"d/e\\f|g?h*', 3) == "01_a_b__c_d_e_f_g_h__ScanAlign_3"
+        assert output_folder_name(1, "", 3) == "01_ScanAlign_3"
+        assert output_folder_name(1, " . ", 3) == "01_ScanAlign_3"
 
     @pytest.mark.unit
     def test_output_file_name_round_trips(self):
@@ -140,34 +147,34 @@ class TestRegistrationExporter:
         """GIVEN scans in the same parent, WHEN exporting, THEN folders are distinct siblings."""
         s1, s2 = two_stacks
         result = run_export(s1, s2, SliceRange(first=0, last=9), SliceRange(first=0, last=9), 4)
-        assert result.folders[0] == s1.folder.parent / "01_ScanAlign_4"
-        assert result.folders[1] == s2.folder.parent / "02_ScanAlign_4"
+        assert result.folders[0] == s1.folder.parent / "01_010RI_T1_ScanAlign_4"
+        assert result.folders[1] == s2.folder.parent / "02_010RI_T2_ScanAlign_4"
 
     @pytest.mark.unit
     def test_same_parent_and_exp_get_distinct_folders(self, tmp_path):
-        """GIVEN two scans with the same exp and parent, WHEN exporting, THEN _2 is used."""
+        """GIVEN two scans with the same exp, name and parent, WHEN exporting, THEN _2 is used."""
         s1 = make_stack(tmp_path, "010RI", "010RI_T1", 1, 10)
         folder2 = tmp_path / "010RI" / "01_other_XZ"
         folder2.mkdir()
         for i in range(10):
             Image.fromarray(np.zeros((20, 30), dtype=np.uint8), mode="L").save(
-                folder2 / f"010RI_T2_1_#{i + 1}_{i + 1:04d}.tiff"
+                folder2 / f"010RI_T1_1_#{i + 1}_{i + 1:04d}.tiff"
             )
         s2 = load_stack(folder2)
         result = run_export(s1, s2, SliceRange(first=0, last=9), SliceRange(first=0, last=9), 3)
-        assert result.folders[0].name == "01_ScanAlign_3"
-        assert result.folders[1].name == "01_ScanAlign_3_2"
+        assert result.folders[0].name == "01_010RI_T1_ScanAlign_3"
+        assert result.folders[1].name == "01_010RI_T1_ScanAlign_3_2"
         assert result.folders[0] != result.folders[1]
 
     @pytest.mark.unit
     def test_existing_folder_is_left_untouched(self, two_stacks):
         """GIVEN an existing output folder, WHEN exporting, THEN it is not written into."""
         s1, s2 = two_stacks
-        existing = s1.folder.parent / "01_ScanAlign_4"
+        existing = s1.folder.parent / "01_010RI_T1_ScanAlign_4"
         existing.mkdir()
         (existing / "keep.txt").write_text("keep")
         result = run_export(s1, s2, SliceRange(first=0, last=9), SliceRange(first=0, last=9), 4)
-        assert result.folders[0].name == "01_ScanAlign_4_2"
+        assert result.folders[0].name == "01_010RI_T1_ScanAlign_4_2"
         assert [p.name for p in existing.iterdir()] == ["keep.txt"]
 
     @pytest.mark.unit
@@ -224,7 +231,7 @@ class TestRegistrationExporter:
     def test_cancel_removes_only_created_folders(self, two_stacks):
         """GIVEN a cancel mid-way, WHEN exporting, THEN created folders vanish, others stay."""
         s1, s2 = two_stacks
-        existing = s1.folder.parent / "01_ScanAlign_4"
+        existing = s1.folder.parent / "01_010RI_T1_ScanAlign_4"
         existing.mkdir()
         (existing / "keep.txt").write_text("keep")
         before = sorted(p.name for p in s1.folder.parent.iterdir())
