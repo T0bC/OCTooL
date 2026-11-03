@@ -81,6 +81,7 @@ class LoadPanel:
         }
         self.link_strip = context.get_panel("scan_link", required=False)
         self.range_panel = context.get_panel("scan_range", required=False)
+        self.overlay_panel = context.get_panel("scan_overlay", required=False)
 
         self.stacks = {1: None, 2: None}
         self.caches = {1: None, 2: None}
@@ -228,6 +229,8 @@ class LoadPanel:
             self.link_strip.on_stack_changed()
         if self.range_panel is not None:
             self.range_panel.on_stack_changed(slot)
+        if self.overlay_panel is not None:
+            self.overlay_panel.on_stack_changed(slot)
 
         cache.start_preview(
             lambda done, total, s=slot, c=cache: self._on_preview_progress(s, c, done, total),
