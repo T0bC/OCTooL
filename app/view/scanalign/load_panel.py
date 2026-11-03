@@ -80,6 +80,7 @@ class LoadPanel:
             2: context.get_panel("scan_viewer_2"),
         }
         self.link_strip = context.get_panel("scan_link", required=False)
+        self.range_panel = context.get_panel("scan_range", required=False)
 
         self.stacks = {1: None, 2: None}
         self.caches = {1: None, 2: None}
@@ -225,6 +226,8 @@ class LoadPanel:
         self.viewers[slot].set_stack(stack, cache)
         if self.link_strip is not None:
             self.link_strip.on_stack_changed()
+        if self.range_panel is not None:
+            self.range_panel.on_stack_changed(slot)
 
         cache.start_preview(
             lambda done, total, s=slot, c=cache: self._on_preview_progress(s, c, done, total),
