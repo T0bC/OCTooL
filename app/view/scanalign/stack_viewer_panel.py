@@ -8,6 +8,7 @@ and index listeners so the link strip can drive two viewers together.
 
 Key contents:
 - StackViewerPanel: Viewer for one scan; set_stack, show_index, add_index_listener.
+- add_view_listener, view_state, apply_view: Zoom/pan hooks for synchronized viewing.
 - display_image: Cache-backed rendering without zoom reset, auto-save or focus steal.
 - setup_specialized_bindings: Focus border bound on the canvas only.
 
@@ -56,6 +57,10 @@ class StackViewerPanel(BaseCanvasPanel):
         self.stack: StackInfo | None = None
         self.cache: SliceCache | None = None
         self._listeners = []
+        self._view_listeners = []
+        self._image_listeners = []
+        self._slice_image = None  # the scan's own image (rawImage may be a composite)
+        self._compositor = None
         self._suppress_scale = False
         self._current_index = None
         self._showing_preview = False
@@ -105,6 +110,94 @@ class StackViewerPanel(BaseCanvasPanel):
         """Register ``callback(role, index, user_initiated)`` for index changes."""
         self._listeners.append(callback)
 
+    @property
+    def slice_image(self):
+        """The scan's own displayed image (preview or full), never the composite."""
+        return self._slice_image
+
+    def add_image_listener(self, callback):
+        """Register ``callback(role)`` fired after the slice image changed."""
+        self._image_listeners.append(callback)
+
+    def _notify_image(self):
+        for callback in list(self._image_listeners):
+            callback(self.role)
+
+    def set_compositor(self, compositor):
+        """Show ``compositor(slice_image)`` instead of the slice image (None = plain)."""
+        self._compositor = compositor
+        self.refresh_composite()
+
+    @handle_errors("ScanAlign refresh composite")
+    def refresh_composite(self):
+        """Recompute the displayed image from the slice image; zoom/pan are kept."""
+        if self._slice_image is None:
+            return
+        self.rawImage = self._composite(self._slice_image)
+        self.render_zoomed_image()
+
+    def _composite(self, image):
+        """Apply the compositor; fall back to the plain image if it fails."""
+        if self._compositor is None:
+            return image
+        try:
+            return self._compositor(image)
+        except Exception as e:  # noqa: BLE001 - never leave a blank canvas
+            update = getattr(self.context, "safe_status_update", None)
+            if update is not None:
+                update(f"Overlay failed: {e}", level="error")
+            return image
+
+    def add_view_listener(self, callback):
+        """Register ``callback(role)`` fired after the user zoomed or panned this viewer."""
+        self._view_listeners.append(callback)
+
+    def _notify_view(self):
+        for callback in list(self._view_listeners):
+            callback(self.role)
+
+    def view_state(self):
+        """Current view as ``(effective_zoom, ox, oy, is_fit, (cw, ch))`` or None.
+
+        ``effective_zoom`` is canvas pixels per image pixel. None if no image is shown or
+        the canvas is not laid out yet.
+        """
+        if self.rawImage is None:
+            return None
+        cw = self.canvas.winfo_width()
+        ch = self.canvas.winfo_height()
+        if cw < 2 or ch < 2:
+            return None
+        is_fit = self.zoom_level == 1.0
+        if is_fit:
+            fitted = getattr(self, "fitted_width", None)
+            if not fitted:
+                return None
+            zoom = fitted / self.rawImage.width
+        else:
+            zoom = self.zoom_level
+        return zoom, self.image_offset_x, self.image_offset_y, is_fit, (cw, ch)
+
+    def apply_view(self, zoom_level, ox, oy):
+        """Set zoom/pan and re-render without notifying view listeners.
+
+        ``zoom_level == 1.0`` means fit (the base render recomputes the offsets).
+        """
+        self.zoom_level = zoom_level
+        self.image_offset_x = ox
+        self.image_offset_y = oy
+        self.render_zoomed_image()
+
+    @handle_errors("ScanAlign mouse wheel zoom")
+    def on_mouse_wheel_zoom(self, event):
+        super().on_mouse_wheel_zoom(event)
+        self._notify_view()
+
+    @handle_errors("ScanAlign pan")
+    def do_pan(self, event):
+        super().do_pan(event)
+        self._notify_view()
+
     @handle_errors("ScanAlign set_stack")
     def set_stack(self, stack, cache):
         """Show a new stack: reset zoom/pan, set the slider range, display slice 0."""
@@ -115,6 +208,7 @@ class StackViewerPanel(BaseCanvasPanel):
         self.cache = cache
         self._current_index = None
         self.rawImage = None
+        self._slice_image = None
         self.tk_image = None
         self.zoom_level = 1.0
         self.image_offset_x = 0
@@ -190,11 +284,13 @@ class StackViewerPanel(BaseCanvasPanel):
 
         self._current_index = index
         self._showing_preview = showing_preview
-        self.rawImage = image
+        self._slice_image = image
+        self.rawImage = self._composite(image)
         if not from_scale:
             self._set_scale(index + 1, n)
         self._update_label()
         self.render_zoomed_image()
+        self._notify_image()
 
         if changed and direction:
             self.cache.prefetch(index, direction)
@@ -272,10 +368,12 @@ class StackViewerPanel(BaseCanvasPanel):
     def _apply_full(self, index, image):
         if index != self._current_index:
             return
-        self.rawImage = image
+        self._slice_image = image
+        self.rawImage = self._composite(image)
         self._showing_preview = False
         self._update_label()
         self.render_zoomed_image()
+        self._notify_image()
 
     def _notify(self, index, user_initiated):
         for callback in list(self._listeners):
