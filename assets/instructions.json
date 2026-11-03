@@ -255,7 +255,7 @@
         "title": "Export",
         "panel": "Export Panel",
         "actions": [
-          "▸ The preview shows the target folders: <exp>_ScanAlign_<N> next to each scan's folder",
+          "▸ The preview shows the target folders: <exp>_<name>_ScanAlign_<N> next to each scan's folder",
           "▸ Existing folders are never overwritten; a suffix _2, _3 ... is added",
           "▸ Export copies the slices unchanged and writes scanalign_registration.json into both folders",
           "▸ Open both folders in AnnoLyze or CarlQuant; slice k matches between them"
