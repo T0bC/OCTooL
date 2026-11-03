@@ -1,7 +1,7 @@
 """
 ScanAlign Link Strip.
 
-Thin strip between the two scan viewers with the link toggle and the slice
+Thin strip between the two scan viewers with the link toggle, the zoom-sync toggle and the slice
 offset (delta). With the link off, delta shows the live difference between the
 two viewer positions; with the link on, delta is frozen and a user-driven change
 in one viewer moves the other by the same offset. With both slice ranges set
@@ -46,6 +46,7 @@ from app.logic.scanalign.matching_service import (
     range_linked_index,
     range_summary,
 )
+from app.view.scanalign.view_sync import ViewSync
 from app.view.shared.error_handler import handle_errors
 from app.view.shared.tool_tip import Tooltip
 
@@ -53,6 +54,15 @@ _DELTA_TIP = (
     "Delta is the slice offset between the scans: position in Scan 2 minus position in "
     "Scan 1. With Link on, it stays fixed and scrolling one scan moves the other by "
     "the same amount. With Link off it follows the current positions."
+)
+
+
+_SYNC_TEXT = "Sync zoom"
+_SYNC_TEXT_PIXELS = "Sync zoom (pixels 1:1)"
+_SYNC_TIP = (
+    "Zooming or panning one scan (Ctrl+wheel / Ctrl+drag) shows the same physical region "
+    "in the other scan. Uses the pixel size (µm/px) of both scans; without it, pixels are "
+    "matched 1:1."
 )
 
 
@@ -79,14 +89,26 @@ class LinkStrip:
         )
         self.check.grid(row=0, column=0, padx=(8, 12), pady=2)
 
+        self.view_sync = ViewSync(self.viewer1, self.viewer2)
+        self.sync_var = tk.BooleanVar(value=True)
+        self.sync_check = ttk.Checkbutton(
+            self.frame,
+            text=_SYNC_TEXT,
+            variable=self.sync_var,
+            command=self._on_sync_toggle,
+            bootstyle="round-toggle",
+        )
+        self.sync_check.grid(row=0, column=1, padx=(0, 12), pady=2)
+
         self.delta_label = ttk.Label(self.frame, text="", bootstyle="secondary")
-        self.delta_label.grid(row=0, column=1, padx=(0, 12))
+        self.delta_label.grid(row=0, column=2, padx=(0, 12))
 
         self.pair_label = ttk.Label(self.frame, text="", bootstyle="secondary")
-        self.pair_label.grid(row=0, column=2, padx=(0, 8))
+        self.pair_label.grid(row=0, column=3, padx=(0, 8))
 
         Tooltip(self.check, text=_DELTA_TIP, wraplength=280)
         Tooltip(self.delta_label, text=_DELTA_TIP, wraplength=280)
+        Tooltip(self.sync_check, text=_SYNC_TIP, wraplength=280)
 
         self.viewer1.add_index_listener(self._on_viewer_changed)
         self.viewer2.add_index_listener(self._on_viewer_changed)
@@ -104,6 +126,10 @@ class LinkStrip:
         self.link_var.set(False)
         self._out_of_range = False
         self._refresh()
+
+    @handle_errors("ScanAlign sync zoom toggle")
+    def _on_sync_toggle(self):
+        self.view_sync.set_enabled(bool(self.sync_var.get()))
 
     @handle_errors("ScanAlign link toggle")
     def _on_toggle(self):
@@ -172,6 +198,10 @@ class LinkStrip:
     def _refresh(self):
         ready = self._both_loaded()
         self.check.configure(state="normal" if ready else "disabled")
+        self.sync_check.configure(
+            state="normal" if ready else "disabled",
+            text=_SYNC_TEXT if self.view_sync.physical else _SYNC_TEXT_PIXELS,
+        )
         if not ready:
             self.delta_label.configure(text="Load both scans to compare", bootstyle="secondary")
             self.pair_label.configure(text="")
